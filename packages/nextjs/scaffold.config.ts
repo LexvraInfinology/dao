@@ -13,23 +13,23 @@ const defineConfig = (config: ScaffoldConfig) => config;
 
 const scaffoldConfig = defineConfig({
   // Which chains to target:
-  // - Use [chains.hardhat] during development
-  // - Use [chains.bscTestnet] for staging
-  // - Use [chains.bsc] for mainnet
-  targetNetworks: [chains.hardhat],
+  // - Hardhat (31337) for local testing
+  // - BSC Testnet (97) for staging
+  // - BSC Mainnet (56) for production
+  targetNetworks: [chains.bscTestnet, chains.bsc, chains.hardhat],
 
   // Polling interval for reading contract data (ms)
-  pollingInterval: 30000,
+  pollingInterval: 15000,
 
-  // Alchemy API key (optional — for mainnet/testnet RPC)
+  // Alchemy / Infura API key (optional)
   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || "",
 
-  // WalletConnect Project ID — get from https://cloud.walletconnect.com/
+  // Reown (WalletConnect) Project ID
   walletConnectProjectId:
-    process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "3a8170812b534d0ff9d794f19a901d64",
+    process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "7663d51173c43f7ad40158edb7e88859",
 
   // Only use local burner wallets in development
-  onlyLocalBurnerWallet: true,
+  onlyLocalBurnerWallet: false,
 });
 
 export default scaffoldConfig;

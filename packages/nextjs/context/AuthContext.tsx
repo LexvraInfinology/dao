@@ -17,6 +17,7 @@ interface AuthUser {
 interface AuthContextType {
   isAuthenticated: boolean;
   isAuthenticating: boolean;
+  isCheckingSession: boolean;
   authUser: AuthUser | null;
   authError: string | null;
   loginWithSignature: () => Promise<boolean>;
@@ -27,6 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isAuthenticating: false,
+  isCheckingSession: true,
   authUser: null,
   authError: null,
   loginWithSignature: async () => false,
@@ -35,58 +37,71 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 const SESSION_STORAGE_KEY = "btitan_auth_session_v1";
-const SESSION_EXPIRY_MS = 2 * 60 * 60 * 1000; // 2 hours
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const getInitialSession = (): AuthUser | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (stored) {
+      const parsed: AuthUser = JSON.parse(stored);
+      const isExpired = Date.now() - parsed.authenticatedAt > SESSION_EXPIRY_MS;
+      if (!isExpired) return parsed;
+    }
+  } catch {}
+  return null;
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, isConnecting, isReconnecting } = useAccount();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const { disconnect } = useDisconnect();
   const { profile } = useUserProfile(address);
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(getInitialSession);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Restore authenticated session from sessionStorage on mount
+  // Sync session on mount / address change
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (stored && address && isConnected) {
+      if (stored && address) {
         const parsed: AuthUser = JSON.parse(stored);
         const isExpired = Date.now() - parsed.authenticatedAt > SESSION_EXPIRY_MS;
         const isSameAddress = parsed.address.toLowerCase() === address.toLowerCase();
-        const isSameChain = parsed.chainId === chainId;
 
-        if (!isExpired && isSameAddress && isSameChain) {
+        if (!isExpired && isSameAddress) {
           setAuthUser({
             ...parsed,
             isRegistered: profile.isRegistered,
             userId: profile.userId,
             sponsor: profile.sponsor,
           });
-          return;
         }
       }
-    } catch {
-      // Invalid session storage
-    }
+    } catch {}
+    setIsCheckingSession(false);
   }, [address, isConnected, chainId, profile.isRegistered, profile.userId, profile.sponsor]);
 
   // Invalidate session immediately if active account changes or disconnects
   useEffect(() => {
-    if (!isConnected || !address) {
-      if (authUser) {
-        logout();
+    if (!isCheckingSession && !isConnecting && !isReconnecting) {
+      if (!isConnected || !address) {
+        if (authUser) {
+          logout();
+        }
+        return;
       }
-      return;
-    }
 
-    if (authUser && authUser.address.toLowerCase() !== address.toLowerCase()) {
-      logout();
-      notification.warning("Active wallet account changed. Please re-authenticate.");
+      if (authUser && authUser.address.toLowerCase() !== address.toLowerCase()) {
+        logout();
+        notification.warning("Active wallet account changed. Please re-authenticate.");
+      }
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, isConnecting, isReconnecting, isCheckingSession]);
 
   const logout = useCallback(() => {
     setAuthUser(null);
@@ -170,6 +185,7 @@ Notice: This signature is gas-free and does not trigger any blockchain transacti
       value={{
         isAuthenticated,
         isAuthenticating,
+        isCheckingSession,
         authUser,
         authError,
         loginWithSignature,

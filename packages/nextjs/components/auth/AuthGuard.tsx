@@ -12,8 +12,8 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthenticating, loginWithSignature } = useAuth();
-  const { isConnected } = useAccount();
+  const { isAuthenticated, isAuthenticating, isCheckingSession, loginWithSignature } = useAuth();
+  const { isConnected, isConnecting, isReconnecting } = useAccount();
   const { openConnectModal } = useConnectModal();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"register" | "login">("login");
@@ -23,8 +23,33 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     setAuthModalOpen(true);
   };
 
+  // If already authenticated, immediately render children with 0 delay
   if (isAuthenticated) {
     return <>{children}</>;
+  }
+
+  // If still reading initial session or reconnecting wallet, show smooth subtle pulse rather than "Access Restricted"
+  if (isCheckingSession || isConnecting || isReconnecting) {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              border: "3px solid rgba(245, 158, 11, 0.15)",
+              borderTopColor: "#f59e0b",
+              animation: "spin 0.8s linear infinite",
+              margin: "0 auto 1rem",
+            }}
+          />
+          <p style={{ fontSize: "0.875rem", color: "#94a3b8", fontWeight: 600 }}>
+            Verifying secure session...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

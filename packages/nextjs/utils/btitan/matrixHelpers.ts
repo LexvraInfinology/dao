@@ -6,6 +6,27 @@
 import { SLOT_COSTS, NODE_ROUTING, NodeEventType } from "../../types/btitan";
 
 /**
+ * Get human-readable slot cost in BTT numbers (e.g. 30, 60, 120, etc.)
+ */
+export function getSlotPrice(slot: number): number {
+  const prices: Record<number, number> = {
+    1: 30,
+    2: 60,
+    3: 120,
+    4: 240,
+    5: 480,
+    6: 960,
+    7: 1920,
+    8: 3840,
+    9: 7680,
+    10: 15360,
+    11: 30720,
+    12: 61440,
+  };
+  return prices[slot] ?? 30 * Math.pow(2, slot - 1);
+}
+
+/**
  * Get the human-readable label for a node position's payout routing
  */
 export function getNodeLabel(position: number, cycle: number): {

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Hardhat & Contracts
+packages/hardhat/artifacts/
+packages/hardhat/cache/
+packages/hardhat/typechain-types/
+packages/hardhat/coverage/
+packages/hardhat/coverage.json
+
+# Next.js Build & Cache
+packages/nextjs/.next/
+packages/nextjs/out/
+packages/nextjs/build/
+
+# Environment Variables & Secrets
+.env
+.env*.local
+*.env
+packages/hardhat/.env
+packages/nextjs/.env
+packages/nextjs/.env.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE & Editor
+.vscode/
+.idea/
+.agents/
+.gemini/

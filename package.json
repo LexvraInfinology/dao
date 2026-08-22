@@ -1,0 +1,18 @@
+{
+  "name": "b-titan",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/hardhat",
+    "packages/nextjs"
+  ],
+  "scripts": {
+    "chain":   "npm run chain --workspace=packages/hardhat",
+    "compile": "npm run compile --workspace=packages/hardhat",
+    "deploy":  "npm run deploy --workspace=packages/hardhat",
+    "test":    "npm run test --workspace=packages/hardhat",
+    "dev":     "npm run dev --workspace=packages/nextjs",
+    "build":   "npm run build --workspace=packages/nextjs",
+    "postinstall": "node scripts/patch-qr.js"
+  }
+}

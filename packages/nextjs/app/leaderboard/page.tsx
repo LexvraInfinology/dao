@@ -1,36 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
 import { useAccount } from "wagmi";
-import { useRouter } from "next/navigation";
 import { useReadContract, useChainId } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
 import { formatAddress } from "../../utils/btitan/formatters";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
-
-type SupportedChainId = keyof typeof deployedContracts;
-
-interface LeaderEntry {
-  address: string;
-  totalEarned: bigint;
-  highestSlot: number;
-  rank: number;
-}
-
-const TROPHY: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-const MEDAL_COLORS: Record<number, string> = {
-  1: "#f59e0b",
-  2: "#94a3b8",
-  3: "#f97316",
-};
+import {
+  IconAward,
+  IconShield,
+  IconUsers,
+  IconCheck,
+  IconZap,
+  LogoTitan,
+} from "../../components/ui/Icons";
+import { AuthGuard } from "../../components/auth/AuthGuard";
 
 function useLeaderboardData() {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
   const registry = contracts?.BTitanRegistry;
 
-  // Get all registered users
   const { data: userList, isLoading: loadingUsers } = useReadContract({
     address: registry?.address as `0x${string}`,
     abi: registry?.abi,
@@ -43,8 +32,6 @@ function useLeaderboardData() {
     isLoading: loadingUsers,
   };
 }
-
-import { AuthGuard } from "../../components/auth/AuthGuard";
 
 export default function LeaderboardPage() {
   return (
@@ -59,157 +46,218 @@ function LeaderboardContent() {
   const { userList, isLoading } = useLeaderboardData();
 
   if (!isConnected) return null;
-  if (isLoading) return <LoadingSpinner fullPage label="Loading leaderboard..." />;
+  if (isLoading) return <LoadingSpinner fullPage label="Loading protocol leaderboard..." />;
 
-  // Note: Full leaderboard with per-user stats requires multicall.
-  // For now show the registered member list with on-chain count.
   const totalMembers = userList.length;
   const myRank = myAddress
     ? userList.findIndex((u) => u.toLowerCase() === myAddress.toLowerCase()) + 1
     : 0;
 
   return (
-    <div className="page-container" style={{ paddingTop: "2rem" }}>
+    <div className="page-container" style={{ paddingTop: "2.5rem", paddingBottom: "5rem" }}>
+      
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="page-header">
-        <h1 className="page-title">🏆 Leaderboard</h1>
-        <p className="page-subtitle">
-          Registered B-TITAN members — {totalMembers} total.
+      <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <div style={{ display: "inline-flex", marginBottom: "0.75rem" }}>
+          <span className="badge-glow badge-gold" style={{ padding: "0.35rem 1rem", fontSize: "0.8rem" }}>
+            <IconAward size={14} /> GLOBAL PROTOCOL RANKINGS
+          </span>
+        </div>
+        <h1
+          style={{
+            fontSize: "clamp(2rem, 4vw, 2.75rem)",
+            fontWeight: 900,
+            color: "#ffffff",
+            fontFamily: "var(--font-heading)",
+            letterSpacing: "-0.02em",
+            margin: "0 0 0.5rem 0",
+          }}
+        >
+          Protocol <span className="gradient-text-gold">Leaderboard</span>
+        </h1>
+        <p style={{ fontSize: "1rem", color: "#94a3b8", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
+          Live verifiable on-chain registration order and top platform contributors across the B-TITAN ecosystem.
         </p>
       </div>
 
-      {/* ─── Your Position Banner ─────────────────────────────────────────── */}
+      {/* ─── Your Rank Position Card ─────────────────────────────────────── */}
       {myRank > 0 && (
-        <div className="card card-gold" style={{ marginBottom: "1.5rem", textAlign: "center" }}>
-          <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginBottom: "0.25rem" }}>
-            Your Registration Rank
-          </div>
-          <div style={{ fontSize: "3rem", fontWeight: 900, color: "#f59e0b" }}>
+        <div
+          className="glass-card glass-card-gold"
+          style={{
+            marginBottom: "2.5rem",
+            padding: "2rem",
+            textAlign: "center",
+            maxWidth: "540px",
+            margin: "0 auto 2.5rem auto",
+          }}
+        >
+          <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+            Your Global Registration Rank
+          </span>
+          <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#f59e0b", fontFamily: "var(--font-heading)", lineHeight: 1.1, margin: "0.5rem 0" }}>
             #{myRank}
           </div>
-          <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-            of {totalMembers} registered members
-          </div>
+          <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: 0 }}>
+            of {totalMembers} registered members worldwide
+          </p>
         </div>
       )}
 
       {/* ─── Top 3 Podium ─────────────────────────────────────────────────── */}
       {userList.length >= 3 && (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end",
-                      gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
-          {/* 2nd place */}
-          <div style={{ textAlign: "center", flex: "0 1 160px" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🥈</div>
-            <div style={{ background: "rgba(148,163,184,0.1)", border: "1px solid rgba(148,163,184,0.3)",
-                          borderRadius: "12px 12px 0 0", padding: "1rem",
-                          minHeight: "80px", display: "flex", flexDirection: "column",
-                          justifyContent: "flex-end" }}>
-              <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#94a3b8" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-end",
+            gap: "1.25rem",
+            marginBottom: "3rem",
+            flexWrap: "wrap",
+          }}
+        >
+          {/* #2 Rank */}
+          <div style={{ textAlign: "center", flex: "1 1 180px", maxWidth: "220px" }}>
+            <span className="badge-glow badge-gray" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
+              #2 RANK
+            </span>
+            <div
+              className="glass-card"
+              style={{
+                padding: "1.5rem 1rem",
+                borderRadius: "16px 16px 0 0",
+                minHeight: "140px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+              }}
+            >
+              <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#e2e8f0", fontWeight: 700 }}>
                 {formatAddress(userList[1])}
               </div>
-              <div style={{ fontWeight: 700, color: "#94a3b8", marginTop: "0.25rem" }}>
-                #2
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.3rem" }}>
+                Founding Member #2
               </div>
             </div>
           </div>
 
-          {/* 1st place */}
-          <div style={{ textAlign: "center", flex: "0 1 180px" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🥇</div>
-            <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.4)",
-                          borderRadius: "12px 12px 0 0", padding: "1.25rem",
-                          minHeight: "110px", display: "flex", flexDirection: "column",
-                          justifyContent: "flex-end", boxShadow: "0 0 20px rgba(245,158,11,0.2)" }}>
-              <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#f59e0b" }}>
+          {/* #1 Champion */}
+          <div style={{ textAlign: "center", flex: "1 1 200px", maxWidth: "250px" }}>
+            <span className="badge-glow badge-gold" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
+              👑 #1 GENESIS ROOT
+            </span>
+            <div
+              className="glass-card glass-card-gold"
+              style={{
+                padding: "2rem 1rem",
+                borderRadius: "20px 20px 0 0",
+                minHeight: "180px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+                boxShadow: "0 0 35px rgba(245, 158, 11, 0.25)",
+                border: "2px solid #f59e0b",
+              }}
+            >
+              <div style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#ffffff", fontWeight: 800 }}>
                 {formatAddress(userList[0])}
               </div>
-              <div style={{ fontWeight: 800, color: "#f59e0b", marginTop: "0.25rem" }}>
-                #1 FIRST
+              <div style={{ fontSize: "0.75rem", color: "#f59e0b", fontWeight: 700, marginTop: "0.3rem" }}>
+                Genesis Root Pioneer
               </div>
             </div>
           </div>
 
-          {/* 3rd place */}
-          <div style={{ textAlign: "center", flex: "0 1 160px" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🥉</div>
-            <div style={{ background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.3)",
-                          borderRadius: "12px 12px 0 0", padding: "1rem",
-                          minHeight: "60px", display: "flex", flexDirection: "column",
-                          justifyContent: "flex-end" }}>
-              <div style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#f97316" }}>
+          {/* #3 Rank */}
+          <div style={{ textAlign: "center", flex: "1 1 180px", maxWidth: "220px" }}>
+            <span className="badge-glow badge-violet" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
+              #3 RANK
+            </span>
+            <div
+              className="glass-card"
+              style={{
+                padding: "1.5rem 1rem",
+                borderRadius: "16px 16px 0 0",
+                minHeight: "120px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+                border: "1px solid rgba(249, 115, 22, 0.3)",
+              }}
+            >
+              <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#e2e8f0", fontWeight: 700 }}>
                 {formatAddress(userList[2])}
               </div>
-              <div style={{ fontWeight: 700, color: "#f97316", marginTop: "0.25rem" }}>
-                #3
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.3rem" }}>
+                Founding Member #3
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── Full Leaderboard Table ───────────────────────────────────────── */}
-      <div className="card">
-        <h2 className="section-title" style={{ marginBottom: "1rem" }}>
-          All <span>Members</span>
-          <span className="badge badge-gold" style={{ marginLeft: "0.75rem" }}>
-            {totalMembers}
-          </span>
-        </h2>
+      {/* ─── Global Registered Roster Table ──────────────────────────────── */}
+      <div className="glass-card" style={{ padding: "2rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
+            Registered Member Roster ({totalMembers})
+          </h2>
+        </div>
 
         {userList.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">🏆</div>
-            <div className="empty-state-text">
-              No members registered yet.<br />
-              Be the first to join B-TITAN!
-            </div>
+          <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+            <p style={{ color: "#94a3b8", margin: 0 }}>No registered members found on this network.</p>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="data-table">
+            <table className="data-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
-                  <th>Rank</th>
-                  <th>Address</th>
-                  <th>Status</th>
+                  <th style={{ textAlign: "left" }}>Rank</th>
+                  <th style={{ textAlign: "left" }}>Member Address</th>
+                  <th style={{ textAlign: "right" }}>Network Status</th>
                 </tr>
               </thead>
               <tbody>
                 {userList.map((user, i) => {
                   const rank = i + 1;
                   const isMe = myAddress?.toLowerCase() === user.toLowerCase();
+
                   return (
                     <tr
                       key={user}
                       id={`leaderboard-row-${rank}`}
                       style={{
-                        background: isMe ? "rgba(245,158,11,0.06)" : undefined,
+                        background: isMe ? "rgba(245,158,11,0.08)" : undefined,
                       }}
                     >
                       <td>
-                        <span style={{ fontWeight: 700,
-                                       color: rank <= 3 ? MEDAL_COLORS[rank] : "#64748b" }}>
-                          {TROPHY[rank] ?? `#${rank}`}
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color: rank === 1 ? "#f59e0b" : rank === 2 ? "#94a3b8" : rank === 3 ? "#f97316" : "#64748b",
+                          }}
+                        >
+                          #{rank}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                          <div
-                            style={{ width: 32, height: 32, borderRadius: "50%",
-                                     background: `hsl(${parseInt(user.slice(2, 8), 16) % 360}, 60%, 35%)`,
-                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                     fontSize: "0.75rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}
-                          >
-                            {user.slice(2, 4).toUpperCase()}
-                          </div>
-                          <span style={{ fontFamily: "monospace", color: isMe ? "#f59e0b" : "#e2e8f0" }}>
-                            {formatAddress(user)}
-                            {isMe && <span style={{ marginLeft: "0.5rem", color: "#f59e0b" }}>(You)</span>}
+                          <span style={{ fontFamily: "monospace", color: isMe ? "#f59e0b" : "#e2e8f0", fontWeight: 600 }}>
+                            {user}
                           </span>
+                          {isMe && (
+                            <span className="badge-glow badge-gold" style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>
+                              You
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td>
-                        <span className="badge badge-green">Active</span>
+                      <td style={{ textAlign: "right" }}>
+                        <span className="badge-glow badge-green" style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}>
+                          <IconCheck size={12} /> Active
+                        </span>
                       </td>
                     </tr>
                   );
@@ -219,6 +267,7 @@ function LeaderboardContent() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

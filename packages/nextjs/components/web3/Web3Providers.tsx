@@ -55,13 +55,18 @@ function getQueryClient() {
   return globalThis.__queryClient;
 }
 
+const appInfo = {
+  appName: "B-TITAN Protocol",
+  learnMoreUrl: "https://btitan.net",
+};
+
 export function Web3Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider appInfo={appInfo}>
           <AuthProvider>
             {children}
             <Toaster position="top-right" />

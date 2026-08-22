@@ -26,16 +26,38 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   };
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 30_000,
-    },
-  },
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __queryClient: QueryClient | undefined;
+}
+
+function getQueryClient() {
+  if (typeof window === "undefined") {
+    return new QueryClient({
+      defaultOptions: {
+        queries: {
+          refetchOnWindowFocus: false,
+          staleTime: 30_000,
+        },
+      },
+    });
+  }
+  if (!globalThis.__queryClient) {
+    globalThis.__queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          refetchOnWindowFocus: false,
+          staleTime: 30_000,
+        },
+      },
+    });
+  }
+  return globalThis.__queryClient;
+}
 
 export function Web3Providers({ children }: { children: ReactNode }) {
+  const queryClient = getQueryClient();
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>

@@ -4,9 +4,20 @@ import scaffoldConfig from "../../scaffold.config";
 
 const { walletConnectProjectId } = scaffoldConfig;
 
-export const wagmiConfig = getDefaultConfig({
-  appName: "B-TITAN",
-  projectId: walletConnectProjectId || "3a8170812b534d0ff9d794f19a901d64",
-  chains: [hardhat, bscTestnet, bsc],
-  ssr: true,
-});
+declare global {
+  // eslint-disable-next-line no-var
+  var __wagmiConfig: ReturnType<typeof getDefaultConfig> | undefined;
+}
+
+export const wagmiConfig =
+  globalThis.__wagmiConfig ??
+  getDefaultConfig({
+    appName: "B-TITAN",
+    projectId: walletConnectProjectId || "7663d51173c43f7ad40158edb7e88859",
+    chains: [hardhat, bscTestnet, bsc],
+    ssr: true,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__wagmiConfig = wagmiConfig;
+}

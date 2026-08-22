@@ -3,16 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "packages/hardhat",
-    "packages/nextjs"
+    "packages/*"
   ],
   "scripts": {
-    "chain": "npm run chain -w @btitan/hardhat",
-    "compile": "npm run compile -w @btitan/hardhat",
-    "deploy": "npm run deploy -w @btitan/hardhat",
-    "test": "npm run test -w @btitan/hardhat",
-    "dev": "npm run dev -w @btitan/nextjs",
-    "build": "cd packages/nextjs && npm run build",
+    "chain": "npm --prefix packages/hardhat run chain",
+    "compile": "npm --prefix packages/hardhat run compile",
+    "deploy": "npm --prefix packages/hardhat run deploy",
+    "test": "npm --prefix packages/hardhat run test",
+    "dev": "npm --prefix packages/nextjs run dev",
+    "build": "npm --prefix packages/nextjs run build",
     "postinstall": "node scripts/patch-qr.js"
   }
 }

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node scripts/patch-qr.js"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.0",

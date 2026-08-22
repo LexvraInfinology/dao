@@ -1,5 +1,0 @@
-{
-  "buildCommand": "npm --prefix packages/nextjs run build",
-  "outputDirectory": "packages/nextjs/.next",
-  "framework": "nextjs"
-}

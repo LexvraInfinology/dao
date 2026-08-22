@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAuth } from "../../context/AuthContext";
 import { useUserProfile } from "../../hooks/btitan/useUserProfile";
@@ -24,7 +24,6 @@ export function LoginRegisterModal({
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { openConnectModal } = useConnectModal();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const { isAuthenticated, isAuthenticating, loginWithSignature } = useAuth();
@@ -42,11 +41,14 @@ export function LoginRegisterModal({
   const registryContract = contracts?.BTitanRegistry;
 
   useEffect(() => {
-    const refParam = searchParams.get("ref");
-    if (refParam) {
-      setSponsorInput(refParam);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const refParam = params.get("ref");
+      if (refParam) {
+        setSponsorInput(refParam);
+      }
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     setTab(defaultTab);

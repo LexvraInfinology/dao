@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
+import { useAuth } from "../../context/AuthContext";
 import { LoginRegisterModal } from "../auth/LoginRegisterModal";
 import {
   LogoTitan,
@@ -16,6 +17,7 @@ import {
   IconUsers,
   IconAward,
   IconWallet,
+  IconLock,
 } from "../ui/Icons";
 
 // Navigation links for Authenticated Members
@@ -40,6 +42,7 @@ const visitorNavLinks = [
 export function Navbar() {
   const pathname = usePathname();
   const { isConnected } = useAccount();
+  const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"register" | "login">("register");
@@ -50,7 +53,7 @@ export function Navbar() {
     setMobileMenuOpen(false);
   };
 
-  const navLinks = isConnected ? memberNavLinks : visitorNavLinks;
+  const navLinks = isAuthenticated ? memberNavLinks : visitorNavLinks;
 
   return (
     <>
@@ -155,7 +158,7 @@ export function Navbar() {
 
           {/* Right Action Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexShrink: 0 }}>
-            {!isConnected ? (
+            {!isAuthenticated ? (
               <>
                 <button
                   onClick={() => openAuth("login")}
@@ -308,7 +311,7 @@ export function Navbar() {
                 gap: "0.6rem",
               }}
             >
-              {!isConnected ? (
+              {!isAuthenticated ? (
                 <>
                   <button
                     onClick={() => openAuth("login")}

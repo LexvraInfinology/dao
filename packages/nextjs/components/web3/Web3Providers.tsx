@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { Toaster } from "react-hot-toast";
 import { wagmiConfig } from "../../services/web3/wagmiConfig";
+import { AuthProvider } from "../../context/AuthContext";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -39,8 +40,10 @@ export function Web3Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          {children}
-          <Toaster position="top-right" />
+          <AuthProvider>
+            {children}
+            <Toaster position="top-right" />
+          </AuthProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

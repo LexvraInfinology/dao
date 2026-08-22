@@ -11,6 +11,8 @@ import { useMatrixData }   from "../../hooks/btitan/useMatrixData";
 import { useUserProfile }  from "../../hooks/btitan/useUserProfile";
 import { LoadingSpinner }  from "../../components/ui/LoadingSpinner";
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 const QUICK_ACTIONS = [
   { href: "/dao",       icon: "🏛️", label: "Join DAO",      desc: "300 BTT · 50 founding spots",     color: "#f59e0b" },
   { href: "/matrix",   icon: "🔢", label: "Open Matrix",   desc: "Start Slot 1 · 30 BTT",            color: "#8b5cf6" },
@@ -19,23 +21,26 @@ const QUICK_ACTIONS = [
 ];
 
 export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+function DashboardContent() {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
 
   const { memberInfo, stats: daoStats, isLoading: loadingDAO } = useDAOData(address);
   const { slots, financials, isLoading: loadingMatrix } = useMatrixData(address);
   const { profile } = useUserProfile(address);
-
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
 
   if (!isConnected) return null;
   if (loadingDAO || loadingMatrix) return <LoadingSpinner fullPage label="Loading your dashboard..." />;
 
   const totalBalance = memberInfo.availableBalance + financials.availableBalance;
   const totalEarned  = memberInfo.totalEarned + financials.lifetimeEarned;
-  const rank = profile.isRegistered ? BTitanRank.NONE : BTitanRank.NONE; // updated via useRewardsData on rewards page
+  const rank = profile.isRegistered ? BTitanRank.NONE : BTitanRank.NONE;
 
   return (
     <div className="page-container" style={{ paddingTop: "2rem" }}>

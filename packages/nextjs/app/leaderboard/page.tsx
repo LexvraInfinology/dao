@@ -44,14 +44,19 @@ function useLeaderboardData() {
   };
 }
 
-export default function LeaderboardPage() {
-  const { address: myAddress, isConnected } = useAccount();
-  const router = useRouter();
-  const { userList, isLoading } = useLeaderboardData();
+import { AuthGuard } from "../../components/auth/AuthGuard";
 
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
+export default function LeaderboardPage() {
+  return (
+    <AuthGuard>
+      <LeaderboardContent />
+    </AuthGuard>
+  );
+}
+
+function LeaderboardContent() {
+  const { address: myAddress, isConnected } = useAccount();
+  const { userList, isLoading } = useLeaderboardData();
 
   if (!isConnected) return null;
   if (isLoading) return <LoadingSpinner fullPage label="Loading leaderboard..." />;

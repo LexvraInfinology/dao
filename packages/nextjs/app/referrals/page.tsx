@@ -7,17 +7,22 @@ import { useUserProfile } from "../../hooks/btitan/useUserProfile";
 import { generateReferralUrl, formatAddress, copyToClipboard } from "../../utils/btitan/formatters";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 export default function ReferralsPage() {
+  return (
+    <AuthGuard>
+      <ReferralsContent />
+    </AuthGuard>
+  );
+}
+
+function ReferralsContent() {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [refUrl, setRefUrl] = useState("");
 
   const { profile } = useUserProfile(address);
-
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
 
   useEffect(() => {
     if (address) setRefUrl(generateReferralUrl(address));

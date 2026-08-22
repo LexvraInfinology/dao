@@ -17,6 +17,8 @@ const RANK_ICONS: Record<BTitanRank, string> = {
   [BTitanRank.LEGENDARY]: "🔥",
 };
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 const MAGIC_BOX_MILESTONES = [
   { slot: 3,  rank: "Rising Star", icon: "🌟", color: "#f59e0b", nftType: "RISING"    },
   { slot: 6,  rank: "Prime",       icon: "💎", color: "#8b5cf6", nftType: "PRIME"     },
@@ -25,13 +27,16 @@ const MAGIC_BOX_MILESTONES = [
 ];
 
 export default function RewardsPage() {
-  const { address, isConnected } = useAccount();
-  const router = useRouter();
-  const { nfts, vestingData, claimVestingLock, isLoading } = useRewardsData(address);
+  return (
+    <AuthGuard>
+      <RewardsContent />
+    </AuthGuard>
+  );
+}
 
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
+function RewardsContent() {
+  const { address, isConnected } = useAccount();
+  const { nfts, vestingData, claimVestingLock, isLoading } = useRewardsData(address);
 
   if (!isConnected) return null;
   if (isLoading) return <LoadingSpinner fullPage label="Loading rewards data..." />;

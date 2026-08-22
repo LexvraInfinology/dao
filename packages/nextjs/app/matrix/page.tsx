@@ -99,9 +99,18 @@ function SlotNodePanel({ address, slotNumber, onClose }: {
   );
 }
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 export default function MatrixPage() {
+  return (
+    <AuthGuard>
+      <MatrixContent />
+    </AuthGuard>
+  );
+}
+
+function MatrixContent() {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
 
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [joinTargetSlot, setJoinTargetSlot] = useState<number | null>(null);
@@ -109,10 +118,6 @@ export default function MatrixPage() {
 
   const { slots, financials, globalStats, isLoading } = useMatrixData(address);
   const { joinSlot, step: joinStep, activeSlot, reset: resetJoin } = useJoinMatrix();
-
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

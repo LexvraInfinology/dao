@@ -9,21 +9,26 @@ import { useJoinDAO }   from "../../hooks/btitan/useJoinDAO";
 import { useWithdraw }  from "../../hooks/btitan/useWithdraw";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 const MAX_POSITIONS = 50;
 
 export default function DAOPage() {
+  return (
+    <AuthGuard>
+      <DAOContent />
+    </AuthGuard>
+  );
+}
+
+function DAOContent() {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [sponsor, setSponsor] = useState("");
 
   const { memberInfo, stats, remainingPositions, previewDistribution, isLoading } = useDAOData(address);
   const { join, step: joinStep, errorMessage, reset: resetJoin } = useJoinDAO();
   const { withdrawFromDAO, withdrawing } = useWithdraw();
-
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
 
   // Auto-populate sponsor from URL ?ref= param
   useEffect(() => {

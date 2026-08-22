@@ -42,6 +42,20 @@ export const notification = {
     });
   },
 
+  warning: (message: string, options?: NotificationOptions) => {
+    toast(message, {
+      duration: options?.duration ?? 5000,
+      icon: options?.icon ?? "⚠️",
+      style: {
+        background: "#0a0f1a",
+        color: "#f59e0b",
+        border: "1px solid rgba(245, 158, 11, 0.3)",
+        borderRadius: "12px",
+        fontSize: "14px",
+      },
+    });
+  },
+
   loading: (message: string) => {
     return toast.loading(message, {
       style: {

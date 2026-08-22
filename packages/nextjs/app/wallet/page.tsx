@@ -9,18 +9,23 @@ import { useMatrixData } from "../../hooks/btitan/useMatrixData";
 import { useWithdraw }   from "../../hooks/btitan/useWithdraw";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 export default function WalletPage() {
+  return (
+    <AuthGuard>
+      <WalletContent />
+    </AuthGuard>
+  );
+}
+
+function WalletContent() {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"dao" | "matrix">("dao");
 
   const { memberInfo, isLoading: loadingDAO } = useDAOData(address);
   const { financials, isLoading: loadingMatrix } = useMatrixData(address);
   const { withdrawFromDAO, withdrawFromMatrix, withdrawing } = useWithdraw();
-
-  useEffect(() => {
-    if (!isConnected) router.push("/");
-  }, [isConnected, router]);
 
   if (!isConnected) return null;
   if (loadingDAO || loadingMatrix) return <LoadingSpinner fullPage label="Loading wallet data..." />;

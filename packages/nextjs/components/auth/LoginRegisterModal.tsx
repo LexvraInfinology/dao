@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAuth } from "../../context/AuthContext";
+import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import deployedContracts from "../../contracts/deployedContracts";
 import { notification } from "../../utils/scaffold-eth/notification";
+import { IconLock, IconShield, IconZap, IconCheck, IconClose, LogoTitan } from "../ui/Icons";
 
 interface LoginRegisterModalProps {
   isOpen: boolean;
@@ -18,13 +22,24 @@ export function LoginRegisterModal({
   defaultTab = "register",
 }: LoginRegisterModalProps) {
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
   const { openConnectModal } = useConnectModal();
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const { isAuthenticated, isAuthenticating, loginWithSignature } = useAuth();
+  const { profile } = useUserProfile(address);
+
   const [tab, setTab] = useState<"register" | "login">(defaultTab);
   const [sponsorInput, setSponsorInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRegisteringOnChain, setIsRegisteringOnChain] = useState(false);
+
+  // Contract write for on-chain registration
+  const { writeContractAsync, data: txHash } = useWriteContract();
+  const { isLoading: isTxPending } = useWaitForTransactionReceipt({ hash: txHash });
+
+  const contracts = (deployedContracts as any)[chainId];
+  const registryContract = contracts?.BTitanRegistry;
 
   useEffect(() => {
     const refParam = searchParams.get("ref");
@@ -39,45 +54,67 @@ export function LoginRegisterModal({
 
   if (!isOpen) return null;
 
-  const handleRegister = async () => {
+  // Step 1: Handle Cryptographic Signature Handshake
+  const handleSignatureAuth = async () => {
     if (!isConnected) {
       if (openConnectModal) openConnectModal();
       return;
     }
-
-    setIsSubmitting(true);
-    const toastId = notification.loading("Validating sponsor & entering B-TITAN...");
-
-    try {
-      // Direct user to Dashboard or Matrix to activate Slot 1
-      setTimeout(() => {
-        notification.dismiss(toastId);
-        notification.success("🚀 Welcome to B-TITAN! Directing to Dashboard...");
-        onClose();
-        router.push(`/dashboard${sponsorInput ? `?ref=${sponsorInput}` : ""}`);
-        setIsSubmitting(false);
-      }, 1000);
-    } catch (err: any) {
-      notification.dismiss(toastId);
-      notification.error(err?.message || "Registration failed");
-      setIsSubmitting(false);
+    const success = await loginWithSignature();
+    if (success && tab === "login") {
+      onClose();
+      router.push("/dashboard");
     }
   };
 
-  const handleLogin = () => {
-    if (!isConnected) {
+  // Step 2: Handle On-Chain User Registration
+  const handleOnChainRegistration = async () => {
+    if (!isConnected || !address) {
       if (openConnectModal) openConnectModal();
       return;
     }
-    notification.success("✨ Wallet authenticated! Welcome back.");
-    onClose();
-    router.push("/dashboard");
+
+    if (!isAuthenticated) {
+      const signed = await loginWithSignature();
+      if (!signed) return;
+    }
+
+    // Default root sponsor if empty
+    const sponsorToUse = sponsorInput.trim() || "0x0000000000000000000000000000000000000000";
+
+    if (!registryContract?.address) {
+      notification.error("Registry smart contract address not found for current network.");
+      return;
+    }
+
+    setIsRegisteringOnChain(true);
+    const toastId = notification.loading("Broadcasting on-chain registration to BSC...");
+
+    try {
+      const hash = await writeContractAsync({
+        address: registryContract.address as `0x${string}`,
+        abi: registryContract.abi,
+        functionName: "registerUser",
+        args: [sponsorToUse as `0x${string}`],
+      });
+
+      notification.dismiss(toastId);
+      notification.success("🚀 Registered successfully on-chain! Welcome to B-TITAN.");
+      setIsRegisteringOnChain(false);
+      onClose();
+      router.push("/dashboard");
+    } catch (err: any) {
+      notification.dismiss(toastId);
+      const msg = err?.shortMessage || err?.message || "Registration transaction failed.";
+      notification.error(msg);
+      setIsRegisteringOnChain(false);
+    }
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {/* Header with Close */}
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "460px" }}>
+        {/* Header with Brand Logo & Close */}
         <div
           style={{
             display: "flex",
@@ -87,45 +124,35 @@ export function LoginRegisterModal({
             borderBottom: "1px solid rgba(168, 85, 247, 0.15)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #f59e0b, #ec4899)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 900,
-                color: "#000",
-                fontSize: "14px",
-              }}
-            >
-              B
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <LogoTitan size={30} />
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontWeight: 900, fontSize: "1.05rem", fontFamily: "var(--font-heading)" }} className="gradient-text-gold">
+                B-TITAN PORTAL
+              </span>
+              <span style={{ fontSize: "0.62rem", color: "#a855f7", fontWeight: 700, letterSpacing: "0.08em" }}>
+                CRYPTOGRAPHIC AUTHENTICATION
+              </span>
             </div>
-            <span style={{ fontWeight: 800, fontSize: "1.1rem" }} className="gradient-text-gold">
-              B-TITAN PORTAL
-            </span>
           </div>
 
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
               background: "rgba(255,255,255,0.05)",
-              border: "none",
+              border: "1px solid rgba(255,255,255,0.08)",
               color: "#94a3b8",
               width: 32,
               height: 32,
               borderRadius: "8px",
               cursor: "pointer",
-              fontSize: "16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            ✕
+            <IconClose size={16} />
           </button>
         </div>
 
@@ -139,7 +166,7 @@ export function LoginRegisterModal({
               borderRadius: "10px",
               border: "none",
               fontWeight: 700,
-              fontSize: "0.875rem",
+              fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
               background: tab === "register" ? "rgba(139, 92, 246, 0.25)" : "transparent",
@@ -147,7 +174,7 @@ export function LoginRegisterModal({
               outline: tab === "register" ? "1px solid rgba(139, 92, 246, 0.5)" : "none",
             }}
           >
-            ✨ Register New
+            ✨ Register Account
           </button>
 
           <button
@@ -158,7 +185,7 @@ export function LoginRegisterModal({
               borderRadius: "10px",
               border: "none",
               fontWeight: 700,
-              fontSize: "0.875rem",
+              fontSize: "0.85rem",
               cursor: "pointer",
               transition: "all 0.2s ease",
               background: tab === "login" ? "rgba(245, 158, 11, 0.25)" : "transparent",
@@ -170,118 +197,141 @@ export function LoginRegisterModal({
           </button>
         </div>
 
-        {/* Form Body */}
+        {/* Modal Body */}
         <div style={{ padding: "1.25rem 1.5rem" }}>
+          {/* Security Status Stepper */}
+          <div
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              marginBottom: "1.25rem",
+              border: "1px solid rgba(255,255,255,0.06)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+              fontSize: "0.78rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "#94a3b8" }}>1. Web3 Wallet Connection</span>
+              <span style={{ fontWeight: 700, color: isConnected ? "#22c55e" : "#f59e0b" }}>
+                {isConnected ? "✓ Connected" : "Pending"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "#94a3b8" }}>2. Cryptographic Signature</span>
+              <span style={{ fontWeight: 700, color: isAuthenticated ? "#22c55e" : "#94a3b8" }}>
+                {isAuthenticated ? "✓ Verified" : "Required"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "#94a3b8" }}>3. On-Chain Registry</span>
+              <span style={{ fontWeight: 700, color: profile.isRegistered ? "#22c55e" : "#94a3b8" }}>
+                {profile.isRegistered ? `✓ Member #${profile.userId}` : "Unregistered"}
+              </span>
+            </div>
+          </div>
+
           {tab === "register" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
               <div>
                 <label
                   style={{
                     display: "block",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
                     color: "#94a3b8",
-                    marginBottom: "0.4rem",
+                    marginBottom: "0.35rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
                   }}
                 >
-                  SPONSOR / REFERRAL ADDRESS
+                  Sponsor / Inviter Address
                 </label>
                 <input
                   type="text"
-                  placeholder="0x... (or leave default for root)"
+                  placeholder="0x... (leave empty for root sponsor)"
                   value={sponsorInput}
                   onChange={(e) => setSponsorInput(e.target.value)}
                   style={{
                     width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "12px",
+                    padding: "0.8rem 1rem",
+                    borderRadius: "10px",
                     background: "rgba(255, 255, 255, 0.04)",
                     border: "1px solid rgba(168, 85, 247, 0.25)",
                     color: "#ffffff",
-                    fontSize: "0.9rem",
+                    fontSize: "0.85rem",
                     outline: "none",
                   }}
                 />
-                <span style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.3rem", display: "block" }}>
-                  Auto-detected from your invitation link if available.
+                <span style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "0.25rem", display: "block" }}>
+                  Auto-populated from your referral link if opened via invitation.
                 </span>
               </div>
 
-              {/* Wallet Status Card */}
-              <div
-                style={{
-                  padding: "0.85rem",
-                  borderRadius: "12px",
-                  background: isConnected ? "rgba(34, 197, 94, 0.08)" : "rgba(245, 158, 11, 0.08)",
-                  border: isConnected ? "1px solid rgba(34, 197, 94, 0.25)" : "1px solid rgba(245, 158, 11, 0.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>CONNECTED WALLET</div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#ffffff" }}>
-                    {isConnected ? `${address?.slice(0, 6)}...${address?.slice(-4)}` : "No Wallet Connected"}
-                  </div>
-                </div>
-                {!isConnected && (
-                  <button onClick={openConnectModal} className="btn btn-primary btn-sm">
-                    Connect
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={handleRegister}
-                disabled={isSubmitting}
-                className="btn btn-violet btn-lg"
-                style={{ width: "100%", marginTop: "0.5rem" }}
-              >
-                {isConnected ? "🚀 Enter B-TITAN Platform" : "🔗 Connect Wallet to Register"}
-              </button>
+              {!isConnected ? (
+                <button onClick={openConnectModal} className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
+                  <IconZap size={18} /> Connect Wallet to Continue
+                </button>
+              ) : !isAuthenticated ? (
+                <button
+                  onClick={handleSignatureAuth}
+                  disabled={isAuthenticating}
+                  className="btn btn-violet btn-lg"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <IconLock size={18} /> {isAuthenticating ? "Awaiting Signature..." : "Sign Security Challenge"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleOnChainRegistration}
+                  disabled={isRegisteringOnChain || isTxPending}
+                  className="btn btn-primary btn-lg"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <IconShield size={18} /> {isRegisteringOnChain || isTxPending ? "Registering on BSC..." : "Complete On-Chain Registration"}
+                </button>
+              )}
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <p style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.5 }}>
-                Already a registered B-TITAN member? Connect your authenticated Web3 wallet to access your Matrix, DAO,
-                and Earnings dashboard instantly.
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+              <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.5 }}>
+                Connect your authenticated wallet to decrypt your private protocol dashboard, matrix cycles, and claimable reward balances.
               </p>
 
-              {/* Wallet Status Card */}
-              <div
-                style={{
-                  padding: "0.85rem",
-                  borderRadius: "12px",
-                  background: isConnected ? "rgba(34, 197, 94, 0.08)" : "rgba(245, 158, 11, 0.08)",
-                  border: isConnected ? "1px solid rgba(34, 197, 94, 0.25)" : "1px solid rgba(245, 158, 11, 0.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>CURRENT WALLET</div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#ffffff" }}>
-                    {isConnected ? `${address?.slice(0, 6)}...${address?.slice(-4)}` : "No Wallet Connected"}
-                  </div>
-                </div>
-                {!isConnected && (
-                  <button onClick={openConnectModal} className="btn btn-primary btn-sm">
-                    Connect
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={handleLogin}
-                className="btn btn-primary btn-lg"
-                style={{ width: "100%", marginTop: "0.5rem" }}
-              >
-                {isConnected ? "📊 Open Dashboard" : "🔑 Connect Wallet to Login"}
-              </button>
+              {!isConnected ? (
+                <button onClick={openConnectModal} className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
+                  <IconZap size={18} /> Connect Web3 Wallet
+                </button>
+              ) : !isAuthenticated ? (
+                <button
+                  onClick={handleSignatureAuth}
+                  disabled={isAuthenticating}
+                  className="btn btn-primary btn-lg"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <IconLock size={18} /> {isAuthenticating ? "Awaiting Signature..." : "Sign In with Cryptographic Verification"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push("/dashboard");
+                  }}
+                  className="btn btn-primary btn-lg"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <IconCheck size={18} /> Enter Dashboard
+                </button>
+              )}
             </div>
           )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "0.75rem 1.5rem 1.25rem", textAlign: "center", fontSize: "0.72rem", color: "#64748b", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          Gas-free cryptographic challenge • Non-custodial session security
         </div>
       </div>
     </div>

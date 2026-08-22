@@ -7,12 +7,12 @@
     "packages/nextjs"
   ],
   "scripts": {
-    "chain":   "npm run chain --workspace=packages/hardhat",
-    "compile": "npm run compile --workspace=packages/hardhat",
-    "deploy":  "npm run deploy --workspace=packages/hardhat",
-    "test":    "npm run test --workspace=packages/hardhat",
-    "dev":     "npm run dev --workspace=packages/nextjs",
-    "build":   "npm run build --workspace=packages/nextjs",
+    "chain": "npm run chain -w @btitan/hardhat",
+    "compile": "npm run compile -w @btitan/hardhat",
+    "deploy": "npm run deploy -w @btitan/hardhat",
+    "test": "npm run test -w @btitan/hardhat",
+    "dev": "npm run dev -w @btitan/nextjs",
+    "build": "cd packages/nextjs && npm run build",
     "postinstall": "node scripts/patch-qr.js"
   }
 }

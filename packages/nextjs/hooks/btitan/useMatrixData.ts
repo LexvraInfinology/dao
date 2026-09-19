@@ -20,27 +20,27 @@ export function useMatrixData(userAddress?: `0x${string}`) {
   const enabled = !!matrixContract?.address && !!userAddress;
   const contractEnabled = !!matrixContract?.address;
 
-  const { data: financialsRaw, isLoading: loadingFin } = useReadContract({
+  const { data: financialsRaw, isLoading: loadingFin, refetch: refetchFinancials } = useReadContract({
     address: matrixContract?.address as `0x${string}`,
     abi: matrixContract?.abi,
     functionName: "getUserFinancials",
     args: userAddress ? [userAddress] : undefined,
-    query: { enabled },
+    query: { enabled, refetchInterval: 3000 },
   });
 
-  const { data: slotsStatusRaw, isLoading: loadingSlots } = useReadContract({
+  const { data: slotsStatusRaw, isLoading: loadingSlots, refetch: refetchSlots } = useReadContract({
     address: matrixContract?.address as `0x${string}`,
     abi: matrixContract?.abi,
     functionName: "getAllSlotsStatus",
     args: userAddress ? [userAddress] : undefined,
-    query: { enabled },
+    query: { enabled, refetchInterval: 3000 },
   });
 
-  const { data: statsRaw } = useReadContract({
+  const { data: statsRaw, refetch: refetchStats } = useReadContract({
     address: matrixContract?.address as `0x${string}`,
     abi: matrixContract?.abi,
     functionName: "getGlobalStats",
-    query: { enabled: contractEnabled },
+    query: { enabled: contractEnabled, refetchInterval: 5000 },
   });
 
   const fin = financialsRaw as [bigint, bigint, bigint, bigint] | undefined;
@@ -58,6 +58,12 @@ export function useMatrixData(userAddress?: `0x${string}`) {
     cost: SLOT_COSTS[i + 1],
   }));
 
+  const refetch = () => {
+    refetchFinancials();
+    refetchSlots();
+    refetchStats();
+  };
+
   return {
     slots,
     financials: {
@@ -70,11 +76,12 @@ export function useMatrixData(userAddress?: `0x${string}`) {
       totalMembers: stats?.[0] ?? BigInt(0),
       totalRecycles: stats?.[1] ?? BigInt(0),
       totalVolume: stats?.[2] ?? BigInt(0),
-      royalPool: stats?.[3] ?? BigInt(0),
+      poolForwarded: stats?.[3] ?? BigInt(0),
     },
     isLoading: loadingFin || loadingSlots,
     contractAddress: matrixContract?.address,
     abi: matrixContract?.abi,
+    refetch,
   };
 }
 
@@ -88,11 +95,19 @@ export function useSlotNodes(userAddress?: `0x${string}`, slotNumber?: number) {
   const contracts = (deployedContracts as any)[chainId];
   const matrixContract = contracts?.BTitanMatrix;
 
-  const { data, isLoading } = useReadContract({
+  const { data, isLoading, refetch: refetchSlot } = useReadContract({
     address: matrixContract?.address as `0x${string}`,
     abi: matrixContract?.abi,
     functionName: "getSlotData",
     // Convert slotNumber to bigint to match uint256 ABI param
+    args: userAddress && slotNumber ? [userAddress, BigInt(slotNumber)] : undefined,
+    query: { enabled: !!matrixContract?.address && !!userAddress && !!slotNumber },
+  });
+
+  const { data: snapshotCountRaw, refetch: refetchSnapshotCount } = useReadContract({
+    address: matrixContract?.address as `0x${string}`,
+    abi: matrixContract?.abi,
+    functionName: "getCycleSnapshotCount",
     args: userAddress && slotNumber ? [userAddress, BigInt(slotNumber)] : undefined,
     query: { enabled: !!matrixContract?.address && !!userAddress && !!slotNumber },
   });
@@ -106,6 +121,12 @@ export function useSlotNodes(userAddress?: `0x${string}`, slotNumber?: number) {
     nodes: (raw?.[3] ?? []) as string[],
     upgradeReserve: raw?.[4] ?? BigInt(0),
     slotEarned: raw?.[5] ?? BigInt(0),
+    cycleSnapshotsCount: snapshotCountRaw !== undefined ? Number(snapshotCountRaw) : 0,
+    refetch: () => {
+      refetchSlot();
+      refetchSnapshotCount();
+    },
     isLoading,
   };
 }
+

@@ -9,6 +9,12 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["./contracts", "./deploy", "./test", "./scripts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "./hardhat.config.ts",
+    "./contracts",
+    "./test",
+    "./scripts",
+    "./typechain-types"
+  ],
+  "exclude": ["node_modules", "dist", "artifacts", "cache"]
 }

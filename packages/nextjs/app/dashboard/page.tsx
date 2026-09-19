@@ -1,27 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 import Link from "next/link";
-import { formatBTT, getSlotPrice } from "../../utils/btitan/matrixHelpers";
+import { formatBTT } from "../../utils/btitan/matrixHelpers";
+import { formatAddress } from "../../utils/btitan/formatters";
 import { useDAOData } from "../../hooks/btitan/useDAOData";
 import { useMatrixData } from "../../hooks/btitan/useMatrixData";
 import { useUserProfile } from "../../hooks/btitan/useUserProfile";
-import { notification } from "../../utils/scaffold-eth/notification";
-import {
-  IconShield,
-  IconZap,
-  IconGrid,
-  IconUsers,
-  IconLock,
-  IconAward,
-  IconWallet,
-  IconChart,
-  IconCheck,
-  IconRefresh,
-  LogoTitan,
-} from "../../components/ui/Icons";
+import { useClaimPoolShare } from "../../hooks/btitan/useClaimPoolShare";
+import { DAOHistoryTable } from "../../components/dao/DAOHistoryTable";
 import { AuthGuard } from "../../components/auth/AuthGuard";
+import { notification } from "../../utils/scaffold-eth/notification";
+
+const MATRIX_LEVELS_CONFIG = [
+  { id: 1, cost: "30", multiplier: "1.0x" },
+  { id: 2, cost: "60", multiplier: "1.2x" },
+  { id: 3, cost: "120", multiplier: "1.5x" },
+  { id: 4, cost: "240", multiplier: "2.0x" },
+  { id: 5, cost: "480", multiplier: "2.5x" },
+  { id: 6, cost: "960", multiplier: "3.0x" },
+  { id: 7, cost: "1,920", multiplier: "4.0x" },
+  { id: 8, cost: "3,840", multiplier: "5.0x" },
+  { id: 9, cost: "7,680", multiplier: "7.0x" },
+  { id: 10, cost: "15,360", multiplier: "10.0x" },
+  { id: 11, cost: "30,720", multiplier: "15.0x" },
+  { id: 12, cost: "61,440", multiplier: "25.0x" },
+];
 
 export default function DashboardPage() {
   return (
@@ -33,590 +38,366 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { address } = useAccount();
-  const chainId = useChainId();
+  const [copied, setCopied] = useState(false);
 
-  const { memberInfo, stats: daoStats, isLoading: loadingDAO } = useDAOData(address);
-  const { slots, financials, isLoading: loadingMatrix } = useMatrixData(address);
+  const { memberInfo, poolShareClaimable, refetch: refetchDAO } = useDAOData(address);
+  const { slots, financials, refetch: refetchMatrix } = useMatrixData(address);
   const { profile } = useUserProfile(address);
+  const { claim: claimPoolShare, isClaiming: isClaimingPoolShare } = useClaimPoolShare(() => {
+    refetchDAO();
+  });
 
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  const totalBalance = (memberInfo?.availableBalance ?? 0) + (financials?.availableBalance ?? 0);
-  const totalEarned = (memberInfo?.totalEarned ?? 0) + (financials?.lifetimeEarned ?? 0);
-  const highestSlot = financials?.highestSlot || 1;
+  const totalWithdrawable = (memberInfo?.availableBalance ?? 0n) + (financials?.availableBalance ?? 0n);
+  const totalEarned = (memberInfo?.totalEarned ?? 0n) + (financials?.lifetimeEarned ?? 0n);
   const isQualified = (profile?.directReferralCount ?? 0) >= 2;
+  const highestUnlockedSlot = financials?.highestSlot || 1;
 
-  const referralLink = typeof window !== "undefined" && address
-    ? `${window.location.origin}/?ref=${address}`
-    : `https://btitan.net/?ref=${address || ""}`;
+  const referralCode = profile?.referralCode || (profile?.userId ? profile.userId + 9999 : 10000);
+  const referralLink = typeof window !== "undefined"
+    ? `${window.location.origin}/register?ref=${referralCode}`
+    : `https://equora.fi/register?ref=${referralCode}`;
 
-  const copyReferralLink = () => {
-    if (!referralLink) return;
-    navigator.clipboard.writeText(referralLink);
-    setCopiedLink(true);
-    notification.success("Referral link copied to clipboard!");
-    setTimeout(() => setCopiedLink(false), 3000);
+  const handleCopyLink = () => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      notification.success("Referral link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  const networkName = chainId === 56 ? "BNB Smart Chain Mainnet" : chainId === 97 ? "BSC Testnet" : "Hardhat Devnet (31337)";
-
   return (
-    <div className="page-container" style={{ paddingTop: "2.5rem", paddingBottom: "5rem" }}>
-      
-      {/* ─── Top Executive Member Banner ─────────────────────────────────── */}
-      <div
-        className="glass-card glass-card-gold"
-        style={{
-          marginBottom: "2rem",
-          padding: "2rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1.5rem",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", zIndex: 2 }}>
-          <div
-            style={{
-              width: 68,
-              height: 68,
-              borderRadius: "20px",
-              background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(139,92,246,0.2))",
-              border: "1px solid rgba(245,158,11,0.4)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 25px rgba(245,158,11,0.25)",
-            }}
-          >
-            <LogoTitan size={44} />
-          </div>
+    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 gap-6 sm:gap-8 relative overflow-hidden font-body-md text-on-surface">
+      {/* Background Subtle Gradient Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-tertiary/5 pointer-events-none -z-10" />
 
+      {/* ─── Top Welcome & Identity Banner (B-Titan Video Phase 6) ─────────── */}
+      <section className="bg-surface-container/60 backdrop-blur-xl rounded-2xl p-5 sm:p-6 border border-outline-variant/20 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-[#0a1120] border border-tertiary/30 shadow-md p-1 shrink-0">
+            <img
+              src="/assets/branding/equorafilogo.jpeg"
+              alt="Equora Brand"
+              className="w-full h-full object-cover rounded-[12px]"
+            />
+          </div>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.4rem" }}>
-              <span className="badge-glow badge-gold" style={{ fontSize: "0.75rem", padding: "0.2rem 0.65rem" }}>
-                <IconShield size={12} /> {profile?.isRegistered ? `MEMBER #${profile.userId}` : "COMMUNITY GUEST"}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-label-md uppercase tracking-wider text-tertiary font-bold">
+                Equora Sovereign Terminal
               </span>
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  padding: "0.2rem 0.65rem",
-                  borderRadius: "9999px",
-                  background: "rgba(34, 197, 94, 0.12)",
-                  color: "#22c55e",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  fontWeight: 600,
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                {networkName}
+              <span className="text-[11px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-code font-bold">
+                ID: #{referralCode}
+              </span>
+              <span className="text-[11px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-code flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                Active Node
               </span>
             </div>
-
-            <h1
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 900,
-                color: "#ffffff",
-                fontFamily: "var(--font-heading)",
-                letterSpacing: "-0.02em",
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected"}
-              <button
-                onClick={() => {
-                  if (address) {
-                    navigator.clipboard.writeText(address);
-                    notification.success("Wallet address copied!");
-                  }
-                }}
-                title="Copy Address"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "6px",
-                  padding: "4px 8px",
-                  cursor: "pointer",
-                  color: "#94a3b8",
-                  fontSize: "0.75rem",
-                }}
-              >
-                Copy
-              </button>
-            </h1>
-
-            <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.35rem", margin: 0 }}>
-              Sponsor:{" "}
-              <span style={{ color: "#e2e8f0", fontFamily: "monospace" }}>
-                {profile?.sponsor && profile.sponsor !== "0x0000000000000000000000000000000000000000"
-                  ? `${profile.sponsor.slice(0, 6)}...${profile.sponsor.slice(-4)}`
-                  : "Genesis Root"}
+            <h1 className="text-xl sm:text-2xl font-black text-on-surface mt-1 flex items-center gap-2">
+              <span>Welcome Back, Leader</span>
+              <span className="text-xs text-outline font-code font-normal">
+                ({address ? formatAddress(address) : "0x000...000"})
               </span>
+            </h1>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Direct Referrals: <span className="text-primary font-bold">{profile?.directReferralCount || 0}</span> •
+              Matrix Qualified: <span className={isQualified ? "text-green-400 font-bold" : "text-amber-400 font-bold"}>{isQualified ? "Qualified (✓)" : "Need 2 Referrals"}</span>
             </p>
           </div>
         </div>
 
-        {/* Right Status Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", zIndex: 2 }}>
-          {isQualified ? (
-            <span className="badge-glow badge-green" style={{ padding: "0.4rem 0.85rem" }}>
-              <IconCheck size={14} /> Qualified for Spillover
-            </span>
-          ) : (
-            <span
-              style={{
-                fontSize: "0.8rem",
-                padding: "0.4rem 0.85rem",
-                borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.12)",
-                color: "#f59e0b",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
-                fontWeight: 600,
-              }}
-            >
-              Direct Referrals: {profile?.directReferralCount ?? 0} / 2
-            </span>
-          )}
-
+        {/* 1-Click Referral Link Copy */}
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="px-3.5 py-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 font-code text-xs text-on-surface-variant flex items-center gap-2 select-all overflow-hidden max-w-sm">
+            <span className="material-symbols-outlined text-[16px] text-tertiary shrink-0">link</span>
+            <span className="truncate">{referralLink}</span>
+          </div>
           <button
-            onClick={copyReferralLink}
-            className="btn btn-primary btn-sm"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+            onClick={handleCopyLink}
+            className="px-5 py-2.5 bg-tertiary hover:bg-tertiary/90 text-on-tertiary rounded-xl text-xs font-bold font-label-md uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 shadow-md active:scale-95"
           >
-            {copiedLink ? <IconCheck size={16} /> : <IconUsers size={16} />}
-            {copiedLink ? "Link Copied!" : "Share Referral Link"}
+            <span className="material-symbols-outlined text-[16px]">
+              {copied ? "check" : "content_copy"}
+            </span>
+            <span>{copied ? "Copied!" : "Copy Link"}</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* ─── Financial KPI Grid ─────────────────────────────────────────── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "1.25rem",
-          marginBottom: "2.5rem",
-        }}
-      >
-        {/* KPI 1: Available Balance */}
-        <div
-          className="glass-card glass-card-gold"
-          style={{
-            padding: "1.75rem",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f59e0b", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                Withdrawable Balance
+      {/* ─── 3 Financial Overview Cards Grid ────────────────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+        {/* Card 1: Total Withdrawable */}
+        <div className="bg-surface-container/50 backdrop-blur-xl rounded-2xl p-6 border border-outline-variant/20 shadow-lg relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-label-md uppercase tracking-wider text-on-surface-variant font-bold">
+                Total Withdrawable
               </span>
-              <IconWallet size={20} color="#f59e0b" />
+              <span className="text-[10px] font-code bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full font-bold">
+                Liquid
+              </span>
             </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#ffffff", fontFamily: "var(--font-heading)" }}>
-              {formatBTT(totalBalance)}{" "}
-              <span style={{ fontSize: "1rem", color: "#f59e0b", fontWeight: 700 }}>BTT</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl sm:text-4xl font-black text-on-surface">
+                {formatBTT(totalWithdrawable)}
+              </span>
+              <span className="text-sm text-primary font-bold font-code">TROB</span>
             </div>
-            <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-              Instant on-chain settlement
-            </p>
+            <span className="text-xs text-outline font-code">
+              ≈ ${(Number(totalWithdrawable) / 1e18 || 0).toFixed(2)} USD
+            </span>
           </div>
-
-          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="mt-5 flex gap-2.5">
             <Link
               href="/wallet"
-              className="btn btn-primary btn-sm"
-              style={{ width: "100%", justifyContent: "center" }}
+              className="flex-1 py-2.5 bg-secondary-container hover:bg-secondary-container/90 text-on-secondary rounded-xl text-xs font-bold uppercase tracking-wider text-center transition-colors shadow"
             >
-              Withdraw Funds →
+              Withdraw
             </Link>
-          </div>
-        </div>
-
-        {/* KPI 2: Lifetime Earned */}
-        <div
-          className="glass-card glass-card-violet"
-          style={{
-            padding: "1.75rem",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#a78bfa", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                Lifetime Earnings
-              </span>
-              <IconChart size={20} color="#a78bfa" />
-            </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#ffffff", fontFamily: "var(--font-heading)" }}>
-              {formatBTT(totalEarned)}{" "}
-              <span style={{ fontSize: "1rem", color: "#a78bfa", fontWeight: 700 }}>BTT</span>
-            </div>
-            <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-              Matrix Direct + Spillover + DAO
-            </p>
-          </div>
-
-          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-            <span style={{ color: "#94a3b8" }}>DAO Share:</span>
-            <span style={{ color: "#f59e0b", fontWeight: 700 }}>{formatBTT(memberInfo?.totalEarned ?? 0)} BTT</span>
-          </div>
-        </div>
-
-        {/* KPI 3: Highest Active Slot */}
-        <div
-          className="glass-card"
-          style={{
-            padding: "1.75rem",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#60a5fa", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                Matrix Progression
-              </span>
-              <IconGrid size={20} color="#60a5fa" />
-            </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#ffffff", fontFamily: "var(--font-heading)" }}>
-              Slot {highestSlot}{" "}
-              <span style={{ fontSize: "1rem", color: "#60a5fa", fontWeight: 700 }}>/ 12</span>
-            </div>
-            <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-              Current Tier: {getSlotPrice(highestSlot)} BTT
-            </p>
-          </div>
-
-          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             <Link
-              href="/matrix"
-              className="btn btn-secondary btn-sm"
-              style={{ width: "100%", justifyContent: "center" }}
+              href="/wallet"
+              className="px-4 py-2.5 bg-surface-variant hover:bg-surface-variant/80 text-on-surface rounded-xl text-xs font-bold uppercase tracking-wider text-center transition-colors border border-outline-variant/30"
             >
-              Open 14-Node Tree →
+              History
             </Link>
           </div>
         </div>
 
-        {/* KPI 4: Direct Team */}
-        <div
-          className="glass-card"
-          style={{
-            padding: "1.75rem",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#22c55e", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                Direct Network
+        {/* Card 2: Lifetime Total Earnings */}
+        <div className="bg-surface-container/50 backdrop-blur-xl rounded-2xl p-6 border border-outline-variant/20 shadow-lg relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-tertiary/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-label-md uppercase tracking-wider text-on-surface-variant font-bold">
+                Lifetime Total Earned
               </span>
-              <IconUsers size={20} color="#22c55e" />
+              <span className="text-[10px] font-code bg-tertiary/10 text-tertiary border border-tertiary/20 px-2 py-0.5 rounded-full font-bold">
+                100% P2P
+              </span>
             </div>
-            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#ffffff", fontFamily: "var(--font-heading)" }}>
-              {profile?.directReferralCount ?? 0}{" "}
-              <span style={{ fontSize: "1rem", color: "#22c55e", fontWeight: 700 }}>Partners</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl sm:text-4xl font-black text-on-surface">
+                {formatBTT(totalEarned)}
+              </span>
+              <span className="text-sm text-tertiary font-bold font-code">TROB</span>
             </div>
-            <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-              {isQualified ? "Full spillover unlocked" : "Refer 2 members to qualify"}
-            </p>
-          </div>
-
-          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <Link
-              href="/referrals"
-              className="btn btn-secondary btn-sm"
-              style={{ width: "100%", justifyContent: "center" }}
-            >
-              View Team Tree →
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Genesis DAO Allocation Widget (If Member) ─────────────────── */}
-      {memberInfo?.isMember && (
-        <div
-          className="glass-card glass-card-gold"
-          style={{
-            marginBottom: "2.5rem",
-            padding: "1.75rem 2rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "1.5rem",
-          }}
-        >
-          <div>
-            <span className="badge-glow badge-gold" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
-              🏛️ GENESIS DAO FOUNDING MEMBER
+            <span className="text-xs text-outline font-code">
+              ≈ ${(Number(totalEarned) / 1e18 || 0).toFixed(2)} USD
             </span>
-            <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: "0.25rem 0" }}>
-              Slot Position #{memberInfo.position} of 50
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: 0 }}>
-              Receiving equal 90% share of all future DAO entries automatically.
-            </p>
           </div>
+          <div className="mt-5 flex items-center justify-between text-xs text-on-surface-variant pt-2 border-t border-outline-variant/10">
+            <span>Matrix + Genesis DAO</span>
+            <span className="text-tertiary font-bold font-code">0% Platform Cut</span>
+          </div>
+        </div>
 
-          <div style={{ flex: 1, minWidth: "220px", maxWidth: "340px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.4rem" }}>
-              <span>Total DAO Slots Filled</span>
-              <span style={{ color: "#f59e0b", fontWeight: 700 }}>{daoStats?.memberCount ?? 0} / 50</span>
+        {/* Card 3: 35% Matrix Vault Pool Share */}
+        <div className="bg-surface-container/50 backdrop-blur-xl rounded-2xl p-6 border border-primary/30 shadow-lg relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-label-md uppercase tracking-wider text-primary font-bold">
+                35% DAO Pool Yield
+              </span>
+              <span className="text-[10px] font-code bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
+                Continuous
+              </span>
             </div>
-            <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 999, overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${((daoStats?.memberCount ?? 0) / 50) * 100}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg, #f59e0b, #fbbf24)",
-                  borderRadius: 999,
-                }}
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-3xl sm:text-4xl font-black text-primary">
+                {formatBTT(poolShareClaimable)}
+              </span>
+              <span className="text-sm text-on-surface font-bold font-code">TROB</span>
+            </div>
+            <span className="text-xs text-outline font-code">
+              Pending dividends from Matrix Nodes 4, 5, 14
+            </span>
+          </div>
+          <button
+            onClick={claimPoolShare}
+            disabled={isClaimingPoolShare || poolShareClaimable === 0n}
+            className="mt-5 w-full py-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow disabled:opacity-50"
+          >
+            {isClaimingPoolShare ? "Claiming..." : poolShareClaimable > 0n ? "Claim 35% Matrix Yield" : "No Yield To Claim"}
+          </button>
+        </div>
+      </section>
+
+      {/* ─── 3 Feature Cards (Genesis DAO, Matrix Slots, Rewards) ───────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Feature 1: Genesis DAO Council (dao_card.jpg) */}
+        <Link
+          href="/dao"
+          className="group bg-surface-container/40 hover:bg-surface-container/70 backdrop-blur-xl rounded-2xl p-5 border border-tertiary/20 shadow-lg transition-all duration-300 flex flex-col justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-20 rounded-xl overflow-hidden bg-black/40 border border-tertiary/30 shadow-md shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <img
+                src="/assets/branding/dao_card.jpg"
+                alt="Genesis DAO Card"
+                className="w-full h-full object-cover"
               />
             </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-tertiary uppercase tracking-widest font-label-md">
+                100-Seat Council
+              </span>
+              <h3 className="text-base font-bold text-on-surface group-hover:text-tertiary transition-colors">
+                Genesis DAO Pass
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                {memberInfo?.isMember
+                  ? `Active Seat #${memberInfo.position} • 1 Vote (1.0%) • 35% Global Matrix Royalties`
+                  : "Secure 1 of only 100 founding seats • $300 Entry • $300/N Instant Redistribution"}
+              </p>
+            </div>
           </div>
+          <div className="mt-4 pt-3 border-t border-outline-variant/10 flex items-center justify-between text-xs font-bold text-tertiary">
+            <span>{memberInfo?.isMember ? "View Governance & 5X Cap" : "Claim Council Seat (300 TROB)"}</span>
+            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </Link>
 
-          <Link href="/dao" className="btn btn-primary btn-sm">
-            DAO Governance Hub →
-          </Link>
-        </div>
-      )}
+        {/* Feature 2: 12-Slot Matrix (matrix_slots.jpg) */}
+        <Link
+          href="/matrix"
+          className="group bg-surface-container/40 hover:bg-surface-container/70 backdrop-blur-xl rounded-2xl p-5 border border-primary/20 shadow-lg transition-all duration-300 flex flex-col justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-20 rounded-xl overflow-hidden bg-black/40 border border-primary/30 shadow-md shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <img
+                src="/assets/branding/matrix_slots.jpg"
+                alt="Matrix Slots"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-widest font-label-md">
+                14-Node Engine
+              </span>
+              <h3 className="text-base font-bold text-on-surface group-hover:text-primary transition-colors">
+                Matrix Slots (1–12)
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                Slot {highestUnlockedSlot} Unlocked • 600% ROI per cycle • Automatic board progression & recycling.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-outline-variant/10 flex items-center justify-between text-xs font-bold text-primary">
+            <span>Explore 14-Node Matrix</span>
+            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </Link>
 
-      {/* ─── 12-Slot Matrix Overview Grid ───────────────────────────────── */}
-      <div style={{ marginBottom: "3rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+        {/* Feature 3: Magic Blind Box & Rewards (mystery_box.jpg) */}
+        <Link
+          href="/rewards"
+          className="group bg-surface-container/40 hover:bg-surface-container/70 backdrop-blur-xl rounded-2xl p-5 border border-secondary/20 shadow-lg transition-all duration-300 flex flex-col justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-20 rounded-xl overflow-hidden bg-black/40 border border-secondary/30 shadow-md shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <img
+                src="/assets/branding/mystery_box.jpg"
+                alt="Magic Blind Box"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-widest font-label-md">
+                Protocol Pools
+              </span>
+              <h3 className="text-base font-bold text-on-surface group-hover:text-secondary transition-colors">
+                Magic Box & Salary
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                40% Monthly Salary Pool on 11th • 10% Quarterly Blind Box • Milestone Cash Drops (Alpha–Crown).
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-outline-variant/10 flex items-center justify-between text-xs font-bold text-secondary">
+            <span>View 4 Protocol Pools</span>
+            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </Link>
+      </section>
+
+      {/* ─── 12-Slot Matrix Quick Progression Grid ─────────────────────────── */}
+      <section className="bg-surface-container/40 backdrop-blur-xl rounded-2xl p-6 sm:p-8 border border-outline-variant/20 shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="section-title" style={{ margin: 0, textAlign: "left" }}>
-              12-Matrix <span>Tier Status</span>
+            <h2 className="text-lg sm:text-xl font-bold text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">grid_view</span>
+              12-Slot Matrix Progression
             </h2>
-            <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginTop: "0.25rem", margin: 0 }}>
-              14-Node auto-upgrading matrix progression from Slot 1 (30 BTT) to Slot 12 (61,440 BTT)
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Cost doubles each tier ($30 to $61,440). Higher slots amplify earnings across all 14-node cycles.
             </p>
           </div>
-          <Link href="/matrix" className="btn btn-secondary btn-sm">
-            Full Matrix View →
+          <Link
+            href="/matrix"
+            className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+          >
+            <span>Open Matrix Board</span>
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
           </Link>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
-            gap: "0.85rem",
-          }}
-        >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((slotNum) => {
-            const isSlotUnlocked = slotNum <= highestSlot;
-            const isCurrentSlot = slotNum === highestSlot;
-            const price = getSlotPrice(slotNum);
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+          {MATRIX_LEVELS_CONFIG.map((lvl) => {
+            const slotData = slots.find((s) => s.slotNumber === lvl.id);
+            const isUnlocked = slotData ? slotData.isUnlocked : lvl.id <= highestUnlockedSlot;
+            const isCurrent = lvl.id === highestUnlockedSlot;
+
+            let bgClass = "bg-surface-container-low border-outline-variant/10 opacity-60";
+            let icon = "lock";
+            let iconColor = "text-outline";
+            let textColor = "text-on-surface-variant";
+
+            if (isUnlocked) {
+              bgClass = "bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(185,199,228,0.08)]";
+              icon = "check_circle";
+              iconColor = "text-green-400";
+              textColor = "text-primary font-bold";
+            } else if (isCurrent) {
+              bgClass = "bg-tertiary/15 border-tertiary shadow-[0_0_20px_rgba(233,193,118,0.2)]";
+              icon = "key";
+              iconColor = "text-tertiary";
+              textColor = "text-tertiary font-bold";
+            }
 
             return (
               <Link
-                key={slotNum}
+                key={lvl.id}
                 href="/matrix"
-                style={{ textDecoration: "none" }}
+                className={`rounded-xl p-4 border ${bgClass} flex flex-col items-center justify-between min-h-[110px] transition-all duration-300 hover:scale-[1.03] cursor-pointer`}
               >
-                <div
-                  className="glass-card"
-                  style={{
-                    padding: "1.25rem 0.75rem",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    transition: "all 0.25s ease",
-                    border: isCurrentSlot
-                      ? "2px solid #f59e0b"
-                      : isSlotUnlocked
-                      ? "1px solid rgba(139,92,246,0.4)"
-                      : "1px solid rgba(255,255,255,0.06)",
-                    background: isCurrentSlot
-                      ? "linear-gradient(180deg, rgba(245,158,11,0.15), rgba(15,23,42,0.8))"
-                      : isSlotUnlocked
-                      ? "rgba(139,92,246,0.08)"
-                      : "rgba(15,23,42,0.4)",
-                    boxShadow: isCurrentSlot ? "0 0 20px rgba(245,158,11,0.2)" : "none",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 800,
-                      color: isCurrentSlot ? "#f59e0b" : isSlotUnlocked ? "#a78bfa" : "#64748b",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    Slot {slotNum}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "1.1rem",
-                      fontWeight: 900,
-                      color: "#ffffff",
-                      fontFamily: "var(--font-heading)",
-                      margin: "0.35rem 0",
-                    }}
-                  >
-                    {price >= 1000 ? `${price / 1000}k` : price}
-                    <span style={{ fontSize: "0.65rem", color: "#94a3b8", marginLeft: "2px" }}>BTT</span>
-                  </div>
-
-                  <div style={{ fontSize: "0.75rem", marginTop: "0.35rem" }}>
-                    {isCurrentSlot ? (
-                      <span style={{ color: "#f59e0b", fontWeight: 700 }}>● Active</span>
-                    ) : isSlotUnlocked ? (
-                      <span style={{ color: "#22c55e", fontWeight: 600 }}>✓ Unlocked</span>
-                    ) : (
-                      <span style={{ color: "#64748b" }}>🔒 Locked</span>
-                    )}
-                  </div>
+                <div className="flex w-full justify-between items-center text-[11px] font-code">
+                  <span className={textColor}>SLOT {lvl.id}</span>
+                  <span className={`material-symbols-outlined text-[16px] ${iconColor}`}>{icon}</span>
                 </div>
+                <div className="flex flex-col items-center my-1">
+                  <span className="text-lg font-black text-on-surface">
+                    {lvl.cost} <span className="text-[10px] font-normal text-outline">TROB</span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">
+                    {lvl.multiplier}
+                  </span>
+                </div>
+                <span className="text-[9px] font-code uppercase text-outline">
+                  {isUnlocked ? "Unlocked" : "Locked"}
+                </span>
               </Link>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* ─── Command Launcher Grid ──────────────────────────────────────── */}
-      <h2 className="section-title" style={{ marginBottom: "1.25rem", textAlign: "left" }}>
-        Protocol <span>Command Center</span>
-      </h2>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: "1.25rem",
-        }}
-      >
-        <Link href="/matrix" style={{ textDecoration: "none" }}>
-          <div
-            className="glass-card glass-card-violet"
-            style={{
-              padding: "1.75rem",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: "12px", background: "rgba(139,92,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <IconGrid size={24} color="#a78bfa" />
-            </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
-              12-Matrix Engine
-            </h3>
-            <p style={{ fontSize: "0.825rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-              Interact with the 14-node tree visualizer, view direct payouts, and auto-upgrade reserves.
-            </p>
-            <span style={{ marginTop: "auto", fontSize: "0.8rem", color: "#a78bfa", fontWeight: 700 }}>
-              Open Matrix →
-            </span>
-          </div>
-        </Link>
-
-        <Link href="/dao" style={{ textDecoration: "none" }}>
-          <div
-            className="glass-card glass-card-gold"
-            style={{
-              padding: "1.75rem",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: "12px", background: "rgba(245,158,11,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <IconShield size={24} color="#f59e0b" />
-            </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
-              Genesis DAO
-            </h3>
-            <p style={{ fontSize: "0.825rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-              Exclusive 50-slot founding pool with 90% automated equal distribution on every new registration.
-            </p>
-            <span style={{ marginTop: "auto", fontSize: "0.8rem", color: "#f59e0b", fontWeight: 700 }}>
-              View DAO Hub →
-            </span>
-          </div>
-        </Link>
-
-        <Link href="/rewards" style={{ textDecoration: "none" }}>
-          <div
-            className="glass-card"
-            style={{
-              padding: "1.75rem",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: "12px", background: "rgba(34,197,94,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <IconAward size={24} color="#22c55e" />
-            </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
-              Magic Box & NFTs
-            </h3>
-            <p style={{ fontSize: "0.825rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-              Unlock milestone rank badges (*Rising Star, Prime, Royal, Legendary*) and 3-year vesting pools.
-            </p>
-            <span style={{ marginTop: "auto", fontSize: "0.8rem", color: "#22c55e", fontWeight: 700 }}>
-              Claim Rewards →
-            </span>
-          </div>
-        </Link>
-
-        <Link href="/wallet" style={{ textDecoration: "none" }}>
-          <div
-            className="glass-card"
-            style={{
-              padding: "1.75rem",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: "12px", background: "rgba(96,165,250,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <IconWallet size={24} color="#60a5fa" />
-            </div>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
-              Treasury Wallet
-            </h3>
-            <p style={{ fontSize: "0.825rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
-              Execute instant non-custodial withdrawals of your combined Matrix & DAO balances.
-            </p>
-            <span style={{ marginTop: "auto", fontSize: "0.8rem", color: "#60a5fa", fontWeight: 700 }}>
-              Open Wallet →
-            </span>
-          </div>
-        </Link>
-      </div>
-
+      {/* ─── Live Activity Feed & Audit Trail (B-Titan Video Phase 6) ──────── */}
+      <section className="w-full">
+        <DAOHistoryTable />
+      </section>
     </div>
   );
 }

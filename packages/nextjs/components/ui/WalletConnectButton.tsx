@@ -1,14 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-/**
- * WalletConnectButton — custom styled version of RainbowKit ConnectButton.
- * Shows wallet address + disconnect when connected.
- * Shows Connect prompt when not.
- */
-export function WalletConnectButton({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+export function WalletConnectButton() {
   return (
     <ConnectButton.Custom>
       {({
@@ -28,10 +22,12 @@ export function WalletConnectButton({ size = "md" }: { size?: "sm" | "md" | "lg"
           return (
             <button
               id="connect-wallet-btn"
-              className={`btn btn-primary btn-${size}`}
               onClick={openConnectModal}
+              className="bg-secondary-container hover:bg-secondary-container/90 text-on-secondary-container px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl font-label-md text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-secondary-container/20 flex items-center gap-1 sm:gap-1.5 shrink-0"
             >
-              🔗 Connect Wallet
+              <span className="material-symbols-outlined text-[15px] sm:text-[18px]">account_balance_wallet</span>
+              <span className="hidden xs:inline">Connect</span>
+              <span className="xs:hidden">Join</span>
             </button>
           );
         }
@@ -40,38 +36,37 @@ export function WalletConnectButton({ size = "md" }: { size?: "sm" | "md" | "lg"
           return (
             <button
               id="wrong-network-btn"
-              className="btn btn-danger"
               onClick={openChainModal}
+              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 shrink-0"
             >
-              ⚠️ Wrong Network
+              <span className="material-symbols-outlined text-[15px] sm:text-[16px]">warning</span>
+              <span>Wrong Net</span>
             </button>
           );
         }
 
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            {/* Network pill */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Chain Switcher Button */}
             <button
               id="chain-switcher-btn"
-              className="btn btn-secondary btn-sm"
               onClick={openChainModal}
-              style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-high/60 hover:bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs font-semibold transition-all shadow-sm"
             >
               {chain.hasIcon && chain.iconUrl && (
-                <img src={chain.iconUrl} alt={chain.name} width={14} height={14} style={{ borderRadius: "50%" }} />
+                <img src={chain.iconUrl} alt={chain.name} width={14} height={14} className="rounded-full" />
               )}
-              {chain.name}
+              <span>{chain.name}</span>
             </button>
 
-            {/* Address button */}
+            {/* Account Modal Button */}
             <button
               id="account-modal-btn"
-              className="btn btn-secondary btn-sm"
               onClick={openAccountModal}
-              style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-primary/30 text-primary text-[11px] sm:text-xs font-code font-bold transition-all shadow-sm shrink-0"
             >
-              {account.displayName}
-              {account.displayBalance ? ` (${account.displayBalance})` : ""}
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+              <span className="max-w-[75px] xs:max-w-[95px] sm:max-w-none truncate">{account.displayName}</span>
             </button>
           </div>
         );

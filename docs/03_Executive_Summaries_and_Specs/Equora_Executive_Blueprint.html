@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Equora.Fi — Master Architecture & Economic Blueprint</title>
+  <style>
+    :root {
+      --primary: #00b4d8;
+      --primary-dark: #0077b6;
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-gold: #f59e0b;
+      --accent-green: #10b981;
+      --accent-purple: #8b5cf6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 40px 20px; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { border-bottom: 2px solid var(--primary); padding-bottom: 24px; margin-bottom: 32px; }
+    h1 { font-size: 28px; color: #fff; margin-bottom: 8px; font-weight: 800; letter-spacing: -0.5px; }
+    .badge { display: inline-block; background: rgba(0, 180, 216, 0.15); color: var(--primary); padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; border: 1px solid rgba(0, 180, 216, 0.3); }
+    .lead { font-size: 15px; color: var(--text-muted); }
+    .section { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .section-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title span { font-size: 20px; }
+    p { margin-bottom: 12px; font-size: 14px; color: #e5e7eb; }
+    ul { list-style: none; margin-bottom: 12px; }
+    li { font-size: 14px; margin-bottom: 8px; padding-left: 20px; position: relative; color: #d1d5db; }
+    li::before { content: "•"; color: var(--primary); position: absolute; left: 6px; font-size: 18px; line-height: 1; top: 0; }
+    .highlight-box { background: rgba(0, 180, 216, 0.08); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 13.5px; }
+    .highlight-gold { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--accent-gold); }
+    .highlight-green { background: rgba(16, 185, 129, 0.08); border-left: 4px solid var(--accent-green); }
+    
+    /* Responsive clean table */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+    th { background: #1f2937; color: #fff; font-weight: 700; text-align: left; padding: 12px 14px; border: 1px solid #374151; }
+    td { padding: 12px 14px; border: 1px solid #374151; color: #e5e7eb; }
+    tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+    .font-bold { font-weight: 700; }
+    .text-green { color: var(--accent-green); }
+    .text-gold { color: var(--accent-gold); }
+    .text-primary { color: var(--primary); }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+    .card-small { background: #1a2234; border: 1px solid #2d3748; padding: 16px; border-radius: 12px; }
+    .card-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Official Technical Blueprint • 2026</div>
+      <h1>Equora.Fi — Architecture & Economic Master Specification</h1>
+      <div class="lead">Complete mathematical routing, launch phases, Genesis DAO Council rules, and automated protocol pool allocations.</div>
+    </header>
+
+    <!-- SECTION 1 -->
+    <div class="section">
+      <div class="section-title"><span>🚀</span> PART 1: GENESIS LAUNCH TIMELINE (2-PHASE ROLLOUT)</div>
+      <div class="grid-2">
+        <div class="card-small">
+          <div class="card-title text-gold">Phase 1: Exclusive Genesis DAO (Days 1–21)</div>
+          <p>• Only Genesis DAO Council ($300 seats) is active and visible.</p>
+          <p>• Normal $30 matrix slots are completely hidden and locked.</p>
+          <p>• <strong>Open Buy-In:</strong> Anyone can purchase a seat immediately with <strong>0 referrals required</strong>.</p>
+        </div>
+        <div class="card-small">
+          <div class="card-title text-primary">Phase 2: Global Matrix Launch (Day 22 Onward)</div>
+          <p>• Public 14-node matrix officially goes live worldwide.</p>
+          <p>• Standard <strong>$30 entry slot</strong> unlocks for general community.</p>
+          <p>• Global participants build teams and drive volume into protocol pools.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="section">
+      <div class="section-title"><span>🏛️</span> PART 2: GENESIS DAO COUNCIL ($300 SEAT SPECIFICATIONS)</div>
+      <ul>
+        <li><strong>Capacity:</strong> Capped strictly at 100 members maximum.</li>
+        <li><strong>Entry Cost:</strong> $300 equivalent in live TROB (on-chain oracle).</li>
+        <li><strong>Referrals Required:</strong> 0 referrals. Open to anyone.</li>
+        <li><strong>Queue Waterfall:</strong> 100% of each incoming $300 is pushed instantly to earlier members ($300 / [N - 1]). Zero platform fee.</li>
+        <li><strong>Ongoing Yield:</strong> Equal continuous share of the 35% DAO Pool from global matrix volume.</li>
+        <li><strong>3X Cap ($900) & 48h Re-topup:</strong> Each seat caps out at $900. Member has 48 hours to deposit $300 re-topup to reset cap.</li>
+        <li><strong>Vacancy Scan (1 to 100):</strong> Unpaid seats become vacant. New buyers scan from Seat 1 to 100 and automatically occupy the lowest blank seat.</li>
+      </ul>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="section">
+      <div class="section-title"><span>🧩</span> PART 3: PARTICIPANT MATRIX BLUEPRINT ($30 ENTRY)</div>
+      <p>A participant only pays <strong>$30 out-of-pocket once</strong> for Slot 1. No manual buys for Slots 2–12 (100% automated self-funding via Nodes 4 & 5).</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Matrix Positions</th>
+            <th>Count</th>
+            <th>Per Node</th>
+            <th>Total</th>
+            <th>Destination & Routing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="font-bold text-green">Nodes 3, 6, 8, 9, 11, 12</td>
+            <td>6 Nodes</td>
+            <td>$30.00</td>
+            <td class="font-bold text-green">$180.00</td>
+            <td>Matrix Owner Withdrawable Net Cash Profit (600% ROI)</td>
+          </tr>
+          <tr>
+            <td class="font-bold text-primary">Nodes 1 & 2</td>
+            <td>2 Nodes</td>
+            <td>$30.00</td>
+            <td>$60.00</td>
+            <td>Upline 1 & Upline 2 Leadership Income ($30 each)</td>
+          </tr>
+          <tr>
+            <td class="font-bold text-gold">Nodes 7, 10, 13</td>
+            <td>3 Nodes</td>
+            <td>$30.00</td>
+            <td>$90.00</td>
+            <td>Downline Team Spillover (Community support)</td>
+          </tr>
+          <tr>
+            <td class="font-bold" style="color:#ec4899;">Nodes 4, 5, 14</td>
+            <td>3 Nodes</td>
+            <td>$30.00</td>
+            <td>$90.00</td>
+            <td>100% to 4 Protocol Pools (Nodes 4 & 5 auto-unlock Slot 2; Node 14 recycles)</td>
+          </tr>
+          <tr style="background:#1f2937; font-weight:700;">
+            <td>TOTAL PER CYCLE</td>
+            <td>14 Nodes</td>
+            <td>-</td>
+            <td class="text-green">$420.00</td>
+            <td>100% Accounted For • Zero Platform Leakage</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="section">
+      <div class="section-title"><span>💰</span> PART 4: THE 4 AUTOMATED PROTOCOL POOLS</div>
+      <p>100% funded by the cash inflow from Nodes 4, 5, and 14 of the matrix:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Protocol Pool</th>
+            <th>Share</th>
+            <th>Distribution</th>
+            <th>Eligible Beneficiaries</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="font-bold text-primary">1. Genesis DAO Pool</td>
+            <td>35.0%</td>
+            <td>Daily / Continuous</td>
+            <td>Genesis DAO Members ONLY (up to 3X / $900 cap)</td>
+          </tr>
+          <tr>
+            <td class="font-bold text-green">2. Monthly Salary Pool</td>
+            <td>40.0%</td>
+            <td>Monthly on the 11th</td>
+            <td>Rank Achievers ONLY (Alpha, Prime, Elite, Crown)</td>
+          </tr>
+          <tr>
+            <td class="font-bold text-gold">3. Level Rewards Pool</td>
+            <td>15.0%</td>
+            <td>Instant on Rank-Up</td>
+            <td>Rank Achievers ONLY (10%, 15%, 25%, 50% cash bonuses)</td>
+          </tr>
+          <tr>
+            <td class="font-bold" style="color:#8b5cf6;">4. Magic Blind Box Pool</td>
+            <td>10.0%</td>
+            <td>Quarterly (91-Day)</td>
+            <td>EVERY Registered Wallet (Normal Users + DAO)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECTION 5 -->
+    <div class="section">
+      <div class="section-title"><span>⚖️</span> PART 5: MASTER COMPARISON ($30 ID vs. $300 ID)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature / Rule</th>
+            <th>Normal User ($30 ID)</th>
+            <th>Genesis DAO Member ($300 ID)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Launch Access</td>
+            <td>Day 22 Onward</td>
+            <td class="text-green font-bold">Days 1–21 (Exclusive)</td>
+          </tr>
+          <tr>
+            <td>Referrals Required</td>
+            <td>0 to Register</td>
+            <td class="text-green font-bold">0 to Buy Seat</td>
+          </tr>
+          <tr>
+            <td>Out-of-Pocket Entry</td>
+            <td>$30 one-time only</td>
+            <td>$300 per 3X cycle</td>
+          </tr>
+          <tr>
+            <td>Slots 2 through 12</td>
+            <td>Auto-unlocked via Nodes 4 & 5</td>
+            <td>Can also activate $30 matrix</td>
+          </tr>
+          <tr>
+            <td>Queue Payout Waterfall</td>
+            <td>No</td>
+            <td class="text-green font-bold">Yes (Earns from all subsequent joins)</td>
+          </tr>
+          <tr>
+            <td>35% DAO Pool Share</td>
+            <td>No ($0)</td>
+            <td class="text-green font-bold">Yes (Up to $900 cap)</td>
+          </tr>
+          <tr>
+            <td>40% Salary Pool Share</td>
+            <td class="text-green font-bold">Yes (If rank achieved)</td>
+            <td class="text-green font-bold">Yes (If rank achieved)</td>
+          </tr>
+          <tr>
+            <td>15% Instant Level Rewards</td>
+            <td class="text-green font-bold">Yes (If rank achieved)</td>
+            <td class="text-green font-bold">Yes (If rank achieved)</td>
+          </tr>
+          <tr>
+            <td>10% Magic Blind Box</td>
+            <td class="text-green font-bold">Yes (Every quarter)</td>
+            <td class="text-green font-bold">Yes (Every quarter)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

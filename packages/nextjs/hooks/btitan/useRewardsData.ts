@@ -1,157 +1,241 @@
 "use client";
 
+import { useState } from "react";
 import { useReadContract, useWriteContract, useChainId } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
-import { UserNFTs, UserVestingData, VestingLock, BTitanRank } from "../../types/btitan";
 import { notification } from "../../utils/scaffold-eth/notification";
 
-/**
- * useRewardsData
- * Reads NFT holdings + vesting locks from BTitanNFT + BTitanVestingVault.
- * Maps to exact verified function signatures.
- *
- * NFT Functions:
- *   hasWelcomePass(address) → bool
- *   getWelcomePassTokenId(address) → uint256
- *   getUserRank(address) → IBTitanNFT.Rank (enum 0-4)
- *   getUserTokens(address) → uint256[]
- *
- * Vault Functions:
- *   getUserLocks(address) → VestingLock[] (struct array)
- *   getClaimableAmount(address) → uint256
- *   getTotalLockedAmount(address) → uint256
- *   getEquityBps(address) → uint256
- *   claimUnlockedTokens(uint256 lockIndex) — write
- */
 export function useRewardsData(userAddress?: `0x${string}`) {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
+
+  const salaryContract = contracts?.EquoraSalaryPool;
+  const magicBoxContract = contracts?.EquoraMagicBox;
+  const rewardContract = contracts?.EquoraRewardPool;
   const nftContract = contracts?.BTitanNFT;
-  const vaultContract = contracts?.BTitanVestingVault;
 
-  const nftEnabled   = !!nftContract?.address   && !!userAddress;
-  const vaultEnabled = !!vaultContract?.address  && !!userAddress;
+  const enabled = !!userAddress;
 
-  // ─── NFT Reads ──────────────────────────────────────────────────────────────
-  const { data: hasWelcomePass } = useReadContract({
+  // ─── Salary Pool Reads ───────────────────────────────────────────────────────
+  const { data: userTierRaw, refetch: refetchTier } = useReadContract({
+    address: salaryContract?.address as `0x${string}`,
+    abi: salaryContract?.abi,
+    functionName: "getUserTier",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!salaryContract?.address, refetchInterval: 5000 },
+  });
+
+  const { data: claimableSalaryRaw, refetch: refetchSalary } = useReadContract({
+    address: salaryContract?.address as `0x${string}`,
+    abi: salaryContract?.abi,
+    functionName: "getClaimable",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!salaryContract?.address, refetchInterval: 5000 },
+  });
+
+  const { data: userMilestonesRaw, refetch: refetchMilestones } = useReadContract({
+    address: salaryContract?.address as `0x${string}`,
+    abi: salaryContract?.abi,
+    functionName: "getUserPoolCount",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!salaryContract?.address, refetchInterval: 5000 },
+  });
+
+  const { data: poolCountsRaw, refetch: refetchPoolCounts } = useReadContract({
+    address: salaryContract?.address as `0x${string}`,
+    abi: salaryContract?.abi,
+    functionName: "getPoolCounts",
+    query: { enabled: !!salaryContract?.address, refetchInterval: 10000 },
+  });
+
+  // ─── Magic Box Reads ─────────────────────────────────────────────────────────
+  const { data: boxPendingRewardRaw, refetch: refetchBoxReward } = useReadContract({
+    address: magicBoxContract?.address as `0x${string}`,
+    abi: magicBoxContract?.abi,
+    functionName: "getPendingReward",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!magicBoxContract?.address, refetchInterval: 5000 },
+  });
+
+  const { data: boxTimeUntilNextDrawRaw, refetch: refetchBoxTimer } = useReadContract({
+    address: magicBoxContract?.address as `0x${string}`,
+    abi: magicBoxContract?.abi,
+    functionName: "getTimeUntilNextDraw",
+    query: { enabled: !!magicBoxContract?.address, refetchInterval: 10000 },
+  });
+
+  const { data: boxEligibleCountRaw, refetch: refetchBoxCount } = useReadContract({
+    address: magicBoxContract?.address as `0x${string}`,
+    abi: magicBoxContract?.abi,
+    functionName: "getEligibleCount",
+    query: { enabled: !!magicBoxContract?.address, refetchInterval: 10000 },
+  });
+
+  // ─── Milestone Reward Pool Reads ─────────────────────────────────────────────
+  const { data: rewardPendingRaw, refetch: refetchMilestonePending } = useReadContract({
+    address: rewardContract?.address as `0x${string}`,
+    abi: rewardContract?.abi,
+    functionName: "getPendingReward",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!rewardContract?.address, refetchInterval: 5000 },
+  });
+
+  const { data: userRewardStatusRaw, refetch: refetchMilestoneStatus } = useReadContract({
+    address: rewardContract?.address as `0x${string}`,
+    abi: rewardContract?.abi,
+    functionName: "getUserRewardStatus",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: enabled && !!rewardContract?.address, refetchInterval: 5000 },
+  });
+
+  // ─── NFT Reads ───────────────────────────────────────────────────────────────
+  const { data: hasWelcomePassRaw } = useReadContract({
     address: nftContract?.address as `0x${string}`,
     abi: nftContract?.abi,
     functionName: "hasWelcomePass",
     args: userAddress ? [userAddress] : undefined,
-    query: { enabled: nftEnabled },
+    query: { enabled: enabled && !!nftContract?.address },
   });
 
-  const { data: welcomePassId } = useReadContract({
-    address: nftContract?.address as `0x${string}`,
-    abi: nftContract?.abi,
-    functionName: "getWelcomePassTokenId",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: nftEnabled },
-  });
+  // ─── Writes ──────────────────────────────────────────────────────────────────
+  const [isClaimingSalary, setIsClaimingSalary] = useState(false);
+  const [isClaimingBox, setIsClaimingBox] = useState(false);
+  const [isClaimingMilestone, setIsClaimingMilestone] = useState(false);
 
-  const { data: userRankRaw } = useReadContract({
-    address: nftContract?.address as `0x${string}`,
-    abi: nftContract?.abi,
-    functionName: "getUserRank",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: nftEnabled },
-  });
+  const { writeContractAsync: writeSalary } = useWriteContract();
+  const { writeContractAsync: writeBox } = useWriteContract();
+  const { writeContractAsync: writeReward } = useWriteContract();
 
-  const { data: userTokenIds } = useReadContract({
-    address: nftContract?.address as `0x${string}`,
-    abi: nftContract?.abi,
-    functionName: "getUserTokens",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: nftEnabled },
-  });
-
-  // ─── Vault Reads ────────────────────────────────────────────────────────────
-  const { data: userLocks, isLoading: loadingLocks } = useReadContract({
-    address: vaultContract?.address as `0x${string}`,
-    abi: vaultContract?.abi,
-    functionName: "getUserLocks",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: vaultEnabled },
-  });
-
-  const { data: claimableAmount } = useReadContract({
-    address: vaultContract?.address as `0x${string}`,
-    abi: vaultContract?.abi,
-    functionName: "getClaimableAmount",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: vaultEnabled },
-  });
-
-  const { data: totalLocked } = useReadContract({
-    address: vaultContract?.address as `0x${string}`,
-    abi: vaultContract?.abi,
-    functionName: "getTotalLockedAmount",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: vaultEnabled },
-  });
-
-  const { data: equityBps } = useReadContract({
-    address: vaultContract?.address as `0x${string}`,
-    abi: vaultContract?.abi,
-    functionName: "getEquityBps",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: vaultEnabled },
-  });
-
-  // ─── Vault Write ────────────────────────────────────────────────────────────
-  const { writeContractAsync: claimWrite } = useWriteContract();
-
-  const claimVestingLock = async (lockIndex: number) => {
-    if (!vaultContract?.address) {
-      notification.error("VestingVault contract not found");
-      return;
-    }
-    const toastId = notification.loading("Claiming vested BTT...");
+  const claimSalary = async () => {
+    if (!salaryContract?.address) return;
+    setIsClaimingSalary(true);
+    const toastId = notification.loading("Claiming monthly salary distribution...");
     try {
-      const tx = await claimWrite({
-        address: vaultContract.address as `0x${string}`,
-        abi: vaultContract.abi,
-        functionName: "claimUnlockedTokens",
-        args: [BigInt(lockIndex)],
+      const tx = await writeSalary({
+        address: salaryContract.address as `0x${string}`,
+        abi: salaryContract.abi,
+        functionName: "claimSalary",
+        args: [],
       });
       notification.dismiss(toastId);
       notification.txSuccess(tx);
-      notification.success("🎁 BTT claimed from vesting vault!");
+      notification.success("🎉 Monthly salary claimed successfully!");
+      refetchSalary();
     } catch (err: any) {
       notification.dismiss(toastId);
-      notification.error(err?.shortMessage || err?.message || "Claim failed");
+      notification.error(err?.shortMessage || err?.message || "Salary claim failed");
+    } finally {
+      setIsClaimingSalary(false);
     }
   };
 
-  // ─── Parsed Data ────────────────────────────────────────────────────────────
-  const nfts: UserNFTs = {
-    hasWelcomePass: !!hasWelcomePass,
-    welcomePassTokenId: welcomePassId ? Number(welcomePassId) : 0,
-    rank: (userRankRaw !== undefined ? Number(userRankRaw) : BTitanRank.NONE) as BTitanRank,
-    allTokenIds: ((userTokenIds as bigint[]) ?? []).map(Number),
+  const claimBoxReward = async () => {
+    if (!magicBoxContract?.address) return;
+    setIsClaimingBox(true);
+    const toastId = notification.loading("Claiming Magic Box quarterly reward...");
+    try {
+      const tx = await writeBox({
+        address: magicBoxContract.address as `0x${string}`,
+        abi: magicBoxContract.abi,
+        functionName: "claimReward",
+        args: [],
+      });
+      notification.dismiss(toastId);
+      notification.txSuccess(tx);
+      notification.success("🎁 Magic Box reward claimed successfully!");
+      refetchBoxReward();
+    } catch (err: any) {
+      notification.dismiss(toastId);
+      notification.error(err?.shortMessage || err?.message || "Box claim failed");
+    } finally {
+      setIsClaimingBox(false);
+    }
   };
 
-  const rawLocks = (userLocks as any[]) ?? [];
-  const vestingData: UserVestingData = {
-    locks: rawLocks.map((l, i) => ({
-      beneficiary: l.beneficiary ?? l[0] ?? "",
-      amount: l.amount ?? l[1] ?? BigInt(0),
-      unlockTimestamp: l.unlockTimestamp ?? l[2] ?? BigInt(0),
-      claimed: l.claimed ?? l[3] ?? false,
-      milestoneSlot: Number(l.milestoneSlot ?? l[4] ?? 0),
-    })) as VestingLock[],
-    totalLocked: (totalLocked as bigint) ?? BigInt(0),
-    claimableAmount: (claimableAmount as bigint) ?? BigInt(0),
-    equityBps: equityBps ? Number(equityBps) : 0,
+  const claimMilestoneReward = async () => {
+    if (!rewardContract?.address) return;
+    setIsClaimingMilestone(true);
+    const toastId = notification.loading("Claiming instant milestone reward...");
+    try {
+      const tx = await writeReward({
+        address: rewardContract.address as `0x${string}`,
+        abi: rewardContract.abi,
+        functionName: "claimReward",
+        args: [],
+      });
+      notification.dismiss(toastId);
+      notification.txSuccess(tx);
+      notification.success("💎 Milestone reward claimed successfully!");
+      refetchMilestonePending();
+      refetchMilestoneStatus();
+    } catch (err: any) {
+      notification.dismiss(toastId);
+      notification.error(err?.shortMessage || err?.message || "Milestone claim failed");
+    } finally {
+      setIsClaimingMilestone(false);
+    }
+  };
+
+  const refetchAll = () => {
+    refetchTier();
+    refetchSalary();
+    refetchMilestones();
+    refetchPoolCounts();
+    refetchBoxReward();
+    refetchBoxTimer();
+    refetchBoxCount();
+    refetchMilestonePending();
+    refetchMilestoneStatus();
+  };
+
+  // Parsing outputs
+  const userTier = userTierRaw !== undefined ? Number(userTierRaw) : 0;
+  const claimableSalary = (claimableSalaryRaw as bigint) ?? 0n;
+  const userMilestones = userMilestonesRaw !== undefined ? Number(userMilestonesRaw) : 0;
+
+  const poolCountsTuple = poolCountsRaw as [bigint, bigint, bigint, bigint] | undefined;
+  const poolCounts = poolCountsTuple
+    ? [Number(poolCountsTuple[0]), Number(poolCountsTuple[1]), Number(poolCountsTuple[2]), Number(poolCountsTuple[3])]
+    : [0, 0, 0, 0];
+
+  const boxPendingReward = (boxPendingRewardRaw as bigint) ?? 0n;
+  const boxTimeUntilNextDraw = boxTimeUntilNextDrawRaw !== undefined ? Number(boxTimeUntilNextDrawRaw) : 0;
+  const boxEligibleCount = boxEligibleCountRaw !== undefined ? Number(boxEligibleCountRaw) : 0;
+
+  const milestonePendingReward = (rewardPendingRaw as bigint) ?? 0n;
+  const statusTuple = userRewardStatusRaw as [boolean, boolean, boolean, boolean, bigint, bigint] | undefined;
+  const milestoneStatus = {
+    rewardedAlpha: statusTuple?.[0] ?? false,
+    rewardedPrime: statusTuple?.[1] ?? false,
+    rewardedElite: statusTuple?.[2] ?? false,
+    rewardedCrown: statusTuple?.[3] ?? false,
+    pendingReward: statusTuple?.[4] ?? 0n,
+    totalClaimed: statusTuple?.[5] ?? 0n,
   };
 
   return {
-    nfts,
-    vestingData,
-    claimVestingLock,
-    isLoading: loadingLocks,
+    salary: {
+      userTier,
+      claimableSalary,
+      userMilestones,
+      poolCounts,
+      claimSalary,
+      isClaimingSalary,
+    },
+    magicBox: {
+      pendingReward: boxPendingReward,
+      timeUntilNextDraw: boxTimeUntilNextDraw,
+      eligibleCount: boxEligibleCount,
+      claimBoxReward,
+      isClaimingBox,
+    },
+    milestone: {
+      pendingReward: milestonePendingReward,
+      status: milestoneStatus,
+      claimMilestoneReward,
+      isClaimingMilestone,
+    },
+    hasWelcomePass: !!hasWelcomePassRaw,
+    refetchAll,
   };
 }
-
-
-

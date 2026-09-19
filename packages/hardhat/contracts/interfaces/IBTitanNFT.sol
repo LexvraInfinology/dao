@@ -8,10 +8,10 @@ pragma solidity ^0.8.20;
 interface IBTitanNFT {
     enum Rank {
         NONE,       // Not yet ranked
-        RISING,     // Slot 3 completed
-        PRIME,      // Slot 6 completed
-        ROYAL,      // Slot 9 completed
-        LEGENDARY   // Slot 12 completed (max)
+        ALPHA,      // Slot 3 completed (Levels 1-3 | 42 slots)
+        PRIME,      // Slot 6 completed (Levels 4-6 | 84 slots)
+        ELITE,      // Slot 9 completed (Levels 7-9 | 126 slots)
+        CROWN       // Slot 12 completed (Levels 10-12 | 168 slots - max)
     }
 
     function mintWelcomePass(address to) external returns (uint256 tokenId);

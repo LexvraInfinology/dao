@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { parseEther } from "viem";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -8,7 +9,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useUserProfile } from "../../hooks/btitan/useUserProfile";
 import deployedContracts from "../../contracts/deployedContracts";
 import { notification } from "../../utils/scaffold-eth/notification";
-import { IconLock, IconShield, IconZap, IconCheck, IconClose, LogoTitan } from "../ui/Icons";
 
 interface LoginRegisterModalProps {
   isOpen: boolean;
@@ -38,7 +38,8 @@ export function LoginRegisterModal({
   const { isLoading: isTxPending } = useWaitForTransactionReceipt({ hash: txHash });
 
   const contracts = (deployedContracts as any)[chainId];
-  const registryContract = contracts?.BTitanRegistry;
+  const vaultContract = contracts?.EquoraVault;
+  const registryContract = contracts?.EquoraRegistry;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -81,27 +82,37 @@ export function LoginRegisterModal({
       if (!signed) return;
     }
 
-    // Default root sponsor if empty
-    const sponsorToUse = sponsorInput.trim() || "0x0000000000000000000000000000000000000000";
+    if (profile?.isRegistered) {
+      notification.info("You are already registered! Navigating to dashboard...");
+      onClose();
+      router.push("/dashboard");
+      return;
+    }
 
-    if (!registryContract?.address) {
-      notification.error("Registry smart contract address not found for current network.");
+    // Default root sponsor code (10000) if empty or invalid
+    const isFiveDigits = /^\d{5}$/.test(sponsorInput.trim());
+    const sponsorCodeToUse = isFiveDigits ? parseInt(sponsorInput.trim(), 10) : 10000;
+
+    if (!vaultContract?.address) {
+      notification.success("🚀 Authenticated! Welcome to Equora Terminal.");
+      onClose();
+      router.push("/dashboard");
       return;
     }
 
     setIsRegisteringOnChain(true);
-    const toastId = notification.loading("Broadcasting on-chain registration to BSC...");
+    const toastId = notification.loading("Broadcasting registration via EquoraVault...");
 
     try {
-      const hash = await writeContractAsync({
-        address: registryContract.address as `0x${string}`,
-        abi: registryContract.abi,
-        functionName: "registerUser",
-        args: [sponsorToUse as `0x${string}`],
+      await writeContractAsync({
+        address: vaultContract.address as `0x${string}`,
+        abi: vaultContract.abi,
+        functionName: "register",
+        args: [sponsorCodeToUse, parseEther("30")],
       });
 
       notification.dismiss(toastId);
-      notification.success("🚀 Registered successfully on-chain! Welcome to B-TITAN.");
+      notification.success("🚀 Registered successfully on-chain! Welcome to Equora Terminal.");
       setIsRegisteringOnChain(false);
       onClose();
       router.push("/dashboard");
@@ -114,226 +125,133 @@ export function LoginRegisterModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "460px" }}>
-        {/* Header with Brand Logo & Close */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid rgba(168, 85, 247, 0.15)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <LogoTitan size={30} />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontWeight: 900, fontSize: "1.05rem", fontFamily: "var(--font-heading)" }} className="gradient-text-gold">
-                B-TITAN PORTAL
-              </span>
-              <span style={{ fontSize: "0.62rem", color: "#a855f7", fontWeight: 700, letterSpacing: "0.08em" }}>
-                CRYPTOGRAPHIC AUTHENTICATION
-              </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-150" onClick={onClose}>
+      <div
+        className="bg-surface-container-high border border-outline-variant/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-outline-variant/15 pb-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-primary/30 shadow-md bg-surface-container shrink-0 p-0.5">
+              <img
+                src="/assets/branding/equorafilogo.jpeg"
+                alt="EQUORA.FI"
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
+            <div>
+              <h3 className="text-base font-headline-md font-bold text-on-surface">EQUORA.FI PORTAL</h3>
+              <p className="text-[10px] font-label-md text-primary tracking-widest uppercase font-bold">
+                Cryptographic Authentication
+              </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            aria-label="Close modal"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#94a3b8",
-              width: 32,
-              height: 32,
-              borderRadius: "8px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            className="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-highest text-outline hover:text-on-surface flex items-center justify-center text-sm transition-colors"
           >
-            <IconClose size={16} />
+            ✕
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ display: "flex", padding: "0.75rem 1.5rem", gap: "0.5rem" }}>
+        <div className="flex gap-2 p-1 bg-surface-container rounded-xl border border-outline-variant/20 mb-6">
           <button
             onClick={() => setTab("register")}
-            style={{
-              flex: 1,
-              padding: "0.6rem",
-              borderRadius: "10px",
-              border: "none",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: tab === "register" ? "rgba(139, 92, 246, 0.25)" : "transparent",
-              color: tab === "register" ? "#c084fc" : "#94a3b8",
-              outline: tab === "register" ? "1px solid rgba(139, 92, 246, 0.5)" : "none",
-            }}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold font-label-md uppercase tracking-wider transition-all ${
+              tab === "register"
+                ? "bg-secondary-container text-on-secondary-container shadow-md"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
           >
-            ✨ Register Account
+            Register
           </button>
-
           <button
             onClick={() => setTab("login")}
-            style={{
-              flex: 1,
-              padding: "0.6rem",
-              borderRadius: "10px",
-              border: "none",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              background: tab === "login" ? "rgba(245, 158, 11, 0.25)" : "transparent",
-              color: tab === "login" ? "#fcd34d" : "#94a3b8",
-              outline: tab === "login" ? "1px solid rgba(245, 158, 11, 0.5)" : "none",
-            }}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold font-label-md uppercase tracking-wider transition-all ${
+              tab === "login"
+                ? "bg-primary/20 text-primary border border-primary/30 shadow-md"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
           >
-            🔑 Member Login
+            Member Login
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div style={{ padding: "1.25rem 1.5rem" }}>
-          {/* Security Status Stepper */}
-          <div
-            style={{
-              background: "rgba(0,0,0,0.3)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              marginBottom: "1.25rem",
-              border: "1px solid rgba(255,255,255,0.06)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.5rem",
-              fontSize: "0.78rem",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: "#94a3b8" }}>1. Web3 Wallet Connection</span>
-              <span style={{ fontWeight: 700, color: isConnected ? "#22c55e" : "#f59e0b" }}>
-                {isConnected ? "✓ Connected" : "Pending"}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: "#94a3b8" }}>2. Cryptographic Signature</span>
-              <span style={{ fontWeight: 700, color: isAuthenticated ? "#22c55e" : "#94a3b8" }}>
-                {isAuthenticated ? "✓ Verified" : "Required"}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: "#94a3b8" }}>3. On-Chain Registry</span>
-              <span style={{ fontWeight: 700, color: profile.isRegistered ? "#22c55e" : "#94a3b8" }}>
-                {profile.isRegistered ? `✓ Member #${profile.userId}` : "Unregistered"}
-              </span>
-            </div>
+        {/* Security Checklist Status */}
+        <div className="bg-surface-container-lowest/80 rounded-2xl p-4 border border-outline-variant/15 space-y-2 mb-6 text-xs font-code">
+          <div className="flex justify-between items-center">
+            <span className="text-on-surface-variant">1. Wallet Connection</span>
+            <span className={isConnected ? "text-green-400 font-bold" : "text-amber-400 font-bold"}>
+              {isConnected ? "CONNECTED" : "PENDING"}
+            </span>
           </div>
-
-          {tab === "register" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.78rem",
-                    fontWeight: 700,
-                    color: "#94a3b8",
-                    marginBottom: "0.35rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  Sponsor / Inviter Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="0x... (leave empty for root sponsor)"
-                  value={sponsorInput}
-                  onChange={(e) => setSponsorInput(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "0.8rem 1rem",
-                    borderRadius: "10px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(168, 85, 247, 0.25)",
-                    color: "#ffffff",
-                    fontSize: "0.85rem",
-                    outline: "none",
-                  }}
-                />
-                <span style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "0.25rem", display: "block" }}>
-                  Auto-populated from your referral link if opened via invitation.
-                </span>
-              </div>
-
-              {!isConnected ? (
-                <button onClick={openConnectModal} className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
-                  <IconZap size={18} /> Connect Wallet to Continue
-                </button>
-              ) : !isAuthenticated ? (
-                <button
-                  onClick={handleSignatureAuth}
-                  disabled={isAuthenticating}
-                  className="btn btn-violet btn-lg"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <IconLock size={18} /> {isAuthenticating ? "Awaiting Signature..." : "Sign Security Challenge"}
-                </button>
-              ) : (
-                <button
-                  onClick={handleOnChainRegistration}
-                  disabled={isRegisteringOnChain || isTxPending}
-                  className="btn btn-primary btn-lg"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <IconShield size={18} /> {isRegisteringOnChain || isTxPending ? "Registering on BSC..." : "Complete On-Chain Registration"}
-                </button>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-              <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.5 }}>
-                Connect your authenticated wallet to decrypt your private protocol dashboard, matrix cycles, and claimable reward balances.
-              </p>
-
-              {!isConnected ? (
-                <button onClick={openConnectModal} className="btn btn-primary btn-lg" style={{ width: "100%", justifyContent: "center" }}>
-                  <IconZap size={18} /> Connect Web3 Wallet
-                </button>
-              ) : !isAuthenticated ? (
-                <button
-                  onClick={handleSignatureAuth}
-                  disabled={isAuthenticating}
-                  className="btn btn-primary btn-lg"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <IconLock size={18} /> {isAuthenticating ? "Awaiting Signature..." : "Sign In with Cryptographic Verification"}
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    onClose();
-                    router.push("/dashboard");
-                  }}
-                  className="btn btn-primary btn-lg"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <IconCheck size={18} /> Enter Dashboard
-                </button>
-              )}
-            </div>
-          )}
+          <div className="flex justify-between items-center">
+            <span className="text-on-surface-variant">2. Cryptographic Handshake</span>
+            <span className={isAuthenticated ? "text-green-400 font-bold" : "text-amber-400 font-bold"}>
+              {isAuthenticated ? "VERIFIED" : "REQUIRED"}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-on-surface-variant">3. On-Chain Registration</span>
+            <span className={profile?.isRegistered ? "text-green-400 font-bold" : "text-outline"}>
+              {profile?.isRegistered ? "REGISTERED" : "NEW NODE"}
+            </span>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: "0.75rem 1.5rem 1.25rem", textAlign: "center", fontSize: "0.72rem", color: "#64748b", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-          Gas-free cryptographic challenge • Non-custodial session security
+        {/* Form Body */}
+        {tab === "register" ? (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-label-md text-on-surface-variant uppercase tracking-wider font-bold">
+                Sponsor 5-Digit Referral Code (Optional)
+              </label>
+              <input
+                type="text"
+                value={sponsorInput}
+                onChange={(e) => setSponsorInput(e.target.value)}
+                placeholder="e.g. 10000 (Defaults to Genesis Root)"
+                className="w-full px-4 py-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30 text-xs font-code text-on-surface placeholder:text-outline outline-none focus:border-primary transition-colors"
+              />
+            </div>
+
+            <button
+              onClick={handleOnChainRegistration}
+              disabled={isRegisteringOnChain || isTxPending || isAuthenticating}
+              className="w-full py-4 bg-secondary-container hover:bg-secondary-container/90 text-on-secondary-container rounded-xl font-label-md text-xs font-bold uppercase tracking-wider shadow-lg shadow-secondary-container/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">verified</span>
+              <span>
+                {isRegisteringOnChain || isTxPending
+                  ? "Broadcasting Registration..."
+                  : isAuthenticating
+                  ? "Signing Challenge..."
+                  : "Complete Registration"}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Verify your Web3 signature to decrypt your terminal session and view real-time matrix earnings.
+            </p>
+
+            <button
+              onClick={handleSignatureAuth}
+              disabled={isAuthenticating}
+              className="w-full py-4 bg-secondary-container hover:bg-secondary-container/90 text-on-secondary-container rounded-xl font-label-md text-xs font-bold uppercase tracking-wider shadow-lg shadow-secondary-container/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">lock_open</span>
+              <span>{isAuthenticating ? "Verifying Signature..." : "Sign Challenge & Enter"}</span>
+            </button>
+          </div>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-outline-variant/15 text-center text-[10px] font-code text-outline">
+          Non-Custodial Cryptographic Authentication • Canadian Institutional Standard
         </div>
       </div>
     </div>

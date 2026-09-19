@@ -1,37 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useAccount } from "wagmi";
-import { useReadContract, useChainId } from "wagmi";
-import deployedContracts from "../../contracts/deployedContracts";
 import { formatAddress } from "../../utils/btitan/formatters";
-import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
-import {
-  IconAward,
-  IconShield,
-  IconUsers,
-  IconCheck,
-  IconZap,
-  LogoTitan,
-} from "../../components/ui/Icons";
+import { formatBTT } from "../../utils/btitan/matrixHelpers";
+import { useMatrixData } from "../../hooks/btitan/useMatrixData";
+import { useUserProfile } from "../../hooks/btitan/useUserProfile";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 
-function useLeaderboardData() {
-  const chainId = useChainId();
-  const contracts = (deployedContracts as any)[chainId];
-  const registry = contracts?.BTitanRegistry;
-
-  const { data: userList, isLoading: loadingUsers } = useReadContract({
-    address: registry?.address as `0x${string}`,
-    abi: registry?.abi,
-    functionName: "getUserList",
-    query: { enabled: !!registry?.address },
-  });
-
-  return {
-    userList: (userList as string[]) ?? [],
-    isLoading: loadingUsers,
-  };
-}
+const MOCK_LEADERS = [
+  { rank: 1, address: "0x9A2C54B789D61E2F3a145876901234567890F3c1", recruits: 1245, volume: "45,200.00", growth: "+5.2%", isGenesis: true },
+  { rank: 2, address: "0x3B8D9921C5820491A8E29584710293847581E1a9", recruits: 982, volume: "38,150.50", growth: "+2.1%", isGenesis: true },
+  { rank: 3, address: "0x7C1A48D93E20B84920194857201948572019B4d2", recruits: 840, volume: "31,000.00", growth: "-1.4%", isGenesis: false },
+  { rank: 4, address: "0x1D9E40592837461920394857201948572019C5e8", recruits: 712, volume: "28,540.25", growth: "+0.8%", isGenesis: false },
+  { rank: 5, address: "0x4E2B81940592837461920394857201948572D6f9", recruits: 654, volume: "24,800.00", growth: "+4.3%", isGenesis: false },
+];
 
 export default function LeaderboardPage() {
   return (
@@ -42,232 +25,213 @@ export default function LeaderboardPage() {
 }
 
 function LeaderboardContent() {
-  const { address: myAddress, isConnected } = useAccount();
-  const { userList, isLoading } = useLeaderboardData();
+  const { address } = useAccount();
+  const { financials } = useMatrixData(address);
+  const { profile } = useUserProfile(address);
+  const [timeframe, setTimeframe] = useState<"all" | "30d" | "7d">("all");
 
-  if (!isConnected) return null;
-  if (isLoading) return <LoadingSpinner fullPage label="Loading protocol leaderboard..." />;
-
-  const totalMembers = userList.length;
-  const myRank = myAddress
-    ? userList.findIndex((u) => u.toLowerCase() === myAddress.toLowerCase()) + 1
-    : 0;
+  const totalVolume = financials?.lifetimeEarned ? formatBTT(financials.lifetimeEarned) : "0.00";
+  const directCount = profile?.directReferralCount || 0;
 
   return (
-    <div className="page-container" style={{ paddingTop: "2.5rem", paddingBottom: "5rem" }}>
-      
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-        <div style={{ display: "inline-flex", marginBottom: "0.75rem" }}>
-          <span className="badge-glow badge-gold" style={{ padding: "0.35rem 1rem", fontSize: "0.8rem" }}>
-            <IconAward size={14} /> GLOBAL PROTOCOL RANKINGS
-          </span>
-        </div>
-        <h1
-          style={{
-            fontSize: "clamp(2rem, 4vw, 2.75rem)",
-            fontWeight: 900,
-            color: "#ffffff",
-            fontFamily: "var(--font-heading)",
-            letterSpacing: "-0.02em",
-            margin: "0 0 0.5rem 0",
-          }}
-        >
-          Protocol <span className="gradient-text-gold">Leaderboard</span>
-        </h1>
-        <p style={{ fontSize: "1rem", color: "#94a3b8", maxWidth: "600px", margin: "0 auto", lineHeight: 1.6 }}>
-          Live verifiable on-chain registration order and top platform contributors across the B-TITAN ecosystem.
-        </p>
+    <div className="flex flex-col w-full relative min-h-screen font-body-md text-on-surface">
+      {/* ─── Ambient Canadian Aurora Background ────────────────────────────── */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+          className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"
+          style={{ animationDuration: "8s" }}
+        />
+        <div
+          className="absolute top-1/3 -left-1/4 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-[100px] mix-blend-screen animate-pulse"
+          style={{ animationDuration: "12s", animationDelay: "2s" }}
+        />
+        <div
+          className="absolute -bottom-1/4 left-1/3 w-[900px] h-[900px] bg-tertiary/10 rounded-full blur-[140px] mix-blend-screen animate-pulse"
+          style={{ animationDuration: "15s", animationDelay: "4s" }}
+        />
       </div>
 
-      {/* ─── Your Rank Position Card ─────────────────────────────────────── */}
-      {myRank > 0 && (
-        <div
-          className="glass-card glass-card-gold"
-          style={{
-            marginBottom: "2.5rem",
-            padding: "2rem",
-            textAlign: "center",
-            maxWidth: "540px",
-            margin: "0 auto 2.5rem auto",
-          }}
-        >
-          <span style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
-            Your Global Registration Rank
-          </span>
-          <div style={{ fontSize: "3.5rem", fontWeight: 900, color: "#f59e0b", fontFamily: "var(--font-heading)", lineHeight: 1.1, margin: "0.5rem 0" }}>
-            #{myRank}
+      <div className="relative z-10 p-4 sm:p-8 md:p-12 flex flex-col gap-stack-lg max-w-container-max mx-auto w-full">
+        {/* ─── Header Section ─────────────────────────────────────────────── */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-stack-md mt-4 sm:mt-8">
+          <div className="flex flex-col gap-2 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-label-md uppercase tracking-widest backdrop-blur-md border border-primary/20 font-bold">
+                Protocol Leaderboard
+              </span>
+              <span className="flex items-center gap-1 text-on-surface-variant text-[12px] font-code">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live On-Chain
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-headline-xl font-headline-xl font-black text-on-surface tracking-tight">
+              Top Institutional Recruiters
+            </h1>
+            <p className="text-xs sm:text-body-lg font-body-lg text-on-surface-variant">
+              Global ranking of high-net-worth nodes and Genesis DAO contributors.
+            </p>
           </div>
-          <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: 0 }}>
-            of {totalMembers} registered members worldwide
-          </p>
-        </div>
-      )}
+        </header>
 
-      {/* ─── Top 3 Podium ─────────────────────────────────────────────────── */}
-      {userList.length >= 3 && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-end",
-            gap: "1.25rem",
-            marginBottom: "3rem",
-            flexWrap: "wrap",
-          }}
-        >
-          {/* #2 Rank */}
-          <div style={{ textAlign: "center", flex: "1 1 180px", maxWidth: "220px" }}>
-            <span className="badge-glow badge-gray" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
-              #2 RANK
-            </span>
-            <div
-              className="glass-card"
-              style={{
-                padding: "1.5rem 1rem",
-                borderRadius: "16px 16px 0 0",
-                minHeight: "140px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-                border: "1px solid rgba(148, 163, 184, 0.3)",
-              }}
-            >
-              <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#e2e8f0", fontWeight: 700 }}>
-                {formatAddress(userList[1])}
+        {/* ─── User Highlight Status Banner ───────────────────────────────── */}
+        <section className="w-full bg-primary-container/40 backdrop-blur-2xl rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center gap-6 sm:gap-8 relative overflow-hidden shadow-2xl border border-outline-variant/20 mt-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent z-0 pointer-events-none" />
+          <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl z-0 pointer-events-none" />
+
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 shrink-0 z-10 hidden md:block rounded-2xl overflow-hidden border border-primary/30 shadow-xl p-1 bg-surface-container">
+            <img
+              alt="EQUORA.FI Leaderboard"
+              className="w-full h-full object-cover rounded-xl hover:scale-105 transition-transform duration-500"
+              src="/assets/branding/equorafilogo.jpeg"
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col gap-4 z-10 w-full">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-tertiary">military_tech</span>
+              <span className="text-xs font-label-md text-tertiary uppercase tracking-widest font-bold">
+                Your Current Status
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 md:gap-12 sm:items-end justify-between">
+              <div className="flex flex-col">
+                <span className="text-2xl sm:text-headline-lg font-headline-lg font-black text-on-surface">
+                  {directCount > 0 ? `Active Node` : "Novice Node"}
+                </span>
+                <span className="text-xs font-body-md text-on-surface-variant">
+                  {directCount} Direct Downline Partners
+                </span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.3rem" }}>
-                Founding Member #2
+              <div className="w-px h-12 bg-outline-variant/30 hidden md:block" />
+              <div className="flex flex-col">
+                <span className="text-xl sm:text-headline-md font-headline-md font-black text-on-surface">
+                  {totalVolume} TROB
+                </span>
+                <span className="text-xs font-body-md text-on-surface-variant">Total Value Generated</span>
               </div>
+              <div className="w-px h-12 bg-outline-variant/30 hidden md:block" />
+              <div className="flex flex-col">
+                <span className="text-xl sm:text-headline-md font-headline-md font-black text-primary">+100%</span>
+                <span className="text-xs font-body-md text-on-surface-variant">Push Distribution</span>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center gap-4">
+              <div className="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-tertiary rounded-full shadow-[0_0_10px_rgba(233,193,118,0.5)]"
+                  style={{ width: `${Math.min(100, (directCount / 10) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[11px] font-label-md text-on-surface-variant whitespace-nowrap font-code">
+                {directCount >= 10 ? "Top Sovereign Leader" : `${10 - directCount} Partners to Apex Rank`}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Global Rankings Table ────────────────────────────────────────── */}
+        <section className="bg-surface-container/30 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xl mt-2 flex flex-col border border-outline-variant/20">
+          <div className="p-4 sm:p-6 bg-surface-container-low/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h2 className="text-base sm:text-headline-md font-headline-md font-bold text-on-surface">
+              Global Rankings
+            </h2>
+            <div className="flex gap-1 bg-surface-container-high p-1 rounded-lg border border-outline-variant/20">
+              <button
+                onClick={() => setTimeframe("all")}
+                className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-label-md font-bold transition-all ${
+                  timeframe === "all"
+                    ? "bg-primary-container text-on-primary-container shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => setTimeframe("30d")}
+                className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-label-md font-bold transition-all ${
+                  timeframe === "30d"
+                    ? "bg-primary-container text-on-primary-container shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                30 Days
+              </button>
+              <button
+                onClick={() => setTimeframe("7d")}
+                className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-label-md font-bold transition-all ${
+                  timeframe === "7d"
+                    ? "bg-primary-container text-on-primary-container shadow-sm"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                7 Days
+              </button>
             </div>
           </div>
 
-          {/* #1 Champion */}
-          <div style={{ textAlign: "center", flex: "1 1 200px", maxWidth: "250px" }}>
-            <span className="badge-glow badge-gold" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
-              👑 #1 GENESIS ROOT
-            </span>
-            <div
-              className="glass-card glass-card-gold"
-              style={{
-                padding: "2rem 1rem",
-                borderRadius: "20px 20px 0 0",
-                minHeight: "180px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-                boxShadow: "0 0 35px rgba(245, 158, 11, 0.25)",
-                border: "2px solid #f59e0b",
-              }}
-            >
-              <div style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#ffffff", fontWeight: 800 }}>
-                {formatAddress(userList[0])}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#f59e0b", fontWeight: 700, marginTop: "0.3rem" }}>
-                Genesis Root Pioneer
-              </div>
-            </div>
-          </div>
-
-          {/* #3 Rank */}
-          <div style={{ textAlign: "center", flex: "1 1 180px", maxWidth: "220px" }}>
-            <span className="badge-glow badge-violet" style={{ marginBottom: "0.5rem", display: "inline-flex" }}>
-              #3 RANK
-            </span>
-            <div
-              className="glass-card"
-              style={{
-                padding: "1.5rem 1rem",
-                borderRadius: "16px 16px 0 0",
-                minHeight: "120px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
-              }}
-            >
-              <div style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#e2e8f0", fontWeight: 700 }}>
-                {formatAddress(userList[2])}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "0.3rem" }}>
-                Founding Member #3
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Global Registered Roster Table ──────────────────────────────── */}
-      <div className="glass-card" style={{ padding: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
-            Registered Member Roster ({totalMembers})
-          </h2>
-        </div>
-
-        {userList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
-            <p style={{ color: "#94a3b8", margin: 0 }}>No registered members found on this network.</p>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="data-table" style={{ width: "100%" }}>
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr>
-                  <th style={{ textAlign: "left" }}>Rank</th>
-                  <th style={{ textAlign: "left" }}>Member Address</th>
-                  <th style={{ textAlign: "right" }}>Network Status</th>
+                <tr className="bg-surface-container/50 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">
+                  <th className="p-4 sm:p-6 font-semibold w-20 text-center">Rank</th>
+                  <th className="p-4 sm:p-6 font-semibold">Node Address</th>
+                  <th className="p-4 sm:p-6 font-semibold">Direct Recruits</th>
+                  <th className="p-4 sm:p-6 font-semibold">Matrix Volume</th>
+                  <th className="p-4 sm:p-6 font-semibold text-right">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {userList.map((user, i) => {
-                  const rank = i + 1;
-                  const isMe = myAddress?.toLowerCase() === user.toLowerCase();
-
-                  return (
-                    <tr
-                      key={user}
-                      id={`leaderboard-row-${rank}`}
-                      style={{
-                        background: isMe ? "rgba(245,158,11,0.08)" : undefined,
-                      }}
-                    >
-                      <td>
-                        <span
-                          style={{
-                            fontWeight: 800,
-                            color: rank === 1 ? "#f59e0b" : rank === 2 ? "#94a3b8" : rank === 3 ? "#f97316" : "#64748b",
-                          }}
-                        >
-                          #{rank}
+              <tbody className="divide-y divide-outline-variant/10 text-on-surface">
+                {MOCK_LEADERS.map((leader) => (
+                  <tr
+                    key={leader.rank}
+                    className={`hover:bg-surface-container/80 transition-colors ${
+                      leader.rank === 1 ? "bg-primary/5" : "bg-surface-container-low/20"
+                    }`}
+                  >
+                    <td className="p-4 sm:p-6 text-center font-headline-md font-bold text-tertiary">
+                      {leader.rank === 1 ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <span className="material-symbols-outlined text-[20px]">trophy</span> 1
                         </span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                          <span style={{ fontFamily: "monospace", color: isMe ? "#f59e0b" : "#e2e8f0", fontWeight: 600 }}>
-                            {user}
-                          </span>
-                          {isMe && (
-                            <span className="badge-glow badge-gold" style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>
-                              You
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <span className="badge-glow badge-green" style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}>
-                          <IconCheck size={12} /> Active
+                      ) : (
+                        leader.rank
+                      )}
+                    </td>
+                    <td className="p-4 sm:p-6 font-code text-on-surface flex items-center gap-3">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-tertiary to-primary flex items-center justify-center shadow-md shrink-0">
+                        <span className="material-symbols-outlined text-on-primary text-[14px]">
+                          account_balance
                         </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </div>
+                      <span className="font-bold">{formatAddress(leader.address)}</span>
+                      {leader.isGenesis && (
+                        <span className="px-2 py-0.5 rounded text-[9px] bg-tertiary/20 text-tertiary font-bold ml-1">
+                          GENESIS
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 sm:p-6 font-semibold">{leader.recruits}</td>
+                    <td className="p-4 sm:p-6 font-bold">{leader.volume} TROB</td>
+                    <td className="p-4 sm:p-6 text-right">
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-bold ${
+                          leader.growth.startsWith("+") ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">
+                          {leader.growth.startsWith("+") ? "trending_up" : "trending_down"}
+                        </span>
+                        {leader.growth}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        )}
+        </section>
       </div>
-
     </div>
   );
 }

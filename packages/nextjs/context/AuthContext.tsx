@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const timestamp = new Date().toISOString();
 
       const challengeMessage = 
-`B-TITAN PROTOCOL DEEP SECURITY AUTHENTICATION
+`EQUORA_Fi PROTOCOL DEEP SECURITY AUTHENTICATION
 
 Please sign this cryptographic challenge to authenticate your wallet ownership and establish a secure, non-custodial session.
 
@@ -134,7 +134,7 @@ Wallet: ${address}
 Chain ID: ${chainId}
 Nonce: ${nonce}
 Timestamp: ${timestamp}
-URI: ${typeof window !== "undefined" ? window.location.origin : "https://btitan.net"}
+URI: ${typeof window !== "undefined" ? window.location.origin : "https://equora.fi"}
 
 Notice: This signature is gas-free and does not trigger any blockchain transaction.`;
 
@@ -161,7 +161,7 @@ Notice: This signature is gas-free and does not trigger any blockchain transacti
       } catch {}
 
       notification.dismiss(toastId);
-      notification.success("🔐 Cryptographic authentication verified! Welcome to B-TITAN.");
+      notification.success("🔐 Cryptographic authentication verified! Welcome to EQUORA_Fi.");
       setIsAuthenticating(false);
       return true;
     } catch (err: any) {

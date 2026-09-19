@@ -6,13 +6,13 @@ import { UserProfile } from "../../types/btitan";
 
 /**
  * useUserProfile
- * Reads user registration data from BTitanRegistry.
- * Maps to exact function signatures verified in BTitanRegistry.sol.
+ * Reads user registration data from EquoraRegistry.
+ * Maps to exact function signatures in EquoraRegistry.sol.
  */
 export function useUserProfile(userAddress?: `0x${string}`) {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
-  const registry = contracts?.BTitanRegistry;
+  const registry = contracts?.EquoraRegistry;
 
   const enabled = !!registry?.address && !!userAddress;
 
@@ -70,6 +70,18 @@ export function useUserProfile(userAddress?: `0x${string}`) {
     query: { enabled },
   });
 
+  // userToCode(address user) → uint32 (5-digit referral code 10000-99999)
+  const { data: referralCode } = useReadContract({
+    address: registry?.address as `0x${string}`,
+    abi: registry?.abi,
+    functionName: "userToCode",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled },
+  });
+
+  const parsedUserId = userId ? Number(userId) : 0;
+  const parsedCode = referralCode ? Number(referralCode) : (parsedUserId > 0 ? parsedUserId + 9999 : 10000);
+
   const profile: UserProfile = {
     address: userAddress ?? "",
     isRegistered: !!isRegistered,
@@ -77,7 +89,8 @@ export function useUserProfile(userAddress?: `0x${string}`) {
     directReferrals: (directReferrals as string[]) ?? [],
     directReferralCount: refCount ? Number(refCount) : 0,
     isQualified: !!isQualified,
-    userId: userId ? Number(userId) : 0,
+    userId: parsedUserId,
+    referralCode: parsedCode,
   };
 
   return {

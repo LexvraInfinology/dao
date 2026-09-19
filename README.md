@@ -1,11 +1,11 @@
-# B-TITAN — Web3 Matrix DApp
+# EQUORA_Fi — Autonomous Web3 Protocol
 
-A fully on-chain matrix platform built on BNB Smart Chain.
+A fully autonomous, peer-to-peer decentralized financial protocol.
 
 ## 🏗 Project Structure
 
 ```
-b-titan/
+equora-fi/
 ├── packages/
 │   ├── hardhat/          # Smart contracts + deployment
 │   └── nextjs/           # Next.js 15 frontend

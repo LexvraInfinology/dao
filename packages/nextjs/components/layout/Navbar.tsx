@@ -109,7 +109,7 @@ export function Navbar() {
                 }}
                 className="gradient-text-gold"
               >
-                B-TITAN
+                EQUORA_Fi
               </span>
               <span style={{ fontSize: "0.62rem", color: "#a855f7", fontWeight: 700, letterSpacing: "0.12em" }}>
                 PROTOCOL • BSC
@@ -245,7 +245,7 @@ export function Navbar() {
                   }}
                   className="gradient-text-gold"
                 >
-                  B-TITAN
+                  EQUORA_Fi
                 </span>
               </div>
               <button

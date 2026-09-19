@@ -1,51 +1,68 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   B-TITAN LUXURY WEB3 DESIGN SYSTEM — globals.css
-   Modern Violet-Gold Cyberpunk Aesthetic inspired by btitan.net
-   Urbanist + Unbounded + DM Sans Typography, Dynamic Glowing Glassmorphism
-═══════════════════════════════════════════════════════════════════════════ */
+   B-TITAN CANADIAN INSTITUTIONAL WEB3 DESIGN SYSTEM — globals.css
+   Northern Sovereign Aesthetic • Inter + DM Sans Typography
+   Deep Navy (#0a192f) • Canadian Crimson (#ce0008) • Sovereign Gold (#e9c176)
+   Obsidian Glassmorphism (#101416)
+ ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Unbounded:wght@300;400;600;700;800;900&family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@100..900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
 /* ─── CSS Variables ────────────────────────────────────────────────────────── */
 :root {
-  /* Luxury Dark Palette */
-  --color-bg:           #080114;
-  --color-bg-deep:      #05000c;
-  --color-bg-card:      rgba(19, 7, 39, 0.7);
-  --color-bg-card-hover:rgba(30, 12, 60, 0.85);
-  --color-surface:      rgba(255, 255, 255, 0.03);
-  --color-surface-hover:rgba(255, 255, 255, 0.07);
-  --color-border:       rgba(168, 85, 247, 0.15);
-  --color-border-glow:  rgba(245, 158, 11, 0.4);
-  --color-border-violet:rgba(168, 85, 247, 0.35);
+  /* Northern Sovereign Palette */
+  --color-bg:               #101416;
+  --color-bg-dim:           #0b0f11;
+  --color-primary-container:#0a192f;
+  --color-secondary-container:#ce0008;
+  --color-tertiary:         #e9c176;
+  --color-primary:          #b9c7e4;
+  --color-on-surface:       #e0e3e6;
+  --color-on-surface-variant:#c5c6cd;
+  --color-outline-variant:  #44474d;
+  --color-surface-container:#1d2022;
+  --color-surface-high:     #272a2d;
 
-  /* Brand Accents */
-  --color-gold:         #f59e0b;
-  --color-gold-light:   #fcd34d;
-  --color-gold-dark:    #d97706;
-  --color-gold-glow:    rgba(245, 158, 11, 0.25);
-  --color-violet:       #8b5cf6;
-  --color-violet-light: #c084fc;
-  --color-fuchsia:      #ec4899;
-  --color-cyan:         #06b6d4;
-
-  /* Matrix Node Category Colors */
-  --color-node-direct:   #22c55e;
-  --color-node-spillover:#a855f7;
-  --color-node-upgrade:  #f59e0b;
-  --color-node-recycle:  #3b82f6;
+  /* Legacy & Accent Colors */
+  --color-gold:             #e9c176;
+  --color-gold-light:       #ffdea5;
+  --color-crimson:          #ce0008;
+  --color-navy:             #0a192f;
+  --color-node-direct:      #ce0008;
+  --color-node-spillover:   #b9c7e4;
+  --color-node-upgrade:     #e9c176;
+  --color-node-recycle:     #22c55e;
 
   /* Typography */
-  --font-sans:     "Urbanist", "Inter", -apple-system, sans-serif;
-  --font-heading:  "Unbounded", "Urbanist", sans-serif;
+  --font-sans:     "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading:  "Inter", sans-serif;
   --font-body:     "DM Sans", sans-serif;
 
   /* Layout */
-  --nav-height:    72px;
+  --sidebar-w:     280px;
+  --header-h:      64px;
+  --nav-height:    64px;
   --bottom-nav-h:  70px;
-  --card-radius:   20px;
-  --btn-radius:    14px;
 }
+
+/* ─── Light Mode Overrides ─────────────────────────────────────────────────── */
+html.light {
+  --color-bg:               #f4f6f8;
+  --color-bg-dim:           #e2e8f0;
+  --color-primary-container:#0d2347;
+  --color-secondary-container:#b30006;
+  --color-tertiary:         #b45309;
+  --color-primary:          #1e3a8a;
+  --color-on-surface:       #0f172a;
+  --color-on-surface-variant:#475569;
+  --color-outline-variant:  #cbd5e1;
+  --color-surface-container:#ffffff;
+  --color-surface-high:     #f8fafc;
+}
+
 
 /* ─── Reset & Core ─────────────────────────────────────────────────────────── */
 *, *::before, *::after {

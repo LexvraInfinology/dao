@@ -7,26 +7,26 @@
 
 export enum BTitanRank {
   NONE = 0,
-  RISING = 1,
+  ALPHA = 1,
   PRIME = 2,
-  ROYAL = 3,
-  LEGENDARY = 4,
+  ELITE = 3,
+  CROWN = 4,
 }
 
 export const RANK_LABELS: Record<BTitanRank, string> = {
   [BTitanRank.NONE]: "Unranked",
-  [BTitanRank.RISING]: "Rising Star",
-  [BTitanRank.PRIME]: "Prime",
-  [BTitanRank.ROYAL]: "Royal",
-  [BTitanRank.LEGENDARY]: "Legendary",
+  [BTitanRank.ALPHA]: "Alpha Pool Card",
+  [BTitanRank.PRIME]: "Prime Pool Card",
+  [BTitanRank.ELITE]: "Elite Pool Card",
+  [BTitanRank.CROWN]: "Crown Pool Card",
 };
 
 export const RANK_COLORS: Record<BTitanRank, string> = {
   [BTitanRank.NONE]: "#6b7280",
-  [BTitanRank.RISING]: "#f59e0b",
+  [BTitanRank.ALPHA]: "#3b82f6",
   [BTitanRank.PRIME]: "#8b5cf6",
-  [BTitanRank.ROYAL]: "#06b6d4",
-  [BTitanRank.LEGENDARY]: "#f97316",
+  [BTitanRank.ELITE]: "#06b6d4",
+  [BTitanRank.CROWN]: "#f59e0b",
 };
 
 // ─── Slot Data ────────────────────────────────────────────────────────────────
@@ -61,21 +61,30 @@ export const SLOT_COSTS: Record<number, bigint> = {
 export const MAGIC_BOX_SLOTS = [3, 6, 9, 12] as const;
 export type MagicBoxSlot = (typeof MAGIC_BOX_SLOTS)[number];
 
-// ─── DAO Types ────────────────────────────────────────────────────────────────
-
 export interface DAOMemberDetails {
   isMember: boolean;
-  position: number;       // 1-50
-  availableBalance: bigint;
+  position: number;           // 1-100
+  nftTokenId?: number;        // Soulbound NFT Token ID
+  availableBalance: bigint;   // crystallized withdrawable balance
+  withdrawableBalance: bigint;
+  pendingDistribution: bigint; // unclaimed share
+  totalClaimable?: bigint;     // fallback balance
   totalEarned: bigint;
   totalWithdrawn: bigint;
+  isCapped?: boolean;
+  retopupDeadline?: number;
+  isBlank?: boolean;
+  poolShareClaimable?: bigint; // 35% Matrix Volume Pool share
 }
 
 export interface DAOStats {
   memberCount: number;
+  maxPositions?: number;
   totalCollected: bigint;
   totalDistributed: bigint;
   isCompleted: boolean;
+  totalPoolReceived?: bigint;
+  totalPoolDistributed?: bigint;
 }
 
 // ─── User Profile ─────────────────────────────────────────────────────────────
@@ -88,6 +97,7 @@ export interface UserProfile {
   directReferralCount: number;
   isQualified: boolean;
   userId: number;
+  referralCode?: number;
 }
 
 // ─── Financial Data ───────────────────────────────────────────────────────────
@@ -123,34 +133,68 @@ export interface UserVestingData {
   equityBps: number;    // e.g., 250 = 2.5%
 }
 
-// ─── Matrix Node Routing ──────────────────────────────────────────────────────
+// ─── Matrix Node Routing & Payout Types ─────────────────────────────────────
 
 export type NodeEventType =
   | "UPLINE_1"
   | "UPLINE_2"
-  | "YOUR_WALLET"
-  | "NEXT_SLOT_FUND"
-  | "ROYAL_POOL"
-  | "DOWNLINE_1_SPILLOVER"
-  | "DOWNLINE_2_SPILLOVER"
-  | "RECYCLE_SPONSOR";
+  | "OWNER_DIRECT"
+  | "UPGRADE_RESERVE"
+  | "AUTO_UPGRADE"
+  | "SPILLOVER_DOWNLINE1"
+  | "SPILLOVER_DOWNLINE2"
+  | "RECYCLE_SPONSOR"
+  | "DAO_POOL"
+  | "RANK_POOL"
+  | "CYCLE_COMPLETE";
+
+export interface CycleSnapshot {
+  cycleNumber: number;
+  nodes: string[];
+  completedAt: string | Date;
+  txHash: string;
+}
+
+export const NODE_ROUTING_CYCLE1: Record<number, { type: NodeEventType; label: string; recipient: string; color: string }> = {
+  1:  { type: "UPLINE_1",            label: "Upline 1",         recipient: "Direct Sponsor", color: "#3b82f6" },
+  2:  { type: "UPLINE_2",            label: "Upline 2",         recipient: "2nd Gen Sponsor", color: "#6366f1" },
+  3:  { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  4:  { type: "UPGRADE_RESERVE",     label: "Upgrade Reserve",  recipient: "50% of Next Slot",color: "#f59e0b" },
+  5:  { type: "UPGRADE_RESERVE",     label: "Auto-Upgrade",     recipient: "50% + Unlock Next",color: "#ec4899" },
+  6:  { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  7:  { type: "SPILLOVER_DOWNLINE1", label: "Downline 1 / You", recipient: "Spillover if Qual", color: "#06b6d4" },
+  8:  { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  9:  { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  10: { type: "SPILLOVER_DOWNLINE1", label: "Downline 1 / You", recipient: "Spillover if Qual", color: "#06b6d4" },
+  11: { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  12: { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",      color: "#10b981" },
+  13: { type: "SPILLOVER_DOWNLINE2", label: "Downline 2 / You", recipient: "Spillover if Qual", color: "#8b5cf6" },
+  14: { type: "RECYCLE_SPONSOR",     label: "Recycle (85/15)",  recipient: "85% Sponsor + 15% DAO", color: "#e11d48" },
+};
+
+export const NODE_ROUTING_CYCLE2_PLUS: Record<number, { type: NodeEventType; label: string; recipient: string; color: string }> = {
+  ...NODE_ROUTING_CYCLE1,
+  4:  { type: "RANK_POOL",           label: "Rank & DAO Pool",  recipient: "50% Rank + 50% DAO", color: "#8b5cf6" },
+  5:  { type: "OWNER_DIRECT",        label: "Your Wallet",      recipient: "You (100%)",         color: "#10b981" },
+};
 
 export const NODE_ROUTING: Record<number, NodeEventType> = {
   1:  "UPLINE_1",
   2:  "UPLINE_2",
-  3:  "YOUR_WALLET",
-  4:  "NEXT_SLOT_FUND",
-  5:  "NEXT_SLOT_FUND",
-  6:  "YOUR_WALLET",
-  7:  "DOWNLINE_1_SPILLOVER",
-  8:  "YOUR_WALLET",
-  9:  "YOUR_WALLET",
-  10: "DOWNLINE_1_SPILLOVER",
-  11: "YOUR_WALLET",
-  12: "YOUR_WALLET",
-  13: "DOWNLINE_2_SPILLOVER",
+  3:  "OWNER_DIRECT",
+  4:  "UPGRADE_RESERVE",
+  5:  "AUTO_UPGRADE",
+  6:  "OWNER_DIRECT",
+  7:  "SPILLOVER_DOWNLINE1",
+  8:  "OWNER_DIRECT",
+  9:  "OWNER_DIRECT",
+  10: "SPILLOVER_DOWNLINE1",
+  11: "OWNER_DIRECT",
+  12: "OWNER_DIRECT",
+  13: "SPILLOVER_DOWNLINE2",
   14: "RECYCLE_SPONSOR",
 };
+
 
 // ─── Global Stats ─────────────────────────────────────────────────────────────
 
@@ -158,7 +202,9 @@ export interface GlobalStats {
   totalMembers: bigint;
   totalRecycles: bigint;
   totalVolume: bigint;
-  royalPool: bigint;
+  daoPool: bigint;
+  rankPool: bigint;
   daoMemberCount: number;
   daoCompleted: boolean;
 }
+

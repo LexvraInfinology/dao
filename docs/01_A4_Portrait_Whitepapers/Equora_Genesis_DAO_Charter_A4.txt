@@ -1,0 +1,66 @@
+================================================================================
+EQUORA PROTOCOL — GENESIS DAO COUNCIL SOVEREIGN CHARTER
+100-Seat Sovereign Governance, 3X Cap & Automated Vacancy Re-Allocation
+================================================================================
+Council Ceiling:   Exactly 100 Seats Maximum Globally
+Capital Entry:     $300.00 USD (USDT / DAI)
+Referral Barrier:  Strictly 0 Referrals Required (100% Open Buy-In)
+Earnings Cap:      Strictly 3X ($900.00 USD)
+Re-Topup Protocol: 48-Hour Execution Window ($300.00 USD Re-Topup)
+Rollout Phasing:   Phase 1 (Days 1-21 Exclusive) | Phase 2 (Day 22 Onward Public)
+
+--------------------------------------------------------------------------------
+1.0 TWO-PHASE DEPLOYMENT ARCHITECTURE
+--------------------------------------------------------------------------------
+Phase 1: Exclusive Genesis DAO Window (First 21 Days)
+  - Only the Genesis DAO Council ($300 seats) is active, visible, and open.
+  - Standard $30 matrix slots are completely locked and hidden on-chain.
+  - Open Buy-In: Any founding leader or investor can purchase a seat directly.
+  - Founding council members establish structural priority and accumulate early queue dividends.
+
+Phase 2: Global Community Matrix Launch (Day 22 Onward)
+  - Public 14-node matrix officially goes live worldwide.
+  - Standard $30 entry slot becomes publicly visible.
+  - The 35% Treasury Pool begins flowing continuously to active Genesis Council wallets.
+
+--------------------------------------------------------------------------------
+2.0 THE GENESIS QUEUE DISTRIBUTION FORMULA: $300 / (N - 1)
+--------------------------------------------------------------------------------
+Every new $300 council deposit is divided equally among all existing seated members:
++---------------+----------------+-----------------------+---------------------+
+| Joining Member| Deposit Amount | Recipient Pool        | Payout Per Member   |
++---------------+----------------+-----------------------+---------------------+
+| Member #2     | $300.00        | Member #1 (1 member)  | $300.00 (100%)      |
+| Member #3     | $300.00        | Members #1-2 (2 mem)  | $150.00 each        |
+| Member #6     | $300.00        | Members #1-5 (5 mem)  | $ 60.00 each        |
+| Member #11    | $300.00        | Members #1-10 (10 mem)| $ 30.00 each        |
+| Member #21    | $300.00        | Members #1-20 (20 mem)| $ 15.00 each        |
+| Member #51    | $300.00        | Members #1-50 (50 mem)| $  6.00 each        |
+| Member #76    | $300.00        | Members #1-75 (75 mem)| $  4.00 each        |
+| Member #100   | $300.00        | Members #1-99 (99 mem)| $  3.03 each        |
++---------------+----------------+-----------------------+---------------------+
+Zero Protocol Skim: Exactly 100% of the $300 fee is pushed directly in the same block.
+
+--------------------------------------------------------------------------------
+3.0 THE 3X ($900) EARNINGS CAP & 48-HOUR RE-TOPUP WINDOW
+--------------------------------------------------------------------------------
+  - Total cumulative payout capped at $900.00 per $300 seat.
+  - When $900.00 is achieved, an immutable 48-hour countdown timer initiates.
+  - Depositing a $300 re-topup resets accumulated earnings to $0.00 and unlocks an
+    additional $900.00 earning window.
+  - 100% of the $300 re-topup is injected into the Ecosystem & DAO Pool (35%),
+    distributing liquidity directly to other active Genesis DAO Seat holders.
+  - If unpaid within 48 hours, the DAO Seat is marked vacant and opened for
+    reassignment via the automated 1-to-100 lowest vacancy scan.
+
+--------------------------------------------------------------------------------
+4.0 AUTOMATED 1-100 VACANCY SCAN ENGINE
+--------------------------------------------------------------------------------
+  - When a new user calls joinDAO(), the contract iterates from Seat 1 through 100.
+  - The incoming member is assigned to the lowest vacant seat index available.
+  - Vacated foundational seats (e.g. Seat #4, Seat #12) are continuously re-occupied
+    by fresh capital, preventing structural stagnation.
+  - Permanent Queue: The former 15-day inactivity timeout has been eliminated;
+    placement remains valid indefinitely until the 3X cap is reached.
+
+================================================================================

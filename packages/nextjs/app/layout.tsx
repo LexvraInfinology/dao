@@ -1,8 +1,8 @@
+import "../services/web3/idbPatch";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Web3Providers } from "../components/web3/Web3Providers";
-import { Navbar } from "../components/layout/Navbar";
-import { BottomNav } from "../components/layout/BottomNav";
+import { TitanAppShell } from "../components/layout/TitanAppShell";
 import "../styles/globals.css";
 
 const inter = Inter({
@@ -11,13 +11,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "B-TITAN — Web3 Matrix Platform",
+  title: "EQUORA_Fi — Autonomous Web3 Protocol",
   description:
-    "Join the B-TITAN decentralized matrix platform. Earn with the Genesis DAO, 12-slot matrix, referral rewards, and Magic Box milestones.",
-  keywords: ["Web3", "Matrix", "DAO", "DeFi", "Crypto", "B-TITAN", "Earn"],
+    "Join EQUORA_Fi — the fully autonomous, peer-to-peer decentralized financial protocol. Earn with the 100-Seat Genesis DAO, 12-slot matrix, referral rewards, and Magic Box milestones.",
+  keywords: ["Web3", "Matrix", "DAO", "DeFi", "Crypto", "EQUORA_Fi", "Equora", "Earn", "TROB"],
   openGraph: {
-    title: "B-TITAN — Web3 Matrix Platform",
-    description: "Earn with the B-TITAN decentralized matrix",
+    title: "EQUORA_Fi — Autonomous Web3 Protocol",
+    description: "Earn with the EQUORA_Fi decentralized matrix platform",
     type: "website",
   },
 };
@@ -28,19 +28,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable} data-scroll-behavior="smooth">
-      <body className="btitan-app">
+    <html lang="en" className={`${inter.variable} dark`} data-scroll-behavior="smooth">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@100..900&display=swap"
+        />
+      </head>
+      <body className="bg-background text-on-surface">
         <Web3Providers>
-          {/* Desktop + Mobile Top Navbar */}
-          <Navbar />
-
-          {/* Main Content Area */}
-          <main className="main-content">
-            {children}
-          </main>
-
-          {/* Mobile Bottom Navigation */}
-          <BottomNav />
+          <TitanAppShell>{children}</TitanAppShell>
         </Web3Providers>
       </body>
     </html>

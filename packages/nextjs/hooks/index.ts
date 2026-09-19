@@ -14,3 +14,7 @@ export { useJoinDAO }        from "./btitan/useJoinDAO";
 export { useJoinMatrix }     from "./btitan/useJoinMatrix";
 export { useWithdraw }       from "./btitan/useWithdraw";
 export { useRewardsData }    from "./btitan/useRewardsData";
+export { useClaimFallback }  from "./btitan/useClaimFallback";
+export { useClaimPoolShare } from "./btitan/useClaimPoolShare";
+export { useAllowanceCheck } from "./btitan/useAllowanceCheck";
+

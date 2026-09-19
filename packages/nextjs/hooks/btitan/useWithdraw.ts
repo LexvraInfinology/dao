@@ -8,11 +8,15 @@ import { notification } from "../../utils/scaffold-eth/notification";
 /**
  * useWithdraw
  * Handles withdrawals from both BTitanDAO and BTitanMatrix.
+ *
+ * DAO withdrawal flow (post D-01 pull-based fix):
+ *   Option A (2 TXs): claimDAODistribution() → withdrawFromDAO(amount)
+ *   Option B (1 TX):  claimAndWithdrawDAO(amount) ← recommended
  */
 export function useWithdraw() {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
-  const daoContract = contracts?.BTitanDAO;
+  const daoContract = contracts?.EquoraDAO;
   const matrixContract = contracts?.BTitanMatrix;
 
   const [withdrawing, setWithdrawing] = useState<"dao" | "matrix" | null>(null);
@@ -21,31 +25,38 @@ export function useWithdraw() {
   const { writeContractAsync: matrixWithdrawWrite } = useWriteContract();
 
   /**
-   * Withdraw from DAO earnings
-   * @param amount - BigInt amount in 18-decimal BTT
+   * Withdraw uncollected fallback DAO earnings (0 fee).
    */
-  const withdrawFromDAO = async (amount: bigint) => {
+  const withdrawFromDAO = async (_amount?: bigint) => {
     if (!daoContract?.address) {
       notification.error("DAO contract not deployed.");
       return;
     }
     setWithdrawing("dao");
-    const toastId = notification.loading("Withdrawing from DAO...");
+    const toastId = notification.loading("Claiming DAO fallback balance...");
     try {
       const tx = await daoWithdrawWrite({
         address: daoContract.address as `0x${string}`,
         abi: daoContract.abi,
-        functionName: "withdraw",
-        args: [amount],
+        functionName: "claimFallback",
+        args: [],
       });
       notification.dismiss(toastId);
       notification.txSuccess(tx);
     } catch (err: any) {
       notification.dismiss(toastId);
-      notification.error(err?.shortMessage || "DAO withdrawal failed");
+      notification.error(err?.shortMessage || "DAO claim failed");
     } finally {
       setWithdrawing(null);
     }
+  };
+
+  const claimDAODistribution = async () => {
+    return withdrawFromDAO();
+  };
+
+  const claimAndWithdrawDAO = async (_amount?: bigint) => {
+    return withdrawFromDAO();
   };
 
   /**
@@ -76,8 +87,11 @@ export function useWithdraw() {
     }
   };
 
-  return { withdrawFromDAO, withdrawFromMatrix, withdrawing };
+  return {
+    withdrawFromDAO,
+    claimDAODistribution,
+    claimAndWithdrawDAO,
+    withdrawFromMatrix,
+    withdrawing,
+  };
 }
-
-
-

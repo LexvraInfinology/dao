@@ -1,0 +1,421 @@
+// ==============================================================================
+// B-TITAN PROTOCOL — PRISMA DATABASE SCHEMA (PostgreSQL)
+// ==============================================================================
+// Smart contracts remain the single authoritative source of truth.
+// This database holds DERIVED indexed blockchain state for sub-millisecond
+// UI queries, genealogy tree traversals, leaderboards, and audit trails.
+// ==============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------------------------
+// 1. IDENTITY & REFERRAL GENEALOGY (BTitanRegistry)
+// ------------------------------------------------------------------------------
+
+model User {
+  id                    String    @id @default(uuid())
+  address               String    @unique // Canonical lowercase 0x... address
+  userId                Int       @unique // 1-indexed on-chain user ID
+  sponsorAddress        String?
+  sponsor               User?     @relation("ReferralTree", fields: [sponsorAddress], references: [address])
+  referrals             User[]    @relation("ReferralTree")
+  directReferralsCount  Int       @default(0)
+  isQualified           Boolean   @default(false) // directReferralsCount >= 2
+  registrationTimestamp DateTime
+  txHash                String?
+  blockNumber           BigInt?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Inverse relations
+  daoMembership         DaoMember?
+  matrixSlots           MatrixSlot[]
+  placedMatrixNodes     MatrixPlacement[] @relation("PlacedUser")
+  ownedMatrixNodes      MatrixPlacement[] @relation("MatrixOwner")
+  nftBadges             NftBadge[]
+  vestingLocks          VestingLock[]
+  withdrawals           Withdrawal[]
+  authNonces            AuthNonce[]
+
+  @@index([address])
+  @@index([sponsorAddress])
+  @@index([isQualified])
+  @@index([registrationTimestamp])
+}
+
+// ------------------------------------------------------------------------------
+// 2. CRYPTOGRAPHIC SIWE AUTHENTICATION (EIP-4361)
+// ------------------------------------------------------------------------------
+
+model AuthNonce {
+  id         String   @id @default(uuid())
+  address    String   // Canonical lowercase address
+  nonce      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [address], references: [address], onDelete: Cascade)
+
+  @@index([address])
+  @@index([nonce])
+  @@index([expiresAt])
+}
+
+// ------------------------------------------------------------------------------
+// 3. GENESIS DAO 100-MEMBER COUNCIL (BTitanDAO / EquoraDAO)
+// ------------------------------------------------------------------------------
+
+model DaoInstance {
+  id                  Int       @id @default(1)
+  capacity            Int       @default(100)
+  isClosed            Boolean   @default(false)
+  closedAt            DateTime?
+  totalDistributedBtt Decimal   @default(0) @db.Decimal(36, 18)
+  distributionMode    String    @default("push_with_pull_fallback")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model DaoMember {
+  id                    String              @id @default(uuid())
+  address               String              @unique
+  user                  User                @relation(fields: [address], references: [address], onDelete: Cascade)
+  position              Int                 @unique // 1 to 100
+  nftTokenId            Int?                @unique // Soulbound NFT Token ID (1 to 100)
+  entryAmountBtt        Decimal             @default(100) @db.Decimal(36, 18)
+  entryAmountUsdAtJoin  Decimal?            @db.Decimal(36, 18)
+  priceSource           String?             // "onchain" | "offchain-estimate"
+  pushedAmountBtt       Decimal             @default(0) @db.Decimal(36, 18)
+  joinedAt              DateTime
+  status                String              @default("active")
+  txHash                String
+  blockNumber           BigInt
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  fallbackClaims        PullFallbackClaim[]
+
+  @@index([position])
+  @@index([joinedAt])
+}
+
+model DaoEvent {
+  id                  String    @id @default(uuid())
+  eventType           String    // "joined", "pushed", "push_failed", "fallback_claimed", "queue_closed"
+  userAddress         String?
+  incomingPosition    Int?      // 1 to 50
+  recipientCount      Int?
+  amountBtt           Decimal   @default(0) @db.Decimal(36, 18)
+  amountUsdEst        Decimal?  @db.Decimal(36, 18)
+  priceSource         String?
+  reason              String?
+  txHash              String
+  blockNumber         BigInt
+  timestamp           DateTime
+  createdAt           DateTime  @default(now())
+
+  @@index([eventType])
+  @@index([userAddress])
+  @@index([blockNumber])
+  @@index([timestamp])
+}
+
+model PullFallbackClaim {
+  id         String    @id @default(uuid())
+  memberId   String
+  member     DaoMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amountBtt  Decimal   @db.Decimal(36, 18)
+  reason     String?
+  txHash     String    @unique
+  claimedAt  DateTime  @default(now())
+
+  @@index([memberId])
+}
+
+// ------------------------------------------------------------------------------
+// 4. MATRIX 12-SLOT, 14-NODE ENGINE (BTitanMatrix)
+// ------------------------------------------------------------------------------
+
+model MatrixSlot {
+  id              String            @id @default(uuid())
+  userAddress     String
+  user            User              @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  slotNumber      Int               // 1 to 12
+  currentCycle    Int               @default(1)
+  filledNodes     Int               @default(0) // 0 to 14
+  isUnlocked      Boolean           @default(false)
+  upgradeReserve  Decimal           @default(0) @db.Decimal(36, 18)
+  totalEarned     Decimal           @default(0) @db.Decimal(36, 18)
+  unlockedAt      DateTime?
+  txHash          String?
+  blockNumber     BigInt?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  placements      MatrixPlacement[]
+
+  @@unique([userAddress, slotNumber])
+  @@index([slotNumber])
+  @@index([isUnlocked])
+}
+
+model MatrixPlacement {
+  id                  String      @id @default(uuid())
+  matrixOwnerAddress  String
+  matrixOwner         User        @relation("MatrixOwner", fields: [matrixOwnerAddress], references: [address], onDelete: Cascade)
+  placedUserAddress   String
+  placedUser          User        @relation("PlacedUser", fields: [placedUserAddress], references: [address], onDelete: Cascade)
+  slotNumber          Int         // 1 to 12
+  position            Int         // 1 to 14
+  cycle               Int
+  payoutType          String      // V2: PayoutType enum as string — UPLINE_1, UPLINE_2, OWNER_DIRECT, UPGRADE_RESERVE, AUTO_UPGRADE, SPILLOVER_DOWNLINE1, SPILLOVER_DOWNLINE2, RECYCLE_SPONSOR, DAO_POOL, RANK_POOL
+  recipientAddress    String      // Actual recipient after qualification check / fallback
+  wasFallback         Boolean     @default(false) // true if unqualified fallback to matrixOwner
+  amount              Decimal     @db.Decimal(36, 18)
+  txHash              String
+  blockNumber         BigInt
+  timestamp           DateTime
+  slot                MatrixSlot? @relation(fields: [matrixOwnerAddress, slotNumber], references: [userAddress, slotNumber], onDelete: Cascade)
+
+  @@index([matrixOwnerAddress, slotNumber, cycle])
+  @@index([placedUserAddress])
+  @@index([payoutType])
+  @@index([recipientAddress])
+  @@index([txHash])
+  @@index([timestamp])
+}
+
+model MatrixCycleEvent {
+  id              String    @id @default(uuid())
+  userAddress     String
+  slotNumber      Int
+  cycleNumber     Int
+  nodes           String[]  @default([]) // snapshot of 14 node addresses at cycle completion
+  completedAt     DateTime
+  txHash          String
+  blockNumber     BigInt
+
+  @@unique([userAddress, slotNumber, cycleNumber])
+  @@index([userAddress, slotNumber])
+  @@index([completedAt])
+}
+
+// ------------------------------------------------------------------------------
+// 4b. DAO POOL ACCUMULATOR STATE (BTitanMatrix daoAccRewardPerShare)
+// ------------------------------------------------------------------------------
+
+// Singleton row (id=1) — mirrors on-chain daoAccRewardPerShare state
+model DaoPoolState {
+  id                    Int      @id @default(1)
+  accRewardPerShare     Decimal  @default(0) @db.Decimal(78, 0) // raw uint256 (1e18 precision)
+  totalShares           Int      @default(0)
+  totalDeposited        Decimal  @default(0) @db.Decimal(36, 18)
+  totalClaimed          Decimal  @default(0) @db.Decimal(36, 18)
+  updatedAt             DateTime @updatedAt
+}
+
+model DaoPoolEvent {
+  id                      String   @id @default(uuid())
+  eventType               String   // "FUNDED" | "CLAIMED"
+  walletAddress           String?
+  amount                  Decimal  @db.Decimal(36, 18)
+  accRewardPerShareAfter  Decimal? @db.Decimal(78, 0) // raw uint256
+  txHash                  String
+  blockNumber             BigInt
+  createdAt               DateTime @default(now())
+
+  @@index([eventType])
+  @@index([walletAddress])
+  @@index([blockNumber])
+}
+
+// ------------------------------------------------------------------------------
+// 4c. RANK POOL EVENTS (BTitanMatrix rankPoolBalance)
+// ------------------------------------------------------------------------------
+
+model RankPoolEvent {
+  id            String   @id @default(uuid())
+  eventType     String   // "FUNDED" | "CLAIMED"
+  walletAddress String?
+  amount        Decimal  @db.Decimal(36, 18)
+  rankTier      Int?     // 1=ALPHA (42 slots), 2=PRIME (84 slots), 3=ELITE (126 slots), 4=CROWN (168 slots)
+  txHash        String
+  blockNumber   BigInt
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([walletAddress])
+  @@index([blockNumber])
+}
+
+// ------------------------------------------------------------------------------
+// 5. REWARDS: NFT BADGES & 3-YEAR VESTING VAULT
+// ------------------------------------------------------------------------------
+
+model NftBadge {
+  id              String    @id @default(uuid())
+  userAddress     String
+  user            User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  tokenId         Int
+  rank            Int       // 0: NONE, 1: ALPHA, 2: PRIME, 3: ELITE, 4: CROWN
+  mintedAt        DateTime
+  txHash          String
+
+  @@unique([userAddress, tokenId])
+  @@index([rank])
+  @@index([userAddress])
+}
+
+// ------------------------------------------------------------------------------
+// 5b. POOL CARDS (ALPHA 42, PRIME 84, ELITE 126, CROWN 168)
+// ------------------------------------------------------------------------------
+
+model PoolCard {
+  id          String   @id @default(uuid())
+  userAddress String
+  tier        Int      // 1: ALPHA, 2: PRIME, 3: ELITE, 4: CROWN
+  tierName    String   // "ALPHA", "PRIME", "ELITE", "CROWN"
+  unlockedAt  DateTime @default(now())
+  txHash      String?
+  blockNumber BigInt?
+
+  @@unique([userAddress, tier])
+  @@index([userAddress])
+  @@index([tier])
+}
+
+// ------------------------------------------------------------------------------
+// 5c. VAULT 4-BUCKET SPLIT (DAO 35%, Salary 40%, MagicBox 10%, Rewards 15%)
+// ------------------------------------------------------------------------------
+
+model VaultDepositSplit {
+  id              String   @id @default(uuid())
+  userAddress     String
+  totalAmount     Decimal  @db.Decimal(36, 18)
+  daoAmount       Decimal  @db.Decimal(36, 18) // 35%
+  salaryAmount    Decimal  @db.Decimal(36, 18) // 40%
+  magicBoxAmount  Decimal  @db.Decimal(36, 18) // 10%
+  rewardsAmount   Decimal  @db.Decimal(36, 18) // 15%
+  timestamp       DateTime @default(now())
+  txHash          String
+  blockNumber     BigInt
+
+  @@index([userAddress])
+  @@index([timestamp])
+  @@index([txHash])
+}
+
+// ------------------------------------------------------------------------------
+// 5d. DAO PROPOSALS & DECENTRALIZED GOVERNANCE
+// ------------------------------------------------------------------------------
+
+model DaoProposal {
+  id           String    @id @default(uuid())
+  proposalId   Int       @unique
+  proposer     String
+  title        String
+  description  String
+  target       String?
+  callData     String?
+  status       String    @default("PENDING") // PENDING, ACTIVE, PASSED, REJECTED, EXECUTED
+  startTime    DateTime
+  endTime      DateTime
+  votesFor     Decimal   @default(0) @db.Decimal(36, 18)
+  votesAgainst Decimal   @default(0) @db.Decimal(36, 18)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  votes        DaoVote[]
+
+  @@index([status])
+  @@index([proposer])
+}
+
+model DaoVote {
+  id         String      @id @default(uuid())
+  proposalId Int
+  proposal   DaoProposal @relation(fields: [proposalId], references: [proposalId], onDelete: Cascade)
+  voter      String
+  support    Boolean
+  weight     Decimal     @db.Decimal(36, 18)
+  votedAt    DateTime    @default(now())
+  txHash     String?
+
+  @@unique([proposalId, voter])
+  @@index([voter])
+}
+
+model VestingLock {
+  id              String    @id @default(uuid())
+  userAddress     String
+  user            User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  amount          Decimal   @db.Decimal(36, 18)
+  milestoneSlot   Int       // 3, 6, 9, 12
+  lockedAt        DateTime
+  unlockTimestamp DateTime
+  isClaimed       Boolean   @default(false)
+  claimedAt       DateTime?
+  txHash          String
+
+  @@index([userAddress])
+  @@index([isClaimed])
+  @@index([unlockTimestamp])
+}
+
+// ------------------------------------------------------------------------------
+// 6. FINANCIAL AUDIT & WITHDRAWALS
+// ------------------------------------------------------------------------------
+
+model Withdrawal {
+  id              String    @id @default(uuid())
+  userAddress     String
+  user            User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  source          String    // "DAO" | "MATRIX"
+  amount          Decimal   @db.Decimal(36, 18)
+  txHash          String
+  blockNumber     BigInt
+  timestamp       DateTime
+
+  @@index([userAddress])
+  @@index([source])
+  @@index([timestamp])
+}
+
+// ------------------------------------------------------------------------------
+// 7. INDEXER SYNCHRONIZATION & CURSOR STATE
+// ------------------------------------------------------------------------------
+
+model IndexerCursor {
+  id                  String   @id @default(uuid())
+  contractName        String   // "BTitanRegistry", "BTitanDAO", "BTitanMatrix", etc.
+  chainId             Int
+  lastIndexedBlock    BigInt   @default(0)
+  lastIndexedBlockHash String?
+  updatedAt           DateTime @updatedAt
+
+  @@unique([contractName, chainId])
+  @@index([chainId])
+}
+
+// ------------------------------------------------------------------------------
+// 8. LEADERBOARD & AGGREGATIONS (Materialized Snapshot Cache)
+// ------------------------------------------------------------------------------
+
+model LeaderboardSnapshot {
+  id              String    @id @default(uuid())
+  userAddress     String    @unique
+  totalEarned     Decimal   @db.Decimal(36, 18)
+  directCount     Int       @default(0)
+  highestSlot     Int       @default(1)
+  rank            Int
+  updatedAt       DateTime  @updatedAt
+
+  @@index([rank])
+  @@index([totalEarned])
+}

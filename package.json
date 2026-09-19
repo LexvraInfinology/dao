@@ -1,9 +1,10 @@
 {
-  "name": "b-titan",
+  "name": "equora-fi",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "chain": "npm --prefix packages/hardhat run chain",
@@ -11,6 +12,8 @@
     "deploy": "npm --prefix packages/hardhat run deploy",
     "test": "npm --prefix packages/hardhat run test",
     "dev": "npm --prefix packages/nextjs run dev",
+    "dev:api": "npm --prefix apps/api run dev",
+    "dev:indexer": "npm --prefix apps/indexer run dev",
     "build": "node scripts/build.js",
     "postinstall": "node scripts/patch-qr.js"
   }

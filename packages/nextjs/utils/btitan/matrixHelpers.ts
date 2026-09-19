@@ -33,40 +33,45 @@ export function getNodeLabel(position: number, cycle: number): {
   label: string;
   color: string;
   description: string;
+  recipient: string;
 } {
-  const isFirstCycle = cycle === 1;
+  const isFirstCycle = cycle <= 1;
 
   switch (position) {
+    case 0:
+      return { label: "Root Node (YOU)", color: "#b9c7e4", description: "Owner of this 14-position binary matrix level", recipient: "You" };
     case 1:
-      return { label: "Upline 1", color: "#60a5fa", description: "Your sponsor receives this" };
+      return { label: "Referral 1", color: "#60a5fa", description: "Direct Referral 1 (Qualification / Downline 1)", recipient: "Direct Sponsor / Downline 1" };
     case 2:
-      return { label: "Upline 2", color: "#818cf8", description: "Your sponsor's sponsor receives this" };
+      return { label: "Referral 2", color: "#818cf8", description: "Direct Referral 2 (Qualification - Unlocks Income)", recipient: "Direct Sponsor / Downline 2" };
     case 3:
+      return { label: "First Income", color: "#22c55e", description: "First income-generating node (100% to your balance if qualified)", recipient: "You" };
     case 6:
     case 8:
     case 9:
     case 11:
     case 12:
-      return { label: "Your Wallet", color: "#22c55e", description: "Direct income to you" };
+      return { label: "Your Wallet", color: "#22c55e", description: "Direct income to your balance (100%)", recipient: "You" };
     case 4:
       return isFirstCycle
-        ? { label: "Next Slot Fund", color: "#f59e0b", description: "Building your next slot reserve (1/2)" }
-        : { label: "Royal Pool", color: "#a78bfa", description: "Contributed to Royal Pool" };
+        ? { label: "Upgrade Reserve", color: "#f59e0b", description: "50% of next slot upgrade cost", recipient: "Upgrade Reserve" }
+        : { label: "Pool & DAO Share", color: "#a78bfa", description: "50% to Milestone Pool + 50% to DAO Pool", recipient: "Pool & DAO Share" };
     case 5:
       return isFirstCycle
-        ? { label: "Next Slot Fund", color: "#f59e0b", description: "Building your next slot reserve (2/2)" }
-        : { label: "Your Wallet", color: "#22c55e", description: "Direct income to you" };
+        ? { label: "Auto-Upgrade", color: "#ec4899", description: "50% + automatically unlocks next slot", recipient: "Auto-Upgrade" }
+        : { label: "Your Wallet", color: "#22c55e", description: "Direct income to your balance (100%)", recipient: "You" };
     case 7:
     case 10:
-      return { label: "Downline 1", color: "#06b6d4", description: "Spillover to your first referral" };
+      return { label: "Downline 1", color: "#06b6d4", description: "Spillover to Downline 1 (fallback to you if unqualified)", recipient: "Downline 1 / You" };
     case 13:
-      return { label: "Downline 2", color: "#0ea5e9", description: "Spillover to your second referral" };
+      return { label: "Downline 2", color: "#0ea5e9", description: "Spillover to Downline 2 (fallback to you if unqualified)", recipient: "Downline 2 / You" };
     case 14:
-      return { label: "Recycle", color: "#f97316", description: "Matrix resets, sponsor gets paid" };
+      return { label: "Recycle", color: "#f97316", description: "Completes level cycle, recycles matrix, and advances to next level", recipient: "Recycle & Advance" };
     default:
-      return { label: "Unknown", color: "#6b7280", description: "" };
+      return { label: "Unknown", color: "#6b7280", description: "", recipient: "" };
   }
 }
+
 
 /**
  * Calculate total potential earnings for a slot
@@ -110,19 +115,16 @@ export function isMagicBoxSlot(slot: number): boolean {
  */
 export function getMagicBoxRank(slot: number): string {
   const ranks: Record<number, string> = {
-    3: "Rising Star",
-    6: "Prime",
-    9: "Royal",
-    12: "Legendary",
+    3: "Alpha Pool Card",
+    6: "Prime Pool Card",
+    9: "Elite Pool Card",
+    12: "Crown Pool Card",
   };
   return ranks[slot] ?? "Unknown";
 }
 
-/**
- * Format BTT amount from BigInt (18 decimals) to human-readable string
- */
-export function formatBTT(amount: bigint, decimals = 2): string {
-  if (!amount && amount !== BigInt(0)) return "0";
+export function formatBTT(amount?: bigint | null, decimals = 2): string {
+  if (amount === undefined || amount === null) return "0.00";
   const divisor = BigInt(10 ** 18);
   const whole = amount / divisor;
   const fraction = amount % divisor;
@@ -130,44 +132,57 @@ export function formatBTT(amount: bigint, decimals = 2): string {
   return `${whole.toLocaleString()}.${fractionStr}`;
 }
 
+export interface MatrixTreeNode {
+  position: number;
+  address: string | null;
+  user?: string | null;
+  isFilled: boolean;
+}
+
 /**
  * Build matrix node tree structure for visualization
- * Returns a 3-level tree: [level1: [p1,p2], level2: [p3,p4,p5,p6], level3: [p7..p14]]
+ * Returns a 4-level tree: [level0: YOU, level1: [p1,p2], level2: [p3..p6], level3: [p7..p14]]
  */
 export function buildMatrixTree(nodes: string[]): {
   level: number;
-  positions: { position: number; address: string | null }[];
+  positions: MatrixTreeNode[];
+  nodes: MatrixTreeNode[];
 }[] {
+  const isFilled = (addr?: string | null) =>
+    !!addr && addr !== "0x0000000000000000000000000000000000000000";
+
+  const makeNode = (pos: number, addr?: string | null): MatrixTreeNode => ({
+    position: pos,
+    address: addr || null,
+    user: addr || null,
+    isFilled: isFilled(addr),
+  });
+
+  const level0 = [makeNode(0, null)]; // Root / YOU
+  const level1 = [makeNode(1, nodes?.[0]), makeNode(2, nodes?.[1])];
+  const level2 = [
+    makeNode(3, nodes?.[2]),
+    makeNode(4, nodes?.[3]),
+    makeNode(5, nodes?.[4]),
+    makeNode(6, nodes?.[5]),
+  ];
+  const level3 = [
+    makeNode(7, nodes?.[6]),
+    makeNode(8, nodes?.[7]),
+    makeNode(9, nodes?.[8]),
+    makeNode(10, nodes?.[9]),
+    makeNode(11, nodes?.[10]),
+    makeNode(12, nodes?.[11]),
+    makeNode(13, nodes?.[12]),
+    makeNode(14, nodes?.[13]),
+  ];
+
   return [
-    {
-      level: 1,
-      positions: [
-        { position: 1, address: nodes[0] || null },
-        { position: 2, address: nodes[1] || null },
-      ],
-    },
-    {
-      level: 2,
-      positions: [
-        { position: 3, address: nodes[2] || null },
-        { position: 4, address: nodes[3] || null },
-        { position: 5, address: nodes[4] || null },
-        { position: 6, address: nodes[5] || null },
-      ],
-    },
-    {
-      level: 3,
-      positions: [
-        { position: 7, address: nodes[6] || null },
-        { position: 8, address: nodes[7] || null },
-        { position: 9, address: nodes[8] || null },
-        { position: 10, address: nodes[9] || null },
-        { position: 11, address: nodes[10] || null },
-        { position: 12, address: nodes[11] || null },
-        { position: 13, address: nodes[12] || null },
-        { position: 14, address: nodes[13] || null },
-      ],
-    },
+    { level: 0, positions: level0, nodes: level0 },
+    { level: 1, positions: level1, nodes: level1 },
+    { level: 2, positions: level2, nodes: level2 },
+    { level: 3, positions: level3, nodes: level3 },
   ];
 }
+
 

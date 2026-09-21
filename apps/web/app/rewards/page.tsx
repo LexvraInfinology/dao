@@ -86,7 +86,7 @@ function RewardsContent() {
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-tertiary/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen -z-10" />
 
       <div className="px-4 sm:px-8 py-8 sm:py-12 flex flex-col gap-10 sm:gap-12 max-w-container-max mx-auto w-full relative z-10">
-        {/* ─── Header & TitanBot Banner ────────────────────────────────────── */}
+        {/* ─── Header & EquoraBot Banner ────────────────────────────────────── */}
         <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
           <div className="flex flex-col gap-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 w-fit backdrop-blur-md border border-primary/20">

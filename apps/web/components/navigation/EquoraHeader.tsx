@@ -211,5 +211,3 @@ export function EquoraHeader() {
     </>
   );
 }
-
-export const TitanHeader = EquoraHeader;

@@ -86,7 +86,7 @@ function DAOContent() {
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[120px] pointer-events-none mix-blend-screen -z-10" />
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-tertiary/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen -z-10" />
 
-      {/* ─── Header Section with TitanBot ──────────────────────────────────── */}
+      {/* ─── Header Section with EquoraBot ──────────────────────────────────── */}
       <section className="relative z-10 px-4 sm:px-8 pt-8 pb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-tertiary/10 rounded-full mb-4 border border-tertiary/20">

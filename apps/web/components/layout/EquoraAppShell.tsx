@@ -32,5 +32,3 @@ export function EquoraAppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-export const TitanAppShell = EquoraAppShell;

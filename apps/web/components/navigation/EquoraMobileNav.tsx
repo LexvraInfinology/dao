@@ -48,5 +48,3 @@ export function EquoraMobileNav() {
     </nav>
   );
 }
-
-export const TitanMobileNav = EquoraMobileNav;

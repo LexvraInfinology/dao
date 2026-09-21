@@ -100,7 +100,7 @@ const TIERS: TierLevel[] = [
 export function TierLevelsSection() {
   const tiers = [
     {
-      name: "Silver Titan",
+      name: "Silver Equora",
       level: "Matrix Level 1–3",
       apy: "12% APY",
       entry: "$30 Entry",
@@ -114,7 +114,7 @@ export function TierLevelsSection() {
       ),
     },
     {
-      name: "Sapphire Titan",
+      name: "Sapphire Equora",
       level: "Matrix Level 4–6",
       apy: "24% APY",
       entry: "$100 Entry",
@@ -128,7 +128,7 @@ export function TierLevelsSection() {
       ),
     },
     {
-      name: "Diamond Titan",
+      name: "Diamond Equora",
       level: "Matrix Level 7–9",
       apy: "48% APY",
       entry: "$500 Entry",

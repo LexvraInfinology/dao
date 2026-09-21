@@ -103,5 +103,3 @@ export function EquoraSidebar() {
     </aside>
   );
 }
-
-export const TitanSidebar = EquoraSidebar;

@@ -60,10 +60,10 @@ module.exports = {
         "primary-fixed-dim": "#b9c7e4",
         "error-container": "#93000a",
         "background": "#101416",
-        // Legacy Brand Compatibility
-        "titanGold": "#f59e0b",
-        "titanViolet": "#8b5cf6",
-        "titanDark": "#0a192f",
+        // Equora Brand Colors
+        "equoraGold": "#f59e0b",
+        "equoraViolet": "#8b5cf6",
+        "equoraDark": "#0a192f",
         // Equora Figma Design System
         "equora-bg": "#F0F4F8",
         "equora-blue": "#2563EB",

@@ -15,20 +15,15 @@ export type EquoraBotState =
   | "transaction-error"
   | "rank-up";
 
-export type TitanBotState = EquoraBotState;
-
 export type EquoraBotVariant = "hero" | "companion" | "card" | "salute" | "dialog" | "mini";
-export type TitanBotVariant = EquoraBotVariant;
 
-interface EquoraBotProps {
+export interface EquoraBotProps {
   state?: EquoraBotState;
   variant?: EquoraBotVariant;
   message?: string;
   className?: string;
   interactive?: boolean;
 }
-
-export type TitanBotProps = EquoraBotProps;
 
 const EQUORABOT_IMAGE_URL = "/assets/branding/equorafilogo.jpeg";
 
@@ -181,5 +176,3 @@ export function EquoraBot({
     </div>
   );
 }
-
-export const TitanBot = EquoraBot;

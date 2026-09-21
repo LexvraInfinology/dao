@@ -67,7 +67,7 @@ Equora.Fi is an autonomous, decentralized Web3 protocol operating on **Trobium B
 
 ## 3. Global Navigation & Layout Shell
 
-### 3.1 Top Navigation Bar (`TitanHeader`)
+### 3.1 Top Navigation Bar (`EquoraHeader`)
 - **Height**: 72px (Desktop), 64px (Mobile).
 - **Position**: Sticky (`top-0`, `z-50`) with `backdrop-blur-md` and subtle border bottom.
 - **Components (Left to Right)**:

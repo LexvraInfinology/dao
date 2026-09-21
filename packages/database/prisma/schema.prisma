@@ -1,5 +1,5 @@
 // ==============================================================================
-// B-TITAN PROTOCOL — PRISMA DATABASE SCHEMA (PostgreSQL)
+// EQUORA.FI PROTOCOL — PRISMA DATABASE SCHEMA (PostgreSQL)
 // ==============================================================================
 // Smart contracts remain the single authoritative source of truth.
 // This database holds DERIVED indexed blockchain state for sub-millisecond
@@ -16,7 +16,7 @@ generator client {
 }
 
 // ------------------------------------------------------------------------------
-// 1. IDENTITY & REFERRAL GENEALOGY (BTitanRegistry)
+// 1. IDENTITY & REFERRAL GENEALOGY (EquoraRegistry)
 // ------------------------------------------------------------------------------
 
 model User {
@@ -68,7 +68,7 @@ model AuthNonce {
 }
 
 // ------------------------------------------------------------------------------
-// 3. GENESIS DAO 100-MEMBER COUNCIL (BTitanDAO / EquoraDAO)
+// 3. GENESIS DAO 100-MEMBER COUNCIL (EquoraDAO)
 // ------------------------------------------------------------------------------
 
 model DaoInstance {
@@ -139,7 +139,7 @@ model PullFallbackClaim {
 }
 
 // ------------------------------------------------------------------------------
-// 4. MATRIX 12-SLOT, 14-NODE ENGINE (BTitanMatrix)
+// 4. MATRIX 12-SLOT, 14-NODE ENGINE (EquoraMatrix)
 // ------------------------------------------------------------------------------
 
 model MatrixSlot {
@@ -207,7 +207,7 @@ model MatrixCycleEvent {
 }
 
 // ------------------------------------------------------------------------------
-// 4b. DAO POOL ACCUMULATOR STATE (BTitanMatrix daoAccRewardPerShare)
+// 4b. DAO POOL ACCUMULATOR STATE (EquoraMatrix daoAccRewardPerShare)
 // ------------------------------------------------------------------------------
 
 // Singleton row (id=1) — mirrors on-chain daoAccRewardPerShare state
@@ -236,7 +236,7 @@ model DaoPoolEvent {
 }
 
 // ------------------------------------------------------------------------------
-// 4c. RANK POOL EVENTS (BTitanMatrix rankPoolBalance)
+// 4c. RANK POOL EVENTS (EquoraMatrix rankPoolBalance)
 // ------------------------------------------------------------------------------
 
 model RankPoolEvent {
@@ -393,7 +393,7 @@ model Withdrawal {
 
 model IndexerCursor {
   id                  String   @id @default(uuid())
-  contractName        String   // "BTitanRegistry", "BTitanDAO", "BTitanMatrix", etc.
+  contractName        String   // "EquoraRegistry", "EquoraDAO", "EquoraMatrix", etc.
   chainId             Int
   lastIndexedBlock    BigInt   @default(0)
   lastIndexedBlockHash String?

@@ -60,8 +60,8 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Sovereign governance, 100-Seat Council co-ownership, 300/N instant redistribution, and passive 35% global matrix dividend claims.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![DAO Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![DAO Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![DAO Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![DAO Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
@@ -69,7 +69,7 @@ The UI/UX designer must utilize the following token library across all pages:
 | **Seats Claimed** | `EquoraDAO.getDAOStats().memberCount` | `uint256` | **`86`** | `0` | Padded integer: `86 / 100` |
 | **Seats Remaining** | `EquoraDAO.getRemainingPositions()` | `uint256` | **`14`** | `100` | Highlight gold if $< 20$ |
 | **Genesis Deadline** | `EquoraDAO.GENESIS_WINDOW_END()` | `timestamp` | **`1,791,240,000`** | Active | Countdown clock: `DD:HH:MM:SS` |
-| **Soulbound Token ID**| `BTitanDAOMembership.tokenOfOwnerByIndex(addr, 0)`| `uint256` | **`#0012`** | `N/A` | 4-digit zero-padded |
+| **Soulbound Token ID**| `EquoraDAOMembership.tokenOfOwnerByIndex(addr, 0)`| `uint256` | **`#0012`** | `N/A` | 4-digit zero-padded |
 | **Voting Power** | Constant: `1 / 100` | `percent` | **`1.0%`** | `0.0%` | Badge: `1 Seat = 1 Vote` |
 | **5X Cap Earned** | `EquoraDAO.getMemberDetails(addr)[4]` | `uint256` | **`$840.00 TROB`** | `$0.00` | Formatted ether, 2 decimals |
 | **5X Cap Limit** | `EquoraDAO.getCapProgress(addr)[1]` | `uint256` | **`$1,500.00 TROB`** | `$1,500.00` | Fixed constant ($300 \times 5$) |
@@ -84,8 +84,8 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Command center upon connecting wallet. Displays decentralized identity, VIP badges, 5-digit referral code, and protocol earnings.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Dashboard Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dashboard_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Dashboard Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dashboard_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Dashboard Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dashboard_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Dashboard Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dashboard_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
@@ -95,7 +95,7 @@ The UI/UX designer must utilize the following token library across all pages:
 | **Sponsor ID** | `EquoraRegistry.sponsorOf(addr)` | `uint24` | **`#10000 (Root)`** | N/A | Subtitle under referral code |
 | **Qualification Badge**| `EquoraRegistry.isQualified(addr)` | `bool` | **`QUALIFIED (2+ Directs)`**| Unqualified | Green badge if qualified, Amber if not |
 | **KPI 1: Protocol Yield**| Aggregated yield sum | `uint256` | **`$2,480.50 TROB`** | `$0.00` | Large header metric |
-| **KPI 2: Matrix Cashflow**| `BTitanMatrix.totalEarned(addr)` | `uint256` | **`$1,200.00 TROB`** | `$0.00` | 600% Direct cashflow metric |
+| **KPI 2: Matrix Cashflow**| `EquoraMatrix.totalEarned(addr)` | `uint256` | **`$1,200.00 TROB`** | `$0.00` | 600% Direct cashflow metric |
 | **KPI 3: DAO Dividends**| `EquoraDAO.totalEarned(addr)` | `uint256` | **`$860.00 TROB`** | `$0.00` | DAO royalty revenue metric |
 | **KPI 4: Withdrawable** | `internalLedgerBalance(addr)` | `uint256` | **`$420.50 TROB`** | `$0.00` | Emerald ticker with Withdraw button |
 | **Activity Feed** | WebSocket / Contract Events | `Event[]` | Real-time push events | Empty feed | Chronological list of network actions |
@@ -106,17 +106,17 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Cyclical 14-position single-leg matrix board. Visualizes slot progression (Slots 1–12), node payout routing, auto-upgrades, and board recycles.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Matrix Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/matrix_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Matrix Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/matrix_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Matrix Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/matrix_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Matrix Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/matrix_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
 |:---|:---|:---:|:---|:---|:---|
 | **Active Slot Index** | User selection state | `uint8` | **`Slot 1 ($30)`** | Slot 1 | Pill selector (Slots 1 to 12) |
-| **Slot Unlock Status** | `BTitanMatrix.userSlotActive(addr, slot)`| `bool` | **`ACTIVE`** | `LOCKED` | Gold badge if active, Buy button if locked |
-| **Current Board Cycle**| `BTitanMatrix.currentCycle(addr, slot)` | `uint32` | **`Cycle #3`** | `Cycle #1` | Monospace cycle counter |
-| **Occupied Nodes Count**| `BTitanMatrix.getFilledNodesCount(addr, slot)`| `uint8` | **`8 / 14 Nodes`** | `0 / 14` | Radial progress / visual counter |
-| **14-Node State Array** | `BTitanMatrix.getNodeDetails(addr, slot)`| `Node[14]` | 14 Occupant Records | 14 Empty | Visual single-leg tree hierarchy |
+| **Slot Unlock Status** | `EquoraMatrix.userSlotActive(addr, slot)`| `bool` | **`ACTIVE`** | `LOCKED` | Gold badge if active, Buy button if locked |
+| **Current Board Cycle**| `EquoraMatrix.currentCycle(addr, slot)` | `uint32` | **`Cycle #3`** | `Cycle #1` | Monospace cycle counter |
+| **Occupied Nodes Count**| `EquoraMatrix.getFilledNodesCount(addr, slot)`| `uint8` | **`8 / 14 Nodes`** | `0 / 14` | Radial progress / visual counter |
+| **14-Node State Array** | `EquoraMatrix.getNodeDetails(addr, slot)`| `Node[14]` | 14 Occupant Records | 14 Empty | Visual single-leg tree hierarchy |
 | **P1, P2 Node Flow** | Contract routing math | `address` | Routed to Uplines | Empty | Tag: `Upline Commission` |
 | **P3, P6, P8, P9, P11, P12**| Direct Cash Nodes | `uint256` | **`600% ROI ($180)`** | `$0` | Tag: `Direct Cash to Owner` |
 | **P4 Node Flow** | Protocol Value Pools | `uint256` | **`$30 split to 4 Pools`**| `$0` | Tag: `35% DAO, 40% Sal, 10% Box, 15% Rew` |
@@ -129,8 +129,8 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Network builder hub with 1-click referral link generation, QR codes, direct downlines, and interactive organizational tree.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Referrals Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/referrals_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Referrals Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/referrals_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Referrals Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/referrals_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Referrals Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/referrals_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
@@ -149,8 +149,8 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Transparency portal for the 4 autonomous protocol pools fed by Nodes 4, 5, and 14 across the entire matrix network.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Rewards Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/rewards_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Rewards Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/rewards_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Rewards Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/rewards_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Rewards Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/rewards_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
@@ -170,13 +170,13 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Non-custodial internal balance management, 1-click blockchain withdrawals, gas estimation, and financial audit ledger.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Wallet Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/wallet_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Wallet Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/wallet_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Wallet Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/wallet_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Wallet Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/wallet_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Smart Contract Function | Type | Live Production Value | Empty State | UI Display Rule |
 |:---|:---|:---:|:---|:---|:---|
-| **Internal Ledger Balance**| `BTitanMatrix.withdrawable(addr)` | `uint256` | **`$420.50 TROB`** | `$0.00` | Large header balance card |
+| **Internal Ledger Balance**| `EquoraMatrix.withdrawable(addr)` | `uint256` | **`$420.50 TROB`** | `$0.00` | Large header balance card |
 | **External Wallet Balance**| ERC-20 `balanceOf(addr)` | `uint256` | **`$1,420.00 TROB`** | `$0.00` | Monospace balance in wallet |
 | **Withdraw Amount Input**| User input state | `number` | `250.00` | `0.00` | Quick buttons: 25%, 50%, 75%, MAX |
 | **Gas Fee Estimation** | Web3 provider estimate | `string` | **`< $0.005 USD`** | `~ $0.005` | Footnote text |
@@ -189,15 +189,15 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Public-facing gateway to educate prospective participants, explain the autonomous game theory, and drive Genesis DAO Council claims.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Landing Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/landing_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Landing Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/landing_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Landing Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/landing_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Landing Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/landing_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Data Source | Type | Live Production Value | Empty State | UI Display Rule |
 |:---|:---|:---:|:---|:---|:---|
 | **Live Volume Ticker** | Indexer aggregated volume | `uint256` | **`$1,420,850 TROB`** | `$0` | Ticker pill in hero |
 | **Genesis Seats Scarcity**| `EquoraDAO.getRemainingPositions()`| `uint256` | **`14 / 100 Available`** | `100` | Pulsing scarcity meter in hero |
-| **Completed Cycles** | `BTitanMatrix.totalCyclesCompleted()`| `uint256` | **`12,480 Cycles`** | `0` | Metric card |
+| **Completed Cycles** | `EquoraMatrix.totalCyclesCompleted()`| `uint256` | **`12,480 Cycles`** | `0` | Metric card |
 | **Old vs Equora Matrix**| Static comparison matrix | `table` | 6 Key Differentiators | Static | High-contrast comparison table |
 | **Interactive Yield Simulator**| Client simulation logic | `slider` | Draggable Slot 1 to 12 | Slot 1 ($30)| Real-time 600% ROI calculator |
 | **Audits & Contracts** | Verified addresses list | `address[]`| 4 Contract addresses | Static | 1-Click copy address + Explorer link |
@@ -209,8 +209,8 @@ The UI/UX designer must utilize the following token library across all pages:
 **Role:** Gamified global ranking board highlighting top volume producers, fastest matrix cyclers, and Crown Sovereign leaders.
 
 #### Visual Screenshots
-- **Desktop Viewport (1440 × 900):** ![Leaderboard Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/leaderboard_desktop.png)
-- **Mobile DApp Browser (390 × 844):** ![Leaderboard Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/leaderboard_mobile.png)
+- **Desktop Viewport (1440 × 900):** ![Leaderboard Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/leaderboard_desktop.png)
+- **Mobile DApp Browser (390 × 844):** ![Leaderboard Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/leaderboard_mobile.png)
 
 #### Complete Component Data ("Sata") Schema
 | Component / UI Field | Data Source | Type | Live Production Value | Empty State | UI Display Rule |

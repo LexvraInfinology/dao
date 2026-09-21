@@ -2,13 +2,15 @@ import "../services/web3/idbPatch";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Web3Providers } from "../components/web3/Web3Providers";
-import { TitanAppShell } from "../components/layout/TitanAppShell";
+import { EquoraAppShell } from "../components/layout/EquoraAppShell";
 import "../styles/globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "EQUORA_Fi — Autonomous Web3 Protocol",
@@ -41,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-on-surface">
         <Web3Providers>
-          <TitanAppShell>{children}</TitanAppShell>
+          <EquoraAppShell>{children}</EquoraAppShell>
         </Web3Providers>
       </body>
     </html>

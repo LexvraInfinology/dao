@@ -1,7 +1,7 @@
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 import { formatUnits } from "viem";
 
-// PayoutType enum — index must match BTitanMatrix.sol V2 enum order
+// PayoutType enum — index must match EquoraMatrix.sol V2 enum order
 const PAYOUT_TYPE_NAMES = [
   "UPLINE_1",            // 0
   "UPLINE_2",            // 1

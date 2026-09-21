@@ -1,7 +1,7 @@
 ================================================================================
-EQUORA_Fi (B-TITAN) — COMPLETE MASTER DEPLOYMENT GUIDE FOR DEVOPS
+EQUORA_Fi (EQUORA) — COMPLETE MASTER DEPLOYMENT GUIDE FOR DEVOPS
 ================================================================================
-Platform: EQUORA_Fi (B-Titan) Autonomous Web3 Protocol
+Platform: EQUORA_Fi (Equora) Autonomous Web3 Protocol
 Scope: Smart Contracts + PostgreSQL + Redis + Indexer + Express API + Next.js 15 + Nginx + SSL
 Networks: BNB Smart Chain (BSC Mainnet: Chain ID 56, BSC Testnet: Chain ID 97)
 
@@ -11,11 +11,11 @@ Networks: BNB Smart Chain (BSC Mainnet: Chain ID 56, BSC Testnet: Chain ID 97)
 Component           Stack                Port        Public?  Managed By
 --------------------------------------------------------------------------------
 Nginx               Reverse Proxy        80, 443     Yes      systemd: nginx
-Frontend Web App    Next.js 15 SSR       3000        No       pm2: btitan-frontend
-Backend REST API    Express / Node 20    4000        No       pm2: btitan-api
-Blockchain Indexer  Viem Daemon          None        No       pm2: btitan-indexer
-PostgreSQL Database Postgres 16 Alpine   5432        No       Docker: btitan_postgres
-Redis Cache         Redis 7 Alpine       6379        No       Docker: btitan_redis
+Frontend Web App    Next.js 15 SSR       3000        No       pm2: equora-frontend
+Backend REST API    Express / Node 20    4000        No       pm2: equora-api
+Blockchain Indexer  Viem Daemon          None        No       pm2: equora-indexer
+PostgreSQL Database Postgres 16 Alpine   5432        No       Docker: equora_postgres
+Redis Cache         Redis 7 Alpine       6379        No       Docker: equora_redis
 
 --------------------------------------------------------------------------------
 2. SERVER SIZING & PREREQUISITES
@@ -59,9 +59,9 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 --------------------------------------------------------------------------------
 STEP 2: SMART CONTRACT DEPLOYMENT (BSC MAINNET / TESTNET)
 --------------------------------------------------------------------------------
-sudo git clone <REPO_URL> /var/www/b-titan
-sudo chown -R $USER:$USER /var/www/b-titan
-cd /var/www/b-titan
+sudo git clone <REPO_URL> /var/www/equora
+sudo chown -R $USER:$USER /var/www/equora
+cd /var/www/equora
 npm install
 
 cat <<EOF > packages/hardhat/.env
@@ -86,7 +86,7 @@ npx hardhat run scripts/deploy.ts --network bsc
 --------------------------------------------------------------------------------
 STEP 3: DATABASE & CACHE INITIALIZATION (POSTGRESQL + REDIS)
 --------------------------------------------------------------------------------
-cd /var/www/b-titan
+cd /var/www/equora
 docker compose up -d
 docker compose ps
 
@@ -98,14 +98,14 @@ cd ../..
 --------------------------------------------------------------------------------
 STEP 4: REAL-TIME BLOCKCHAIN EVENT INDEXER
 --------------------------------------------------------------------------------
-cat <<EOF > /var/www/b-titan/.env
+cat <<EOF > /var/www/equora/.env
 NODE_ENV=production
 PORT=4000
-DATABASE_URL="postgresql://btitan_admin:btitan_secret_password@localhost:5432/btitan_db"
+DATABASE_URL="postgresql://equora_admin:equora_secret_password@localhost:5432/equora_db"
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=btitan_redis_secret
-REDIS_URL="redis://:btitan_redis_secret@localhost:6379"
+REDIS_PASSWORD=equora_redis_secret
+REDIS_URL="redis://:equora_redis_secret@localhost:6379"
 JWT_SECRET="$(openssl rand -hex 32)"
 JWT_EXPIRES_IN=24h
 SIWE_NONCE_TTL_SECONDS=300
@@ -116,36 +116,36 @@ INDEXER_POLL_INTERVAL_MS=3000
 INDEXER_START_BLOCK=0
 EOF
 
-cd /var/www/b-titan/apps/indexer
+cd /var/www/equora/apps/indexer
 npm run build
-pm2 start dist/index.js --name "btitan-indexer" --time
+pm2 start dist/index.js --name "equora-indexer" --time
 cd ../..
 
 --------------------------------------------------------------------------------
 STEP 5: BACKEND REST API SERVICE
 --------------------------------------------------------------------------------
-cd /var/www/b-titan/apps/api
+cd /var/www/equora/apps/api
 npm run build
-pm2 start dist/index.js --name "btitan-api" --time
+pm2 start dist/index.js --name "equora-api" --time
 cd ../..
 
 # Health check verification:
 curl http://localhost:4000/health
-# Expected: {"status":"healthy","service":"btitan-api",...}
+# Expected: {"status":"healthy","service":"equora-api",...}
 
 --------------------------------------------------------------------------------
 STEP 6: FRONTEND WEB APPLICATION (NEXT.JS 15)
 --------------------------------------------------------------------------------
-cat <<EOF > /var/www/b-titan/packages/nextjs/.env.local
+cat <<EOF > /var/www/equora/packages/nextjs/.env.local
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_REOWN_PROJECT_ID"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
 NEXT_PUBLIC_API_URL="https://yourdomain.com"
 NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 EOF
 
-cd /var/www/b-titan/packages/nextjs
+cd /var/www/equora/packages/nextjs
 npm run build
-pm2 start "npm run start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "npm run start -- -p 3000" --name "equora-frontend" --time
 pm2 save
 pm2 startup
 cd ../..
@@ -153,7 +153,7 @@ cd ../..
 --------------------------------------------------------------------------------
 STEP 7: PRODUCTION NGINX REVERSE PROXY & SSL
 --------------------------------------------------------------------------------
-Create /etc/nginx/sites-available/btitan.conf:
+Create /etc/nginx/sites-available/equora.conf:
 
 limit_req_zone $binary_remote_addr zone=api_limit:10m rate=30r/s;
 
@@ -218,7 +218,7 @@ server {
 }
 
 Enable site and SSL:
-sudo ln -s /etc/nginx/sites-available/btitan.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/equora.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 sudo certbot --nginx -d yourdomain.com
@@ -237,25 +237,25 @@ sudo ufw status
 --------------------------------------------------------------------------------
 AUTOMATED DAILY DATABASE BACKUP (CRON)
 --------------------------------------------------------------------------------
-sudo mkdir -p /var/backups/btitan
-(crontab -l 2>/dev/null; echo "0 2 * * * docker exec btitan_postgres pg_dump -U btitan_admin btitan_db | gzip > /var/backups/btitan/btitan_db_\$(date +\%Y\%m\%d).sql.gz && find /var/backups/btitan -name 'btitan_db_*.sql.gz' -mtime +14 -delete") | crontab -
+sudo mkdir -p /var/backups/equora
+(crontab -l 2>/dev/null; echo "0 2 * * * docker exec equora_postgres pg_dump -U equora_admin equora_db | gzip > /var/backups/equora/equora_db_\$(date +\%Y\%m\%d).sql.gz && find /var/backups/equora -name 'equora_db_*.sql.gz' -mtime +14 -delete") | crontab -
 
 --------------------------------------------------------------------------------
 ZERO-DOWNTIME CODE UPDATES
 --------------------------------------------------------------------------------
-cd /var/www/b-titan
+cd /var/www/equora
 git pull
-cd packages/nextjs && npm run build && pm2 reload btitan-frontend
-cd ../../apps/api && npm run build && pm2 reload btitan-api
-cd ../indexer && npm run build && pm2 reload btitan-indexer
+cd packages/nextjs && npm run build && pm2 reload equora-frontend
+cd ../../apps/api && npm run build && pm2 reload equora-api
+cd ../indexer && npm run build && pm2 reload equora-indexer
 
 --------------------------------------------------------------------------------
 OPERATIONAL COMMANDS
 --------------------------------------------------------------------------------
 pm2 status              # View status of all 3 services
 pm2 logs                # Real-time combined log stream
-pm2 logs btitan-api     # API logs only
-pm2 logs btitan-indexer # Indexer logs only
-pm2 logs btitan-frontend# Frontend logs only
+pm2 logs equora-api     # API logs only
+pm2 logs equora-indexer # Indexer logs only
+pm2 logs equora-frontend# Frontend logs only
 pm2 monit               # Interactive CPU/Memory dashboard
 ================================================================================

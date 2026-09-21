@@ -1,5 +1,5 @@
 // ==============================================================================
-// B-TITAN PROTOCOL — PRISMA CLIENT SINGLETON & DATABASE UTILITIES
+// EQUORA.FI PROTOCOL — PRISMA CLIENT SINGLETON & DATABASE UTILITIES
 // ==============================================================================
 
 import { PrismaClient } from "@prisma/client";
@@ -7,11 +7,11 @@ import { PrismaClient } from "@prisma/client";
 declare global {
   // Allow global `var` declarations in TypeScript
   // eslint-disable-next-line no-var
-  var __btitan_prisma__: PrismaClient | undefined;
+  var __equora_prisma__: PrismaClient | undefined;
 }
 
 export const prisma: PrismaClient =
-  global.__btitan_prisma__ ??
+  global.__equora_prisma__ ??
   new PrismaClient({
     log:
       process.env.NODE_ENV === "development"
@@ -20,7 +20,7 @@ export const prisma: PrismaClient =
   });
 
 if (process.env.NODE_ENV !== "production") {
-  global.__btitan_prisma__ = prisma;
+  global.__equora_prisma__ = prisma;
 }
 
 export * from "@prisma/client";

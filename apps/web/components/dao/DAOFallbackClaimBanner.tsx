@@ -2,7 +2,7 @@
 
 import React from "react";
 import { formatUnits } from "viem";
-import { useClaimFallback } from "../../hooks/btitan/useClaimFallback";
+import { useClaimFallback } from "../../hooks/equora/useClaimFallback";
 
 interface DAOFallbackClaimBannerProps {
   claimableAmount: bigint;

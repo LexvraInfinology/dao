@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { fetchDAOEvents, DAOEventItem } from "../../utils/btitan/api";
+import { fetchDAOEvents, DAOEventItem } from "../../utils/equora/api";
 
 type FilterType = "all" | "joined" | "pushed" | "retopup" | "pool_claimed";
 

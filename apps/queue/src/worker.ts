@@ -1,5 +1,5 @@
-import { createLogger } from "@btitan/logger";
-import { QueueJob } from "@btitan/types";
+import { createLogger } from "@equora/logger";
+import { QueueJob } from "@equora/types";
 import { processIndexerCatchup } from "./jobs/indexerCatchup.job";
 import { processStatsRecalculation } from "./jobs/statsRecalculation.job";
 

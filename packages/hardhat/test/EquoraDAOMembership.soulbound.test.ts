@@ -2,11 +2,11 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import {
-  BTitanDAOMembership,
+  EquoraDAOMembership,
 } from "../typechain-types";
 
-describe("BTitanDAOMembership — Soulbound ERC-721 Verification", function () {
-  let membershipNFT: BTitanDAOMembership;
+describe("EquoraDAOMembership — Soulbound ERC-721 Verification", function () {
+  let membershipNFT: EquoraDAOMembership;
   let daoSigner: HardhatEthersSigner;
   let user1: HardhatEthersSigner;
   let user2: HardhatEthersSigner;
@@ -14,7 +14,7 @@ describe("BTitanDAOMembership — Soulbound ERC-721 Verification", function () {
   beforeEach(async function () {
     [daoSigner, user1, user2] = await ethers.getSigners();
 
-    const Factory = await ethers.getContractFactory("BTitanDAOMembership");
+    const Factory = await ethers.getContractFactory("EquoraDAOMembership");
     membershipNFT = await Factory.deploy(daoSigner.address);
   });
 

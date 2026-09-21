@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-export type TitanBotState =
+export type EquoraBotState =
   | "idle"
   | "welcome"
   | "guide"
@@ -15,19 +15,24 @@ export type TitanBotState =
   | "transaction-error"
   | "rank-up";
 
-export type TitanBotVariant = "hero" | "companion" | "card" | "salute" | "dialog" | "mini";
+export type TitanBotState = EquoraBotState;
 
-interface TitanBotProps {
-  state?: TitanBotState;
-  variant?: TitanBotVariant;
+export type EquoraBotVariant = "hero" | "companion" | "card" | "salute" | "dialog" | "mini";
+export type TitanBotVariant = EquoraBotVariant;
+
+interface EquoraBotProps {
+  state?: EquoraBotState;
+  variant?: EquoraBotVariant;
   message?: string;
   className?: string;
   interactive?: boolean;
 }
 
-const TITANBOT_IMAGE_URL = "/assets/branding/equorafilogo.jpeg";
+export type TitanBotProps = EquoraBotProps;
 
-function TitanBotAvatarSvg({ size = 32 }: { size?: number }) {
+const EQUORABOT_IMAGE_URL = "/assets/branding/equorafilogo.jpeg";
+
+function EquoraBotAvatarSvg({ size = 32 }: { size?: number }) {
   return (
     <div
       style={{ width: size, height: size }}
@@ -42,13 +47,13 @@ function TitanBotAvatarSvg({ size = 32 }: { size?: number }) {
   );
 }
 
-export function TitanBot({
+export function EquoraBot({
   state = "idle",
   variant = "companion",
   message,
   className = "",
   interactive = true,
-}: TitanBotProps) {
+}: EquoraBotProps) {
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -78,10 +83,10 @@ export function TitanBot({
     return (
       <div className={`relative inline-flex items-center gap-2 ${className}`}>
         {imgError ? (
-          <TitanBotAvatarSvg size={28} />
+          <EquoraBotAvatarSvg size={28} />
         ) : (
           <img
-            src={TITANBOT_IMAGE_URL}
+            src={EQUORABOT_IMAGE_URL}
             alt="EquoraBot Mini"
             onError={() => setImgError(true)}
             className="w-7 h-7 object-contain drop-shadow-md hover:scale-110 transition-transform cursor-pointer"
@@ -111,7 +116,7 @@ export function TitanBot({
           </div>
         ) : (
           <img
-            src={TITANBOT_IMAGE_URL}
+            src={EQUORABOT_IMAGE_URL}
             alt="EquoraBot Hero"
             onError={() => setImgError(true)}
             className="relative z-10 w-full h-full object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
@@ -141,10 +146,10 @@ export function TitanBot({
       <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0">
         <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl group-hover:bg-tertiary/20 transition-all duration-300" />
         {imgError ? (
-          <TitanBotAvatarSvg size={56} />
+          <EquoraBotAvatarSvg size={56} />
         ) : (
           <img
-            src={TITANBOT_IMAGE_URL}
+            src={EQUORABOT_IMAGE_URL}
             alt="EquoraBot Assistant"
             onError={() => setImgError(true)}
             className={`relative z-10 w-full h-full object-contain drop-shadow-lg transition-transform duration-300 ${
@@ -176,3 +181,5 @@ export function TitanBot({
     </div>
   );
 }
+
+export const TitanBot = EquoraBot;

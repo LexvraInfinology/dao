@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IEquoraRegistry.sol";
-import "../interfaces/IBTitanNFT.sol";
+import "../interfaces/IEquoraNFT.sol";
 
 /**
- * @title BTitanMatrix — V3 (Equora.Fi Aligned)
+ * @title EquoraMatrix — V3 (Equora.Fi Aligned)
  * @dev 12-Slot, 14-Node Single-Leg Matrix Engine
  *
  * === SLOT COSTS (formula: 30 x 2^(N-1)) =====================================
@@ -58,7 +58,7 @@ import "../interfaces/IBTitanNFT.sol";
  *   - Cycle history permanently preserved (never deleted)
  *   - 100% accounting: every wei of cost is distributed
  */
-contract BTitanMatrix is Ownable, ReentrancyGuard {
+contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     // -------------------------------------------------------------------------
     // Constants
@@ -109,7 +109,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
 
     IERC20          public paymentToken;
     IEquoraRegistry public registry;
-    IBTitanNFT      public nftContract;
+    IEquoraNFT      public nftContract;
 
     // EquoraVault receives P4, P5, P14 and routes them to the 4 protocol pools
     address public vaultContract;
@@ -228,12 +228,12 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
         address _registry,
         address _nftContract
     ) Ownable(msg.sender) {
-        require(_paymentToken != address(0), "BTitanMatrix: invalid token");
-        require(_registry     != address(0), "BTitanMatrix: invalid registry");
+        require(_paymentToken != address(0), "EquoraMatrix: invalid token");
+        require(_registry     != address(0), "EquoraMatrix: invalid registry");
 
         paymentToken = IERC20(_paymentToken);
         registry     = IEquoraRegistry(_registry);
-        nftContract  = IBTitanNFT(_nftContract);
+        nftContract  = IEquoraNFT(_nftContract);
 
         // Precompute slot costs: 30, 60, 120, 240 ... 61440
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
@@ -246,7 +246,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     function setVaultContract(address _vault) external onlyOwner {
-        require(_vault != address(0), "BTitanMatrix: invalid vault");
+        require(_vault != address(0), "EquoraMatrix: invalid vault");
         vaultContract = _vault;
         emit VaultContractSet(_vault);
     }
@@ -258,7 +258,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
     ) external onlyOwner {
         if (_token    != address(0)) paymentToken = IERC20(_token);
         if (_registry != address(0)) registry     = IEquoraRegistry(_registry);
-        if (_nft      != address(0)) nftContract  = IBTitanNFT(_nft);
+        if (_nft      != address(0)) nftContract  = IEquoraNFT(_nft);
     }
 
     function setMatrixLaunchTime(uint256 _launchTime) external onlyOwner {
@@ -276,16 +276,16 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
      */
     function joinSlot(uint256 slot, address sponsor) external nonReentrant {
         if (matrixLaunchTime > 0) {
-            require(block.timestamp >= matrixLaunchTime, "BTitanMatrix: matrix locked during 21-day Genesis DAO phase");
+            require(block.timestamp >= matrixLaunchTime, "EquoraMatrix: matrix locked during 21-day Genesis DAO phase");
         }
-        require(slot >= 1 && slot <= TOTAL_SLOTS,         "BTitanMatrix: invalid slot");
-        require(slot == 1,                                "BTitanMatrix: only slot 1 can be joined directly; higher slots are auto-unlocked");
-        require(!userSlots[msg.sender][slot].isUnlocked,  "BTitanMatrix: already unlocked");
+        require(slot >= 1 && slot <= TOTAL_SLOTS,         "EquoraMatrix: invalid slot");
+        require(slot == 1,                                "EquoraMatrix: only slot 1 can be joined directly; higher slots are auto-unlocked");
+        require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
 
         uint256 cost = slotCosts[slot];
 
         bool ok = paymentToken.transferFrom(msg.sender, address(this), cost);
-        require(ok, "BTitanMatrix: payment failed - approve token first");
+        require(ok, "EquoraMatrix: payment failed - approve token first");
 
         totalVolumeProcessed += cost;
 
@@ -507,7 +507,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
         }
 
         bool ok = paymentToken.transfer(vaultContract, amount);
-        require(ok, "BTitanMatrix: vault transfer failed");
+        require(ok, "EquoraMatrix: vault transfer failed");
 
         // Notify vault to route funds into the 4 pools
         try IEquoraVault(vaultContract).routePoolDeposit(amount) {} catch {}
@@ -556,11 +556,11 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
      *      Slot 3 → ALPHA, Slot 6 → PRIME, Slot 9 → ELITE, Slot 12 → CROWN
      */
     function _awardMilestoneNFT(address user, uint256 slot) internal {
-        IBTitanNFT.Rank rank;
-        if      (slot == 3)  rank = IBTitanNFT.Rank.ALPHA;
-        else if (slot == 6)  rank = IBTitanNFT.Rank.PRIME;
-        else if (slot == 9)  rank = IBTitanNFT.Rank.ELITE;
-        else if (slot == 12) rank = IBTitanNFT.Rank.CROWN;
+        IEquoraNFT.Rank rank;
+        if      (slot == 3)  rank = IEquoraNFT.Rank.ALPHA;
+        else if (slot == 6)  rank = IEquoraNFT.Rank.PRIME;
+        else if (slot == 9)  rank = IEquoraNFT.Rank.ELITE;
+        else if (slot == 12) rank = IEquoraNFT.Rank.CROWN;
         else return;
 
         if (address(nftContract) != address(0)) {
@@ -575,14 +575,14 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0,                        "BTitanMatrix: amount must be > 0");
-        require(userBalance[msg.sender] >= amount, "BTitanMatrix: insufficient balance");
+        require(amount > 0,                        "EquoraMatrix: amount must be > 0");
+        require(userBalance[msg.sender] >= amount, "EquoraMatrix: insufficient balance");
 
         userBalance[msg.sender]    -= amount;
         totalWithdrawn[msg.sender] += amount;
 
         bool ok = paymentToken.transfer(msg.sender, amount);
-        require(ok, "BTitanMatrix: transfer failed");
+        require(ok, "EquoraMatrix: transfer failed");
 
         emit BalanceWithdrawn(msg.sender, amount, block.timestamp);
     }
@@ -624,7 +624,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
     }
 
     function getSlotCost(uint256 slot) external view returns (uint256) {
-        require(slot >= 1 && slot <= TOTAL_SLOTS, "BTitanMatrix: invalid slot");
+        require(slot >= 1 && slot <= TOTAL_SLOTS, "EquoraMatrix: invalid slot");
         return slotCosts[slot];
     }
 
@@ -656,7 +656,7 @@ contract BTitanMatrix is Ownable, ReentrancyGuard {
 // ---------------------------------------------------------------------------
 
 interface IEquoraVault {
-    /// @dev Called by BTitanMatrix to route P4/P5/P14 funds into the 4 protocol pools.
+    /// @dev Called by EquoraMatrix to route P4/P5/P14 funds into the 4 protocol pools.
     ///      Vault splits: 35% Ecosystem & DAO Pool | 40% Salary Pool | 15% Level Rewards | 10% Magic Blind Box.
     function routePoolDeposit(uint256 amount) external;
 }

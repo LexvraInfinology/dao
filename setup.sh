@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# EQUORA.FI / B-TITAN PROTOCOL — MONOREPO SETUP SCRIPT (Linux / macOS / WSL)
+# EQUORA.FI PROTOCOL — MONOREPO SETUP SCRIPT (Linux / macOS / WSL)
 # ==============================================================================
 
 set -e
@@ -52,12 +52,12 @@ pnpm install
 # 5. Generate Prisma Database Client
 echo ""
 echo "🗄️ Generating Prisma database client..."
-pnpm --filter @btitan/database db:generate
+pnpm --filter @equora/database db:generate
 
 # 6. Compile Smart Contracts
 echo ""
 echo "🔨 Compiling Hardhat Solidity smart contracts..."
-pnpm --filter @btitan/hardhat compile
+pnpm --filter @equora/hardhat compile
 
 # 7. Apply RainbowKit QR patch
 echo ""

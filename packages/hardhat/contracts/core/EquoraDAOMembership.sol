@@ -4,16 +4,16 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 /**
- * @title BTitanDAOMembership
+ * @title EquoraDAOMembership
  * @dev Soulbound (Non-Transferable) ERC-721 representing Genesis DAO Membership.
  *
  * Requirements:
  *   - Exactly 100 tokens can ever exist (Token IDs 1 to 100).
- *   - Only the immutable BTitanDAO contract can mint tokens.
+ *   - Only the immutable EquoraDAO contract can mint tokens.
  *   - Tokens are soulbound: transfers between wallets revert automatically.
  *   - Each token ID directly corresponds to the member's queue position (1 to 100).
  */
-contract BTitanDAOMembership is ERC721 {
+contract EquoraDAOMembership is ERC721 {
     address public immutable daoContract;
     uint256 public constant MAX_SUPPLY = 100;
     uint256 public totalSupply;
@@ -35,7 +35,7 @@ contract BTitanDAOMembership is ERC721 {
         _;
     }
 
-    constructor(address _daoContract) ERC721("B-TITAN Genesis DAO Membership", "BTT-DAO") {
+    constructor(address _daoContract) ERC721("Equora Genesis DAO Membership", "EQR-DAO") {
         require(_daoContract != address(0), "Invalid DAO address");
         daoContract = _daoContract;
     }

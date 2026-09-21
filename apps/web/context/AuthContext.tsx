@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAccount, useSignMessage, useChainId, useDisconnect } from "wagmi";
-import { useUserProfile } from "../hooks/btitan/useUserProfile";
+import { useUserProfile } from "../hooks/equora/useUserProfile";
 import { notification } from "../utils/scaffold-eth/notification";
 
 interface AuthUser {
@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   checkOnChainRegistration: () => false,
 });
 
-const SESSION_STORAGE_KEY = "btitan_auth_session_v1";
+const SESSION_STORAGE_KEY = "equora_auth_session_v1";
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const getInitialSession = (): AuthUser | null => {

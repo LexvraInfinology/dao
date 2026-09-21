@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useAccount, useReadContract, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAuth } from "../../context/AuthContext";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import deployedContracts from "../../contracts/deployedContracts";
 import { notification } from "../../utils/scaffold-eth/notification";
-import { useJoinMatrix } from "../../hooks/btitan/useJoinMatrix";
+import { useJoinMatrix } from "../../hooks/equora/useJoinMatrix";
 
 export default function RegisterPage() {
   const { isConnected, address } = useAccount();

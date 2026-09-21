@@ -1,5 +1,5 @@
 {
-  "name": "@btitan/hardhat",
+  "name": "@equora/hardhat",
   "version": "1.0.0",
   "scripts": {
     "dev": "npx hardhat node",

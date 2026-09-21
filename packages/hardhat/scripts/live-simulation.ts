@@ -52,13 +52,13 @@ async function main() {
     ? await ethers.provider.getCode(deployedAddresses["EquoraRegistry"])
     : "0x";
 
-  if (codeAtRegistry !== "0x" && deployedAddresses["EquoraVault"] && deployedAddresses["BTitanMatrix"]) {
+  if (codeAtRegistry !== "0x" && deployedAddresses["EquoraVault"] && deployedAddresses["EquoraMatrix"]) {
     console.log("📦 Using live deployed contracts from network...");
-    token = await ethers.getContractAt("MockToken", deployedAddresses["BTitanToken"] || deployedAddresses["MockToken"]);
+    token = await ethers.getContractAt("MockToken", deployedAddresses["EquoraToken"] || deployedAddresses["MockToken"]);
     registry = await ethers.getContractAt("EquoraRegistry", deployedAddresses["EquoraRegistry"]);
     vault = await ethers.getContractAt("EquoraVault", deployedAddresses["EquoraVault"]);
     dao = await ethers.getContractAt("EquoraDAO", deployedAddresses["EquoraDAO"]);
-    matrix = await ethers.getContractAt("BTitanMatrix", deployedAddresses["BTitanMatrix"]);
+    matrix = await ethers.getContractAt("EquoraMatrix", deployedAddresses["EquoraMatrix"]);
     salaryPool = await ethers.getContractAt("EquoraSalaryPool", deployedAddresses["EquoraSalaryPool"]);
     rewardPool = await ethers.getContractAt("EquoraRewardPool", deployedAddresses["EquoraRewardPool"]);
     magicBox = await ethers.getContractAt("EquoraMagicBox", deployedAddresses["EquoraMagicBox"]);
@@ -70,7 +70,7 @@ async function main() {
     const Registry = await ethers.getContractFactory("EquoraRegistry");
     registry = await Registry.deploy(root.address);
 
-    const NFT = await ethers.getContractFactory("BTitanNFT");
+    const NFT = await ethers.getContractFactory("EquoraNFT");
     const nft = await NFT.deploy();
 
     const Vault = await ethers.getContractFactory("EquoraVault");
@@ -88,7 +88,7 @@ async function main() {
     const DAO = await ethers.getContractFactory("EquoraDAO");
     dao = await DAO.deploy(await token.getAddress(), await registry.getAddress());
 
-    const Matrix = await ethers.getContractFactory("BTitanMatrix");
+    const Matrix = await ethers.getContractFactory("EquoraMatrix");
     matrix = await Matrix.deploy(await token.getAddress(), await registry.getAddress(), await nft.getAddress());
 
     // Wire up authorizations

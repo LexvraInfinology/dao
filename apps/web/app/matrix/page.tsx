@@ -8,11 +8,11 @@ import {
   getNodeLabel,
   isMagicBoxSlot,
   MatrixTreeNode,
-} from "../../utils/btitan/matrixHelpers";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { SLOT_COSTS } from "../../types/btitan";
-import { useMatrixData, useSlotNodes } from "../../hooks/btitan/useMatrixData";
-import { useJoinMatrix } from "../../hooks/btitan/useJoinMatrix";
+} from "../../utils/equora/matrixHelpers";
+import { formatAddress } from "../../utils/equora/formatters";
+import { SLOT_COSTS } from "../../types/equora";
+import { useMatrixData, useSlotNodes } from "../../hooks/equora/useMatrixData";
+import { useJoinMatrix } from "../../hooks/equora/useJoinMatrix";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 

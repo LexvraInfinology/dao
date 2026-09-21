@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { useDAOData } from "../../hooks/btitan/useDAOData";
-import { useMatrixData } from "../../hooks/btitan/useMatrixData";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
-import { useClaimPoolShare } from "../../hooks/btitan/useClaimPoolShare";
+import { formatBTT } from "../../utils/equora/matrixHelpers";
+import { formatAddress } from "../../utils/equora/formatters";
+import { useDAOData } from "../../hooks/equora/useDAOData";
+import { useMatrixData } from "../../hooks/equora/useMatrixData";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
+import { useClaimPoolShare } from "../../hooks/equora/useClaimPoolShare";
 import { DAOHistoryTable } from "../../components/dao/DAOHistoryTable";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 import { notification } from "../../utils/scaffold-eth/notification";
@@ -71,7 +71,7 @@ function DashboardContent() {
       {/* Background Subtle Gradient Glow */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-tertiary/5 pointer-events-none -z-10" />
 
-      {/* ─── Top Welcome & Identity Banner (B-Titan Video Phase 6) ─────────── */}
+      {/* ─── Top Welcome & Identity Banner (Equora Video Phase 6) ─────────── */}
       <section className="bg-surface-container/60 backdrop-blur-xl rounded-2xl p-5 sm:p-6 border border-outline-variant/20 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-[#0a1120] border border-tertiary/30 shadow-md p-1 shrink-0">
@@ -394,7 +394,7 @@ function DashboardContent() {
         </div>
       </section>
 
-      {/* ─── Live Activity Feed & Audit Trail (B-Titan Video Phase 6) ──────── */}
+      {/* ─── Live Activity Feed & Audit Trail (Equora Video Phase 6) ──────── */}
       <section className="w-full">
         <DAOHistoryTable />
       </section>

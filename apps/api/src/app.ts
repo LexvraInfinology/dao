@@ -47,7 +47,7 @@ export function createApp(): Express {
   app.get("/health", (req, res) => {
     res.json({
       status: "healthy",
-      service: "btitan-api",
+      service: "equora-api",
       timestamp: new Date().toISOString(),
       chainId: config.blockchain.chainId,
     });

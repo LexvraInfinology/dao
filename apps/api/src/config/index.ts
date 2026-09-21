@@ -12,7 +12,7 @@ export const config = {
   port: parseInt(process.env.PORT || "4000", 10),
   corsOrigin: process.env.CORS_ORIGIN || "*",
   jwt: {
-    secret: process.env.JWT_SECRET || "btitan_default_jwt_secret_dev_key_32_chars",
+    secret: process.env.JWT_SECRET || "equora_default_jwt_secret_dev_key_32_chars",
     expiresIn: process.env.JWT_EXPIRES_IN || "24h",
   },
   redis: {

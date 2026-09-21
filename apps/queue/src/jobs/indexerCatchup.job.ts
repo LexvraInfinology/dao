@@ -1,6 +1,6 @@
-import { createLogger } from "@btitan/logger";
-import { IndexerCatchupPayload } from "@btitan/types";
-import prisma from "@btitan/database";
+import { createLogger } from "@equora/logger";
+import { IndexerCatchupPayload } from "@equora/types";
+import prisma from "@equora/database";
 
 const logger = createLogger("Queue:IndexerCatchup");
 

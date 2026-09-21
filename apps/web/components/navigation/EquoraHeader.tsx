@@ -7,7 +7,7 @@ import { useAccount } from "wagmi";
 import { LanguageSwitcher } from "../i18n/LanguageSwitcher";
 import { ThemeSwitcher } from "../theme/ThemeSwitcher";
 import { WalletConnectButton } from "../ui/WalletConnectButton";
-import { TitanBot } from "../titanbot/TitanBot";
+import { EquoraBot } from "../equorabot/EquoraBot";
 import { useI18n } from "../../services/i18n/I18nContext";
 
 const NAV_ITEMS = [
@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { path: "/leaderboard", labelKey: "nav.leaderboard", icon: "leaderboard" },
 ];
 
-export function TitanHeader() {
+export function EquoraHeader() {
   const pathname = usePathname();
   const { address, isConnected } = useAccount();
   const { t } = useI18n();
@@ -90,13 +90,13 @@ export function TitanHeader() {
           {/* Theme Switcher */}
           <ThemeSwitcher />
 
-          {/* TitanBot Assistant Trigger (desktop) */}
+          {/* EquoraBot Assistant Trigger (desktop) */}
           <div
             onClick={() => setShowAssistantModal(true)}
             className="hidden md:flex cursor-pointer hover:scale-105 transition-transform shrink-0"
             title="Equora Assistant Support"
           >
-            <TitanBot variant="mini" interactive={false} />
+            <EquoraBot variant="mini" interactive={false} />
           </div>
 
           {/* Wallet Connect Button */}
@@ -188,7 +188,7 @@ export function TitanHeader() {
               ✕
             </button>
             <div className="flex items-center gap-4 mb-4">
-              <TitanBot variant="companion" state="welcome" interactive={false} />
+              <EquoraBot variant="companion" state="welcome" interactive={false} />
               <div>
                 <h3 className="text-base font-bold text-on-surface">Equora AI Assistant</h3>
                 <p className="text-xs text-primary font-code">Autonomous Protocol Support</p>
@@ -211,3 +211,5 @@ export function TitanHeader() {
     </>
   );
 }
+
+export const TitanHeader = EquoraHeader;

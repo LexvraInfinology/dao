@@ -166,7 +166,7 @@ In legacy Web3 systems, users are forced to share cumbersome 42-character hexade
 
 ---
 
-## 5. THE 14-NODE SINGLE-LEG MATRIX ENGINE (`BTitanMatrix.sol`)
+## 5. THE 14-NODE SINGLE-LEG MATRIX ENGINE (`EquoraMatrix.sol`)
 
 ```
 [ WATERMARK: LEXVRA — MATHEMATICAL PROOF OF 14-NODE MATRIX CASHFLOW ]
@@ -569,7 +569,7 @@ Step 10: Instant Payout   → Exactly 100% of all earnings drop straight into th
 
 The Equora.Fi protocol comprises the following core Solidity contracts located in `packages/hardhat/contracts/`:
 
-1. **`core/BTitanMatrix.sol`:**
+1. **`core/EquoraMatrix.sol`:**
    - The core 14-node single-leg matrix engine.
    - Handles board assignments, left-to-right tree placement, spillover logic.
    - Hardcodes the $180 cash payout to owner (Nodes 3, 6, 8, 9, 11, 12).
@@ -584,7 +584,7 @@ The Equora.Fi protocol comprises the following core Solidity contracts located i
    - Manages Phase 1 21-day window ($300 open buy-in, 0 referrals).
    - Implements the `$300 / N` queue push distribution algorithm (inclusive of joining member).
    - Enforces the 5X cap ($1,500.00), the 48-hour re-topup countdown, and the automated vacancy scanner (Seats 1–100).
-4. **`core/BTitanDAOMembership.sol`:**
+4. **`core/EquoraDAOMembership.sol`:**
    - Non-transferable Soulbound ERC-721 token representing exclusive ownership of one of the 100 DAO seats.
 5. **`core/EquoraVault.sol`:**
    - The centralized liquidity distributor.

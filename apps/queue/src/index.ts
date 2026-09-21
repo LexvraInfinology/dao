@@ -1,13 +1,13 @@
-import { createLogger } from "@btitan/logger";
+import { createLogger } from "@equora/logger";
 import { QueueWorker } from "./worker";
 import { config } from "./config";
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 
 const logger = createLogger("Queue:Main");
 
 async function bootstrap() {
   logger.info("========================================================");
-  logger.info("🚀 B-TITAN Background Queue & Worker Service starting");
+  logger.info("🚀 EQUORA Background Queue & Worker Service starting");
   logger.info(`🌍 Environment: ${config.env}`);
   logger.info(`📡 Redis Host: ${config.redis.host}:${config.redis.port}`);
   logger.info("========================================================");

@@ -12,7 +12,7 @@ import { TierLevelsSection } from "../components/landing/TierLevelsSection";
 import { FaqSection } from "../components/landing/FaqSection";
 import { LandingFooter } from "../components/landing/LandingFooter";
 import { LoginRegisterModal } from "../components/auth/LoginRegisterModal";
-import { TitanBot } from "../components/titanbot/TitanBot";
+import { EquoraBot } from "../components/equorabot/EquoraBot";
 
 export default function LandingPage() {
   const { isConnected } = useAccount();
@@ -86,7 +86,7 @@ export default function LandingPage() {
               ✕
             </button>
             <div className="flex items-center gap-4 mb-4">
-              <TitanBot variant="companion" state="welcome" interactive={false} />
+              <EquoraBot variant="companion" state="welcome" interactive={false} />
               <div>
                 <h3 className="text-base font-bold text-white">Equora AI Assistant</h3>
                 <p className="text-xs text-blue-400 font-mono">Autonomous Protocol Support</p>

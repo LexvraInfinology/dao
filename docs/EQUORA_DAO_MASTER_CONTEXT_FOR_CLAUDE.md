@@ -31,7 +31,7 @@ The **Genesis DAO Council** represents the sovereign governing body and premier 
 
 ### What makes it a true DAO?
 - **Zero Human Intermediaries:** There is no CEO, no board of directors, no centralized company bank account, and no admin keys that can alter fund distributions.
-- **100% Non-Custodial & Autonomous:** Every single dollar entering the DAO is handled entirely by verified Solidity smart contracts (`EquoraDAO.sol`, `EquoraVault.sol`, `BTitanDAOMembership.sol`).
+- **100% Non-Custodial & Autonomous:** Every single dollar entering the DAO is handled entirely by verified Solidity smart contracts (`EquoraDAO.sol`, `EquoraVault.sol`, `EquoraDAOMembership.sol`).
 - **Founding Co-Ownership:** Holding a Genesis DAO Seat establishes the member as a verified founding architect of the protocol, granting equal governance voting power and direct daily dividend rights across the entire global ecosystem.
 
 ### Core Value Proposition

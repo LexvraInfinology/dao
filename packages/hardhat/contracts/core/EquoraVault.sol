@@ -19,7 +19,7 @@ import "../interfaces/IEquoraRegistry.sol";
  *     15%  → Level Rewards         (EquoraRewardPool — instant one-time milestone payouts)
  *
  * === ADDITIONAL ROUTE ========================================================
- *   - routePoolDeposit(amount): Called by BTitanMatrix when P4/P5/P14 positions
+ *   - routePoolDeposit(amount): Called by EquoraMatrix when P4/P5/P14 positions
  *     are filled. The matrix transfers TROB to vault, vault splits it to pools.
  *     This ensures 100% of P4+P5+P14 node fees go to the 4 protocol pools.
  *
@@ -53,12 +53,12 @@ contract EquoraVault is ReentrancyGuard {
     address public rewardsPool;
     bool    public initialized;
 
-    // Authorized callers for routePoolDeposit (BTitanMatrix)
+    // Authorized callers for routePoolDeposit (EquoraMatrix)
     address public matrixContract;
 
     // ─── Global Stats ──────────────────────────────────────────────────────────
 
-    uint256 public totalRoutedFromMatrix; // total TROB forwarded by BTitanMatrix P4/P5/P14
+    uint256 public totalRoutedFromMatrix; // total TROB forwarded by EquoraMatrix P4/P5/P14
     uint256 public totalRoutedFromUsers;  // total TROB from user registrations
 
     // ─── Events ────────────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ contract EquoraVault is ReentrancyGuard {
     }
 
     /**
-     * @dev Set the BTitanMatrix contract address (authorized to call routePoolDeposit).
+     * @dev Set the EquoraMatrix contract address (authorized to call routePoolDeposit).
      *      Called once during deployment wiring.
      */
     function setMatrixContract(address _matrix) external {
@@ -182,7 +182,7 @@ contract EquoraVault is ReentrancyGuard {
     // ─── Matrix Pool Route (P4 / P5 / P14) ────────────────────────────────────
 
     /**
-     * @dev Called by BTitanMatrix when P4, P5, or P14 positions are filled.
+     * @dev Called by EquoraMatrix when P4, P5, or P14 positions are filled.
      *      The matrix contract must pre-approve and transfer TROB to this vault,
      *      then this function routes it to the 4 protocol pools.
      *
@@ -195,7 +195,7 @@ contract EquoraVault is ReentrancyGuard {
         if (msg.sender != matrixContract) revert Unauthorized();
         require(amount > 0, "EquoraVault: Zero amount");
 
-        // TROB is already in this contract (transferred by BTitanMatrix via transfer())
+        // TROB is already in this contract (transferred by EquoraMatrix via transfer())
         _routeToAllPools(amount);
 
         totalRoutedFromMatrix += amount;

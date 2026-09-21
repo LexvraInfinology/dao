@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../interfaces/IBTitanNFT.sol";
+import "../interfaces/IEquoraNFT.sol";
 
 /**
- * @title BTitanNFT
- * @dev B-TITAN Platform NFT Contract — ERC-721 compliant (via OpenZeppelin)
+ * @title EquoraNFT
+ * @dev Equora Platform NFT Contract — ERC-721 compliant (via OpenZeppelin)
  *
  * Token Types:
  *   1. WELCOME PASS — Minted when any user first joins the platform (DAO or Matrix)
@@ -26,21 +26,21 @@ import "../interfaces/IBTitanNFT.sol";
  *   - Each user can only have 1 Welcome Pass
  *   - Rank badges stack (user can have all 4 ranks)
  */
-contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
+contract EquoraNFT is ERC721, ERC721Enumerable, IEquoraNFT, Ownable {
     // ─── State ─────────────────────────────────────────────────────────────
 
     uint256 private _nextTokenId = 1;
 
     // Token metadata
     struct TokenData {
-        IBTitanNFT.Rank rank;
+        IEquoraNFT.Rank rank;
         bool isWelcomePass;
         uint256 mintTimestamp;
     }
 
     mapping(uint256 => TokenData) public tokenData;
     mapping(address => uint256) private _welcomePassId;   // user → tokenId (0 = none)
-    mapping(address => IBTitanNFT.Rank) private _userRanks;
+    mapping(address => IEquoraNFT.Rank) private _userRanks;
 
     // Authorized minter contracts
     mapping(address => bool) public isMinter;
@@ -48,7 +48,7 @@ contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
     // ─── Events ────────────────────────────────────────────────────────────
 
     event WelcomePassMinted(address indexed to, uint256 indexed tokenId);
-    event RankBadgeMinted(address indexed to, uint256 indexed tokenId, IBTitanNFT.Rank rank);
+    event RankBadgeMinted(address indexed to, uint256 indexed tokenId, IEquoraNFT.Rank rank);
     event MinterSet(address indexed minter, bool authorized);
 
     // ─── Modifiers ─────────────────────────────────────────────────────────
@@ -56,14 +56,14 @@ contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
     modifier onlyMinter() {
         require(
             isMinter[msg.sender] || msg.sender == owner(),
-            "BTitanNFT: Not authorized minter"
+            "EquoraNFT: Not authorized minter"
         );
         _;
     }
 
     // ─── Constructor ────────────────────────────────────────────────────────
 
-    constructor() ERC721("B-TITAN Pass", "BTPASS") Ownable(msg.sender) {}
+    constructor() ERC721("Equora Pass", "EQPASS") Ownable(msg.sender) {}
 
     // ─── Admin ─────────────────────────────────────────────────────────────
 
@@ -82,14 +82,14 @@ contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
      *      Each address can only have 1 Welcome Pass.
      */
     function mintWelcomePass(address to) external override onlyMinter returns (uint256 tokenId) {
-        require(to != address(0), "BTitanNFT: Mint to zero address");
-        require(_welcomePassId[to] == 0, "BTitanNFT: Welcome pass already minted");
+        require(to != address(0), "EquoraNFT: Mint to zero address");
+        require(_welcomePassId[to] == 0, "EquoraNFT: Welcome pass already minted");
 
         tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
 
         tokenData[tokenId] = TokenData({
-            rank: IBTitanNFT.Rank.NONE,
+            rank: IEquoraNFT.Rank.NONE,
             isWelcomePass: true,
             mintTimestamp: block.timestamp
         });
@@ -105,10 +105,10 @@ contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
      */
     function mintRankBadge(
         address to,
-        IBTitanNFT.Rank rank
+        IEquoraNFT.Rank rank
     ) external override onlyMinter returns (uint256 tokenId) {
-        require(to != address(0), "BTitanNFT: Mint to zero address");
-        require(rank != IBTitanNFT.Rank.NONE, "BTitanNFT: Invalid rank");
+        require(to != address(0), "EquoraNFT: Mint to zero address");
+        require(rank != IEquoraNFT.Rank.NONE, "EquoraNFT: Invalid rank");
 
         tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
@@ -133,7 +133,7 @@ contract BTitanNFT is ERC721, ERC721Enumerable, IBTitanNFT, Ownable {
         return _welcomePassId[user];
     }
 
-    function getUserRank(address user) external view override returns (IBTitanNFT.Rank) {
+    function getUserRank(address user) external view override returns (IEquoraNFT.Rank) {
         return _userRanks[user];
     }
 

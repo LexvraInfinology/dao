@@ -13,21 +13,21 @@ The UI/UX designer can reference the actual live visual renderings of the Genesi
 ### 1.1 Desktop Command Center View (1440 × 900)
 The sovereign council dashboard featuring the Genesis scarcity header, 100-Seat Holographic Grid, 300/N dynamic simulator, and 5X cap health monitor:
 
-![Genesis DAO Council Desktop Viewport](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_desktop.png)
+![Genesis DAO Council Desktop Viewport](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_desktop.png)
 
 ---
 
 ### 1.2 Mobile DApp Browser View (390 × 844)
 Optimized for mobile Web3 browsers (TrobSafe, MetaMask Mobile, Trust Wallet) with touch-friendly 10x10 seat navigation and sticky action drawers:
 
-![Genesis DAO Council Mobile DApp Viewport](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_mobile.png)
+![Genesis DAO Council Mobile DApp Viewport](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_mobile.png)
 
 ---
 
 ### 1.3 Soulbound ERC-721 VIP Governance Pass Card Artwork
 The 3D metallic gold holographic badge minted to each member upon claiming a seat (#01 to #100):
 
-![Genesis DAO Soulbound NFT Pass](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/dao_card.jpg)
+![Genesis DAO Soulbound NFT Pass](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/dao_card.jpg)
 
 ---
 
@@ -139,10 +139,10 @@ Rendered for connected users who hold a Genesis Council seat.
 |:---|:---|:---:|:---|:---|:---|
 | **Is Council Member** | `EquoraDAO.getMemberDetails(addr)[0]` | `bool` | `true` | `false` | If false, show Pre-Claim View |
 | **Seat Index** | `EquoraDAO.getMemberDetails(addr)[1]` | `uint256` | `12` | `0` | Format: `Council Seat #12` |
-| **Soulbound Token ID** | `BTitanDAOMembership.tokenOfOwnerByIndex(addr, 0)` | `uint256` | `12` | `N/A` | Format: `#0012` |
+| **Soulbound Token ID** | `EquoraDAOMembership.tokenOfOwnerByIndex(addr, 0)` | `uint256` | `12` | `N/A` | Format: `#0012` |
 | **Owner Address** | `userAddress` (from Web3 provider) | `address` | `0x4B71a...89F2` | `Not Connected` | Shortened `0x...` with copy icon |
 | **Governance Weight** | Fixed: `1 / 100` | `percentage` | `1.0%` | `0.0%` | Tag badge: `1 Seat = 1 Vote` |
-| **Soulbound Check** | `BTitanDAOMembership.isSoulbound()` | `bool` | `true` | `true` | Lock icon: `Non-Transferable` |
+| **Soulbound Check** | `EquoraDAOMembership.isSoulbound()` | `bool` | `true` | `true` | Lock icon: `Non-Transferable` |
 
 ---
 

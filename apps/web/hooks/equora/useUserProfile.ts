@@ -2,7 +2,7 @@
 
 import { useReadContract, useChainId } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
-import { UserProfile } from "../../types/btitan";
+import { UserProfile } from "../../types/equora";
 
 /**
  * useUserProfile

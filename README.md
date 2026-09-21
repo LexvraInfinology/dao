@@ -1,4 +1,4 @@
-# EQUORA.FI (B-TITAN) — Autonomous Decentralized Protocol
+# EQUORA.FI — Autonomous Decentralized Protocol
 
 An enterprise-grade, non-custodial decentralized financial protocol built on EVM smart contracts, featuring a 100-Seat Genesis DAO, 12-Slot Matrix Engine, and automated multi-tier yield pools.
 
@@ -9,19 +9,19 @@ An enterprise-grade, non-custodial decentralized financial protocol built on EVM
 Orchestrated with **pnpm workspaces** and **Turborepo** (`turbo.json`):
 
 ```
-b-titan/
+equora/
 ├── apps/
 │   ├── web/                    # Next.js 15 Web3 DApp (@equora/web)
-│   ├── api/                    # Express REST API with SIWE Auth (@btitan/api)
-│   ├── indexer/                # Viem blockchain event listener (@btitan/indexer)
-│   └── queue/                  # BullMQ / Redis background worker & cron (@btitan/queue)
+│   ├── api/                    # Express REST API with SIWE Auth (@equora/api)
+│   ├── indexer/                # Viem blockchain event listener (@equora/indexer)
+│   └── queue/                  # BullMQ / Redis background worker & cron (@equora/queue)
 │
 ├── packages/
-│   ├── hardhat/                # Solidity 0.8.24 contracts, tests, deploy scripts (@btitan/hardhat)
-│   ├── database/               # Prisma ORM schemas & client singleton (@btitan/database)
-│   ├── types/                  # Shared TypeScript types & DTOs (@btitan/types)
-│   ├── logger/                 # Standardized colorized & structured logger (@btitan/logger)
-│   └── tsconfig/               # Shared base, node, and Next.js tsconfigs (@btitan/tsconfig)
+│   ├── hardhat/                # Solidity 0.8.24 contracts, tests, deploy scripts (@equora/hardhat)
+│   ├── database/               # Prisma ORM schemas & client singleton (@equora/database)
+│   ├── types/                  # Shared TypeScript types & DTOs (@equora/types)
+│   ├── logger/                 # Standardized colorized & structured logger (@equora/logger)
+│   └── tsconfig/               # Shared base, node, and Next.js tsconfigs (@equora/tsconfig)
 │
 ├── scripts/                    # Utility scripts (patch-qr, whitepaper generators)
 ├── setup.sh                    # Linux / macOS / WSL automated setup script
@@ -103,13 +103,13 @@ pnpm clean            # Clean all build artifacts across workspaces
 
 | Contract | Standard | Role |
 |---|---|---|
-| `BTitanToken` | ERC-20 | Protocol payment token (TROB) |
+| `EquoraToken` | ERC-20 | Protocol payment token (TROB) |
 | `EquoraRegistry` | Custom | On-chain registration, 5-digit referral codes, qualification logic |
-| `BTitanNFT` | ERC-721 | Soulbound rank badges (Alpha, Prime, Elite, Crown) |
+| `EquoraNFT` | ERC-721 | Soulbound rank badges (Alpha, Prime, Elite, Crown) |
 | `EquoraDAO` | Custom | 100-member Genesis DAO (300 TROB entry, 5X cap, 48h retopup) |
-| `BTitanDAOMembership` | ERC-721 | Soulbound NFT proof-of-seat for DAO members |
+| `EquoraDAOMembership` | ERC-721 | Soulbound NFT proof-of-seat for DAO members |
 | `EquoraVault` | Custom | Central deposit router (35% DAO, 40% Salary, 10% Box, 15% Rewards) |
-| `BTitanMatrix` | Custom | 12-slot, 14-node single-leg matrix engine (Positions 4, 5, 14 route to Vault) |
+| `EquoraMatrix` | Custom | 12-slot, 14-node single-leg matrix engine (Positions 4, 5, 14 route to Vault) |
 | `EquoraSalaryPool` | Custom | Monthly salary pool distributed on the 11th of each month |
 | `EquoraMagicBox` | Custom | Quarterly shared lottery pool ($0.50, $0.80, $1.20, $5.00 tiers) |
 | `EquoraRewardPool` | Custom | Instant milestone bonus pool for rank achievers |
@@ -136,4 +136,4 @@ pnpm clean            # Clean all build artifacts across workspaces
 
 ## 📜 License
 
-MIT License. Developed for Equora.Fi / B-Titan Protocol.
+MIT License. Developed for Equora.Fi Protocol.

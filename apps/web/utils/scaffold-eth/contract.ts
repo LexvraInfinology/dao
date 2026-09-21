@@ -1,7 +1,7 @@
 /**
  * contract.ts
  * Utility types for the deployed contracts mapping.
- * Adapted from Scaffold-ETH 2 for B-TITAN.
+ * Adapted from Scaffold-ETH 2 for EQUORA.
  */
 
 export type GenericContractsDeclaration = {

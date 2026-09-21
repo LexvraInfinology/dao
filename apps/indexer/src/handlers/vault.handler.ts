@@ -1,4 +1,4 @@
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 import { formatUnits } from "viem";
 
 export async function handleDepositRouted(event: {

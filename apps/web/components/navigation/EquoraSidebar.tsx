@@ -4,9 +4,9 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAccount } from "wagmi";
-import { formatAddress } from "../../utils/btitan/formatters";
+import { formatAddress } from "../../utils/equora/formatters";
 import { useI18n } from "../../services/i18n/I18nContext";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { path: "/leaderboard", label: "Leaderboard", icon: "leaderboard" },
 ];
 
-export function TitanSidebar() {
+export function EquoraSidebar() {
   const pathname = usePathname();
   const { address, isConnected } = useAccount();
   const { profile } = useUserProfile(address as `0x${string}`);
@@ -103,3 +103,5 @@ export function TitanSidebar() {
     </aside>
   );
 }
+
+export const TitanSidebar = EquoraSidebar;

@@ -3,47 +3,47 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: btitan_postgres
+    container_name: equora_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-btitan_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-btitan_secret_password}
-      POSTGRES_DB: ${POSTGRES_DB:-btitan_db}
+      POSTGRES_USER: ${POSTGRES_USER:-equora_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equora_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-equora_db}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - btitan_pg_data:/var/lib/postgresql/data
+      - equora_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-btitan_admin} -d ${POSTGRES_DB:-btitan_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-equora_admin} -d ${POSTGRES_DB:-equora_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - btitan_network
+      - equora_network
 
   redis:
     image: redis:7-alpine
-    container_name: btitan_redis
+    container_name: equora_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-btitan_redis_secret}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-equora_redis_secret}
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - btitan_redis_data:/data
+      - equora_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-btitan_redis_secret}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-equora_redis_secret}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - btitan_network
+      - equora_network
 
 volumes:
-  btitan_pg_data:
+  equora_pg_data:
     driver: local
-  btitan_redis_data:
+  equora_redis_data:
     driver: local
 
 networks:
-  btitan_network:
+  equora_network:
     driver: bridge

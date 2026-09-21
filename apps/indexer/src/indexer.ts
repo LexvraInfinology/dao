@@ -1,5 +1,5 @@
 import { createPublicClient, http, Address, Log } from "viem";
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 import { config } from "./config";
 import { REGISTRY_ABI, DAO_ABI, MATRIX_ABI, NFT_ABI, VESTING_ABI, VAULT_ABI } from "./contracts";
 import { handleUserRegistered } from "./handlers/registry.handler";
@@ -29,7 +29,7 @@ import {
 } from "./handlers/matrix.handler";
 
 
-import { createLogger } from "@btitan/logger";
+import { createLogger } from "@equora/logger";
 
 const logger = createLogger("Indexer");
 
@@ -47,7 +47,7 @@ export class BlockchainIndexer {
 
   async start() {
     logger.info("========================================================");
-    logger.info("📡 B-TITAN Blockchain Event Indexer Starting");
+    logger.info("📡 EQUORA Blockchain Event Indexer Starting");
     logger.info(`🔗 RPC: ${config.rpcUrl}`);
     logger.info(`🌍 Chain ID: ${config.chainId}`);
     logger.info(`⏱️ Poll Interval: ${config.pollIntervalMs}ms`);
@@ -153,7 +153,7 @@ export class BlockchainIndexer {
   }
 
   private async syncRegistry(currentBlock: bigint) {
-    const fromBlock = (await this.getCursor("BTitanRegistry", currentBlock)) + 1n;
+    const fromBlock = (await this.getCursor("EquoraRegistry", currentBlock)) + 1n;
     if (fromBlock > currentBlock) return;
 
     const toBlock = currentBlock - fromBlock > 2000n ? fromBlock + 2000n : currentBlock;
@@ -178,11 +178,11 @@ export class BlockchainIndexer {
       });
     }
 
-    await this.updateCursor("BTitanRegistry", toBlock);
+    await this.updateCursor("EquoraRegistry", toBlock);
   }
 
   private async syncDAO(currentBlock: bigint) {
-    const fromBlock = (await this.getCursor("BTitanDAO", currentBlock)) + 1n;
+    const fromBlock = (await this.getCursor("EquoraDAO", currentBlock)) + 1n;
     if (fromBlock > currentBlock) return;
 
     const toBlock = currentBlock - fromBlock > 2000n ? fromBlock + 2000n : currentBlock;
@@ -382,11 +382,11 @@ export class BlockchainIndexer {
       });
     }
 
-    await this.updateCursor("BTitanDAO", toBlock);
+    await this.updateCursor("EquoraDAO", toBlock);
   }
 
   private async syncMatrix(currentBlock: bigint) {
-    const fromBlock = (await this.getCursor("BTitanMatrix", currentBlock)) + 1n;
+    const fromBlock = (await this.getCursor("EquoraMatrix", currentBlock)) + 1n;
     if (fromBlock > currentBlock) return;
 
     const toBlock = currentBlock - fromBlock > 2000n ? fromBlock + 2000n : currentBlock;
@@ -499,7 +499,7 @@ export class BlockchainIndexer {
       await handleRankPoolFunded({ amount, txHash: log.transactionHash!, blockNumber: log.blockNumber! });
     }
 
-    await this.updateCursor("BTitanMatrix", toBlock);
+    await this.updateCursor("EquoraMatrix", toBlock);
   }
 
   private async syncVault(currentBlock: bigint) {

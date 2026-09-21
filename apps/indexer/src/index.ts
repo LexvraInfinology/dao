@@ -1,6 +1,6 @@
 import "./config";
 import { BlockchainIndexer } from "./indexer";
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 
 async function main() {
   const indexer = new BlockchainIndexer();

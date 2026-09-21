@@ -1,6 +1,6 @@
 @echo off
 REM ==============================================================================
-REM EQUORA.FI / B-TITAN PROTOCOL — MONOREPO SETUP SCRIPT (Windows Native)
+REM EQUORA.FI PROTOCOL — MONOREPO SETUP SCRIPT (Windows Native)
 REM ==============================================================================
 
 echo.
@@ -51,12 +51,12 @@ if %ERRORLEVEL% neq 0 (
 REM 5. Generate Prisma Database Client
 echo.
 echo [*] Generating Prisma database client...
-call pnpm --filter @btitan/database db:generate
+call pnpm --filter @equora/database db:generate
 
 REM 6. Compile Smart Contracts
 echo.
 echo [*] Compiling Hardhat Solidity smart contracts...
-call pnpm --filter @btitan/hardhat compile
+call pnpm --filter @equora/hardhat compile
 
 REM 7. Apply RainbowKit QR patch
 echo.

@@ -9,8 +9,8 @@ interface NotificationOptions {
 
 /**
  * notification.tsx
- * Unified notification/toast system for B-TITAN.
- * Wraps react-hot-toast with B-TITAN styling.
+ * Unified notification/toast system for EQUORA.
+ * Wraps react-hot-toast with EQUORA styling.
  */
 
 export const notification = {

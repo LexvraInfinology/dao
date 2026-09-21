@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { SiweMessage, generateNonce } from "siwe";
 import jwt from "jsonwebtoken";
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 import { config } from "../../config";
 
 export class AuthService {

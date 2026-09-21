@@ -1,5 +1,5 @@
 {
-  "name": "@btitan/types",
+  "name": "@equora/types",
   "version": "1.0.0",
   "private": true,
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "clean": "rimraf dist"
   },
   "devDependencies": {
-    "@btitan/tsconfig": "workspace:*",
+    "@equora/tsconfig": "workspace:*",
     "@types/node": "^20.17.6",
     "typescript": "^5.6.3"
   }

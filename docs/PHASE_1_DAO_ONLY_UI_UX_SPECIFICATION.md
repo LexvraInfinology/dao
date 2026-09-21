@@ -47,21 +47,21 @@ The UI/UX designer can reference the visual mockups below for Phase 1:
 ### 2.1 Genesis DAO Primary Screen (Desktop 1440 × 900)
 Features the Genesis 21-day window banner, 100-Seat Council Grid, 300/N dynamic simulator, and 5X cap health monitor:
 
-![Genesis DAO Desktop](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_desktop.png)
+![Genesis DAO Desktop](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_desktop.png)
 
 ---
 
 ### 2.2 Genesis DAO Mobile DApp Viewport (390 × 844)
 Optimized for mobile Web3 in-app browsers (TrobSafe, MetaMask Mobile, Trust Wallet) with touch-friendly 10x10 seat navigation and bottom sticky drawers:
 
-![Genesis DAO Mobile](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/screenshots/dao_mobile.png)
+![Genesis DAO Mobile](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/screenshots/dao_mobile.png)
 
 ---
 
 ### 2.3 Soulbound ERC-721 VIP Pass Card Artwork
 The 3D metallic gold holographic badge issued to each council member upon claiming a seat (`#01` to `#100`):
 
-![Soulbound NFT Pass](file:///c:/Users/Dell/Documents/codes/b-titan/docs/assets/dao_card.jpg)
+![Soulbound NFT Pass](file:///c:/Users/Dell/Documents/codes/equora/docs/assets/dao_card.jpg)
 
 ---
 
@@ -135,7 +135,7 @@ Phase 1 consists of **4 Active DAO Screens** and **1 Locked Teaser Screen**:
 | **Seats Claimed** | `EquoraDAO.getDAOStats().memberCount` | `uint256` | **`86`** | `0` | Number `86 / 100` |
 | **Seats Remaining** | `EquoraDAO.getRemainingPositions()` | `uint256` | **`14`** | `100` | Highlight gold if $< 20$ |
 | **Genesis Countdown**| `EquoraDAO.GENESIS_WINDOW_END()` | `timestamp` | **`1,791,240,000`** | Active | Clock: `DD:HH:MM:SS` |
-| **Soulbound Token ID**| `BTitanDAOMembership.tokenOfOwnerByIndex()`| `uint256` | **`#0012`** | `N/A` | Padded `#0012` |
+| **Soulbound Token ID**| `EquoraDAOMembership.tokenOfOwnerByIndex()`| `uint256` | **`#0012`** | `N/A` | Padded `#0012` |
 | **5X Cap Earned** | `EquoraDAO.getMemberDetails()[4]` | `uint256` | **`$840.00 TROB`** | `$0.00` | Formatted ether |
 | **5X Cap Ceiling** | `EquoraDAO.getCapProgress()[1]` | `uint256` | **`$1,500.00 TROB`** | `$1,500.00`| Fixed constant ($300 \times 5$) |
 | **48h Urgency Clock**| `EquoraDAO.retopupTimeRemaining()` | `uint256` | **`172,400s (47h 53m)`**| `0s` | Digital flip clock `HH:MM:SS` |
@@ -181,7 +181,7 @@ Phase 1 consists of **4 Active DAO Screens** and **1 Locked Teaser Screen**:
 | **Lock Status Badge** | Protocol Launch State | `enum` | **`LOCKED (PHASE 1 IN PROGRESS)`** | Crimson locked pill |
 | **Countdown Clock** | `GENESIS_WINDOW_END - block.timestamp` | `timestamp` | **`18d : 14h : 22m : 10s`** | Large digital flip clock |
 | **Unlock Milestone** | Static Milestone Copy | `string` | **`Day 22: $30 ID Matrix Seats Fill`** | Gold highlight banner |
-| **Slot 1 Entry Price**| `BTitanMatrix.slotPrice(1)` | `uint256` | **`$30.00 TROB`** | Teaser badge |
+| **Slot 1 Entry Price**| `EquoraMatrix.slotPrice(1)` | `uint256` | **`$30.00 TROB`** | Teaser badge |
 | **DAO Royalty Share** | `EquoraVault.DAO_POOL_BPS()` | `percentage`| **`35.0% of all matrix volume`** | Sovereign benefit callout |
 | **Primary CTA** | Router Link | `button` | `[ Claim Genesis DAO Seat (300 TROB) ]` | Routes to `/dao` |
 

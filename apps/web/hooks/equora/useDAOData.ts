@@ -2,7 +2,7 @@
 
 import { useAccount, useChainId, useReadContract } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
-import { DAOMemberDetails, DAOStats } from "../../types/btitan";
+import { DAOMemberDetails, DAOStats } from "../../types/equora";
 
 export function useDAOData(userAddress?: string) {
   const { address: connectedAddress } = useAccount();

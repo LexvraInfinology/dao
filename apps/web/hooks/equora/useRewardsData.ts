@@ -12,7 +12,7 @@ export function useRewardsData(userAddress?: `0x${string}`) {
   const salaryContract = contracts?.EquoraSalaryPool;
   const magicBoxContract = contracts?.EquoraMagicBox;
   const rewardContract = contracts?.EquoraRewardPool;
-  const nftContract = contracts?.BTitanNFT;
+  const nftContract = contracts?.EquoraNFT;
 
   const enabled = !!userAddress;
 

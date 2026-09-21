@@ -1,9 +1,9 @@
 "use client";
 
 import { useAccount } from "wagmi";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
-import { useMatrixData } from "../../hooks/btitan/useMatrixData";
-import { useRewardsData } from "../../hooks/btitan/useRewardsData";
+import { formatBTT } from "../../utils/equora/matrixHelpers";
+import { useMatrixData } from "../../hooks/equora/useMatrixData";
+import { useRewardsData } from "../../hooks/equora/useRewardsData";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 
 function formatSecondsToDhms(seconds: number) {

@@ -7,7 +7,7 @@ import { notification } from "../../utils/scaffold-eth/notification";
 
 /**
  * useWithdraw
- * Handles withdrawals from both BTitanDAO and BTitanMatrix.
+ * Handles withdrawals from both EquoraDAO and EquoraMatrix.
  *
  * DAO withdrawal flow (post D-01 pull-based fix):
  *   Option A (2 TXs): claimDAODistribution() → withdrawFromDAO(amount)
@@ -17,7 +17,7 @@ export function useWithdraw() {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
   const daoContract = contracts?.EquoraDAO;
-  const matrixContract = contracts?.BTitanMatrix;
+  const matrixContract = contracts?.EquoraMatrix;
 
   const [withdrawing, setWithdrawing] = useState<"dao" | "matrix" | null>(null);
 

@@ -1,6 +1,6 @@
-import { createLogger } from "@btitan/logger";
-import { StatsRecalculationPayload } from "@btitan/types";
-import prisma from "@btitan/database";
+import { createLogger } from "@equora/logger";
+import { StatsRecalculationPayload } from "@equora/types";
+import prisma from "@equora/database";
 
 const logger = createLogger("Queue:StatsRecalc");
 

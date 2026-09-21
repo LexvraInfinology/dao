@@ -1,4 +1,4 @@
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 
 export class RewardsService {
   async getUserRewards(address: string) {

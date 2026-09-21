@@ -1,11 +1,11 @@
 /**
- * B-TITAN Shared TypeScript Types
+ * Equora.Fi Shared TypeScript Types
  * Used across all components, hooks, and pages
  */
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export enum BTitanRank {
+export enum EquoraRank {
   NONE = 0,
   ALPHA = 1,
   PRIME = 2,
@@ -13,20 +13,20 @@ export enum BTitanRank {
   CROWN = 4,
 }
 
-export const RANK_LABELS: Record<BTitanRank, string> = {
-  [BTitanRank.NONE]: "Unranked",
-  [BTitanRank.ALPHA]: "Alpha Pool Card",
-  [BTitanRank.PRIME]: "Prime Pool Card",
-  [BTitanRank.ELITE]: "Elite Pool Card",
-  [BTitanRank.CROWN]: "Crown Pool Card",
+export const RANK_LABELS: Record<EquoraRank, string> = {
+  [EquoraRank.NONE]: "Unranked",
+  [EquoraRank.ALPHA]: "Alpha Pool Card",
+  [EquoraRank.PRIME]: "Prime Pool Card",
+  [EquoraRank.ELITE]: "Elite Pool Card",
+  [EquoraRank.CROWN]: "Crown Pool Card",
 };
 
-export const RANK_COLORS: Record<BTitanRank, string> = {
-  [BTitanRank.NONE]: "#6b7280",
-  [BTitanRank.ALPHA]: "#3b82f6",
-  [BTitanRank.PRIME]: "#8b5cf6",
-  [BTitanRank.ELITE]: "#06b6d4",
-  [BTitanRank.CROWN]: "#f59e0b",
+export const RANK_COLORS: Record<EquoraRank, string> = {
+  [EquoraRank.NONE]: "#6b7280",
+  [EquoraRank.ALPHA]: "#3b82f6",
+  [EquoraRank.PRIME]: "#8b5cf6",
+  [EquoraRank.ELITE]: "#06b6d4",
+  [EquoraRank.CROWN]: "#f59e0b",
 };
 
 // ─── Slot Data ────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ export interface UserFinancials {
 export interface UserNFTs {
   hasWelcomePass: boolean;
   welcomePassTokenId: number;
-  rank: BTitanRank;
+  rank: EquoraRank;
   allTokenIds: number[];
 }
 

@@ -7,15 +7,15 @@ import * as path from "path";
  * Run with: npx hardhat run scripts/deploy.ts --network localhost
  *
  * Deployment Order:
- *  1. MockToken / BTitanToken
+ *  1. MockToken / EquoraToken
  *  2. EquoraRegistry
- *  3. BTitanNFT
+ *  3. EquoraNFT
  *  4. EquoraRewardPool
  *  5. EquoraSalaryPool
  *  6. EquoraMagicBox
  *  7. EquoraDAO
  *  8. EquoraVault
- *  9. BTitanMatrix
+ *  9. EquoraMatrix
  * 10. Wire all authorizations
  * 11. Generate deployedContracts.ts for frontend
  * 12. Renounce ownership on all Ownable contracts (Null Key)
@@ -45,12 +45,12 @@ async function main() {
     tokenAddress = await mockToken.getAddress();
     console.log(`   ✅ MockToken:         ${tokenAddress}`);
   } else {
-    console.log("🪙  Deploying BTitanToken...");
-    const BTitanToken = await ethers.getContractFactory("BTitanToken");
-    const token = await BTitanToken.deploy(deployer.address);
+    console.log("🪙  Deploying EquoraToken...");
+    const EquoraToken = await ethers.getContractFactory("EquoraToken");
+    const token = await EquoraToken.deploy(deployer.address);
     await token.waitForDeployment();
     tokenAddress = await token.getAddress();
-    console.log(`   ✅ BTitanToken:       ${tokenAddress}`);
+    console.log(`   ✅ EquoraToken:       ${tokenAddress}`);
   }
 
   // ─── 2. Deploy EquoraRegistry ─────────────────────────────────────────────
@@ -62,14 +62,14 @@ async function main() {
   const registryAddress = await registry.getAddress();
   console.log(`   ✅ EquoraRegistry:    ${registryAddress}`);
 
-  // ─── 3. Deploy BTitanNFT ──────────────────────────────────────────────────
+  // ─── 3. Deploy EquoraNFT ──────────────────────────────────────────────────
 
-  console.log("\n🎨  Deploying BTitanNFT...");
-  const BTitanNFT = await ethers.getContractFactory("BTitanNFT");
-  const nft = await BTitanNFT.deploy();
+  console.log("\n🎨  Deploying EquoraNFT...");
+  const EquoraNFT = await ethers.getContractFactory("EquoraNFT");
+  const nft = await EquoraNFT.deploy();
   await nft.waitForDeployment();
   const nftAddress = await nft.getAddress();
-  console.log(`   ✅ BTitanNFT:         ${nftAddress}`);
+  console.log(`   ✅ EquoraNFT:         ${nftAddress}`);
 
   // ─── 4. Deploy EquoraVault (deploys before pools so pools can reference its address) ──
   // Vault needs pool addresses only for initialize() which is called AFTER pools deploy.
@@ -120,14 +120,14 @@ async function main() {
   console.log(`   ✅ EquoraDAO:         ${daoAddress}`);
   console.log(`   ✅ DAOMembershipNFT:  ${membershipNFTAddress}`);
 
-  // ─── 9. Deploy BTitanMatrix ───────────────────────────────────────────────
+  // ─── 9. Deploy EquoraMatrix ───────────────────────────────────────────────
 
-  console.log("\n🔢  Deploying BTitanMatrix...");
-  const BTitanMatrix = await ethers.getContractFactory("BTitanMatrix");
-  const matrix = await BTitanMatrix.deploy(tokenAddress, registryAddress, nftAddress);
+  console.log("\n🔢  Deploying EquoraMatrix...");
+  const EquoraMatrix = await ethers.getContractFactory("EquoraMatrix");
+  const matrix = await EquoraMatrix.deploy(tokenAddress, registryAddress, nftAddress);
   await matrix.waitForDeployment();
   const matrixAddress = await matrix.getAddress();
-  console.log(`   ✅ BTitanMatrix:      ${matrixAddress}`);
+  console.log(`   ✅ EquoraMatrix:      ${matrixAddress}`);
 
   // ─── 10. Wire Authorizations ──────────────────────────────────────────────
 
@@ -143,8 +143,8 @@ async function main() {
   await (await vault.setMatrixContract(matrixAddress)).wait();
   console.log("         ✅ Matrix authorized in Vault");
 
-  // BTitanMatrix: set vault contract (for P4/P5/P14 forwarding)
-  console.log("   [3/9] BTitanMatrix.setVaultContract(vault)...");
+  // EquoraMatrix: set vault contract (for P4/P5/P14 forwarding)
+  console.log("   [3/9] EquoraMatrix.setVaultContract(vault)...");
   await (await matrix.setVaultContract(vaultAddress)).wait();
   console.log("         ✅ Vault set in Matrix");
 
@@ -163,8 +163,8 @@ async function main() {
   await (await rewardPool.setAuthorizedCaller(salaryPoolAddress)).wait();
   console.log("         ✅ SalaryPool authorized in RewardPool");
 
-  // BTitanNFT: authorize Matrix as minter (for rank badge NFTs on slot milestones)
-  console.log("   [7/9] BTitanNFT.setMinter(matrix, true)...");
+  // EquoraNFT: authorize Matrix as minter (for rank badge NFTs on slot milestones)
+  console.log("   [7/9] EquoraNFT.setMinter(matrix, true)...");
   await (await nft.setMinter(matrixAddress, true)).wait();
   console.log("         ✅ Matrix set as NFT minter");
 
@@ -203,11 +203,11 @@ async function main() {
 
   console.log("\n📝  Generating deployedContracts.ts...");
 
-  const tokenContractName = isLocal ? "MockToken" : "BTitanToken";
+  const tokenContractName = isLocal ? "MockToken" : "EquoraToken";
 
   const deployedData = {
     [Number(chainId)]: {
-      BTitanToken: {
+      EquoraToken: {
         address: tokenAddress,
         abi: (await artifacts.readArtifact(tokenContractName)).abi,
       },
@@ -215,25 +215,25 @@ async function main() {
         address: registryAddress,
         abi: (await artifacts.readArtifact("EquoraRegistry")).abi,
       },
-      BTitanNFT: {
+      EquoraNFT: {
         address: nftAddress,
-        abi: (await artifacts.readArtifact("BTitanNFT")).abi,
+        abi: (await artifacts.readArtifact("EquoraNFT")).abi,
       },
       EquoraDAO: {
         address: daoAddress,
         abi: (await artifacts.readArtifact("EquoraDAO")).abi,
       },
-      BTitanDAOMembership: {
+      EquoraDAOMembership: {
         address: membershipNFTAddress,
-        abi: (await artifacts.readArtifact("BTitanDAOMembership")).abi,
+        abi: (await artifacts.readArtifact("EquoraDAOMembership")).abi,
       },
       EquoraVault: {
         address: vaultAddress,
         abi: (await artifacts.readArtifact("EquoraVault")).abi,
       },
-      BTitanMatrix: {
+      EquoraMatrix: {
         address: matrixAddress,
-        abi: (await artifacts.readArtifact("BTitanMatrix")).abi,
+        abi: (await artifacts.readArtifact("EquoraMatrix")).abi,
       },
       EquoraSalaryPool: {
         address: salaryPoolAddress,
@@ -262,16 +262,16 @@ async function main() {
  * Network: ${networkName} (chainId: ${chainId})
  *
  * Equora.Fi Protocol Contracts:
- *   BTitanToken      — TROB payment token
- *   EquoraRegistry   — User registration, referral codes, sponsor tracking
- *   BTitanNFT        — Rank badge + welcome pass NFTs
- *   EquoraDAO        — 100-seat genesis DAO (300 TROB entry, 5X cap, 48hr retopup)
- *   BTitanDAOMembership — Soulbound DAO seat NFTs
- *   EquoraVault      — Central deposit router (35% DAO, 40% Salary, 10% Box, 15% Rewards)
- *   BTitanMatrix     — 12-slot, 14-node matrix engine (P4/P5/P14 → Vault)
- *   EquoraSalaryPool — Monthly salary (cumulative tier laddering, 11th of month)
- *   EquoraMagicBox   — Quarterly shared lottery pool ($0.50/$0.80/$1.20/$5.00 prizes)
- *   EquoraRewardPool — Instant milestone rewards (Alpha 10%, Prime 15%, Elite 25%, Crown 50%)
+ *   EquoraToken         — TROB payment token
+ *   EquoraRegistry      — User registration, referral codes, sponsor tracking
+ *   EquoraNFT           — Rank badge + welcome pass NFTs
+ *   EquoraDAO           — 100-seat genesis DAO (300 TROB entry, 5X cap, 48hr retopup)
+ *   EquoraDAOMembership — Soulbound DAO seat NFTs
+ *   EquoraVault         — Central deposit router (35% DAO, 40% Salary, 10% Box, 15% Rewards)
+ *   EquoraMatrix        — 12-slot, 14-node matrix engine (P4/P5/P14 → Vault)
+ *   EquoraSalaryPool    — Monthly salary (cumulative tier laddering, 11th of month)
+ *   EquoraMagicBox      — Quarterly shared lottery pool ($0.50/$0.80/$1.20/$5.00 prizes)
+ *   EquoraRewardPool    — Instant milestone rewards (Alpha 10%, Prime 15%, Elite 25%, Crown 50%)
  */
 import type { GenericContractsDeclaration } from "../utils/scaffold-eth/contract";
 
@@ -298,10 +298,10 @@ export default deployedContracts satisfies GenericContractsDeclaration;
     console.log("   ✅ EquoraRegistry: ownership renounced");
 
     await (await nft.renounceOwnership()).wait();
-    console.log("   ✅ BTitanNFT: ownership renounced");
+    console.log("   ✅ EquoraNFT: ownership renounced");
 
     await (await matrix.renounceOwnership()).wait();
-    console.log("   ✅ BTitanMatrix: ownership renounced");
+    console.log("   ✅ EquoraMatrix: ownership renounced");
 
     console.log("   ✅ Null Key complete — protocol is now fully autonomous");
   } else {

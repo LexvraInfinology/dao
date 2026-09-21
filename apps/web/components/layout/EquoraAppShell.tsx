@@ -2,21 +2,21 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import { TitanSidebar } from "../navigation/TitanSidebar";
-import { TitanHeader } from "../navigation/TitanHeader";
-import { TitanMobileNav } from "../navigation/TitanMobileNav";
+import { EquoraSidebar } from "../navigation/EquoraSidebar";
+import { EquoraHeader } from "../navigation/EquoraHeader";
+import { EquoraMobileNav } from "../navigation/EquoraMobileNav";
 
-export function TitanAppShell({ children }: { children: React.ReactNode }) {
+export function EquoraAppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col relative font-body-md antialiased selection:bg-secondary/30 selection:text-white">
       {/* 280px Fixed Terminal Sidebar (for dApp routes) */}
-      <TitanSidebar />
+      <EquoraSidebar />
 
       {/* Top Header Bar (Only for dApp routes) */}
-      {!isLanding && <TitanHeader />}
+      {!isLanding && <EquoraHeader />}
 
       {/* Main Content Area */}
       <main
@@ -28,7 +28,9 @@ export function TitanAppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Mobile Bottom Navigation (for screens < 1024px) */}
-      <TitanMobileNav />
+      <EquoraMobileNav />
     </div>
   );
 }
+
+export const TitanAppShell = EquoraAppShell;

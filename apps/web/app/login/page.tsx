@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useAuth } from "../../context/AuthContext";
 import { AuthGuard } from "../../components/auth/AuthGuard";
-import { TitanBot } from "../../components/titanbot/TitanBot";
+import { EquoraBot } from "../../components/equorabot/EquoraBot";
 
 export default function LoginPage() {
   const { isAuthenticated } = useAuth();

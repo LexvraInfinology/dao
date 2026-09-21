@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { useDAOData } from "../../hooks/btitan/useDAOData";
-import { useJoinDAO } from "../../hooks/btitan/useJoinDAO";
-import { useClaimFallback } from "../../hooks/btitan/useClaimFallback";
-import { useClaimPoolShare } from "../../hooks/btitan/useClaimPoolShare";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import { formatBTT } from "../../utils/equora/matrixHelpers";
+import { formatAddress } from "../../utils/equora/formatters";
+import { useDAOData } from "../../hooks/equora/useDAOData";
+import { useJoinDAO } from "../../hooks/equora/useJoinDAO";
+import { useClaimFallback } from "../../hooks/equora/useClaimFallback";
+import { useClaimPoolShare } from "../../hooks/equora/useClaimPoolShare";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import { DAOHistoryTable } from "../../components/dao/DAOHistoryTable";
 import { notification } from "../../utils/scaffold-eth/notification";
 import { AuthGuard } from "../../components/auth/AuthGuard";
@@ -118,7 +118,7 @@ function DAOContent() {
         </div>
       </section>
 
-      {/* ─── Personal Genesis Referral & Leader Identity Card (Adapted from B-Titan UX) ──── */}
+      {/* ─── Personal Genesis Referral & Leader Identity Card (Adapted from Equora UX) ──── */}
       <section className="px-4 sm:px-8 mb-6 relative z-10">
         <div className="bg-surface-container/60 backdrop-blur-xl rounded-2xl p-5 sm:p-6 border border-tertiary/25 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">

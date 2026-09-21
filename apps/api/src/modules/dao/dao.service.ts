@@ -1,4 +1,4 @@
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 import { priceService } from "./price.service";
 
 export class DaoService {

@@ -1,4 +1,4 @@
-// B-TITAN Service Worker
+// EQUORA Service Worker
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });

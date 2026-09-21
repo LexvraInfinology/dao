@@ -2,11 +2,11 @@
 
 import { useReadContract, useChainId } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
-import { SlotData, SLOT_COSTS } from "../../types/btitan";
+import { SlotData, SLOT_COSTS } from "../../types/equora";
 
 /**
  * useMatrixData
- * Reads live matrix data from BTitanMatrix.
+ * Reads live matrix data from EquoraMatrix.
  * Uses exact verified function signatures:
  *   - getUserFinancials(address) → (availableBalance, lifetimeEarned, withdrawn, highestSlotUnlocked)
  *   - getAllSlotsStatus(address) → (bool[12] unlocked, uint256[12] cycles, uint256[12] filled)
@@ -15,7 +15,7 @@ import { SlotData, SLOT_COSTS } from "../../types/btitan";
 export function useMatrixData(userAddress?: `0x${string}`) {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
-  const matrixContract = contracts?.BTitanMatrix;
+  const matrixContract = contracts?.EquoraMatrix;
 
   const enabled = !!matrixContract?.address && !!userAddress;
   const contractEnabled = !!matrixContract?.address;
@@ -93,7 +93,7 @@ export function useMatrixData(userAddress?: `0x${string}`) {
 export function useSlotNodes(userAddress?: `0x${string}`, slotNumber?: number) {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
-  const matrixContract = contracts?.BTitanMatrix;
+  const matrixContract = contracts?.EquoraMatrix;
 
   const { data, isLoading, refetch: refetchSlot } = useReadContract({
     address: matrixContract?.address as `0x${string}`,

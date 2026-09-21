@@ -1,6 +1,6 @@
 /**
  * formatters.ts
- * General formatting utilities for the B-TITAN frontend
+ * General formatting utilities for the Equora.Fi frontend
  */
 
 /**

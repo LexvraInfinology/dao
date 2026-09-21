@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    const saved = localStorage.getItem("btitan-theme") as Theme | null;
+    const saved = localStorage.getItem("equora-theme") as Theme | null;
     if (saved && (saved === "dark" || saved === "light" || saved === "system")) {
       setThemeState(saved);
     }
@@ -49,7 +49,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem("btitan-theme", newTheme);
+    localStorage.setItem("equora-theme", newTheme);
   };
 
   return (

@@ -1,4 +1,4 @@
-# EQUORA_Fi (B-TITAN) — Project Executive Overview & Master Briefing
+# EQUORA_Fi — Project Executive Overview & Master Briefing
 
 > **Document Type:** Master Executive Briefing & Stakeholder Summary  
 > **Blockchain Ecosystem:** BNB Smart Chain (BSC) / EVM  
@@ -7,9 +7,9 @@
 
 ---
 
-## 1. What Is EQUORA_Fi (B-Titan)?
+## 1. What Is EQUORA_Fi?
 
-**EQUORA_Fi** (marketed as B-Titan / The Ultimate Bitcoin Rush) is a **100% decentralized, autonomous, peer-to-peer financial protocol**. It allows users to participate in community matrix wealth generation, earn automated monthly salary tiers, and join an exclusive 100-seat sovereign DAO council.
+**EQUORA_Fi** (The Sovereign Autonomous Protocol) is a **100% decentralized, autonomous, peer-to-peer financial protocol**. It allows users to participate in community matrix wealth generation, earn automated monthly salary tiers, and join an exclusive 100-seat sovereign DAO council.
 
 Unlike conventional MLM or DeFi projects that rely on centralized admins, centralized bank accounts, or human discretion:
 * **Zero Human Intervention (Null Key):** The smart contracts have no admin keys. Ownership is permanently renounced to `0x000...000`. No one—not even the original developers—can pause the contracts, confiscate funds, or alter the math.

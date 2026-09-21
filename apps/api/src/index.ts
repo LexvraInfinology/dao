@@ -1,13 +1,13 @@
 import { createApp } from "./app";
 import { config } from "./config";
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 
 async function bootstrap() {
   const app = createApp();
 
   const server = app.listen(config.port, () => {
     console.log(`========================================================`);
-    console.log(`🚀 B-TITAN API Service is running`);
+    console.log(`🚀 EQUORA API Service is running`);
     console.log(`📡 URL: http://localhost:${config.port}`);
     console.log(`🌍 Environment: ${config.env}`);
     console.log(`🔗 Target Chain ID: ${config.blockchain.chainId}`);

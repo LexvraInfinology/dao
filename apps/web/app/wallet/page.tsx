@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import toast from "react-hot-toast";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { useMatrixData } from "../../hooks/btitan/useMatrixData";
-import { useDAOData } from "../../hooks/btitan/useDAOData";
-import { useWithdraw } from "../../hooks/btitan/useWithdraw";
-import { useClaimFallback } from "../../hooks/btitan/useClaimFallback";
-import { useClaimPoolShare } from "../../hooks/btitan/useClaimPoolShare";
+import { formatBTT } from "../../utils/equora/matrixHelpers";
+import { formatAddress } from "../../utils/equora/formatters";
+import { useMatrixData } from "../../hooks/equora/useMatrixData";
+import { useDAOData } from "../../hooks/equora/useDAOData";
+import { useWithdraw } from "../../hooks/equora/useWithdraw";
+import { useClaimFallback } from "../../hooks/equora/useClaimFallback";
+import { useClaimPoolShare } from "../../hooks/equora/useClaimPoolShare";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 
 export default function WalletPage() {

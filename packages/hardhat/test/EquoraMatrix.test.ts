@@ -8,22 +8,22 @@ import {
   EquoraSalaryPool,
   EquoraRewardPool,
   EquoraMagicBox,
-  BTitanMatrix,
-  BTitanNFT,
+  EquoraMatrix,
+  EquoraNFT,
   MockToken,
 } from "../typechain-types";
 import { HDNodeWallet } from "ethers";
 
-describe("BTitanMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", function () {
+describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", function () {
   let token: MockToken;
   let registry: EquoraRegistry;
-  let nft: BTitanNFT;
+  let nft: EquoraNFT;
   let vault: EquoraVault;
   let dao: EquoraDAO;
   let salaryPool: EquoraSalaryPool;
   let rewardPool: EquoraRewardPool;
   let magicBox: EquoraMagicBox;
-  let matrix: BTitanMatrix;
+  let matrix: EquoraMatrix;
 
   let owner: HardhatEthersSigner;
   let root: HardhatEthersSigner;
@@ -62,7 +62,7 @@ describe("BTitanMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     registry = await RegistryFactory.deploy(root.address);
 
     // 3. Deploy NFT
-    const NFTFactory = await ethers.getContractFactory("BTitanNFT");
+    const NFTFactory = await ethers.getContractFactory("EquoraNFT");
     nft = await NFTFactory.deploy();
 
     // 4. Deploy Vault
@@ -83,7 +83,7 @@ describe("BTitanMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     dao = await DAOFactory.deploy(await token.getAddress(), await registry.getAddress());
 
     // 6. Deploy Matrix
-    const MatrixFactory = await ethers.getContractFactory("BTitanMatrix");
+    const MatrixFactory = await ethers.getContractFactory("EquoraMatrix");
     matrix = await MatrixFactory.deploy(
       await token.getAddress(),
       await registry.getAddress(),
@@ -134,14 +134,14 @@ describe("BTitanMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
     it("should revert if activating an invalid slot or already unlocked slot", async function () {
       await expect(matrix.connect(matrixOwner).joinSlot(0, upline1.address)).to.be.revertedWith(
-        "BTitanMatrix: invalid slot"
+        "EquoraMatrix: invalid slot"
       );
       await expect(matrix.connect(matrixOwner).joinSlot(13, upline1.address)).to.be.revertedWith(
-        "BTitanMatrix: invalid slot"
+        "EquoraMatrix: invalid slot"
       );
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
       await expect(matrix.connect(matrixOwner).joinSlot(1, upline1.address)).to.be.revertedWith(
-        "BTitanMatrix: already unlocked"
+        "EquoraMatrix: already unlocked"
       );
     });
   });

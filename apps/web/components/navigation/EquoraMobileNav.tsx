@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { path: "/referrals", labelKey: "nav.referrals", icon: "group_add" },
 ];
 
-export function TitanMobileNav() {
+export function EquoraMobileNav() {
   const pathname = usePathname();
   const { isConnected } = useAccount();
   const { t } = useI18n();
@@ -48,3 +48,5 @@ export function TitanMobileNav() {
     </nav>
   );
 }
+
+export const TitanMobileNav = EquoraMobileNav;

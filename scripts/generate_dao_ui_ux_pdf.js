@@ -687,7 +687,7 @@ async function main() {
         </tr>
         <tr>
           <td><strong>NFT Token ID</strong></td>
-          <td class="code-cell">BTitanDAOMembership.tokenOfOwnerByIndex(addr, 0)</td>
+          <td class="code-cell">EquoraDAOMembership.tokenOfOwnerByIndex(addr, 0)</td>
           <td>uint256</td>
           <td class="gold-cell">#0012</td>
           <td>N/A</td>
@@ -711,7 +711,7 @@ async function main() {
         </tr>
         <tr>
           <td><strong>Soulbound Status</strong></td>
-          <td class="code-cell">BTitanDAOMembership.isSoulbound()</td>
+          <td class="code-cell">EquoraDAOMembership.isSoulbound()</td>
           <td>bool</td>
           <td class="gold-cell">true</td>
           <td>true</td>

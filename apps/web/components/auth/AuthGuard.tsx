@@ -5,7 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { LoginRegisterModal } from "./LoginRegisterModal";
-import { TitanBot } from "../titanbot/TitanBot";
 
 interface AuthGuardProps {
   children: React.ReactNode;

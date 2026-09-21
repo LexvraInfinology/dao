@@ -23,7 +23,7 @@ const PAGES = [
       { element: 'Seats Claimed', func: 'EquoraDAO.getDAOStats().memberCount', type: 'uint256', val: '86', rule: 'Padded integer: 86 / 100' },
       { element: 'Seats Remaining', func: 'EquoraDAO.getRemainingPositions()', type: 'uint256', val: '14', rule: 'Highlight gold if < 20' },
       { element: 'Genesis Deadline', func: 'EquoraDAO.GENESIS_WINDOW_END()', type: 'timestamp', val: '1,791,240,000', rule: 'Digital clock: DD:HH:MM:SS' },
-      { element: 'Soulbound Token ID', func: 'BTitanDAOMembership.tokenOfOwnerByIndex()', type: 'uint256', val: '#0012', rule: '4-digit zero-padded' },
+      { element: 'Soulbound Token ID', func: 'EquoraDAOMembership.tokenOfOwnerByIndex()', type: 'uint256', val: '#0012', rule: '4-digit zero-padded' },
       { element: 'Voting Power', func: 'Constant: 1 / 100', type: 'percent', val: '1.0%', rule: 'Badge: 1 Seat = 1 Vote' },
       { element: '5X Cap Earned', func: 'EquoraDAO.getMemberDetails()[4]', type: 'uint256', val: '$840.00 TROB', rule: '2 decimals + Monospace' },
       { element: '5X Cap Ceiling', func: 'EquoraDAO.getCapProgress()[1]', type: 'uint256', val: '$1,500.00 TROB', rule: 'Fixed constant ($300 × 5)' },
@@ -45,7 +45,7 @@ const PAGES = [
       { element: 'Sponsor Code', func: 'EquoraRegistry.sponsorOf()', type: 'uint24', val: '#10000 (Root)', rule: 'Subtitle under referral code' },
       { element: 'Qualification Badge', func: 'EquoraRegistry.isQualified()', type: 'bool', val: 'QUALIFIED (2+ Directs)', rule: 'Green badge if qualified' },
       { element: 'KPI 1: Protocol Yield', func: 'Aggregated yield sum', type: 'uint256', val: '$2,480.50 TROB', rule: 'Large header metric' },
-      { element: 'KPI 2: Matrix Cashflow', func: 'BTitanMatrix.totalEarned()', type: 'uint256', val: '$1,200.00 TROB', rule: '600% Direct cashflow' },
+      { element: 'KPI 2: Matrix Cashflow', func: 'EquoraMatrix.totalEarned()', type: 'uint256', val: '$1,200.00 TROB', rule: '600% Direct cashflow' },
       { element: 'KPI 3: DAO Dividends', func: 'EquoraDAO.totalEarned()', type: 'uint256', val: '$860.00 TROB', rule: 'DAO royalty revenue' },
       { element: 'KPI 4: Withdrawable', func: 'internalLedgerBalance()', type: 'uint256', val: '$420.50 TROB', rule: 'Emerald ticker with Withdraw' }
     ],
@@ -59,9 +59,9 @@ const PAGES = [
     description: 'The autonomous network progression engine. Participants activate Slots 1 through 12 ($30 to $61,440), visual single-leg tree hierarchy, auto-upgrades via Nodes 5 & 10, and cycle reset at Node 14.',
     dataRows: [
       { element: 'Active Slot Index', func: 'User selection state', type: 'uint8', val: 'Slot 1 ($30)', rule: 'Pill selector (Slots 1 to 12)' },
-      { element: 'Slot Unlock Status', func: 'BTitanMatrix.userSlotActive()', type: 'bool', val: 'ACTIVE', rule: 'Gold if active, Buy if locked' },
-      { element: 'Current Cycle Number', func: 'BTitanMatrix.currentCycle()', type: 'uint32', val: 'Cycle #3', rule: 'Monospace cycle counter' },
-      { element: 'Occupied Nodes Count', func: 'BTitanMatrix.getFilledNodesCount()', type: 'uint8', val: '8 / 14 Nodes', rule: 'Visual counter / radial progress' },
+      { element: 'Slot Unlock Status', func: 'EquoraMatrix.userSlotActive()', type: 'bool', val: 'ACTIVE', rule: 'Gold if active, Buy if locked' },
+      { element: 'Current Cycle Number', func: 'EquoraMatrix.currentCycle()', type: 'uint32', val: 'Cycle #3', rule: 'Monospace cycle counter' },
+      { element: 'Occupied Nodes Count', func: 'EquoraMatrix.getFilledNodesCount()', type: 'uint8', val: '8 / 14 Nodes', rule: 'Visual counter / radial progress' },
       { element: 'Nodes P1 & P2', func: 'Upline routing logic', type: 'address', val: 'Upline 1 & Upline 2', rule: 'Tag: Upline Commission' },
       { element: 'Direct Cash Nodes', func: 'P3, P6, P8, P9, P11, P12', type: 'uint256', val: '600% ROI ($180)', rule: 'Tag: Direct Cash to Owner' },
       { element: 'Pool Routing Node', func: 'P4 Flow', type: 'uint256', val: '$30 split to 4 Pools', rule: 'Tag: 35% DAO, 40% Sal, 10% Box, 15% Rew' },
@@ -110,7 +110,7 @@ const PAGES = [
     subtitle: 'Internal Balance Management, 1-Click Blockchain Withdrawals & Transaction Audit Trail',
     description: 'Non-custodial balance accounting, instant blockchain withdrawal execution to TrobSafe on Polygon/Trobium, gas fee preview, and filterable ledger history.',
     dataRows: [
-      { element: 'Internal Ledger Balance', func: 'BTitanMatrix.withdrawable()', type: 'uint256', val: '$420.50 TROB', rule: 'Large withdrawable ticker' },
+      { element: 'Internal Ledger Balance', func: 'EquoraMatrix.withdrawable()', type: 'uint256', val: '$420.50 TROB', rule: 'Large withdrawable ticker' },
       { element: 'External Wallet Balance', func: 'ERC-20 balanceOf()', type: 'uint256', val: '$1,420.00 TROB', rule: 'Monospace balance in wallet' },
       { element: 'Withdraw Amount Input', func: 'User input state', type: 'number', val: '250.00', rule: 'Quick chips: 25%, 50%, 75%, MAX' },
       { element: 'Estimated Gas Fee', func: 'Provider estimateGas()', type: 'string', val: '< $0.005 USD', rule: 'Footnote text' },
@@ -127,7 +127,7 @@ const PAGES = [
     dataRows: [
       { element: 'Live Protocol Volume', func: 'Indexer volume accumulator', type: 'uint256', val: '$1,420,850 TROB', rule: 'Pulsing pill in hero' },
       { element: 'Genesis Seats Scarcity', func: 'EquoraDAO.getRemainingPositions()', type: 'uint256', val: '14 / 100 Available', rule: 'Scarcity progress bar' },
-      { element: 'Completed Cycles Ticker', func: 'BTitanMatrix.totalCyclesCompleted()', type: 'uint256', val: '12,480 Cycles', rule: 'Metric card in hero' },
+      { element: 'Completed Cycles Ticker', func: 'EquoraMatrix.totalCyclesCompleted()', type: 'uint256', val: '12,480 Cycles', rule: 'Metric card in hero' },
       { element: 'Old vs Equora Matrix', func: 'Static architectural matrix', type: 'table', val: '6 Comparative Invariants', rule: 'High-contrast table' },
       { element: 'Interactive Yield Simulator', func: 'Client calculator engine', type: 'slider', val: 'Slot 1 to 12 Simulator', rule: 'Real-time 600% ROI calc' }
     ],

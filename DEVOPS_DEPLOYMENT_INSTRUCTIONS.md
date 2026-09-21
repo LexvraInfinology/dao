@@ -1,4 +1,4 @@
-# EQUORA_Fi (B-TITAN) — Complete Master Deployment Guide for DevOps
+# EQUORA_Fi (EQUORA) — Complete Master Deployment Guide for DevOps
 
 > **Document Type:** Comprehensive Full-Stack Production Deployment Runbook  
 > **Target Audience:** DevOps Engineers, SysAdmins, Smart Contract Deployment Engineers  
@@ -65,10 +65,10 @@ The platform operates as a cohesive, 5-tier architecture:
 | Component | Stack | Port | Public? | Process Manager | Working Dir |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Nginx** | Reverse Proxy | `80`, `443` | **Yes** | `systemd: nginx` | `/etc/nginx/` |
-| **Frontend Web App** | Next.js 15 | `3000` | No (Internal) | `pm2: btitan-frontend` | `apps/web` |
-| **Backend REST API** | Express / Node.js 20 | `4000` | No (Internal) | `pm2: btitan-api` | `apps/api` |
-| **Blockchain Indexer** | Viem Daemon | None | No | `pm2: btitan-indexer` | `apps/indexer` |
-| **Queue & Worker** | BullMQ / Node.js 20 | None | No | `pm2: btitan-queue` | `apps/queue` |
+| **Frontend Web App** | Next.js 15 | `3000` | No (Internal) | `pm2: equora-frontend` | `apps/web` |
+| **Backend REST API** | Express / Node.js 20 | `4000` | No (Internal) | `pm2: equora-api` | `apps/api` |
+| **Blockchain Indexer** | Viem Daemon | None | No | `pm2: equora-indexer` | `apps/indexer` |
+| **Queue & Worker** | BullMQ / Node.js 20 | None | No | `pm2: equora-queue` | `apps/queue` |
 | **PostgreSQL Database**| Postgres 16 Alpine | `5432` | No (Localhost) | Docker Container | `docker-compose.yml` |
 | **Redis Cache** | Redis 7 Alpine | `6379` | No (Localhost) | Docker Container | `docker-compose.yml` |
 
@@ -147,10 +147,10 @@ docker compose version # Docker Compose v2+
 > **Note:** If smart contracts are already deployed, skip to **Step 3** and paste your contract addresses into the environment files.
 
 ```bash
-# 1. Clone the repository to /var/www/b-titan
-sudo git clone <YOUR_REPO_URL> /var/www/b-titan
-sudo chown -R $USER:$USER /var/www/b-titan
-cd /var/www/b-titan
+# 1. Clone the repository to /var/www/equora
+sudo git clone <YOUR_REPO_URL> /var/www/equora
+sudo chown -R $USER:$USER /var/www/equora
+cd /var/www/equora
 
 # 2. Install root monorepo dependencies
 npm install
@@ -173,13 +173,13 @@ npx hardhat run scripts/deploy.ts --network bsc
 ```
 
 ### What this single deploy script handles automatically:
-1. Deploys `BTitanToken` (TROB token).
+1. Deploys `EquoraToken` (TROB token).
 2. Deploys `EquoraRegistry` (User registration & sponsor tree).
-3. Deploys `BTitanNFT` (Milestone rank badges).
+3. Deploys `EquoraNFT` (Milestone rank badges).
 4. Deploys `EquoraVault` (Central routing treasury).
 5. Deploys `EquoraRewardPool`, `EquoraSalaryPool`, `EquoraMagicBox`.
-6. Deploys `EquoraDAO` and mints `BTitanDAOMembership` Soulbound NFT.
-7. Deploys `BTitanMatrix` (12-Slot, 14-Node auto-matrix engine).
+6. Deploys `EquoraDAO` and mints `EquoraDAOMembership` Soulbound NFT.
+7. Deploys `EquoraMatrix` (12-Slot, 14-Node auto-matrix engine).
 8. Wires all cross-contract authorizations (Vault pools, Matrix links, Registry caller rules).
 9. Automatically generates [`apps/web/contracts/deployedContracts.ts`](file:///apps/web/contracts/deployedContracts.ts) with all addresses and ABIs.
 10. Renounces contract ownership (Null Key lockdown) on production networks.
@@ -189,7 +189,7 @@ npx hardhat run scripts/deploy.ts --network bsc
 ## Step 3: Database & Cache Initialization (PostgreSQL + Redis)
 
 ```bash
-cd /var/www/b-titan
+cd /var/www/equora
 
 # 1. Start PostgreSQL 16 and Redis 7 containers
 docker compose up -d
@@ -212,18 +212,18 @@ The indexer runs continuously in the background, listening to contract events (R
 
 ```bash
 # 1. Create root .env for Indexer & API
-cat <<EOF > /var/www/b-titan/.env
+cat <<EOF > /var/www/equora/.env
 NODE_ENV=production
 PORT=4000
 
 # PostgreSQL Connection
-DATABASE_URL="postgresql://btitan_admin:btitan_secret_password@localhost:5432/btitan_db"
+DATABASE_URL="postgresql://equora_admin:equora_secret_password@localhost:5432/equora_db"
 
 # Redis Cache Connection
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=btitan_redis_secret
-REDIS_URL="redis://:btitan_redis_secret@localhost:6379"
+REDIS_PASSWORD=equora_redis_secret
+REDIS_URL="redis://:equora_redis_secret@localhost:6379"
 
 # SIWE Authentication & Security
 JWT_SECRET="$(openssl rand -hex 32)"
@@ -241,9 +241,9 @@ INDEXER_START_BLOCK=0
 EOF
 
 # 2. Build and start Indexer daemon
-cd /var/www/b-titan/apps/indexer
+cd /var/www/equora/apps/indexer
 npm run build
-pm2 start dist/index.js --name "btitan-indexer" --time
+pm2 start dist/index.js --name "equora-indexer" --time
 cd ../..
 ```
 
@@ -253,14 +253,14 @@ cd ../..
 
 ```bash
 # Build and start Express API on port 4000
-cd /var/www/b-titan/apps/api
+cd /var/www/equora/apps/api
 npm run build
-pm2 start dist/index.js --name "btitan-api" --time
+pm2 start dist/index.js --name "equora-api" --time
 cd ../..
 
 # Verify health endpoint returns HTTP 200:
 curl http://localhost:4000/health
-# Expected Output: {"status":"healthy","service":"btitan-api",...}
+# Expected Output: {"status":"healthy","service":"equora-api",...}
 ```
 
 ---
@@ -269,7 +269,7 @@ curl http://localhost:4000/health
 
 ```bash
 # 1. Create Frontend environment file
-cat <<EOF > /var/www/b-titan/apps/web/.env.local
+cat <<EOF > /var/www/equora/apps/web/.env.local
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_REOWN_PROJECT_ID"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
 NEXT_PUBLIC_API_URL="https://yourdomain.com"
@@ -277,11 +277,11 @@ NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 EOF
 
 # 2. Build Next.js production bundle
-cd /var/www/b-titan/apps/web
+cd /var/www/equora/apps/web
 pnpm build
 
 # 3. Start Next.js SSR on port 3000 via PM2
-pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "pnpm start -- -p 3000" --name "equora-frontend" --time
 
 # 4. Save PM2 state so all 3 services auto-restart on server reboot
 pm2 save
@@ -293,7 +293,7 @@ cd ../..
 
 ## Step 7: Production Nginx Reverse Proxy & SSL
 
-Create `/etc/nginx/sites-available/btitan.conf`:
+Create `/etc/nginx/sites-available/equora.conf`:
 
 ```nginx
 # Rate limiting zone for API protection
@@ -367,7 +367,7 @@ server {
 
 Enable site and generate SSL:
 ```bash
-sudo ln -s /etc/nginx/sites-available/btitan.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/equora.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
@@ -402,10 +402,10 @@ Set up a daily automated database backup that keeps the last 14 days of backups:
 
 ```bash
 # Create backup directory
-sudo mkdir -p /var/backups/btitan
+sudo mkdir -p /var/backups/equora
 
 # Add daily backup cron job at 02:00 AM UTC
-(crontab -l 2>/dev/null; echo "0 2 * * * docker exec btitan_postgres pg_dump -U btitan_admin btitan_db | gzip > /var/backups/btitan/btitan_db_\$(date +\\%Y\\%m\\%d).sql.gz && find /var/backups/btitan -name 'btitan_db_*.sql.gz' -mtime +14 -delete") | crontab -
+(crontab -l 2>/dev/null; echo "0 2 * * * docker exec equora_postgres pg_dump -U equora_admin equora_db | gzip > /var/backups/equora/equora_db_\$(date +\\%Y\\%m\\%d).sql.gz && find /var/backups/equora -name 'equora_db_*.sql.gz' -mtime +14 -delete") | crontab -
 ```
 
 ---
@@ -416,15 +416,15 @@ sudo mkdir -p /var/backups/btitan
 ```bash
 pm2 status              # View status of all 3 services
 pm2 logs                # Combined real-time logs
-pm2 logs btitan-api     # API logs only
-pm2 logs btitan-indexer # Indexer logs only
-pm2 logs btitan-frontend# Frontend logs only
+pm2 logs equora-api     # API logs only
+pm2 logs equora-indexer # Indexer logs only
+pm2 logs equora-frontend# Frontend logs only
 pm2 monit               # Interactive CPU/Memory dashboard
 ```
 
 ### Deploying Code Updates (Zero Downtime)
 ```bash
-cd /var/www/b-titan
+cd /var/www/equora
 git pull
 
 # 1. Update Monorepo & Rebuild all
@@ -432,10 +432,10 @@ pnpm install
 pnpm build
 
 # 2. Reload PM2 processes
-pm2 reload btitan-frontend
-pm2 reload btitan-api
-pm2 reload btitan-indexer
-pm2 reload btitan-queue
+pm2 reload equora-frontend
+pm2 reload equora-api
+pm2 reload equora-indexer
+pm2 reload equora-queue
 ```
 
 ---
@@ -444,14 +444,14 @@ pm2 reload btitan-queue
 
 | Issue | Root Cause | Solution |
 | :--- | :--- | :--- |
-| **API returns 502 Bad Gateway** | `btitan-api` process is stopped | Run `pm2 restart btitan-api` and check `pm2 logs btitan-api`. |
-| **Prisma migration error** | PostgreSQL container not ready | Verify container with `docker compose ps`. Test connection with `docker exec -it btitan_postgres pg_isready`. |
-| **Indexer not polling events** | Invalid `RPC_URL` or rate limit | Check `pm2 logs btitan-indexer`. Switch `RPC_URL` in root `.env` to a dedicated QuickNode / Alchemy RPC. |
+| **API returns 502 Bad Gateway** | `equora-api` process is stopped | Run `pm2 restart equora-api` and check `pm2 logs equora-api`. |
+| **Prisma migration error** | PostgreSQL container not ready | Verify container with `docker compose ps`. Test connection with `docker exec -it equora_postgres pg_isready`. |
+| **Indexer not polling events** | Invalid `RPC_URL` or rate limit | Check `pm2 logs equora-indexer`. Switch `RPC_URL` in root `.env` to a dedicated QuickNode / Alchemy RPC. |
 | **WalletConnect modal doesn't open** | Missing/invalid Project ID | Verify `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` in `apps/web/.env.local`. Rebuild frontend. |
 | **Contract deployment reverts** | Insufficient deployer BNB gas | Fund deployer wallet with at least 0.25 BNB. |
 | **Nginx 413 Payload Too Large** | Default Nginx client body size | Add `client_max_body_size 20M;` inside `http` block of `/etc/nginx/nginx.conf`. |
-| **CORS error on API calls** | Missing domain in `CORS_ORIGIN` | Add your exact domain (e.g. `https://yourdomain.com`) to `CORS_ORIGIN` in root `.env` and run `pm2 restart btitan-api`. |
+| **CORS error on API calls** | Missing domain in `CORS_ORIGIN` | Add your exact domain (e.g. `https://yourdomain.com`) to `CORS_ORIGIN` in root `.env` and run `pm2 restart equora-api`. |
 
 ---
 
-*This document contains the complete, authoritative runbook for deploying and operating the EQUORA_Fi (B-Titan) platform in production.*
+*This document contains the complete, authoritative runbook for deploying and operating the EQUORA_Fi (Equora) platform in production.*

@@ -1,9 +1,9 @@
 /**
  * matrixHelpers.ts
- * Helper functions for B-TITAN Matrix calculations and visualizations
+ * Helper functions for Equora.Fi Matrix calculations and visualizations
  */
 
-import { SLOT_COSTS, NODE_ROUTING, NodeEventType } from "../../types/btitan";
+import { SLOT_COSTS, NODE_ROUTING, NodeEventType } from "../../types/equora";
 
 /**
  * Get human-readable slot cost in BTT numbers (e.g. 30, 60, 120, etc.)
@@ -131,6 +131,8 @@ export function formatBTT(amount?: bigint | null, decimals = 2): string {
   const fractionStr = fraction.toString().padStart(18, "0").slice(0, decimals);
   return `${whole.toLocaleString()}.${fractionStr}`;
 }
+
+export const formatEQR = formatBTT;
 
 export interface MatrixTreeNode {
   position: number;

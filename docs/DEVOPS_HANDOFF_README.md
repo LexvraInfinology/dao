@@ -1,4 +1,4 @@
-# EQUORA_Fi (B-TITAN) — DevOps Engineering & Deployment Handoff
+# EQUORA_Fi (EQUORA) — DevOps Engineering & Deployment Handoff
 
 > **Target Audience:** DevOps Engineers, SysAdmins, Infrastructure Specialists  
 > **Repository Architecture:** npm Workspaces Monorepo (`apps/*`, `packages/*`)  
@@ -12,12 +12,12 @@ The platform comprises **5 core services** running on the host server:
 
 | Service | Technology | Port / Type | Working Directory | Process Name |
 | :--- | :--- | :--- | :--- | :--- |
-| **Database** | PostgreSQL 16 Alpine | `5432/tcp` | Root (`docker-compose.yml`) | Container: `btitan_postgres` |
-| **Cache** | Redis 7 Alpine | `6379/tcp` | Root (`docker-compose.yml`) | Container: `btitan_redis` |
-| **Backend REST API** | Express / Node.js 20+ | `4000/tcp` (Internal) | `apps/api` | PM2: `btitan-api` |
-| **Blockchain Indexer** | Viem / Node.js 20+ | Daemon (No open port) | `apps/indexer` | PM2: `btitan-indexer` |
-| **Queue & Worker** | BullMQ / Node.js 20+ | Daemon (No open port) | `apps/queue` | PM2: `btitan-queue` |
-| **Frontend Web App** | Next.js 15 (Webpack SSR) | `3000/tcp` (Internal) | `apps/web` | PM2: `btitan-frontend` |
+| **Database** | PostgreSQL 16 Alpine | `5432/tcp` | Root (`docker-compose.yml`) | Container: `equora_postgres` |
+| **Cache** | Redis 7 Alpine | `6379/tcp` | Root (`docker-compose.yml`) | Container: `equora_redis` |
+| **Backend REST API** | Express / Node.js 20+ | `4000/tcp` (Internal) | `apps/api` | PM2: `equora-api` |
+| **Blockchain Indexer** | Viem / Node.js 20+ | Daemon (No open port) | `apps/indexer` | PM2: `equora-indexer` |
+| **Queue & Worker** | BullMQ / Node.js 20+ | Daemon (No open port) | `apps/queue` | PM2: `equora-queue` |
+| **Frontend Web App** | Next.js 15 (Webpack SSR) | `3000/tcp` (Internal) | `apps/web` | PM2: `equora-frontend` |
 | **Reverse Proxy** | Nginx + Certbot SSL | `80`, `443/tcp` (Public) | `/etc/nginx/sites-available/` | `systemd: nginx` |
 
 ---
@@ -39,8 +39,8 @@ The platform comprises **5 core services** running on the host server:
 
 ### Step 1: Clone Repository & Install Root Workspaces
 ```bash
-git clone <REPO_URL> /var/www/b-titan
-cd /var/www/b-titan
+git clone <REPO_URL> /var/www/equora
+cd /var/www/equora
 
 # Install dependencies across all packages and apps
 npm install
@@ -61,19 +61,19 @@ cd ../..
 ### Step 3: Configure Environment Variables
 
 #### Root `.env` (Used by Backend API & Indexer)
-Create `/var/www/b-titan/.env`:
+Create `/var/www/equora/.env`:
 ```ini
 NODE_ENV=production
 PORT=4000
 
 # Database Connection (Default matching docker-compose.yml)
-DATABASE_URL="postgresql://btitan_admin:btitan_secret_password@localhost:5432/btitan_db"
+DATABASE_URL="postgresql://equora_admin:equora_secret_password@localhost:5432/equora_db"
 
 # Redis Cache
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=btitan_redis_secret
-REDIS_URL="redis://:btitan_redis_secret@localhost:6379"
+REDIS_PASSWORD=equora_redis_secret
+REDIS_URL="redis://:equora_redis_secret@localhost:6379"
 
 # Security & SIWE Auth
 JWT_SECRET="generate_a_random_32_to_64_character_secret_key"
@@ -91,7 +91,7 @@ INDEXER_START_BLOCK=0
 ```
 
 #### Frontend `.env.local`
-Create `/var/www/b-titan/apps/web/.env.local`:
+Create `/var/www/equora/apps/web/.env.local`:
 ```ini
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_REOWN_PROJECT_ID"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
@@ -102,25 +102,25 @@ NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 ### Step 4: Build & Launch Services via PM2
 ```bash
 # 1. Build all services from monorepo root
-cd /var/www/b-titan
+cd /var/www/equora
 pnpm install
 pnpm build
 
 # 2. Launch Backend API (Port 4000)
 cd apps/api
-pm2 start dist/index.js --name "btitan-api" --time
+pm2 start dist/index.js --name "equora-api" --time
 
 # 3. Launch Blockchain Event Indexer
 cd ../indexer
-pm2 start dist/index.js --name "btitan-indexer" --time
+pm2 start dist/index.js --name "equora-indexer" --time
 
 # 4. Launch Queue Worker
 cd ../queue
-pm2 start dist/index.js --name "btitan-queue" --time
+pm2 start dist/index.js --name "equora-queue" --time
 
 # 5. Launch Frontend Web App (Port 3000)
 cd ../web
-pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "pnpm start -- -p 3000" --name "equora-frontend" --time
 
 # Save PM2 state across reboots
 pm2 save
@@ -129,7 +129,7 @@ cd ../..
 ```
 
 ### Step 5: Configure Nginx & SSL
-Create `/etc/nginx/sites-available/btitan.conf`:
+Create `/etc/nginx/sites-available/equora.conf`:
 ```nginx
 upstream nextjs_upstream {
     server 127.0.0.1:3000;
@@ -189,7 +189,7 @@ server {
 
 Enable site and generate SSL:
 ```bash
-sudo ln -s /etc/nginx/sites-available/btitan.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/equora.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 sudo certbot --nginx -d yourdomain.com
@@ -208,9 +208,9 @@ pm2 status
 pm2 logs
 
 # View specific service logs
-pm2 logs btitan-api --lines 50
-pm2 logs btitan-indexer --lines 50
-pm2 logs btitan-frontend --lines 50
+pm2 logs equora-api --lines 50
+pm2 logs equora-indexer --lines 50
+pm2 logs equora-frontend --lines 50
 
 # Live memory & CPU monitoring dashboard
 pm2 monit
@@ -222,17 +222,17 @@ pm2 monit
 git pull
 pnpm install
 pnpm build
-pm2 reload btitan-frontend
-pm2 reload btitan-api
-pm2 reload btitan-indexer
-pm2 reload btitan-queue
+pm2 reload equora-frontend
+pm2 reload equora-api
+pm2 reload equora-indexer
+pm2 reload equora-queue
 ```
 
 ### Health Check Verification
 ```bash
 # Test API Health (Must return HTTP 200)
 curl http://localhost:4000/health
-# Output: {"status":"healthy","service":"btitan-api",...}
+# Output: {"status":"healthy","service":"equora-api",...}
 
 # Test Next.js SSR
 curl -I http://localhost:3000/
@@ -246,5 +246,5 @@ curl -I http://localhost:3000/
 Add this daily backup cronjob (`crontab -e`):
 ```bash
 # Daily PostgreSQL backup at 02:00 AM UTC (Retains last 14 days)
-0 2 * * * docker exec btitan_postgres pg_dump -U btitan_admin btitan_db | gzip > /var/backups/btitan_db_$(date +\%Y\%m\%d).sql.gz && find /var/backups -name "btitan_db_*.sql.gz" -mtime +14 -delete
+0 2 * * * docker exec equora_postgres pg_dump -U equora_admin equora_db | gzip > /var/backups/equora_db_$(date +\%Y\%m\%d).sql.gz && find /var/backups -name "equora_db_*.sql.gz" -mtime +14 -delete
 ```

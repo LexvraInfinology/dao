@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { formatBTT } from "../../utils/btitan/matrixHelpers";
-import { useMatrixData } from "../../hooks/btitan/useMatrixData";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import { formatAddress } from "../../utils/equora/formatters";
+import { formatBTT } from "../../utils/equora/matrixHelpers";
+import { useMatrixData } from "../../hooks/equora/useMatrixData";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 
 const MOCK_LEADERS = [

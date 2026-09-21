@@ -874,8 +874,8 @@ async function main() {
         <td>Controls 100-seat ledger, $300/N formula, 5X cap, and 48h vacancy scan.</td>
       </tr>
       <tr>
-        <td class="font-bold">BTitanDAOMembership</td>
-        <td class="font-mono">BTitanDAOMembership.sol</td>
+        <td class="font-bold">EquoraDAOMembership</td>
+        <td class="font-mono">EquoraDAOMembership.sol</td>
         <td>Soulbound ERC-721 governance NFT. Transfer restrictions enforced on-chain.</td>
       </tr>
       <tr>

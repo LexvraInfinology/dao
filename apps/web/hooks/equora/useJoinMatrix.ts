@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWriteContract, useChainId } from "wagmi";
 import deployedContracts from "../../contracts/deployedContracts";
 import { notification } from "../../utils/scaffold-eth/notification";
-import { SLOT_COSTS } from "../../types/btitan";
+import { SLOT_COSTS } from "../../types/equora";
 
 /**
  * useJoinMatrix
@@ -17,8 +17,8 @@ export function useJoinMatrix(
 ) {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
-  const matrixContract = contracts?.BTitanMatrix;
-  const tokenContract = contracts?.BTitanToken;
+  const matrixContract = contracts?.EquoraMatrix;
+  const tokenContract = contracts?.MockToken || contracts?.EquoraToken;
 
   const [step, setStep] = useState<"idle" | "approving" | "joining" | "success" | "error">("idle");
   const [activeSlot, setActiveSlot] = useState<number | null>(null);

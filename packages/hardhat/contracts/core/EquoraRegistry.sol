@@ -8,12 +8,10 @@ import "../interfaces/IEquoraRegistry.sol";
  * @title EquoraRegistry
  * @dev Central user registry for Equora.Fi platform.
  *
- * Key Additions vs B-Titan:
+ * Key Features:
  *   - 5-digit unique referral code (10000–99999) auto-generated on registration
  *   - registerUser() accepts referral CODE (uint32) instead of sponsor address
  *   - Bi-directional mapping: code → address, address → code
- *
- * Unchanged from BTitanRegistry:
  *   - 2-referral qualification for matrix earnings
  *   - Sponsor genealogy tree
  *   - Root fallback for invalid sponsors
@@ -42,7 +40,7 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
     address public root;
     address public vaultContract;    // EquoraVault — primary authorized caller
     address public daoContract;      // EquoraDAO
-    address public matrixContract;   // BTitanMatrix
+    address public matrixContract;   // EquoraMatrix
 
     mapping(address => User)         private _users;
     mapping(address => address[])    private _directReferrals;

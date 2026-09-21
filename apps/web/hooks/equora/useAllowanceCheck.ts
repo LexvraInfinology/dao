@@ -11,7 +11,7 @@ export function useAllowanceCheck() {
   const chainId = useChainId();
   const contracts = (deployedContracts as any)[chainId];
   const daoContract = contracts?.EquoraDAO;
-  const tokenContract = contracts?.MockToken || contracts?.BTitanToken;
+  const tokenContract = contracts?.MockToken || contracts?.EquoraToken;
 
   const {
     data: allowanceData,

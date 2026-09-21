@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./BTitanDAOMembership.sol";
+import "./EquoraDAOMembership.sol";
 import "../interfaces/IEquoraRegistry.sol";
 
 /**
@@ -36,7 +36,7 @@ import "../interfaces/IEquoraRegistry.sol";
  *   - Caller must have >= 2 direct referrals (via EquoraRegistry.isQualified())
  *
  * === PRESERVED ===============================================================
- *   - Soulbound ERC-721 per seat (BTitanDAOMembership NFT)
+ *   - Soulbound ERC-721 per seat (EquoraDAOMembership NFT)
  *   - Instant push distribution to all prior members
  *   - Anti-griefing: failed push → pullFallbackBalance for manual claim
  *   - Zero platform fees: 100% of entry flows to members
@@ -57,7 +57,7 @@ contract EquoraDAO is ReentrancyGuard {
     // ─── Immutable Dependencies ────────────────────────────────────────────────
 
     IERC20              public immutable paymentToken;
-    BTitanDAOMembership public immutable membershipNFT;
+    EquoraDAOMembership public immutable membershipNFT;
     IEquoraRegistry     public immutable registry;
 
     // ─── Configured Contracts ──────────────────────────────────────────────────
@@ -150,7 +150,7 @@ contract EquoraDAO is ReentrancyGuard {
         registry     = IEquoraRegistry(_registry);
 
         // Deploy Soulbound Membership NFT — this contract is sole minter
-        membershipNFT = new BTitanDAOMembership(address(this));
+        membershipNFT = new EquoraDAOMembership(address(this));
     }
 
     // ─── Vault Configuration (One-Time Deployment Wiring) ──────────────────────

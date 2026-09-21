@@ -19,15 +19,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en");
 
   useEffect(() => {
-    const saved = localStorage.getItem("btitan-language") as Language | null;
-    if (saved && (saved === "en" || saved === "fr" || saved === "zh" || saved === "es")) {
+    const saved = localStorage.getItem("equora-language") as Language | null;
+    if (saved && (saved === "en" || saved === "es" || saved === "fr" || saved === "zh")) {
       setLanguageState(saved);
     }
   }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem("btitan-language", lang);
+    localStorage.setItem("equora-language", lang);
   };
 
   const t = (key: string, fallback?: string): string => {

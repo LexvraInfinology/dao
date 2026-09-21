@@ -1,4 +1,4 @@
-import prisma from "@btitan/database";
+import prisma from "@equora/database";
 
 const SLOT_COSTS: Record<number, number> = {
   1: 30,

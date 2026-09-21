@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  *      DO NOT deploy to mainnet.
  */
 contract MockToken is ERC20 {
-    constructor() ERC20("Mock BTT Token", "mBTT") {
+    constructor() ERC20("Mock Equora Token", "mEQR") {
         // Mint 10M to deployer
         _mint(msg.sender, 10_000_000 * 10 ** 18);
     }

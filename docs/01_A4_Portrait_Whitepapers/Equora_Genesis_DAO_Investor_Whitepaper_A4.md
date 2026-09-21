@@ -186,7 +186,7 @@ To prevent early participants from draining the protocol treasury indefinitely w
 ## 7. Governance Sovereignty & Soulbound ERC-721 Security
 
 ### 7.1 Soulbound Non-Transferable ERC-721
-- **Minting:** Upon deposit of 300 TROB, the contract mints a unique `BTitanDAOMembership` Soulbound NFT (`#0001` to `#0100`).
+- **Minting:** Upon deposit of 300 TROB, the contract mints a unique `EquoraDAOMembership` Soulbound NFT (`#0001` to `#0100`).
 - **Non-Transferable:** Strict overrides on `transferFrom()` and `safeTransferFrom()` ensure that seats cannot be sold on secondary marketplaces or hoarded by speculative cartels.
 - **Institutional Weight:** **1 Seat = 1 Vote (1.0% voting sovereignty)**. All proposals regarding treasury upgrades, fee adjustments, and future chain bridges require a 51% council quorum.
 
@@ -197,7 +197,7 @@ To prevent early participants from draining the protocol treasury indefinitely w
 | Contract Module | Implementation File | On-Chain Role |
 |:---|:---|:---|
 | **EquoraDAO** | `EquoraDAO.sol` | Manages 100-seat grid, $300/N formula, 5X cap, and 48h timer |
-| **BTitanDAOMembership**| `BTitanDAOMembership.sol` | Soulbound ERC-721 governance token logic |
+| **EquoraDAOMembership**| `EquoraDAOMembership.sol` | Soulbound ERC-721 governance token logic |
 | **EquoraVault** | `EquoraVault.sol` | Autonomous fee splitting (35% DAO / 40% Salary / 10% Box / 15% Drops) |
 | **EquoraRegistry** | `EquoraRegistry.sol` | Manages 5-digit referral ID resolution and root mappings |
 

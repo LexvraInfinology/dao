@@ -1,4 +1,4 @@
-# EQUORA_Fi (B-TITAN) — Complete Production Deployment Guide & Infrastructure Needs
+# EQUORA_Fi (EQUORA) — Complete Production Deployment Guide & Infrastructure Needs
 
 > **Document Classification:** Official Infrastructure & Deployment Runbook  
 > **Audience:** DevOps Engineers, Smart Contract Engineers, Infrastructure Architects, Full-Stack Developers  
@@ -9,7 +9,7 @@
 
 ## 1. Executive Architecture Overview
 
-EQUORA_Fi (B-Titan) is an autonomous Web3 protocol structured as an integrated npm/TypeScript monorepo. It operates across 5 decoupled tiers:
+EQUORA_Fi (Equora) is an autonomous Web3 protocol structured as an integrated npm/TypeScript monorepo. It operates across 5 decoupled tiers:
 
 ```
                             ┌─────────────────────────────────────────┐
@@ -38,7 +38,7 @@ EQUORA_Fi (B-Titan) is an autonomous Web3 protocol structured as an integrated n
                                         ▼
                       ┌───────────────────────────────────┐
                       │    Blockchain Event Indexer       │
-                      │       (@btitan/indexer)           │
+                      │       (@equora/indexer)           │
                       └───────────────────────────────────┘
 ```
 
@@ -121,8 +121,8 @@ Follow these steps sequentially to deploy the entire stack from scratch.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-org/b-titan.git /var/www/b-titan
-cd /var/www/b-titan
+git clone https://github.com/your-org/equora.git /var/www/equora
+cd /var/www/equora
 
 # 2. Install monorepo dependencies
 npm install
@@ -167,15 +167,15 @@ cd ../..
 ### Step 3: Smart Contract Deployment (BSC Mainnet / Testnet)
 
 The deployment script (`packages/hardhat/scripts/deploy.ts`) handles the full deployment lifecycle:
-1. Deploys `BTitanToken` (or `MockToken` on local).
+1. Deploys `EquoraToken` (or `MockToken` on local).
 2. Deploys `EquoraRegistry` (User registration & sponsor tree).
-3. Deploys `BTitanNFT` (Soulbound milestone rank badges).
+3. Deploys `EquoraNFT` (Soulbound milestone rank badges).
 4. Deploys `EquoraVault` (Central routing treasury).
 5. Deploys `EquoraRewardPool` (Milestone bonus pool).
 6. Deploys `EquoraSalaryPool` (Monthly recurring salary pool).
 7. Deploys `EquoraMagicBox` (Quarterly reward pool).
-8. Deploys `EquoraDAO` + `BTitanDAOMembership` (100-Seat Genesis Council).
-9. Deploys `BTitanMatrix` (12-Slot, 14-Node auto-matrix engine).
+8. Deploys `EquoraDAO` + `EquoraDAOMembership` (100-Seat Genesis Council).
+9. Deploys `EquoraMatrix` (12-Slot, 14-Node auto-matrix engine).
 10. **Wires all authorizations**: Vault pool initialization, Matrix permissions, Registry caller links, NFT minter assignment, and DAO volume routing.
 11. **Synchronizes Frontend**: Automatically writes all addresses and ABIs to [`apps/web/contracts/deployedContracts.ts`](file:///apps/web/contracts/deployedContracts.ts).
 12. **Null Key Lockdown**: On production networks, automatically renounces ownership on all contracts, locking the protocol as fully autonomous.
@@ -217,7 +217,7 @@ npx hardhat run scripts/deploy.ts --network bsc
 
 #### 3.3 Verify Contracts on BscScan
 ```bash
-# Verify BTitanMatrix (example)
+# Verify EquoraMatrix (example)
 npx hardhat verify --network bsc <MATRIX_ADDRESS> "<TOKEN_ADDRESS>" "<REGISTRY_ADDRESS>" "<NFT_ADDRESS>"
 
 # Verify EquoraDAO
@@ -286,17 +286,17 @@ We use **PM2** to manage long-running backend processes with automatic crash res
 
 #### 5.1 Build & Start API Server
 ```bash
-cd /var/www/b-titan/apps/api
+cd /var/www/equora/apps/api
 npm run build
-pm2 start dist/index.js --name "btitan-api" --time
+pm2 start dist/index.js --name "equora-api" --time
 cd ../..
 ```
 
 #### 5.2 Build & Start Blockchain Indexer
 ```bash
-cd /var/www/b-titan/apps/indexer
+cd /var/www/equora/apps/indexer
 npm run build
-pm2 start dist/index.js --name "btitan-indexer" --time
+pm2 start dist/index.js --name "equora-indexer" --time
 cd ../..
 ```
 
@@ -304,7 +304,7 @@ cd ../..
 ```bash
 pm2 status
 curl http://localhost:4000/health
-# Response: {"status":"healthy","service":"btitan-api",...}
+# Response: {"status":"healthy","service":"equora-api",...}
 ```
 
 ---
@@ -312,13 +312,13 @@ curl http://localhost:4000/health
 ### Step 6: Build & Launch Frontend Web App
 
 ```bash
-cd /var/www/b-titan/apps/web
+cd /var/www/equora/apps/web
 
 # Production Next.js build
 pnpm build
 
 # Start Next.js standalone server on port 3000
-pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "pnpm start -- -p 3000" --name "equora-frontend" --time
 cd ../..
 
 # Persist PM2 processes across server reboots
@@ -431,12 +431,12 @@ Execute these checks immediately following deployment to certify production read
 | :--- | :--- | :--- |
 | **API Health Check** | `curl https://api.equora.fi/health` | HTTP 200 `{"status":"healthy"}` |
 | **Database Connectivity** | `cd packages/database && npx prisma db pull --print` | Successfully reads models without connection timeout |
-| **Indexer Active Sync** | `pm2 logs btitan-indexer --lines 20` | Output shows `[Indexer] Polling block #... (0 events)` |
+| **Indexer Active Sync** | `pm2 logs equora-indexer --lines 20` | Output shows `[Indexer] Polling block #... (0 events)` |
 | **Frontend SSR Load** | `curl -I https://app.equora.fi` | HTTP 200 OK |
 | **Wallet Connection** | Open `https://app.equora.fi` on desktop & mobile | RainbowKit modal opens; connects with MetaMask, TokenPocket, Trust Wallet |
 | **DAO Contract Read** | Check `totalSeats()` on BscScan / Frontend | Returns `0` (or seats occupied, max `100`) |
 | **Matrix Contract Read** | Check `SLOT_COUNT` on BscScan | Returns `12` |
-| **Null Key Verification** | Query `owner()` on `BTitanMatrix` & `EquoraRegistry` | Returns `0x0000000000000000000000000000000000000000` |
+| **Null Key Verification** | Query `owner()` on `EquoraMatrix` & `EquoraRegistry` | Returns `0x0000000000000000000000000000000000000000` |
 | **Browser Console Clean** | Check DevTools Console on `/matrix` and `/dao` | **0 errors, 0 warnings** |
 
 ---
@@ -447,7 +447,7 @@ Execute these checks immediately following deployment to certify production read
 Add a cron job on the server (`crontab -e`):
 ```bash
 # Backup PostgreSQL daily at 02:00 AM UTC and delete backups older than 14 days
-0 2 * * * pg_dump -U btitan_admin -d btitan_db | gzip > /var/backups/btitan_db_$(date +\%Y\%m\%d).sql.gz && find /var/backups -name "btitan_db_*.sql.gz" -mtime +14 -delete
+0 2 * * * pg_dump -U equora_admin -d equora_db | gzip > /var/backups/equora_db_$(date +\%Y\%m\%d).sql.gz && find /var/backups -name "equora_db_*.sql.gz" -mtime +14 -delete
 ```
 
 ### 6.2 Monitoring & Log Management
@@ -459,12 +459,12 @@ pm2 monit
 pm2 flush
 
 # Restart any individual service safely with zero downtime
-pm2 reload btitan-frontend
-pm2 reload btitan-api
-pm2 reload btitan-indexer
+pm2 reload equora-frontend
+pm2 reload equora-api
+pm2 reload equora-indexer
 ```
 
 ### 6.3 Emergency Protocol Checklist
-1. **Blockchain RPC Outage**: Update `RPC_URL` in root `.env` and `packages/hardhat/hardhat.config.ts`, then run `pm2 restart btitan-indexer`.
+1. **Blockchain RPC Outage**: Update `RPC_URL` in root `.env` and `packages/hardhat/hardhat.config.ts`, then run `pm2 restart equora-indexer`.
 2. **Database Failover**: Update `DATABASE_URL` in `.env` and `packages/database/.env`, then run `pm2 restart all`.
-3. **Frontend Rollback**: Run `git checkout <PREVIOUS_TAG>`, `pnpm --filter @equora/web build`, and `pm2 reload btitan-frontend`.
+3. **Frontend Rollback**: Run `git checkout <PREVIOUS_TAG>`, `pnpm --filter @equora/web build`, and `pm2 reload equora-frontend`.

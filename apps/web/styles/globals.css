@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   B-TITAN CANADIAN INSTITUTIONAL WEB3 DESIGN SYSTEM — globals.css
+   EQUORA CANADIAN INSTITUTIONAL WEB3 DESIGN SYSTEM — globals.css
    Northern Sovereign Aesthetic • Inter + DM Sans Typography
    Deep Navy (#0a192f) • Canadian Crimson (#ce0008) • Sovereign Gold (#e9c176)
    Obsidian Glassmorphism (#101416)
@@ -88,7 +88,7 @@ body {
 }
 
 /* ─── Luxury Background with Ambient Glow Orbs ─────────────────────────────── */
-.btitan-app {
+.equora-app {
   min-height: 100vh;
   background-color: var(--color-bg);
   background-image: 

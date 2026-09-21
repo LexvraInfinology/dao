@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import toast from "react-hot-toast";
-import { formatAddress } from "../../utils/btitan/formatters";
-import { useUserProfile } from "../../hooks/btitan/useUserProfile";
+import { formatAddress } from "../../utils/equora/formatters";
+import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 
 export default function ReferralsPage() {

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title IBTitanNFT
- * @dev Interface for the B-TITAN NFT contract (Welcome Pass + Rank Badges)
+ * @title IEquoraNFT
+ * @dev Interface for the Equora NFT contract (Welcome Pass + Rank Badges)
  */
-interface IBTitanNFT {
+interface IEquoraNFT {
     enum Rank {
         NONE,       // Not yet ranked
         ALPHA,      // Slot 3 completed (Levels 1-3 | 42 slots)

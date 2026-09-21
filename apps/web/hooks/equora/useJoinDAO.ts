@@ -20,7 +20,7 @@ export function useJoinDAO(onSuccess?: () => void) {
   const { address } = useAccount();
   const contracts = (deployedContracts as any)[chainId];
   const daoContract = contracts?.EquoraDAO;
-  const tokenContract = contracts?.MockToken || contracts?.BTitanToken;
+  const tokenContract = contracts?.MockToken || contracts?.EquoraToken;
 
   const { hasAllowance, refetchAllowance } = useAllowanceCheck();
 

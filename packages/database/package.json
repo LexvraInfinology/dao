@@ -1,5 +1,5 @@
 {
-  "name": "@btitan/database",
+  "name": "@equora/database",
   "version": "1.0.0",
   "private": true,
   "main": "dist/index.js",
@@ -16,7 +16,7 @@
     "@prisma/client": "^5.22.0"
   },
   "devDependencies": {
-    "@btitan/tsconfig": "workspace:*",
+    "@equora/tsconfig": "workspace:*",
     "prisma": "^5.22.0",
     "typescript": "^5.6.3"
   }

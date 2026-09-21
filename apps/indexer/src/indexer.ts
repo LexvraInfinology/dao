@@ -29,9 +29,15 @@ import {
 } from "./handlers/matrix.handler";
 
 
+import { createLogger } from "@btitan/logger";
+
+const logger = createLogger("Indexer");
+
 export class BlockchainIndexer {
   private client: ReturnType<typeof createPublicClient>;
   private isRunning = false;
+  private wasOffline = false;
+  private lastOfflineNotification = 0;
 
   constructor() {
     this.client = createPublicClient({
@@ -40,12 +46,12 @@ export class BlockchainIndexer {
   }
 
   async start() {
-    console.log(`========================================================`);
-    console.log(`📡 B-TITAN Blockchain Event Indexer Starting`);
-    console.log(`🔗 RPC: ${config.rpcUrl}`);
-    console.log(`🌍 Chain ID: ${config.chainId}`);
-    console.log(`⏱️ Poll Interval: ${config.pollIntervalMs}ms`);
-    console.log(`========================================================`);
+    logger.info("========================================================");
+    logger.info("📡 B-TITAN Blockchain Event Indexer Starting");
+    logger.info(`🔗 RPC: ${config.rpcUrl}`);
+    logger.info(`🌍 Chain ID: ${config.chainId}`);
+    logger.info(`⏱️ Poll Interval: ${config.pollIntervalMs}ms`);
+    logger.info("========================================================");
 
     this.isRunning = true;
     this.pollLoop();
@@ -53,15 +59,33 @@ export class BlockchainIndexer {
 
   stop() {
     this.isRunning = false;
-    console.log("🛑 Indexer stopped.");
+    logger.info("🛑 Indexer stopped.");
   }
 
   private async pollLoop() {
     while (this.isRunning) {
       try {
         await this.syncNewBlocks();
+        if (this.wasOffline) {
+          logger.success(`Reconnected to blockchain RPC at ${config.rpcUrl}`);
+          this.wasOffline = false;
+        }
       } catch (err: any) {
-        console.error("⚠️ [Indexer Polling Error]", err?.message || err);
+        const isConnectionError =
+          err?.message?.includes("fetch failed") ||
+          err?.message?.includes("ECONNREFUSED") ||
+          err?.name === "HttpRequestError";
+
+        if (isConnectionError) {
+          const now = Date.now();
+          if (!this.wasOffline || now - this.lastOfflineNotification > 15000) {
+            logger.warn(`Waiting for blockchain RPC at ${config.rpcUrl} (node offline, will auto-resume when online)`);
+            this.lastOfflineNotification = now;
+          }
+          this.wasOffline = true;
+        } else {
+          logger.error("Indexer polling error:", err?.message || err);
+        }
       }
       await new Promise((r) => setTimeout(r, config.pollIntervalMs));
     }

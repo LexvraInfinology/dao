@@ -46,8 +46,8 @@ EQUORA_Fi (B-Titan) is an autonomous Web3 protocol structured as an integrated n
 - [`packages/hardhat/`](file:///packages/hardhat) — Solidity contracts (v0.8.25, Cancun EVM), deployment scripts, and verification tooling.
 - [`packages/database/`](file:///packages/database) — Prisma schema, PostgreSQL client, migrations, and database models.
 - [`apps/api/`](file:///apps/api) — Node.js/Express backend API providing SIWE authentication, user genealogy tree queries, and analytics.
-- [`apps/indexer/`](file:///apps/indexer) — Real-time blockchain event indexer that synchronizes smart contract events into PostgreSQL.
-- [`packages/nextjs/`](file:///packages/nextjs) — Next.js 15 client dashboard, RainbowKit v2 wallet connect, responsive UI (mobile DApp browser ready).
+- [`apps/web/`](file:///apps/web) — Next.js 15 client dashboard, RainbowKit v2 wallet connect, responsive UI (mobile DApp browser ready).
+- [`apps/queue/`](file:///apps/queue) — Background queue worker for async recalculations and sync jobs.
 
 ---
 
@@ -177,7 +177,7 @@ The deployment script (`packages/hardhat/scripts/deploy.ts`) handles the full de
 8. Deploys `EquoraDAO` + `BTitanDAOMembership` (100-Seat Genesis Council).
 9. Deploys `BTitanMatrix` (12-Slot, 14-Node auto-matrix engine).
 10. **Wires all authorizations**: Vault pool initialization, Matrix permissions, Registry caller links, NFT minter assignment, and DAO volume routing.
-11. **Synchronizes Frontend**: Automatically writes all addresses and ABIs to [`packages/nextjs/contracts/deployedContracts.ts`](file:///packages/nextjs/contracts/deployedContracts.ts).
+11. **Synchronizes Frontend**: Automatically writes all addresses and ABIs to [`apps/web/contracts/deployedContracts.ts`](file:///apps/web/contracts/deployedContracts.ts).
 12. **Null Key Lockdown**: On production networks, automatically renounces ownership on all contracts, locking the protocol as fully autonomous.
 
 #### 3.1 Configure Hardhat Environment
@@ -270,7 +270,7 @@ INDEXER_POLL_INTERVAL_MS=3000
 INDEXER_START_BLOCK=DEPLOYMENT_BLOCK_NUMBER
 ```
 
-#### 4.2 Frontend `.env.local` ([`packages/nextjs/.env.local`](file:///packages/nextjs/.env.local))
+#### 4.2 Frontend `.env.local` ([`apps/web/.env.local`](file:///apps/web/.env.local))
 ```ini
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="your_reown_project_id"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
@@ -312,13 +312,13 @@ curl http://localhost:4000/health
 ### Step 6: Build & Launch Frontend Web App
 
 ```bash
-cd /var/www/b-titan/packages/nextjs
+cd /var/www/b-titan/apps/web
 
 # Production Next.js build
-npm run build
+pnpm build
 
 # Start Next.js standalone server on port 3000
-pm2 start "npm run start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
 cd ../..
 
 # Persist PM2 processes across server reboots
@@ -467,4 +467,4 @@ pm2 reload btitan-indexer
 ### 6.3 Emergency Protocol Checklist
 1. **Blockchain RPC Outage**: Update `RPC_URL` in root `.env` and `packages/hardhat/hardhat.config.ts`, then run `pm2 restart btitan-indexer`.
 2. **Database Failover**: Update `DATABASE_URL` in `.env` and `packages/database/.env`, then run `pm2 restart all`.
-3. **Frontend Rollback**: Run `git checkout <PREVIOUS_TAG>`, `npm --prefix packages/nextjs run build`, and `pm2 reload btitan-frontend`.
+3. **Frontend Rollback**: Run `git checkout <PREVIOUS_TAG>`, `pnpm --filter @equora/web build`, and `pm2 reload btitan-frontend`.

@@ -175,9 +175,19 @@ async function main() {
   console.log("   [9/10] EquoraRegistry: confirming Matrix registration path...");
   console.log("         ✅ Matrix authorized for direct registration");
 
+  // 21-Day Genesis DAO Phase 1 Lock:
+  if (!isLocal) {
+    const launchTime = Math.floor(Date.now() / 1000) + (21 * 24 * 60 * 60); // 21 days from deployment
+    console.log(`   [10/11] Setting 21-day Matrix launch lock...`);
+    await (await matrix.setMatrixLaunchTime(launchTime)).wait();
+    console.log(`         ✅ Matrix locked until Day 22: ${new Date(launchTime * 1000).toISOString()}`);
+  } else {
+    console.log("   [10/11] Local network: Matrix launch lock set to 0 (unlocked for testing)");
+  }
+
   // Local: mint some test tokens to deployer for testing
   if (isLocal) {
-    console.log("   [10/10] Minting test tokens for deployer (local only)...");
+    console.log("   [11/11] Minting test tokens for deployer (local only)...");
     const MockToken = await ethers.getContractAt("MockToken", tokenAddress);
     const mintBatch = ethers.parseEther("10000"); // MockToken: max 10,000 per mint
     // Mint 5 batches = 50,000 TROB total for testing
@@ -186,7 +196,7 @@ async function main() {
     }
     console.log(`         ✅ Minted 50,000 TROB to deployer (5 × 10,000 batches)`);
   } else {
-    console.log("   [10/10] Production: skip test token mint");
+    console.log("   [11/11] Production: skip test token mint");
   }
 
   // ─── 11. Generate deployedContracts.ts ────────────────────────────────────
@@ -242,7 +252,7 @@ async function main() {
 
   const outputPath = path.resolve(
     __dirname,
-    "../../nextjs/contracts/deployedContracts.ts"
+    "../../../apps/web/contracts/deployedContracts.ts"
   );
 
   const fileContent = `/**
@@ -272,7 +282,7 @@ export default deployedContracts satisfies GenericContractsDeclaration;
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, fileContent, "utf-8");
-  console.log(`   ✅ deployedContracts.ts written to nextjs/contracts/`);
+  console.log(`   ✅ deployedContracts.ts written to apps/web/contracts/`);
 
   // ─── 12. Renounce Ownership (Null Key) ────────────────────────────────────
   // Per client requirement: "To be deployed on Null Key"

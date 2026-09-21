@@ -1,0 +1,24 @@
+{
+  "name": "@btitan/queue",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@btitan/database": "workspace:*",
+    "@btitan/logger": "workspace:*",
+    "@btitan/types": "workspace:*",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@btitan/tsconfig": "workspace:*",
+    "@types/node": "^20.17.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

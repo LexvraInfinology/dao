@@ -65,9 +65,10 @@ The platform operates as a cohesive, 5-tier architecture:
 | Component | Stack | Port | Public? | Process Manager | Working Dir |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Nginx** | Reverse Proxy | `80`, `443` | **Yes** | `systemd: nginx` | `/etc/nginx/` |
-| **Frontend Web App** | Next.js 15 | `3000` | No (Internal) | `pm2: btitan-frontend` | `packages/nextjs` |
+| **Frontend Web App** | Next.js 15 | `3000` | No (Internal) | `pm2: btitan-frontend` | `apps/web` |
 | **Backend REST API** | Express / Node.js 20 | `4000` | No (Internal) | `pm2: btitan-api` | `apps/api` |
 | **Blockchain Indexer** | Viem Daemon | None | No | `pm2: btitan-indexer` | `apps/indexer` |
+| **Queue & Worker** | BullMQ / Node.js 20 | None | No | `pm2: btitan-queue` | `apps/queue` |
 | **PostgreSQL Database**| Postgres 16 Alpine | `5432` | No (Localhost) | Docker Container | `docker-compose.yml` |
 | **Redis Cache** | Redis 7 Alpine | `6379` | No (Localhost) | Docker Container | `docker-compose.yml` |
 
@@ -180,7 +181,7 @@ npx hardhat run scripts/deploy.ts --network bsc
 6. Deploys `EquoraDAO` and mints `BTitanDAOMembership` Soulbound NFT.
 7. Deploys `BTitanMatrix` (12-Slot, 14-Node auto-matrix engine).
 8. Wires all cross-contract authorizations (Vault pools, Matrix links, Registry caller rules).
-9. Automatically generates [`packages/nextjs/contracts/deployedContracts.ts`](file:///packages/nextjs/contracts/deployedContracts.ts) with all addresses and ABIs.
+9. Automatically generates [`apps/web/contracts/deployedContracts.ts`](file:///apps/web/contracts/deployedContracts.ts) with all addresses and ABIs.
 10. Renounces contract ownership (Null Key lockdown) on production networks.
 
 ---
@@ -268,7 +269,7 @@ curl http://localhost:4000/health
 
 ```bash
 # 1. Create Frontend environment file
-cat <<EOF > /var/www/b-titan/packages/nextjs/.env.local
+cat <<EOF > /var/www/b-titan/apps/web/.env.local
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_REOWN_PROJECT_ID"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
 NEXT_PUBLIC_API_URL="https://yourdomain.com"
@@ -276,11 +277,11 @@ NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 EOF
 
 # 2. Build Next.js production bundle
-cd /var/www/b-titan/packages/nextjs
-npm run build
+cd /var/www/b-titan/apps/web
+pnpm build
 
 # 3. Start Next.js SSR on port 3000 via PM2
-pm2 start "npm run start -- -p 3000" --name "btitan-frontend" --time
+pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
 
 # 4. Save PM2 state so all 3 services auto-restart on server reboot
 pm2 save
@@ -426,14 +427,15 @@ pm2 monit               # Interactive CPU/Memory dashboard
 cd /var/www/b-titan
 git pull
 
-# 1. Update Frontend
-cd packages/nextjs && npm run build && pm2 reload btitan-frontend
+# 1. Update Monorepo & Rebuild all
+pnpm install
+pnpm build
 
-# 2. Update Backend API
-cd ../../apps/api && npm run build && pm2 reload btitan-api
-
-# 3. Update Indexer
-cd ../indexer && npm run build && pm2 reload btitan-indexer
+# 2. Reload PM2 processes
+pm2 reload btitan-frontend
+pm2 reload btitan-api
+pm2 reload btitan-indexer
+pm2 reload btitan-queue
 ```
 
 ---
@@ -445,7 +447,7 @@ cd ../indexer && npm run build && pm2 reload btitan-indexer
 | **API returns 502 Bad Gateway** | `btitan-api` process is stopped | Run `pm2 restart btitan-api` and check `pm2 logs btitan-api`. |
 | **Prisma migration error** | PostgreSQL container not ready | Verify container with `docker compose ps`. Test connection with `docker exec -it btitan_postgres pg_isready`. |
 | **Indexer not polling events** | Invalid `RPC_URL` or rate limit | Check `pm2 logs btitan-indexer`. Switch `RPC_URL` in root `.env` to a dedicated QuickNode / Alchemy RPC. |
-| **WalletConnect modal doesn't open** | Missing/invalid Project ID | Verify `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` in `packages/nextjs/.env.local`. Rebuild frontend. |
+| **WalletConnect modal doesn't open** | Missing/invalid Project ID | Verify `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` in `apps/web/.env.local`. Rebuild frontend. |
 | **Contract deployment reverts** | Insufficient deployer BNB gas | Fund deployer wallet with at least 0.25 BNB. |
 | **Nginx 413 Payload Too Large** | Default Nginx client body size | Add `client_max_body_size 20M;` inside `http` block of `/etc/nginx/nginx.conf`. |
 | **CORS error on API calls** | Missing domain in `CORS_ORIGIN` | Add your exact domain (e.g. `https://yourdomain.com`) to `CORS_ORIGIN` in root `.env` and run `pm2 restart btitan-api`. |

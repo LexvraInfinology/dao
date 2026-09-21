@@ -2,19 +2,29 @@
   "name": "equora-fi",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "chain": "npm --prefix packages/hardhat run chain",
-    "compile": "npm --prefix packages/hardhat run compile",
-    "deploy": "npm --prefix packages/hardhat run deploy",
-    "test": "npm --prefix packages/hardhat run test",
-    "dev": "npm --prefix packages/nextjs run dev",
-    "dev:api": "npm --prefix apps/api run dev",
-    "dev:indexer": "npm --prefix apps/indexer run dev",
-    "build": "node scripts/build.js",
+    "dev": "turbo run dev",
+    "dev:apps": "turbo run dev --filter=!@btitan/hardhat",
+    "dev:web": "pnpm --filter @equora/web dev",
+    "dev:api": "pnpm --filter @btitan/api dev",
+    "dev:indexer": "pnpm --filter @btitan/indexer dev",
+    "dev:queue": "pnpm --filter @btitan/queue dev",
+    "chain": "pnpm --filter @btitan/hardhat chain",
+    "compile": "pnpm --filter @btitan/hardhat compile",
+    "deploy": "pnpm --filter @btitan/hardhat deploy",
+    "deploy:testnet": "pnpm --filter @btitan/hardhat deploy:testnet",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "build": "turbo run build",
+    "db:generate": "pnpm --filter @btitan/database db:generate",
+    "db:push": "pnpm --filter @btitan/database db:push",
+    "db:migrate": "pnpm --filter @btitan/database db:migrate",
+    "db:studio": "pnpm --filter @btitan/database db:studio",
+    "clean": "turbo run clean",
     "postinstall": "node scripts/patch-qr.js"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.2"
   }
 }

@@ -27,7 +27,7 @@ async function main() {
   const matrixOwner = signers[4];
 
   // Try reading deployedContracts.ts or deploy freshly for standalone execution
-  const deployedContractsPath = path.resolve(__dirname, "../../nextjs/contracts/deployedContracts.ts");
+  const deployedContractsPath = path.resolve(__dirname, "../../../apps/web/contracts/deployedContracts.ts");
   let deployedAddresses: Record<string, string> = {};
 
   if (fs.existsSync(deployedContractsPath)) {

@@ -346,7 +346,7 @@ function DashboardContent() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
           {MATRIX_LEVELS_CONFIG.map((lvl) => {
-            const slotData = slots.find((s) => s.slotNumber === lvl.id);
+            const slotData = slots.find((s: any) => s.slotNumber === lvl.id);
             const isUnlocked = slotData ? slotData.isUnlocked : lvl.id <= highestUnlockedSlot;
             const isCurrent = lvl.id === highestUnlockedSlot;
 

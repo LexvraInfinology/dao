@@ -16,7 +16,8 @@ The platform comprises **5 core services** running on the host server:
 | **Cache** | Redis 7 Alpine | `6379/tcp` | Root (`docker-compose.yml`) | Container: `btitan_redis` |
 | **Backend REST API** | Express / Node.js 20+ | `4000/tcp` (Internal) | `apps/api` | PM2: `btitan-api` |
 | **Blockchain Indexer** | Viem / Node.js 20+ | Daemon (No open port) | `apps/indexer` | PM2: `btitan-indexer` |
-| **Frontend Web App** | Next.js 15 (Webpack SSR) | `3000/tcp` (Internal) | `packages/nextjs` | PM2: `btitan-frontend` |
+| **Queue & Worker** | BullMQ / Node.js 20+ | Daemon (No open port) | `apps/queue` | PM2: `btitan-queue` |
+| **Frontend Web App** | Next.js 15 (Webpack SSR) | `3000/tcp` (Internal) | `apps/web` | PM2: `btitan-frontend` |
 | **Reverse Proxy** | Nginx + Certbot SSL | `80`, `443/tcp` (Public) | `/etc/nginx/sites-available/` | `systemd: nginx` |
 
 ---
@@ -90,7 +91,7 @@ INDEXER_START_BLOCK=0
 ```
 
 #### Frontend `.env.local`
-Create `/var/www/b-titan/packages/nextjs/.env.local`:
+Create `/var/www/b-titan/apps/web/.env.local`:
 ```ini
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID="YOUR_REOWN_PROJECT_ID"
 NEXT_PUBLIC_TARGET_NETWORK="bsc"
@@ -100,20 +101,26 @@ NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 
 ### Step 4: Build & Launch Services via PM2
 ```bash
-# 1. Launch Backend API (Port 4000)
-cd /var/www/b-titan/apps/api
-npm run build
+# 1. Build all services from monorepo root
+cd /var/www/b-titan
+pnpm install
+pnpm build
+
+# 2. Launch Backend API (Port 4000)
+cd apps/api
 pm2 start dist/index.js --name "btitan-api" --time
 
-# 2. Launch Blockchain Event Indexer
-cd /var/www/b-titan/apps/indexer
-npm run build
+# 3. Launch Blockchain Event Indexer
+cd ../indexer
 pm2 start dist/index.js --name "btitan-indexer" --time
 
-# 3. Launch Frontend Web App (Port 3000)
-cd /var/www/b-titan/packages/nextjs
-npm run build
-pm2 start "npm run start -- -p 3000" --name "btitan-frontend" --time
+# 4. Launch Queue Worker
+cd ../queue
+pm2 start dist/index.js --name "btitan-queue" --time
+
+# 5. Launch Frontend Web App (Port 3000)
+cd ../web
+pm2 start "pnpm start -- -p 3000" --name "btitan-frontend" --time
 
 # Save PM2 state across reboots
 pm2 save
@@ -211,12 +218,14 @@ pm2 monit
 
 ### Zero-Downtime Reloads
 ```bash
-# Reload frontend after code update
+# Reload services after code update
 git pull
-cd packages/nextjs && npm run build && pm2 reload btitan-frontend
-
-# Reload API server
-cd apps/api && npm run build && pm2 reload btitan-api
+pnpm install
+pnpm build
+pm2 reload btitan-frontend
+pm2 reload btitan-api
+pm2 reload btitan-indexer
+pm2 reload btitan-queue
 ```
 
 ### Health Check Verification

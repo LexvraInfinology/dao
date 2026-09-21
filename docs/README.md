@@ -4,9 +4,10 @@ This directory contains the formal architectural, mathematical, and governance d
 
 > **Featured Quick Reads & Visual Catalogs:**  
 > 🌟 **[EQUORA_PROJECT_EXECUTIVE_OVERVIEW.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/EQUORA_PROJECT_EXECUTIVE_OVERVIEW.md)** — Master Executive Briefing & Stakeholder Summary (What it is, how it works, earning pathways, and key links).  
-> 📸 **[Equora_UI_UX_Designer_Catalog.pdf](file:///c:/Users/Dell/Documents/codes/b-titan/docs/Equora_UI_UX_Designer_Catalog.pdf)** — **Complete High-Resolution Screen Catalog with Desktop & Mobile In-App Browser Screenshots (13.6 MB PDF)**.  
-> 👑 **[PHASE_1_DAO_UI_UX_SPECIFICATION.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/PHASE_1_DAO_UI_UX_SPECIFICATION.md)** — Dedicated Phase 1 (Genesis DAO Exclusive) Launch Design Specification (100-Seat Grid, 300/N Engine, 5X Cap, Locked Phase 2 Teasers).  
-> 🎨 **[UI_UX_DESIGN_SPECIFICATION_PAGE_BY_PAGE.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/UI_UX_DESIGN_SPECIFICATION_PAGE_BY_PAGE.md)** — Full Protocol Page-by-Page UI/UX Specification (Phase 1 & Phase 2 Complete Blueprint).
+> 🌐 **[DAO_SEPARATE_DOMAIN_UI_UX_SPECIFICATION.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/DAO_SEPARATE_DOMAIN_UI_UX_SPECIFICATION.md)** — **Dedicated Standalone DAO Domain (dao.equora.fi) Specification: Pages, Reference Visuals & Content Schemas.**  
+> 📕 **[Equora_DAO_Separate_Domain_Design_Guide.pdf](file:///c:/Users/Dell/Documents/codes/b-titan/docs/Equora_DAO_Separate_Domain_Design_Guide.pdf)** — **Print-Ready High-Res A4 PDF: Standalone DAO Web App Design Guide (3.50 MB PDF).**  
+> 👑 **[PHASE_1_DAO_ONLY_UI_UX_SPECIFICATION.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/PHASE_1_DAO_ONLY_UI_UX_SPECIFICATION.md)** — Dedicated Phase 1 (Genesis DAO Only) Design Spec & 21-Day Locked Matrix ($30 ID) Guide.  
+> 💎 **[ALL_PAGES_UI_UX_DESIGNER_REFERENCE_GUIDE.md](file:///c:/Users/Dell/Documents/codes/b-titan/docs/ALL_PAGES_UI_UX_DESIGNER_REFERENCE_GUIDE.md)** — Complete All-Pages UI/UX Reference Guide (All 8 Pages, Wireframes, 16 Screenshots, and Full Data Schemas).  
 
 ---
 
@@ -20,7 +21,12 @@ This directory contains the formal architectural, mathematical, and governance d
    - [Plain Text / Formatted Tables](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Technical_Whitepaper_A4.txt)
    - [HTML Source](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Technical_Whitepaper_A4.html)
 
-2. **Genesis DAO Council Sovereign Charter** (100-Seat Hard Cap, Phase 1 Exclusive 21-Day Window, `$300 / N` Instant Queue, 35% Treasury Pool, 5X Cap & 48h Re-Topup, 1–100 Vacancy Scan):
+2. **Genesis DAO Whitepaper** (Comprehensive Protocol Whitepaper, Sovereign Co-Ownership Architecture, What is Equora.Fi & DAO, Problem/Solution Matrix, $300/N Formula, Harmonic Proofs, 35% Day 22 Matrix Royalties, 5X Cap & 48h Window):
+   - [PDF Format](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Whitepaper_A4.pdf)
+   - [Markdown Source](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Whitepaper_A4.md)
+   - [HTML Source](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Whitepaper_A4.html)
+
+3. **Genesis DAO Council Sovereign Charter** (100-Seat Hard Cap, Phase 1 Exclusive 21-Day Window, `$300 / N` Instant Queue, 35% Treasury Pool, 5X Cap & 48h Re-Topup, 1–100 Vacancy Scan):
    - [PDF Format](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Charter_A4.pdf)
    - [Plain Text / Formatted Tables](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Charter_A4.txt)
    - [HTML Source](file:///c:/Users/Dell/Documents/codes/b-titan/docs/01_A4_Portrait_Whitepapers/Equora_Genesis_DAO_Charter_A4.html)

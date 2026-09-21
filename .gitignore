@@ -1,7 +1,13 @@
-# Dependencies
+# Dependencies & Package Managers
 node_modules/
+**/node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
+
+# Turborepo Cache
+.turbo/
+**/.turbo/
 
 # Hardhat & Contracts
 packages/hardhat/artifacts/
@@ -10,19 +16,28 @@ packages/hardhat/typechain-types/
 packages/hardhat/coverage/
 packages/hardhat/coverage.json
 
-# Next.js Build & Cache
+# Next.js Build & Outputs
+apps/web/.next/
+apps/web/out/
+apps/web/build/
 packages/nextjs/.next/
 packages/nextjs/out/
 packages/nextjs/build/
+
+# Compilation Artifacts & Types
 dist/
 **/dist/
 *.tsbuildinfo
+**/*.tsbuildinfo
 
 # Environment Variables & Secrets
 .env
 .env*.local
 *.env
 packages/hardhat/.env
+packages/database/.env
+apps/web/.env
+apps/web/.env.local
 packages/nextjs/.env
 packages/nextjs/.env.local
 
@@ -32,6 +47,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # OS Files
 .DS_Store

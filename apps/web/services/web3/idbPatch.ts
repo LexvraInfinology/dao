@@ -173,7 +173,9 @@ if (typeof window !== "undefined") {
           arg.includes("Proposal expired") ||
           arg.includes("Lit is in dev mode") ||
           arg.includes("ObjectMultiplex") ||
-          arg.includes("MaxListenersExceededWarning")
+          arg.includes("MaxListenersExceededWarning") ||
+          arg.includes("Invalid dappMetadata") ||
+          arg.includes("metamask://")
         ) {
           return true;
         }
@@ -182,7 +184,9 @@ if (typeof window !== "undefined") {
           arg.message?.includes("database connection is closing") ||
           arg.message?.includes("IDBDatabase") ||
           arg.stack?.includes("database connection is closing") ||
-          arg.stack?.includes("IDBDatabase")
+          arg.stack?.includes("IDBDatabase") ||
+          arg.message?.includes("Invalid dappMetadata") ||
+          arg.message?.includes("metamask://")
         ) {
           return true;
         }
@@ -192,7 +196,9 @@ if (typeof window !== "undefined") {
           if (
             str.includes("database connection is closing") ||
             str.includes("IDBDatabase") ||
-            str.includes("Proposal expired")
+            str.includes("Proposal expired") ||
+            str.includes("Invalid dappMetadata") ||
+            str.includes("metamask://")
           ) {
             return true;
           }

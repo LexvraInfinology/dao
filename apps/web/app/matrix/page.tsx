@@ -55,20 +55,20 @@ function MatrixContent() {
     <div className="flex flex-col w-full relative min-h-full font-body-md text-on-surface">
       {/* ─── Network Particles Background ─────────────────────────────────── */}
       <div className="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
           <g className="text-primary">
-            <circle cx="10%" cy="20%" r="2" className="animate-pulse" />
-            <circle cx="30%" cy="10%" r="3" className="animate-pulse" />
-            <circle cx="80%" cy="40%" r="2" className="animate-pulse" />
-            <circle cx="60%" cy="80%" r="4" className="animate-pulse" />
-            <circle cx="90%" cy="90%" r="2" className="animate-pulse" />
-            <circle cx="20%" cy="70%" r="3" className="animate-pulse" />
+            <circle cx="10" cy="20" r="0.5" className="animate-pulse" />
+            <circle cx="30" cy="10" r="0.75" className="animate-pulse" />
+            <circle cx="80" cy="40" r="0.5" className="animate-pulse" />
+            <circle cx="60" cy="80" r="1" className="animate-pulse" />
+            <circle cx="90" cy="90" r="0.5" className="animate-pulse" />
+            <circle cx="20" cy="70" r="0.75" className="animate-pulse" />
             <path
-              d="M 10% 20% L 30% 10% L 80% 40% L 90% 90% L 60% 80% L 20% 70% Z"
+              d="M 10 20 L 30 10 L 80 40 L 90 90 L 60 80 L 20 70 Z"
               fill="none"
               stroke="currentColor"
-              strokeWidth="0.5"
-              strokeDasharray="4 4"
+              strokeWidth="0.2"
+              strokeDasharray="1 1"
               className="opacity-20"
             />
           </g>

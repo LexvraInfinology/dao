@@ -113,8 +113,7 @@ export async function fetchDAOEvents(limit = 20): Promise<DAOEventItem[]> {
     if (!res.ok) return [];
     const json = await res.json();
     return json.success ? json.data : [];
-  } catch (err) {
-    console.warn("⚠️ [API] Failed to fetch DAO events:", err);
+  } catch {
     return [];
   }
 }

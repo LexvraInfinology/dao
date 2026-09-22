@@ -593,7 +593,7 @@ The Equora.Fi protocol comprises the following core Solidity contracts located i
 6. **`core/EquoraSalaryPool.sol`:**
    - Automated monthly recurring salary engine.
    - Settles on the 11th of every month.
-   - Splits the 40% pool into 4 equal 25% slices and computes progressive rank-stacking payouts across Alpha, Prime, Elite, and Crown.
+   - Distributes the 40% salary pool across 4 exclusive tiers: Alpha (10%), Prime (15%), Elite (25%), and Crown (50%). Achievers receive dividends strictly for their current highest milestone rank (non-stacking). Empty tier shares cascade dynamically to active tiers, and 100% rolls over if no achievers exist platform-wide.
 7. **`core/EquoraMagicBox.sol`:**
    - 3-Month (91-Day) time-locked accumulation reserve.
    - Manages user dashboard countdown widgets.

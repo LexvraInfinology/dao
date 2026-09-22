@@ -6,41 +6,44 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title EquoraSalaryPool
- * @dev Monthly salary distribution across 4 pool tiers: Alpha, Prime, Elite, Crown.
+ * @dev Monthly salary distribution across 4 exclusive pool tiers:
+ *        Alpha: 10% (1,000 BPS)
+ *        Prime: 15% (1,500 BPS)
+ *        Elite: 25% (2,500 BPS)
+ *        Crown: 50% (5,000 BPS)
  *
- * === POOL TIER STRUCTURE =====================================================
- *   Users progress through tiers based on cumulative salary deposit contributions.
- *   A "milestone event" = one creditUser() call from the vault (one deposit received).
+ * === POOL TIER MILESTONES ====================================================
+ *   Users progress through tiers based on cumulative milestone contributions:
+ *     Alpha Pool  — milestones >= 42   (14 nodes × 3 levels)
+ *     Prime Pool  — milestones >= 84   (14 nodes × 6 levels)
+ *     Elite Pool  — milestones >= 126  (14 nodes × 9 levels)
+ *     Crown Pool  — milestones >= 168  (14 nodes × 12 levels)
  *
- *   Alpha Pool  — milestones  1–42   (14 nodes × 3 cycles)
- *   Prime Pool  — milestones 43–84
- *   Elite Pool  — milestones 85–126
- *   Crown Pool  — milestones 127–168
+ * === EXCLUSIVE CURRENT-ACHIEVEMENT-ONLY MODEL =================================
+ *   Users receive payouts ONLY for their current highest tier:
+ *     Alpha Pool (10%):  split equally among current Alpha members only.
+ *     Prime Pool (15%):  split equally among current Prime members only.
+ *     Elite Pool (25%):  split equally among current Elite members only.
+ *     Crown Pool (50%):  split equally among current Crown members only.
  *
- * === CUMULATIVE LADDERING =====================================================
- *   Unlike a simple exclusive split, higher tier members receive from ALL lower pools:
+ *   When a user advances from Alpha to Prime, they are removed from Alpha
+ *   and added to Prime, ensuring zero double-dipping or multi-pool dilution.
  *
- *     Pool A (25%): distributed equally among ALL users with rank >= Alpha
- *                   (alpha + prime + elite + crown members together)
- *     Pool B (25%): distributed equally among users with rank >= Prime
- *                   (prime + elite + crown members together)
- *     Pool C (25%): distributed equally among users with rank >= Elite
- *                   (elite + crown members together)
- *     Pool D (25%): distributed equally among Crown members ONLY
- *
- *   Example: A Crown member receives a share from ALL 4 pools.
- *            An Elite member receives from Pool A, B, and C (3 pools).
- *            A Prime member receives from Pool A and B (2 pools).
- *            An Alpha member receives from Pool A only (1 pool).
- *
- *   This rewards higher achievers significantly more while still including
- *   all members in at least the base pool.
+ * === EMPTY TIER HANDLING (ZERO-ACHIEVER STRATEGY) =============================
+ *   1. All Tiers Empty (0 achievers platform-wide):
+ *      The entire pending balance remains in `pendingPoolBalance` and carries over
+ *      (rolls over) to the next month's settlement on the 11th. Zero funds are lost.
+ *   2. Higher Tiers Empty:
+ *      Unclaimed shares waterfall down to the highest active tier:
+ *        Crown (50%) -> Elite -> Prime -> Alpha
+ *      If lower tiers are empty (e.g. all members promoted to Prime/Elite):
+ *        Alpha (10%) -> Prime -> Elite -> Crown
+ *      Ensures 100% of accumulated funds are always distributed if any achievers exist.
  *
  * === AUTO-SETTLEMENT =========================================================
- *   - `settleMonthly()` callable on the 11th of every month (UTC).
- *   - Permissionless: anyone can trigger it once the condition is met.
- *   - Chainlink Automation will be the reliable caller in production.
- *   - Cannot be settled twice in the same month.
+ *   - `settleMonthly()` callable on or after the 11th of every month (UTC).
+ *   - Minimum 28 days interval between settlements (cannot double-settle).
+ *   - Permissionless: anyone or Chainlink Automation can trigger it.
  *
  * === MILESTONE REWARD TRIGGER ================================================
  *   When a user first reaches a new tier (Alpha/Prime/Elite/Crown), this contract
@@ -61,9 +64,12 @@ contract EquoraSalaryPool is ReentrancyGuard {
     uint256 public constant ELITE_THRESHOLD = 126;  // 126 IDs (9 levels × 14 slots) → Elite
     uint256 public constant CROWN_THRESHOLD = 168;  // 168 IDs (12 levels × 14 slots)→ Crown
 
-    // ─── Constants ─────────────────────────────────────────────────────────────
+    // ─── Constants (10% Alpha, 15% Prime, 25% Elite, 50% Crown = 100%) ────────
 
-    uint256 public constant POOL_SHARE_BPS  = 2500;  // 25% per pool (4 pools total)
+    uint256 public constant ALPHA_POOL_BPS  = 1000;  // 10%
+    uint256 public constant PRIME_POOL_BPS  = 1500;  // 15%
+    uint256 public constant ELITE_POOL_BPS  = 2500;  // 25%
+    uint256 public constant CROWN_POOL_BPS  = 5000;  // 50%
     uint256 public constant BPS_BASE        = 10000;
 
     uint256 public constant SETTLEMENT_DAY  = 11;
@@ -80,20 +86,20 @@ contract EquoraSalaryPool is ReentrancyGuard {
     mapping(address => uint256) public userMilestones;      // cumulative deposit events
     mapping(address => uint256) public pendingBalance;      // claimable salary
     mapping(address => uint256) public totalSalaryClaimed;  // lifetime claimed
+    mapping(address => PoolTier) public currentTier;        // user's exclusive active tier
 
-    // Pool membership arrays
-    // NOTE: Alpha array = ALL members that crossed alpha threshold
-    //       Prime array = members that crossed prime threshold
-    //       (These are NOT mutually exclusive — Crown is in alpha/prime/elite/crown all)
-    address[] public alphaMembers;  // all users with milestone >= 42
-    address[] public primeMembers;  // all users with milestone >= 84
-    address[] public eliteMembers;  // all users with milestone >= 126
-    address[] public crownMembers;  // all users with milestone >= 168
+    // Pool membership arrays (stores members EXCLUSIVELY in that specific tier)
+    address[] public alphaMembers;  // current exclusive Alpha members
+    address[] public primeMembers;  // current exclusive Prime members
+    address[] public eliteMembers;  // current exclusive Elite members
+    address[] public crownMembers;  // current exclusive Crown members
 
     mapping(address => bool) public inAlpha;
     mapping(address => bool) public inPrime;
     mapping(address => bool) public inElite;
     mapping(address => bool) public inCrown;
+
+    mapping(address => uint256) internal _tierIndex; // 0-indexed position in current tier array
 
     // Accumulated TROB balance ready for next settlement
     uint256 public pendingPoolBalance;
@@ -116,6 +122,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
         uint256 crownEligible,
         uint256 timestamp
     );
+    event MonthlySettlementRollover(uint256 rolloverAmount, uint256 timestamp);
     event SalaryClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event RewardPoolSet(address indexed rewardPool);
 
@@ -162,8 +169,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
         // Advance milestone and check for tier promotions
         _advanceMilestone(user);
 
-        PoolTier tier = _getTier(userMilestones[user]);
-        emit UserCredited(user, salaryContribution, tier, block.timestamp);
+        emit UserCredited(user, salaryContribution, currentTier[user], block.timestamp);
     }
 
     /**
@@ -176,37 +182,67 @@ contract EquoraSalaryPool is ReentrancyGuard {
     }
 
     /**
-     * @dev Internal: advance user milestone count and trigger tier promotions.
-     *      Each tier promotion triggers a one-time reward from EquoraRewardPool.
+     * @dev Internal: advance user milestone count and trigger exclusive tier promotions.
+     *      Each tier promotion notifies EquoraRewardPool for a one-time cash reward.
+     *      Maintains exclusive arrays via O(1) swap-and-pop.
      */
     function _advanceMilestone(address user) internal {
         userMilestones[user]++;
         uint256 count = userMilestones[user];
+        PoolTier oldTier = currentTier[user];
+        PoolTier newTier = _getTier(count);
 
-        if (count >= ALPHA_THRESHOLD && !inAlpha[user]) {
-            inAlpha[user] = true;
-            alphaMembers.push(user);
-            emit RankAchieved(user, PoolTier.ALPHA, count, block.timestamp);
-            _notifyRewardPool(user, uint8(PoolTier.ALPHA));
+        if (newTier != oldTier && newTier != PoolTier.NONE) {
+            currentTier[user] = newTier;
+
+            // Remove from previous tier array if user was promoted from a lower tier
+            if (oldTier == PoolTier.ALPHA) {
+                _removeFromTier(alphaMembers, user);
+                inAlpha[user] = false;
+            } else if (oldTier == PoolTier.PRIME) {
+                _removeFromTier(primeMembers, user);
+                inPrime[user] = false;
+            } else if (oldTier == PoolTier.ELITE) {
+                _removeFromTier(eliteMembers, user);
+                inElite[user] = false;
+            }
+
+            // Add to new tier array
+            if (newTier == PoolTier.ALPHA) {
+                _tierIndex[user] = alphaMembers.length;
+                alphaMembers.push(user);
+                inAlpha[user] = true;
+            } else if (newTier == PoolTier.PRIME) {
+                _tierIndex[user] = primeMembers.length;
+                primeMembers.push(user);
+                inPrime[user] = true;
+            } else if (newTier == PoolTier.ELITE) {
+                _tierIndex[user] = eliteMembers.length;
+                eliteMembers.push(user);
+                inElite[user] = true;
+            } else if (newTier == PoolTier.CROWN) {
+                _tierIndex[user] = crownMembers.length;
+                crownMembers.push(user);
+                inCrown[user] = true;
+            }
+
+            emit RankAchieved(user, newTier, count, block.timestamp);
+            _notifyRewardPool(user, uint8(newTier));
         }
-        if (count >= PRIME_THRESHOLD && !inPrime[user]) {
-            inPrime[user] = true;
-            primeMembers.push(user);
-            emit RankAchieved(user, PoolTier.PRIME, count, block.timestamp);
-            _notifyRewardPool(user, uint8(PoolTier.PRIME));
+    }
+
+    function _removeFromTier(address[] storage arr, address user) internal {
+        uint256 len = arr.length;
+        if (len == 0) return;
+        uint256 idx = _tierIndex[user];
+        uint256 lastIdx = len - 1;
+        if (idx != lastIdx) {
+            address lastUser = arr[lastIdx];
+            arr[idx] = lastUser;
+            _tierIndex[lastUser] = idx;
         }
-        if (count >= ELITE_THRESHOLD && !inElite[user]) {
-            inElite[user] = true;
-            eliteMembers.push(user);
-            emit RankAchieved(user, PoolTier.ELITE, count, block.timestamp);
-            _notifyRewardPool(user, uint8(PoolTier.ELITE));
-        }
-        if (count >= CROWN_THRESHOLD && !inCrown[user]) {
-            inCrown[user] = true;
-            crownMembers.push(user);
-            emit RankAchieved(user, PoolTier.CROWN, count, block.timestamp);
-            _notifyRewardPool(user, uint8(PoolTier.CROWN));
-        }
+        arr.pop();
+        delete _tierIndex[user];
     }
 
     /**
@@ -221,28 +257,38 @@ contract EquoraSalaryPool is ReentrancyGuard {
     // ─── Settlement (11th of Month) ────────────────────────────────────────────
 
     /**
-     * @dev Distribute the accumulated salary pool using CUMULATIVE LADDERING.
-     *      Callable by ANYONE (permissionless) on the 11th of each month.
+     * @dev Distribute the accumulated salary pool across the 4 exclusive tiers:
+     *      Alpha (10%), Prime (15%), Elite (25%), Crown (50%).
+     *      Callable by ANYONE (permissionless) on or after the 11th of each month.
      *      Cannot be called twice in the same calendar month.
      *
-     *      CUMULATIVE DISTRIBUTION:
-     *        Pool A (25%): shared among all Alpha+ members (alpha + prime + elite + crown)
-     *        Pool B (25%): shared among all Prime+ members (prime + elite + crown)
-     *        Pool C (25%): shared among all Elite+ members (elite + crown)
-     *        Pool D (25%): shared among Crown members only
+     *      EXCLUSIVE CURRENT-ACHIEVEMENT DISTRIBUTION:
+     *        Members receive payouts ONLY for their current tier.
      *
-     *      This means a Crown member gets a share from ALL 4 pools (effectively earning
-     *      proportionally much more than an Alpha-only member).
-     *
-     *      Rolldown: if a pool tier has 0 members, its 25% rolls down to the next
-     *      lower eligible tier. If all higher tiers are empty, Alpha gets everything.
+     *      ZERO-ACHIEVER HANDLING:
+     *        1. If ALL tiers are empty (0 achievers platform-wide):
+     *           100% of pendingPoolBalance rolls over to the next month's settlement.
+     *        2. If higher tiers are empty:
+     *           Unclaimed funds cascade downward to the highest populated tier
+     *           (Crown -> Elite -> Prime -> Alpha).
+     *        3. If lower tiers are empty:
+     *           Unclaimed funds cascade upward (Alpha -> Prime -> Elite -> Crown).
      */
     function settleMonthly() external nonReentrant {
         _checkSettlementWindow();
 
         uint256 totalPool = pendingPoolBalance;
+        uint256 totalAchievers = alphaMembers.length + primeMembers.length + eliteMembers.length + crownMembers.length;
 
-        // Mark settled even if pool is empty
+        // Condition 1: Zero achievers in any tier platform-wide -> Full rollover to next month
+        if (totalAchievers == 0) {
+            lastSettlementTimestamp = block.timestamp;
+            settlementCount++;
+            emit MonthlySettlementRollover(totalPool, block.timestamp);
+            return;
+        }
+
+        // Mark settled
         lastSettlementTimestamp = block.timestamp;
         settlementCount++;
 
@@ -250,28 +296,46 @@ contract EquoraSalaryPool is ReentrancyGuard {
 
         pendingPoolBalance = 0;
 
-        uint256 perPool    = totalPool / 4;
-        uint256 dustToAlpha = totalPool - (perPool * 4);
+        // Calculate initial tier shares: 10% Alpha, 15% Prime, 25% Elite, 50% Crown
+        uint256 alphaPool = (totalPool * ALPHA_POOL_BPS) / BPS_BASE;
+        uint256 primePool = (totalPool * PRIME_POOL_BPS) / BPS_BASE;
+        uint256 elitePool = (totalPool * ELITE_POOL_BPS) / BPS_BASE;
+        uint256 crownPool = (totalPool * CROWN_POOL_BPS) / BPS_BASE;
 
-        // ── Pool D: Crown members only ────────────────────────────────────────
-        // Crown is included in elite, prime, alpha arrays too (cumulative membership)
-        // But for Pool D distribution, we use crownMembers array specifically.
+        // Cascade top-down if higher tiers are empty
+        if (crownMembers.length == 0) {
+            elitePool += crownPool;
+            crownPool = 0;
+        }
+        if (eliteMembers.length == 0) {
+            primePool += elitePool;
+            elitePool = 0;
+        }
+        if (primeMembers.length == 0) {
+            alphaPool += primePool;
+            primePool = 0;
+        }
+
+        // Cascade bottom-up if lower tiers are empty (e.g., all members promoted)
+        if (alphaMembers.length == 0) {
+            if (primeMembers.length > 0) {
+                primePool += alphaPool;
+                alphaPool = 0;
+            } else if (eliteMembers.length > 0) {
+                elitePool += alphaPool;
+                alphaPool = 0;
+            } else if (crownMembers.length > 0) {
+                crownPool += alphaPool;
+                alphaPool = 0;
+            }
+        }
+
+        // Distribute each pool equally to current tier members
         uint256 distributed = 0;
-
-        // Pool D (25%) → Crown only
-        distributed += _distributePerPool(crownMembers, inCrown, perPool, alphaMembers, inAlpha);
-
-        // Pool C (25%) → Elite+ (Elite + Crown together)
-        // Build combined list: eliteMembers (which includes those NOT crown)
-        // Since our arrays are additive (inElite = true for elite, prime, crown),
-        // we use the full eliteMembers array which has everyone >= Elite threshold.
-        distributed += _distributePerPool(eliteMembers, inElite, perPool, alphaMembers, inAlpha);
-
-        // Pool B (25%) → Prime+ (Prime + Elite + Crown together)
-        distributed += _distributePerPool(primeMembers, inPrime, perPool, alphaMembers, inAlpha);
-
-        // Pool A (25% + dust) → Alpha+ (everyone with rank)
-        distributed += _distributePerPool(alphaMembers, inAlpha, perPool + dustToAlpha, alphaMembers, inAlpha);
+        distributed += _distributeToMembers(crownMembers, crownPool);
+        distributed += _distributeToMembers(eliteMembers, elitePool);
+        distributed += _distributeToMembers(primeMembers, primePool);
+        distributed += _distributeToMembers(alphaMembers, alphaPool);
 
         totalDistributed += distributed;
 
@@ -286,37 +350,16 @@ contract EquoraSalaryPool is ReentrancyGuard {
         );
     }
 
-    /**
-     * @dev Distribute `poolShare` equally among `members`.
-     *      If members array is empty, rolls down to `fallbackMembers`.
-     *      Returns total amount actually distributed.
-     */
-    function _distributePerPool(
-        address[] storage members,
-        mapping(address => bool) storage memberMap,
-        uint256 poolShare,
-        address[] storage fallbackMembers,
-        mapping(address => bool) storage fallbackMap
-    ) internal returns (uint256 distributed) {
-        if (poolShare == 0) return 0;
-
-        // Use primary members if available
-        address[] storage eligibleList = members.length > 0 ? members : fallbackMembers;
-        mapping(address => bool) storage eligibleMap = members.length > 0 ? memberMap : fallbackMap;
-
-        uint256 eligible = eligibleList.length;
-        if (eligible == 0) return 0;
-
-        uint256 perMember = poolShare / eligible;
+    function _distributeToMembers(address[] storage members, uint256 poolAmount) internal returns (uint256) {
+        uint256 count = members.length;
+        if (count == 0 || poolAmount == 0) return 0;
+        uint256 perMember = poolAmount / count;
         if (perMember == 0) return 0;
 
-        for (uint256 i = 0; i < eligible; i++) {
-            address m = eligibleList[i];
-            if (eligibleMap[m]) {
-                pendingBalance[m] += perMember;
-                distributed       += perMember;
-            }
+        for (uint256 i = 0; i < count; i++) {
+            pendingBalance[members[i]] += perMember;
         }
+        return perMember * count;
     }
 
     function _checkSettlementWindow() internal view {
@@ -325,9 +368,6 @@ contract EquoraSalaryPool is ReentrancyGuard {
         }
         uint256 dayOfMonth = _getDayOfMonth(block.timestamp);
         if (dayOfMonth < SETTLEMENT_DAY) revert NotSettlementDay();
-        // Allow settling any time from day 11 onward in the month
-        // (Chainlink automation calls on exact 11th, but we don't lock out day 12+
-        //  in case automation missed it — MIN_INTERVAL prevents double-settling)
     }
 
     /**
@@ -366,7 +406,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
     // ─── View Functions ────────────────────────────────────────────────────────
 
     function getUserTier(address user) external view returns (PoolTier) {
-        return _getTier(userMilestones[user]);
+        return currentTier[user] != PoolTier.NONE ? currentTier[user] : _getTier(userMilestones[user]);
     }
 
     function _getTier(uint256 milestones) internal pure returns (PoolTier) {
@@ -401,16 +441,10 @@ contract EquoraSalaryPool is ReentrancyGuard {
     }
 
     /**
-     * @dev Returns how many of the 4 salary pools a user qualifies for.
-     *      Alpha = 1 pool, Prime = 2 pools, Elite = 3 pools, Crown = 4 pools.
+     * @dev Returns 1 if user qualifies for a salary pool, 0 if none.
      */
     function getUserPoolCount(address user) external view returns (uint256) {
-        uint256 count = 0;
-        if (inAlpha[user]) count++;
-        if (inPrime[user]) count++;
-        if (inElite[user]) count++;
-        if (inCrown[user]) count++;
-        return count;
+        return currentTier[user] != PoolTier.NONE ? 1 : 0;
     }
 }
 

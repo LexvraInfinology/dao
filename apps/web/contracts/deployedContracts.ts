@@ -12,7 +12,7 @@
  *   EquoraDAOMembership — Soulbound DAO seat NFTs
  *   EquoraVault         — Central deposit router (35% DAO, 40% Salary, 10% Box, 15% Rewards)
  *   EquoraMatrix        — 12-slot, 14-node matrix engine (P4/P5/P14 → Vault)
- *   EquoraSalaryPool    — Monthly salary (cumulative tier laddering, 11th of month)
+ *   EquoraSalaryPool    — Monthly salary (exclusive tiers: Alpha 10%, Prime 15%, Elite 25%, Crown 50%, 11th of month)
  *   EquoraMagicBox      — Quarterly shared lottery pool ($0.50/$0.80/$1.20/$5.00 prizes)
  *   EquoraRewardPool    — Instant milestone rewards (Alpha 10%, Prime 15%, Elite 25%, Crown 50%)
  */

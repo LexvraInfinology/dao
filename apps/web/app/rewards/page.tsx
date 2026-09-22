@@ -40,7 +40,7 @@ function RewardsContent() {
       milestones: "Milestones 1–42",
       icon: "workspace_premium",
       desc: "Levels 1–3 Complete (42 Slots)",
-      perks: ["Alpha Pool Monthly Share (25% Base)", "Milestone 1 Cash Reward", "Soulbound Alpha Badge"],
+      perks: ["Alpha Salary Pool Share (10%)", "Milestone 1 Cash Reward", "Soulbound Alpha Badge"],
       achieved: currentTier >= 1,
       rewarded: milestone.status.rewardedAlpha,
     },
@@ -51,7 +51,7 @@ function RewardsContent() {
       milestones: "Milestones 43–84",
       icon: "military_tech",
       desc: "Levels 4–6 Complete (84 Slots)",
-      perks: ["Cumulative Alpha + Prime Payouts", "Milestone 2 Cash Reward", "Double Ladder Allocation"],
+      perks: ["Prime Salary Pool Share (15%)", "Milestone 2 Cash Reward", "Exclusive Current Tier Payout"],
       achieved: currentTier >= 2,
       rewarded: milestone.status.rewardedPrime,
     },
@@ -62,7 +62,7 @@ function RewardsContent() {
       milestones: "Milestones 85–126",
       icon: "local_police",
       desc: "Levels 7–9 Complete (126 Slots)",
-      perks: ["Triple Pool Cumulative Share (A + B + C)", "Milestone 3 Cash Reward", "Governance Weight Multiplier"],
+      perks: ["Elite Salary Pool Share (25%)", "Milestone 3 Cash Reward", "Exclusive Current Tier Payout"],
       achieved: currentTier >= 3,
       rewarded: milestone.status.rewardedElite,
     },
@@ -73,7 +73,7 @@ function RewardsContent() {
       milestones: "Milestones 127–168",
       icon: "diamond",
       desc: "Levels 10–12 Complete (168 Slots)",
-      perks: ["Quadruple Pool Share (A + B + C + D)", "Milestone 4 Top Cash Reward", "Full Protocol Royalty"],
+      perks: ["Crown Salary Apex Share (50%)", "Milestone 4 Top Cash Reward", "Apex Leadership Royalty"],
       achieved: currentTier >= 4,
       rewarded: milestone.status.rewardedCrown,
     },
@@ -102,7 +102,7 @@ function RewardsContent() {
               </span>
             </h1>
             <p className="font-body-lg text-sm sm:text-body-lg text-on-surface-variant max-w-3xl leading-relaxed">
-              Earn from our unpausable smart contract pools: cumulative monthly salary ladders, quarterly community Magic Box draws, and instant milestone payouts as you conquer matrix tiers.
+              Earn from our unpausable smart contract pools: exclusive monthly salary dividends, quarterly community Magic Box draws, and instant milestone payouts as you conquer matrix tiers.
             </p>
           </div>
 
@@ -132,7 +132,7 @@ function RewardsContent() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-label-md uppercase tracking-wider text-primary font-bold flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-                  Monthly Salary Ladder
+                  Monthly Salary Pool
                 </span>
                 <span className="text-[10px] font-code px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
                   11th UTC Settlement
@@ -146,7 +146,7 @@ function RewardsContent() {
                 </div>
               </div>
               <p className="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
-                Cumulative multi-tier earnings. Higher ranks earn simultaneously from all subordinate pools.
+                Exclusive tier earnings (Alpha 10%, Prime 15%, Elite 25%, Crown 50%). Achievers receive dividends strictly from their current highest milestone tier.
               </p>
             </div>
             <button
@@ -233,7 +233,7 @@ function RewardsContent() {
             <div>
               <h2 className="text-xl font-headline-lg font-bold text-on-surface">Official Pool Cards</h2>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Complete matrix levels to advance through the salary tiers. Higher tiers participate in lower pools concurrently.
+                Complete matrix levels to advance through salary tiers. Members receive monthly dividends from their current highest achieved tier only.
               </p>
             </div>
             <span className="text-xs font-code text-tertiary">
@@ -318,26 +318,26 @@ function RewardsContent() {
           </div>
         </div>
 
-        {/* ─── Cumulative Laddering Explanation Banner ─────────────────────── */}
+        {/* ─── Exclusive Tier Salary System Explanation Banner ─────────────────────── */}
         <div className="bg-surface-container rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xl relative overflow-hidden border border-outline-variant/20">
           <div className="absolute -right-24 -top-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute left-0 bottom-0 w-full h-1 bg-gradient-to-r from-primary via-tertiary to-surface-variant" />
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center relative z-10">
             <div className="flex-1 flex flex-col gap-3">
               <span className="text-xs uppercase tracking-widest text-primary font-code font-bold">
-                AUTONOMOUS CUMULATIVE SALARY SYSTEM
+                AUTONOMOUS EXCLUSIVE SALARY SYSTEM
               </span>
               <h2 className="text-2xl sm:text-headline-lg font-headline-lg font-bold text-on-surface">
-                How Laddering Distributions Work
+                How Monthly Salary Distributions Work
               </h2>
               <p className="text-xs sm:text-body-md text-on-surface-variant leading-relaxed">
-                Equora.Fi utilizes a non-exclusive cumulative ladder. A Crown member participates in and receives shares from all 4 pools simultaneously (Pool A, Pool B, Pool C, and Pool D). Elite receives from 3 pools; Prime from 2 pools; and Alpha from 1 pool. Settleable permissionlessly on the 11th of each month.
+                Equora.Fi distributes 40% of protocol volume on the 11th of each month across 4 exclusive achievement tiers: <strong>Alpha (10%)</strong>, <strong>Prime (15%)</strong>, <strong>Elite (25%)</strong>, and <strong>Crown (50%)</strong>. Members receive salary strictly for their current highest milestone rank without multi-pool dilution. If any tier has zero achievers, its allocation dynamically cascades to active tiers. If zero achievers exist platform-wide, 100% of the funds roll over to the next month without loss.
               </p>
             </div>
             <div className="flex gap-6 sm:gap-8 items-center shrink-0">
               <div className="flex flex-col items-center">
-                <div className="text-2xl sm:text-3xl font-code font-black text-tertiary">4 Tiers</div>
-                <div className="text-xs text-outline font-label-md uppercase tracking-wider mt-1">Cumulative</div>
+                <div className="text-2xl sm:text-3xl font-code font-black text-tertiary">Exclusive</div>
+                <div className="text-xs text-outline font-label-md uppercase tracking-wider mt-1">Current Tier</div>
               </div>
               <div className="w-px h-12 bg-outline-variant/30" />
               <div className="flex flex-col items-center">

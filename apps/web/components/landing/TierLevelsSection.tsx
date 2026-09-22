@@ -90,7 +90,7 @@ const TIERS: TierLevel[] = [
     bgGradient: "from-purple-500/15 via-indigo-500/10 to-white",
     features: [
       "100-Seat Genesis DAO Council eligibility",
-      "Crown Monthly Salary Pool (Top 25% allocation)",
+      "Crown Monthly Salary Pool (Apex 50% allocation)",
       "Perpetual 15% share of all network matrix recycles",
       "2.5x maximum dynamic rate multiplier",
     ],

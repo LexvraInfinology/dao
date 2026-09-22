@@ -1,8 +1,11 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useTokenBalance } from "../../hooks/equora/useTokenBalance";
 
 export function WalletConnectButton() {
+  const { formattedRounded: tokenBalanceFormatted, symbol } = useTokenBalance();
+
   return (
     <ConnectButton.Custom>
       {({
@@ -47,6 +50,19 @@ export function WalletConnectButton() {
 
         return (
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Live Token Balance Display */}
+            <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 text-[11px] font-code">
+              {account.displayBalance && (
+                <span className="text-on-surface-variant font-medium flex items-center gap-1" title="Native Gas (ETH)">
+                  <span>⛽</span> {account.displayBalance}
+                </span>
+              )}
+              <span className="w-px h-3 bg-outline-variant/30" />
+              <span className="text-primary font-bold flex items-center gap-1" title="Protocol Payment Token">
+                <span>🪙</span> {tokenBalanceFormatted} {symbol}
+              </span>
+            </div>
+
             {/* Chain Switcher Button */}
             <button
               id="chain-switcher-btn"

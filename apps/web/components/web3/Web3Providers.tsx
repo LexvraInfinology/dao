@@ -1,8 +1,8 @@
 "use client";
 
 import "../../services/web3/idbPatch";
-import { ReactNode } from "react";
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { ReactNode, useState, useEffect } from "react";
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { Toaster } from "react-hot-toast";
@@ -48,12 +48,30 @@ const appInfo = {
 };
 
 export function Web3Providers({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const queryClient = getQueryClient();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-code text-on-surface-variant uppercase tracking-widest">
+            Loading Equora.Fi...
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider appInfo={appInfo}>
+        <RainbowKitProvider appInfo={appInfo} theme={darkTheme()}>
           <ThemeProvider>
             <I18nProvider>
               <AuthProvider>

@@ -40,7 +40,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@100..900&display=swap"
         />
       </head>
-      <body className="bg-background text-on-surface">
+      <body className="bg-background text-on-surface" suppressHydrationWarning>
         <Web3Providers>
           <EquoraAppShell>{children}</EquoraAppShell>
         </Web3Providers>

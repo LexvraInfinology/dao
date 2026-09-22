@@ -33,7 +33,7 @@ import "../interfaces/IEquoraRegistry.sol";
  *   - If 15 days pass with no new join, the DAO queue expires permanently.
  *
  * === ELIGIBILITY =============================================================
- *   - Caller must have >= 2 direct referrals (via EquoraRegistry.isQualified())
+ *   - Open to any participant (0 referrals required, no sponsor/referral ID needed)
  *
  * === PRESERVED ===============================================================
  *   - Soulbound ERC-721 per seat (EquoraDAOMembership NFT)

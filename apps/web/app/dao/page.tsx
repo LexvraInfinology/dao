@@ -8,7 +8,6 @@ import { useDAOData } from "../../hooks/equora/useDAOData";
 import { useJoinDAO } from "../../hooks/equora/useJoinDAO";
 import { useClaimFallback } from "../../hooks/equora/useClaimFallback";
 import { useClaimPoolShare } from "../../hooks/equora/useClaimPoolShare";
-import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import { DAOHistoryTable } from "../../components/dao/DAOHistoryTable";
 import { notification } from "../../utils/scaffold-eth/notification";
 import { AuthGuard } from "../../components/auth/AuthGuard";
@@ -31,23 +30,7 @@ export default function DAOPage() {
 
 function DAOContent() {
   const { address } = useAccount();
-  const { profile } = useUserProfile(address as `0x${string}`);
-  const [copied, setCopied] = useState(false);
   const [calcSeat, setCalcSeat] = useState<number>(2);
-
-  const referralCode = profile?.referralCode || (profile?.userId ? profile.userId + 9999 : 10000);
-  const referralLink = typeof window !== "undefined"
-    ? `${window.location.origin}/register?ref=${referralCode}`
-    : `https://equora.fi/register?ref=${referralCode}`;
-
-  const handleCopyLink = () => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      notification.success("Referral link copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
   const {
     totalMembers,
     isFull,
@@ -118,53 +101,75 @@ function DAOContent() {
         </div>
       </section>
 
-      {/* ─── Personal Genesis Referral & Leader Identity Card (Adapted from Equora UX) ──── */}
+      {/* ─── Genesis Council Governance & Identity Card ────────────────────── */}
       <section className="px-4 sm:px-8 mb-6 relative z-10">
         <div className="bg-surface-container/60 backdrop-blur-xl rounded-2xl p-5 sm:p-6 border border-tertiary/25 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-tertiary/20 to-primary/20 border border-tertiary/40 flex items-center justify-center shrink-0 shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-tertiary/25 to-primary/25 border border-tertiary/40 flex items-center justify-center shrink-0 shadow-inner">
               <span className="text-2xl">👑</span>
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-label-md uppercase tracking-wider text-tertiary font-bold">
-                  Genesis Member Identity
+                  Genesis Council Identity
                 </span>
-                <span className="text-[11px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-code font-bold">
-                  5-Digit ID: #{referralCode}
-                </span>
-                {isMember && (
-                  <span className="text-[10px] bg-tertiary/20 text-tertiary border border-tertiary/30 px-2 py-0.5 rounded-full font-bold">
-                    Council Seat #{userSeat}
+                {isMember ? (
+                  <>
+                    <span className="text-[11px] bg-tertiary/20 text-tertiary border border-tertiary/30 px-2.5 py-0.5 rounded-full font-code font-bold">
+                      Council Seat #{userSeat}
+                    </span>
+                    <span className="text-[11px] bg-green-500/20 text-green-400 border border-green-500/30 px-2.5 py-0.5 rounded-full font-code font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      1 Vote (1.0% Power)
+                    </span>
+                    <span className="text-[11px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-code font-bold">
+                      Soulbound NFT #{userSeat}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[11px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-code font-bold">
+                    Open Participation • 0 Referrals Required
                   </span>
                 )}
               </div>
               <h3 className="text-lg font-bold text-on-surface mt-1 flex items-center gap-2">
-                <span>{isMember ? "Genesis Council Seat Holder" : "Equora Platform Participant"}</span>
-                {isMember && <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded font-mono">1 Vote (1.0%)</span>}
+                <span>{isMember ? `Genesis Council Seat #${userSeat} Holder` : "Prospective Council Member"}</span>
               </h3>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                Direct Referrals: <span className="text-primary font-bold">{profile?.directReferralCount || 0}</span> •
-                Matrix Qualified: <span className={profile?.isQualified ? "text-green-400 font-bold" : "text-amber-400 font-bold"}>{profile?.isQualified ? "Qualified (✓)" : "0 / 2 Referrals"}</span>
+              <p className="text-xs text-on-surface-variant mt-0.5 flex flex-wrap items-center gap-x-2">
+                <span className="text-tertiary font-bold">0 Referrals Required</span>
+                <span>•</span>
+                <span>100% Direct Push Dividends</span>
+                <span>•</span>
+                <span>35% Matrix Volume Pool Beneficiary</span>
+                <span>•</span>
+                <span>5X Lifetime Cap Protection</span>
               </p>
             </div>
           </div>
 
-          {/* Referral Link & Copy Action */}
-          <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="px-3.5 py-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 font-code text-xs text-on-surface-variant flex items-center gap-2 select-all overflow-hidden max-w-md">
-              <span className="material-symbols-outlined text-[16px] text-tertiary shrink-0">link</span>
-              <span className="truncate">{referralLink}</span>
-            </div>
-            <button
-              onClick={handleCopyLink}
-              className="px-5 py-2.5 bg-tertiary hover:bg-tertiary/90 text-on-tertiary rounded-xl text-xs font-bold font-label-md uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 shadow-md active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {copied ? "check" : "content_copy"}
+          {/* Council Status & Quick Info */}
+          <div className="w-full md:w-auto flex flex-wrap items-center gap-3">
+            <div className="px-3.5 py-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 font-code text-xs text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] text-tertiary shrink-0">
+                {isMember ? "verified_user" : "how_to_reg"}
               </span>
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
-            </button>
+              <span>{isMember ? "Lifetime Governance Active" : `${remainingPositions} of 100 Seats Available`}</span>
+            </div>
+            {isMember ? (
+              <div className="px-4 py-2.5 bg-tertiary/15 text-tertiary border border-tertiary/30 rounded-xl text-xs font-bold font-label-md uppercase tracking-wider flex items-center gap-2 shadow-sm">
+                <span className="material-symbols-outlined text-[16px]">gavel</span>
+                <span>Council Member</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleJoinDAO}
+                disabled={isJoining || isApproving || isFull}
+                className="px-5 py-2.5 bg-tertiary hover:bg-tertiary/90 text-on-tertiary rounded-xl text-xs font-bold font-label-md uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 shadow-md active:scale-95 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">login</span>
+                <span>{isJoining ? "Joining..." : isApproving ? "Approving..." : "Join Council (300 TROB)"}</span>
+              </button>
+            )}
           </div>
         </div>
       </section>

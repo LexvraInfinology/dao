@@ -16,7 +16,7 @@ const scaffoldConfig = defineConfig({
   // - Hardhat (31337) for local testing
   // - BSC Testnet (97) for staging
   // - BSC Mainnet (56) for production
-  targetNetworks: [chains.bscTestnet, chains.bsc, chains.hardhat],
+  targetNetworks: [chains.hardhat, chains.bscTestnet, chains.bsc],
 
   // Polling interval for reading contract data (ms)
   pollingInterval: 15000,

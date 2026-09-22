@@ -11,16 +11,24 @@
 
 if (typeof window !== "undefined") {
   // 1. Safe interceptor for IDBDatabase.prototype.transaction
-  if (typeof IDBDatabase !== "undefined" && IDBDatabase.prototype) {
+  if (
+    typeof IDBDatabase !== "undefined" &&
+    IDBDatabase.prototype &&
+    typeof IDBDatabase.prototype.transaction === "function" &&
+    !(IDBDatabase.prototype.transaction as any)?.__isPatched
+  ) {
     const origTransaction = IDBDatabase.prototype.transaction;
 
-    IDBDatabase.prototype.transaction = function (
+    const patchedTransaction = function (
+      this: any,
       storeNames: any,
       mode?: any,
       options?: any
     ) {
       try {
-        return origTransaction.call(this, storeNames, mode, options);
+        if (typeof origTransaction === "function") {
+          return origTransaction.call(this, storeNames, mode, options);
+        }
       } catch (err: any) {
         const isClosingError =
           err?.name === "InvalidStateError" ||
@@ -102,6 +110,9 @@ if (typeof window !== "undefined") {
         throw err;
       }
     };
+
+    (patchedTransaction as any).__isPatched = true;
+    IDBDatabase.prototype.transaction = patchedTransaction;
   }
 
   // 2. Global unhandledrejection listener to suppress transient Web3/IDB rejections
@@ -193,14 +204,22 @@ if (typeof window !== "undefined") {
 
   const origWarn = console.warn;
   console.warn = (...args: any[]) => {
-    if (shouldSuppress(args)) return;
-    origWarn(...args);
+    try {
+      if (shouldSuppress(args)) return;
+      if (typeof origWarn === "function") {
+        origWarn.apply(console, args);
+      }
+    } catch {}
   };
 
   const origError = console.error;
   console.error = (...args: any[]) => {
-    if (shouldSuppress(args)) return;
-    origError(...args);
+    try {
+      if (shouldSuppress(args)) return;
+      if (typeof origError === "function") {
+        origError.apply(console, args);
+      }
+    } catch {}
   };
 }
 

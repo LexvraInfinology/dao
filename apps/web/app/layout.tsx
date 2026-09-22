@@ -1,4 +1,3 @@
-import "../services/web3/idbPatch";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Web3Providers } from "../components/web3/Web3Providers";

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAccount, useSignMessage, useChainId, useDisconnect } from "wagmi";
 import { useUserProfile } from "../hooks/equora/useUserProfile";
 import { notification } from "../utils/scaffold-eth/notification";
+import { siteConfig } from "../config/env";
 
 interface AuthUser {
   address: string;
@@ -134,7 +135,7 @@ Wallet: ${address}
 Chain ID: ${chainId}
 Nonce: ${nonce}
 Timestamp: ${timestamp}
-URI: ${typeof window !== "undefined" ? window.location.origin : "https://equora.fi"}
+URI: ${typeof window !== "undefined" ? window.location.origin : siteConfig.appUrl}
 
 Notice: This signature is gas-free and does not trigger any blockchain transaction.`;
 

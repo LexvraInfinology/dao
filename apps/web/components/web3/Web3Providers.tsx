@@ -10,6 +10,7 @@ import { wagmiConfig } from "../../services/web3/wagmiConfig";
 import { AuthProvider } from "../../context/AuthContext";
 import { ThemeProvider } from "../../services/theme/ThemeContext";
 import { I18nProvider } from "../../services/i18n/I18nContext";
+import { siteConfig } from "../../config/env";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -44,7 +45,7 @@ function getQueryClient() {
 
 const appInfo = {
   appName: "EQUORA_Fi Protocol",
-  learnMoreUrl: "https://equora.fi",
+  learnMoreUrl: siteConfig.matrixUrl,
 };
 
 export function Web3Providers({ children }: { children: ReactNode }) {

@@ -12,6 +12,7 @@ import { useClaimPoolShare } from "../../hooks/equora/useClaimPoolShare";
 import { DAOHistoryTable } from "../../components/dao/DAOHistoryTable";
 import { AuthGuard } from "../../components/auth/AuthGuard";
 import { notification } from "../../utils/scaffold-eth/notification";
+import { siteConfig } from "../../config/env";
 
 const MATRIX_LEVELS_CONFIG = [
   { id: 1, cost: "30", multiplier: "1.0x" },
@@ -55,7 +56,7 @@ function DashboardContent() {
   const referralCode = profile?.referralCode || (profile?.userId ? profile.userId + 9999 : 10000);
   const referralLink = typeof window !== "undefined"
     ? `${window.location.origin}/register?ref=${referralCode}`
-    : `https://equora.fi/register?ref=${referralCode}`;
+    : `${siteConfig.matrixUrl}/register?ref=${referralCode}`;
 
   const handleCopyLink = () => {
     if (navigator?.clipboard) {

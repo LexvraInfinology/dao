@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { formatAddress } from "../../utils/equora/formatters";
 import { useUserProfile } from "../../hooks/equora/useUserProfile";
 import { AuthGuard } from "../../components/auth/AuthGuard";
+import { siteConfig } from "../../config/env";
 
 export default function ReferralsPage() {
   return (
@@ -25,7 +26,7 @@ function ReferralsContent() {
   const referralCode = profile?.referralCode || (profile?.userId ? profile.userId + 9999 : 10000);
   const referralUrl = typeof window !== "undefined"
     ? `${window.location.origin}/register?ref=${referralCode}`
-    : `https://equora.fi/register?ref=${referralCode}`;
+    : `${siteConfig.matrixUrl}/register?ref=${referralCode}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralUrl);

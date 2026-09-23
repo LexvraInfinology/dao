@@ -3,8 +3,9 @@
  * Connects frontend to the Express backend (apps/api) with graceful offline fallbacks.
  */
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { siteConfig } from "../../config/env";
+
+export const API_BASE_URL = siteConfig.apiUrl;
 
 export interface DAOStatsResponse {
   memberCount: number;

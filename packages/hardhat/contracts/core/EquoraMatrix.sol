@@ -428,30 +428,36 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
 
         } else if (position == 7 || position == 10) {
-            // P7, P10 → Downline 1 (node at index 0), fallback to Owner
-            address dl1       = userSlots[matrixOwner][slot].nodes[0];
-            address recipient = _resolveSpillover(dl1, matrixOwner);
-            bool    wasFallback = (recipient == matrixOwner);
-            if (wasFallback) {
-                _creditOwner(matrixOwner, slot, cost);
+            // P7, P10 → Downline 1 (node at index 0); if unqualified, reroute to Protocol Pools
+            address dl1 = userSlots[matrixOwner][slot].nodes[0];
+            if (dl1 != address(0) && registry.isQualified(dl1)) {
+                userBalance[dl1] += cost;
+                totalEarned[dl1] += cost;
+                emit SpilloverResolved(matrixOwner, dl1, p, false);
+                emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
             } else {
-                _creditUser(recipient, matrixOwner, cost);
+                // Ineligible / Not Qualified -> Reroutes back to Protocol Pools!
+                _forwardToVault(matrixOwner, cost);
+                emit SpilloverResolved(matrixOwner, vaultContract, p, true);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
+                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
             }
-            emit SpilloverResolved(matrixOwner, recipient, p, wasFallback);
-            emit DistributionExecuted(recipient, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
 
         } else if (position == 13) {
-            // P13 → Downline 2 (node at index 1), fallback to Owner
-            address dl2       = userSlots[matrixOwner][slot].nodes[1];
-            address recipient = _resolveSpillover(dl2, matrixOwner);
-            bool    wasFallback = (recipient == matrixOwner);
-            if (wasFallback) {
-                _creditOwner(matrixOwner, slot, cost);
+            // P13 → Downline 2 (node at index 1); if unqualified, reroute to Protocol Pools
+            address dl2 = userSlots[matrixOwner][slot].nodes[1];
+            if (dl2 != address(0) && registry.isQualified(dl2)) {
+                userBalance[dl2] += cost;
+                totalEarned[dl2] += cost;
+                emit SpilloverResolved(matrixOwner, dl2, p, false);
+                emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
             } else {
-                _creditUser(recipient, matrixOwner, cost);
+                // Ineligible / Not Qualified -> Reroutes back to Protocol Pools!
+                _forwardToVault(matrixOwner, cost);
+                emit SpilloverResolved(matrixOwner, vaultContract, p, true);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
+                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
             }
-            emit SpilloverResolved(matrixOwner, recipient, p, wasFallback);
-            emit DistributionExecuted(recipient, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
         }
     }
 
@@ -461,12 +467,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Credit user balance with qualification check.
-     *      Unqualified recipient → fallback to matrixOwner (never root).
+     *      Unqualified recipient → reroutes directly to Protocol Pools via EquoraVault.
      */
     function _creditUser(address user, address fallbackOwner, uint256 amount) internal {
-        address recipient = registry.isQualified(user) ? user : fallbackOwner;
-        userBalance[recipient] += amount;
-        totalEarned[recipient] += amount;
+        if (registry.isQualified(user)) {
+            userBalance[user] += amount;
+            totalEarned[user] += amount;
+        } else {
+            // Ineligible / Did not meet referral criteria -> reroutes to Protocol Pools!
+            _forwardToVault(fallbackOwner, amount);
+        }
     }
 
     /**
@@ -476,19 +486,6 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         userBalance[matrixOwner] += amount;
         totalEarned[matrixOwner] += amount;
         userSlots[matrixOwner][slot].totalEarned += amount;
-    }
-
-    /**
-     * @dev Resolve spillover recipient.
-     *      Returns downline if exists and qualified; else returns matrixOwner.
-     */
-    function _resolveSpillover(
-        address downline,
-        address matrixOwner
-    ) internal view returns (address) {
-        if (downline == address(0))          return matrixOwner;
-        if (registry.isQualified(downline)) return downline;
-        return matrixOwner;
     }
 
     /**

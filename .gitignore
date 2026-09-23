@@ -60,3 +60,16 @@ Thumbs.db
 .idea/
 .agents/
 .gemini/
+
+# Temporary, Presentation Assets & Local Guides
+dist/
+**/dist/
+*.pptx
+presentation_assets/
+scripts/make_presentation.py
+scripts/generate_matrix_retail_guide.js
+scripts/generate_matrix_ui_ux_pdf.js
+DEVOPS_DEPLOYMENT_INSTRUCTIONS.md
+docs/Equora_Matrix_UI_UX_Designer_Guide.pdf
+docs/Equora_Matrix_UI_UX_Designer_Guide.html
+packages/hardhat/scripts/fund-user.ts

@@ -1,7 +1,0 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M24 43C34.4934 43 43 34.4934 43 24C43 13.5066 34.4934 5 24 5C13.5066 5 5 13.5066 5 24C5 34.4934 13.5066 43 24 43Z" stroke="#2563EB" stroke-width="2"/>
-<path d="M24 43C29.5228 43 34 34.4934 34 24C34 13.5066 29.5228 5 24 5C18.4772 5 14 13.5066 14 24C14 34.4934 18.4772 43 24 43Z" stroke="#2563EB" stroke-width="1.5"/>
-<path d="M5 24H43" stroke="#2563EB" stroke-width="1.5"/>
-<path d="M5 16H43" stroke="#2563EB"/>
-<path d="M5 32H43" stroke="#2563EB"/>
-</svg>

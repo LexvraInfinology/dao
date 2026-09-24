@@ -11,7 +11,10 @@
   "dependencies": {
     "@equora/database": "workspace:*",
     "@equora/logger": "workspace:*",
+    "@equora/services": "workspace:*",
+    "@equora/trpc": "workspace:*",
     "@equora/types": "workspace:*",
+    "@trpc/server": "^10.45.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
@@ -19,7 +22,8 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "siwe": "^2.3.2",
-    "viem": "^2.21.53"
+    "viem": "^2.21.53",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@equora/tsconfig": "workspace:*",

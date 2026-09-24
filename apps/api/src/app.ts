@@ -1,15 +1,10 @@
 import express, { Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import * as trpcExpress from "@trpc/server/adapters/express";
+import { serverRouter, createContext } from "@equora/trpc";
 import { config } from "./config";
 import { errorHandler } from "./middleware/errorHandler";
-import { authRouter } from "./modules/auth/auth.controller";
-import { usersRouter } from "./modules/users/users.controller";
-import { daoRouter } from "./modules/dao/dao.controller";
-import { matrixRouter } from "./modules/matrix/matrix.controller";
-import { leaderboardRouter } from "./modules/leaderboard/leaderboard.controller";
-import { rewardsRouter } from "./modules/rewards/rewards.controller";
-import { statsRouter } from "./modules/stats/stats.controller";
 
 export function createApp(): Express {
   const app = express();
@@ -43,6 +38,18 @@ export function createApp(): Express {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Root API Information & Discovery
+  app.get("/", (req, res) => {
+    res.json({
+      message: "EQUORA Protocol API is up and running...",
+      service: "@equora/api",
+      version: "1.0.0",
+      trpcEndpoint: "/trpc",
+      healthEndpoint: "/health",
+      chainId: config.blockchain.chainId,
+    });
+  });
+
   // Health check
   app.get("/health", (req, res) => {
     res.json({
@@ -53,14 +60,14 @@ export function createApp(): Express {
     });
   });
 
-  // API Routes
-  app.use("/api/auth", authRouter);
-  app.use("/api/users", usersRouter);
-  app.use("/api/dao", daoRouter);
-  app.use("/api/matrix", matrixRouter);
-  app.use("/api/leaderboard", leaderboardRouter);
-  app.use("/api/rewards", rewardsRouter);
-  app.use("/api/stats", statsRouter);
+  // tRPC Express Middleware (mounted on /trpc)
+  app.use(
+    "/trpc",
+    trpcExpress.createExpressMiddleware({
+      router: serverRouter,
+      createContext,
+    })
+  );
 
   // 404 handler
   app.use((req, res) => {

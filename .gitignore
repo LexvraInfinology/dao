@@ -17,9 +17,14 @@ packages/hardhat/coverage/
 packages/hardhat/coverage.json
 
 # Next.js Build & Outputs
+.next/
+**/.next/
 apps/web/.next/
 apps/web/out/
 apps/web/build/
+apps/web-dao/.next/
+apps/web-dao/out/
+apps/web-dao/build/
 packages/nextjs/.next/
 packages/nextjs/out/
 packages/nextjs/build/

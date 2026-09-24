@@ -1,0 +1,68 @@
+'use client';
+
+import React from 'react';
+import { Share2, Lock, ChevronRight } from 'lucide-react';
+
+export const IncomeChannelsCard: React.FC = () => {
+  return (
+    <div className="space-y-3">
+      {/* Section Title */}
+      <h3 className="text-base font-bold font-jakarta text-[#071A4A]">
+        Income Channels
+      </h3>
+
+      {/* List of Channels */}
+      <div className="space-y-2.5">
+        {/* Item 1: 300 / N Distributions */}
+        <div className="bg-white border border-[#E2ECF9] rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-blue-200 transition-all cursor-pointer">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE]/40 text-[#155EEF] flex items-center justify-center shrink-0">
+              <Share2 className="w-4 h-4" />
+            </div>
+
+            <div className="space-y-0.5 min-w-0">
+              <div className="text-xs sm:text-sm font-bold font-jakarta text-[#071A4A] truncate">
+                1. 300 / N Distributions
+              </div>
+              <div className="text-xs font-bold font-jakarta text-[#155EEF]">
+                $512.40 TROB
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#059669]">
+              Active
+            </span>
+            <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+          </div>
+        </div>
+
+        {/* Item 2: Retail Matrix Royalties */}
+        <div className="bg-white border border-[#E2ECF9] rounded-2xl p-3.5 sm:p-4 flex items-center justify-between shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-slate-300 transition-all cursor-pointer">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[#94A3B8] flex items-center justify-center shrink-0">
+              <Lock className="w-4 h-4" />
+            </div>
+
+            <div className="space-y-0.5 min-w-0">
+              <div className="text-xs sm:text-sm font-bold font-jakarta text-[#475569] truncate">
+                2. Retail Matrix Royalties
+              </div>
+              <div className="text-xs font-medium font-jakarta text-[#94A3B8]">
+                Coming on Day 22
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#64748B]">
+              Locked
+            </span>
+            <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

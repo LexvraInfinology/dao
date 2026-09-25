@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 export const LandingNavbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -37,14 +38,11 @@ export const LandingNavbar: React.FC = () => {
         <div className="flex items-center justify-between h-12 gap-2">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0052FF] flex items-center justify-center shadow-sm shrink-0">
-              <svg width="16" height="16" className="sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 8L16 12L12 16L8 12L12 8Z" fill="white"/>
-              </svg>
+            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 flex items-center justify-center">
+              <EquoraLogo className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
             </div>
             <span className="text-[15px] sm:text-[17px] font-bold font-inter tracking-tight text-[#0F172A] shrink-0">
-              EQUORA<span className="text-[#0052FF]">_FI</span>
+              EQUORA<span className="text-[#155EEF]">_FI</span>
             </span>
           </Link>
 

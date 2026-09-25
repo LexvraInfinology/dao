@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X, Wallet, ExternalLink } from 'lucide-react';
 import { LANDING_NAV_ITEMS } from '@/data/navigation';
 import { WalletModal } from '@/components/ui/WalletModal';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 export const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -33,10 +34,8 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-dark to-brand flex items-center justify-center shadow-sm">
-                <div className="w-4 h-4 border-2 border-white rotate-45 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-white" />
-                </div>
+              <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+                <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
               </div>
               <span className="text-xl font-bold font-inter tracking-tight text-navy">
                 EQUORA<span className="text-brand">_Fi</span>

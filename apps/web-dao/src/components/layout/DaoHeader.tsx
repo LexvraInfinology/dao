@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
 import { usePathname } from 'next/navigation';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 export const DaoHeader: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -33,12 +34,8 @@ export const DaoHeader: React.FC = () => {
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Mobile Brand Logo */}
           <Link href="/dao" className="lg:hidden flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-xs flex items-center justify-center shrink-0 border border-[#E2ECF9] bg-white">
-              <img
-                src="/dao/Logos.png"
-                alt="EQUORA Genesis DAO"
-                className="w-6 h-6 object-contain"
-              />
+            <div className="w-8 h-8 shrink-0 flex items-center justify-center">
+              <EquoraLogo className="w-8 h-8 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)]" />
             </div>
             <div>
               <div className="text-[11px] font-black font-inter tracking-tight text-[#071A4A] leading-tight">

@@ -1,0 +1,40 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="eqAmbientGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.45" />
+      <stop offset="60%" stop-color="#155EEF" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#155EEF" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="eqFacetTL" x1="18" y1="20" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7DD3FC" />
+      <stop offset="100%" stop-color="#155EEF" />
+    </linearGradient>
+    <linearGradient id="eqFacetTR" x1="82" y1="20" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="eqFacetBL" x1="18" y1="80" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1D4ED8" />
+      <stop offset="100%" stop-color="#0B1A42" />
+    </linearGradient>
+    <linearGradient id="eqFacetBR" x1="82" y1="80" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0D255E" />
+    </linearGradient>
+    <linearGradient id="eqCoreHighlight" x1="50" y1="26" x2="50" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#38BDF8" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0.3" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="38" fill="url(#eqAmbientGlow)" />
+  <polygon points="50,11 22,50 50,50" fill="url(#eqFacetTL)" />
+  <polygon points="50,11 78,50 50,50" fill="url(#eqFacetTR)" />
+  <polygon points="50,89 22,50 50,50" fill="url(#eqFacetBL)" />
+  <polygon points="50,89 78,50 50,50" fill="url(#eqFacetBR)" />
+  <polygon points="50,28 35,50 50,72 65,50" fill="url(#eqCoreHighlight)" />
+  <line x1="22" y1="50" x2="78" y2="50" stroke="#BAE6FD" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.95" />
+  <line x1="50" y1="11" x2="50" y2="89" stroke="#E0F2FE" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.9" />
+  <circle cx="50" cy="11" r="1.5" fill="#FFFFFF" />
+  <circle cx="50" cy="50" r="1.8" fill="#FFFFFF" />
+</svg>

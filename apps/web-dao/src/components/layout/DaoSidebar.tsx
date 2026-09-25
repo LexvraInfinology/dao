@@ -17,6 +17,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
   Dashboard: <LayoutDashboard className="w-4 h-4" />,
@@ -38,12 +39,8 @@ export const DaoSidebar: React.FC = () => {
         {/* Brand Logo Header */}
         <div className="px-2 pt-2">
           <Link href="/dao" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-xs flex items-center justify-center shrink-0 border border-[#E2ECF9] bg-white">
-              <img
-                src="/dao/Logos.png"
-                alt="EQUORA Genesis DAO"
-                className="w-8 h-8 object-contain"
-              />
+            <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+              <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
             </div>
             <div>
               <div className="text-sm font-black font-inter tracking-tight text-[#071A4A] leading-tight">

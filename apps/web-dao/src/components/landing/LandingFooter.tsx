@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Send, Twitter, Disc as Discord, Github } from 'lucide-react';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 export const LandingFooter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -61,15 +62,12 @@ export const LandingFooter: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12 border-b border-slate-200/80">
             {/* Column 1: Brand & Socials (4 cols) */}
             <div className="lg:col-span-4 space-y-5">
-              <Link href="/" className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#0052FF] flex items-center justify-center shadow-sm">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M12 8L16 12L12 16L8 12L12 8Z" fill="white"/>
-                  </svg>
+              <Link href="/" className="flex items-center gap-2.5 group">
+                <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+                  <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
                 </div>
                 <span className="text-[18px] font-bold font-inter tracking-tight text-[#0F172A]">
-                  EQUORA<span className="text-[#0052FF]">_FI</span>
+                  EQUORA<span className="text-[#155EEF]">_FI</span>
                 </span>
               </Link>
 

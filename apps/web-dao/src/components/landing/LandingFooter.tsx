@@ -67,7 +67,7 @@ export const LandingFooter: React.FC = () => {
                   <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
                 </div>
                 <span className="text-[18px] font-bold font-inter tracking-tight text-[#0F172A]">
-                  EQUORA<span className="text-[#155EEF]">_FI</span>
+                  EQUORA<span className="text-[#155EEF]">.FI</span>
                 </span>
               </Link>
 

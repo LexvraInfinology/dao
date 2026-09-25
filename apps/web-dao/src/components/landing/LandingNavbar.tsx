@@ -42,7 +42,7 @@ export const LandingNavbar: React.FC = () => {
               <EquoraLogo className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
             </div>
             <span className="text-[15px] sm:text-[17px] font-bold font-inter tracking-tight text-[#0F172A] shrink-0">
-              EQUORA<span className="text-[#155EEF]">_FI</span>
+              EQUORA<span className="text-[#155EEF]">.FI</span>
             </span>
           </Link>
 

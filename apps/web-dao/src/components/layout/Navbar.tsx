@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
                 <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
               </div>
               <span className="text-xl font-bold font-inter tracking-tight text-navy">
-                EQUORA<span className="text-brand">_Fi</span>
+                EQUORA<span className="text-brand">.FI</span>
               </span>
             </Link>
 

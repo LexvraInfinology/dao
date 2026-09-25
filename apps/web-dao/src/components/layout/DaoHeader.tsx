@@ -39,7 +39,7 @@ export const DaoHeader: React.FC = () => {
             </div>
             <div>
               <div className="text-[11px] font-black font-inter tracking-tight text-[#071A4A] leading-tight">
-                EQUORA_FI
+                EQUORA<span className="text-[#155EEF]">.FI</span>
               </div>
               <div className="text-[8px] font-bold font-inter text-[#155EEF] tracking-wider leading-none">
                 GENESIS DAO

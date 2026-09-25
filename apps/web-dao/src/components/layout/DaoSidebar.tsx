@@ -44,7 +44,7 @@ export const DaoSidebar: React.FC = () => {
             </div>
             <div>
               <div className="text-sm font-black font-inter tracking-tight text-[#071A4A] leading-tight">
-                EQUORA_FI
+                EQUORA<span className="text-[#155EEF]">.FI</span>
               </div>
               <div className="text-[10px] font-semibold font-inter text-[#155EEF] tracking-wider">
                 GENESIS DAO

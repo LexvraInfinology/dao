@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:apps": "turbo run dev --filter=!@equora/hardhat",
-    "dev:web": "pnpm --filter @equora/web dev",
+    "dev:web": "pnpm --filter equora-app dev",
+    "dev:dao": "pnpm --filter equora-app dev",
     "dev:api": "pnpm --filter @equora/api dev",
     "dev:indexer": "pnpm --filter @equora/indexer dev",
     "dev:queue": "pnpm --filter @equora/queue dev",

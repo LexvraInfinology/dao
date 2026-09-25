@@ -14,7 +14,7 @@ export const LandingFaq: React.FC = () => {
     },
     {
       q: 'How does the 300 / N cashback formula work?',
-      a: 'When you deposit 300 TROB to claim Seat #N, the protocol calculates your instant cashback as 300 divided by N. For example, Seat #87 receives 300 / 87 = 3.45 TROB refunded immediately to your wallet in the same transaction block.',
+      a: 'When you deposit $300 TROB (at the live coin rate of TROB) to claim Seat #N, the protocol calculates your instant cashback as $300 divided by N. For example, Seat #87 receives $300 / 87 = $3.45 TROB refunded immediately to your wallet in the same transaction block.',
     },
     {
       q: 'When is Retail Matrix launching?',

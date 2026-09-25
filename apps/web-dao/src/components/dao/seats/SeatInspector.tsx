@@ -172,7 +172,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             className="w-full py-3 rounded-xl bg-[#155EEF] hover:bg-[#0052E6] text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(21,94,239,0.35)] transition-all flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Claim Seat #{seat.seatNumber} (300 TROB)</span>
+            <span>Claim Seat #{seat.seatNumber} ($300 TROB)</span>
           </button>
         ) : null}
 

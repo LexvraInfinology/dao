@@ -65,7 +65,7 @@ export default function DaoDashboardPage() {
                 href="/dao/seats"
                 className="px-6 py-3.5 rounded-full font-bold text-sm text-white bg-[#155EEF] hover:bg-[#0052E6] shadow-[0_4px_16px_rgba(21,94,239,0.35)] transition-all flex items-center gap-2"
               >
-                <span>Claim Council Seat (300 TROB)</span>
+                <span>Claim Council Seat ($300 TROB)</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
@@ -173,7 +173,7 @@ export default function DaoDashboardPage() {
               href="/dao/seats"
               className="w-full py-3.5 px-4 rounded-full font-bold text-xs sm:text-sm text-white bg-[#155EEF] hover:bg-[#0052E6] shadow-[0_4px_16px_rgba(21,94,239,0.35)] transition-all flex items-center justify-center gap-2"
             >
-              <span>Claim Council Seat (300 TROB)</span>
+              <span>Claim Council Seat ($300 TROB)</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -311,7 +311,7 @@ export default function DaoDashboardPage() {
               <div>
                 <div className="text-base sm:text-lg md:text-sm lg:text-lg xl:text-2xl font-black font-jakarta text-[#071A4A]">$296.55</div>
                 <div className="text-[9px] lg:text-[10px] xl:text-[11px] text-[#64748B] font-medium mt-1 leading-tight">
-                  Net Out-of-Pocket
+                  Total In-Flow
                 </div>
               </div>
             </div>
@@ -390,7 +390,7 @@ export default function DaoDashboardPage() {
                     ${instantCashback}
                   </div>
                   <div className="text-xs text-[#60739A] font-medium mt-0.5">
-                    Instant Cashback (300 / {seatPosition})
+                    Instant Cashback ($300 / {seatPosition})
                   </div>
                 </div>
 
@@ -399,7 +399,7 @@ export default function DaoDashboardPage() {
                     ${netOutOfPocket}
                   </div>
                   <div className="text-xs text-[#60739A] font-medium mt-0.5">
-                    Net Out-of-Pocket
+                    Total In-Flow
                   </div>
                 </div>
               </div>
@@ -420,7 +420,7 @@ export default function DaoDashboardPage() {
                     <span className="font-bold text-[#10B981] whitespace-nowrap">$300.00</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[#60739A]">Net Out-of-Pocket</span>
+                    <span className="text-[#60739A]">Total In-Flow</span>
                     <span className="font-bold text-[#10B981] whitespace-nowrap">$0.00</span>
                   </div>
                 </div>
@@ -448,7 +448,7 @@ export default function DaoDashboardPage() {
                 </div>
 
                 <div className="p-3 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]">
-                  <div className="text-[9px] font-bold uppercase text-[#155EEF]">NET COST</div>
+                  <div className="text-[9px] font-bold uppercase text-[#155EEF]">TOTAL IN-FLOW</div>
                   <div className="text-sm font-black font-jakarta text-[#155EEF] mt-1">${netOutOfPocket}</div>
                 </div>
               </div>
@@ -481,7 +481,7 @@ export default function DaoDashboardPage() {
                       <span className="font-bold text-[#10B981]">$300.00</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Net Out-of-Pocket:</span>
+                      <span>Total In-Flow:</span>
                       <span className="font-bold text-[#10B981]">$0.00</span>
                     </div>
                     <p className="text-[11px] text-[#60739A] pt-1">

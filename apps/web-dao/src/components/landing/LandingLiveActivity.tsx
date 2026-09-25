@@ -80,10 +80,10 @@ export const LandingLiveActivity: React.FC = () => {
       titleMobile: 'Re-Top-Up',
       subtitleDesktop: (
         <>
-          Seat #82 re-top-up completed <span className="mx-1 text-slate-300">•</span> 300 TROB
+          Seat #82 re-top-up completed <span className="mx-1 text-slate-300">•</span> $300 TROB
         </>
       ),
-      subtitleMobile: 'Seat #82 re-top-up completed • 300 TROB',
+      subtitleMobile: 'Seat #82 re-top-up completed • $300 TROB',
       timeDesktop: 'just now',
       timeMobile: '5h ago',
       highlightMobile: null,

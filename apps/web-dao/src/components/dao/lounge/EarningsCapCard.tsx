@@ -131,7 +131,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
 
           {/* Bottom Re-top Explainer Box */}
           <div className="rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] p-3.5 text-xs text-[#60739A] leading-relaxed font-jakarta">
-            When you reach $1,500 (5X), a 300 TROB re-top-up is required within 48 hours to reset your cap and continue earning.
+            When you reach $1,500 (5X), a $300 TROB re-top-up is required within 48 hours to reset your cap and continue earning.
           </div>
         </div>
       )}
@@ -153,7 +153,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
               Earnings remaining: <span className="font-bold text-[#071A4A]">$660.00 TROB</span>
             </div>
             <div className="text-[11px] text-[#94A3B8] font-jakarta">
-              Re-top: 300 TROB
+              Re-top: $300 TROB
             </div>
           </div>
         </div>
@@ -185,7 +185,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
                 <div>You have accumulated $840.00 with $660.00 remaining before cap reach.</div>
               </div>
               <p>
-                Once $1,500.00 is reached, a <strong>300 TROB re-top-up</strong> is required within 48 hours to restart the next 5X cycle and continue receiving daily distributions.
+                Once $1,500.00 is reached, a <strong>$300 TROB re-top-up</strong> is required within 48 hours to restart the next 5X cycle and continue receiving daily distributions.
               </p>
             </div>
 

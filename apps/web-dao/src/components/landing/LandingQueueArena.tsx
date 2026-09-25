@@ -77,7 +77,7 @@ export const LandingQueueArena: React.FC = () => {
 
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#12B76A]" />
-              <span className="text-sm font-bold text-[#0B132B] font-inter">300 TROB Entry = 300 / N Cashback</span>
+              <span className="text-sm font-bold text-[#0B132B] font-inter">$300 TROB Entry = $300 / N Cashback</span>
               <span className="text-xs text-[#027A48] font-medium">Smart Contract Verified</span>
             </div>
           </div>

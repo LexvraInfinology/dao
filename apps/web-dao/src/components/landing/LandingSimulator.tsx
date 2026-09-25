@@ -132,7 +132,7 @@ export const LandingSimulator: React.FC = () => {
                 <DollarSign className="w-4 h-4" />
               </div>
               <div className="text-2xl sm:text-3xl font-bold font-sora text-[#0B132B] tracking-tight">
-                {grossDeposit} <span className="text-base font-normal text-slate-500">TROB</span>
+                ${grossDeposit} <span className="text-base font-normal text-slate-500">TROB</span>
               </div>
               <div className="text-xs font-semibold text-[#0B132B] font-inter">
                 Gross Deposit
@@ -148,26 +148,26 @@ export const LandingSimulator: React.FC = () => {
                 <RotateCcw className="w-4 h-4" />
               </div>
               <div className="text-2xl sm:text-3xl font-bold font-sora text-[#155EEF] tracking-tight">
-                {instantCashback} <span className="text-base font-normal text-blue-400">TROB</span>
+                ${instantCashback} <span className="text-base font-normal text-blue-400">TROB</span>
               </div>
               <div className="text-xs font-semibold text-[#155EEF] font-inter">
-                Instant Cashback (300/{selectedSeat})
+                Instant Cashback ($300/{selectedSeat})
               </div>
               <div className="text-[11px] text-[#475467]">
                 Returned immediately to wallet
               </div>
             </div>
 
-            {/* Card 3: Net Out-of-Pocket */}
+            {/* Card 3: Total In-Flow */}
             <div className="p-5 rounded-2xl bg-[#ECFDF3] border border-[#D1FADF] space-y-1 text-center md:text-left">
               <div className="w-8 h-8 rounded-lg bg-white border border-[#D1FADF] flex items-center justify-center text-[#027A48] mb-3 mx-auto md:mx-0">
                 <Wallet className="w-4 h-4" />
               </div>
               <div className="text-2xl sm:text-3xl font-bold font-sora text-[#027A48] tracking-tight">
-                {netOutPocket} <span className="text-base font-normal text-emerald-500">TROB</span>
+                ${netOutPocket} <span className="text-base font-normal text-emerald-500">TROB</span>
               </div>
               <div className="text-xs font-semibold text-[#027A48] font-inter">
-                Net Out-of-Pocket
+                Total In-Flow
               </div>
               <div className="text-[11px] text-[#475467]">
                 Actual capital deployed
@@ -186,7 +186,7 @@ export const LandingSimulator: React.FC = () => {
               href="/dao"
               className="w-full sm:w-auto px-10 py-4 rounded-full font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_25px_rgba(21,94,239,0.4)] hover:shadow-[0_12px_30px_rgba(21,94,239,0.5)] transition-all duration-200 flex items-center justify-center gap-2 group"
             >
-              <span>Claim Seat #{selectedSeat} for {netOutPocket} TROB</span>
+              <span>Claim Seat #{selectedSeat} for ${netOutPocket} TROB</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

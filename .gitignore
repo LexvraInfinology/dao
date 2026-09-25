@@ -16,6 +16,10 @@ packages/hardhat/typechain-types/
 packages/hardhat/coverage/
 packages/hardhat/coverage.json
 
+# Deprecated frontend
+apps/web/
+scripts/start-web.js
+
 # Next.js Build & Outputs
 .next/
 **/.next/

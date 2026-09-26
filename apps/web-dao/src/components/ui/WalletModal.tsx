@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle2, AlertTriangle, Loader2, ShieldCheck, Download, ExternalLink, Wallet } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Loader2, ShieldCheck, Download, ExternalLink, Wallet, Smartphone } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 
@@ -137,8 +137,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
               <div>
                 <p className="text-sm font-semibold text-amber-300">TrobSafe not detected</p>
                 <p className="text-xs text-amber-200/70 mt-1 leading-relaxed">
-                  You need the TrobSafe browser extension to access the EQUORA Genesis DAO.
-                  Install it and refresh this page.
+                  You need TrobSafe Wallet to access the EQUORA Genesis DAO. Download the browser extension or the Android APK below.
                 </p>
               </div>
             </div>
@@ -151,14 +150,23 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
                 className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_6px_16px_rgba(21,94,239,0.35)] flex items-center justify-center gap-2 transition-all"
               >
                 <Download className="w-4 h-4" />
-                <span>Install TrobSafe Extension</span>
+                <span>Install Browser Extension</span>
+              </a>
+
+              <a
+                href="/api/trobsafe/apk"
+                download="trobsafe.apk"
+                className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#93C5FD] hover:text-white bg-[#1E3A5F]/60 hover:bg-[#1E3A5F] border border-[#2E5A88] flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                <Smartphone className="w-4 h-4 text-[#38BDF8]" />
+                <span>Download Android App (.APK)</span>
               </a>
 
               <a
                 href={TROBSAFE_LEARN_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 rounded-xl text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 transition-all"
+                className="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/20 flex items-center justify-center gap-1.5 transition-all"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>Learn about TrobSafe</span>
@@ -166,7 +174,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
             </div>
 
             <p className="text-center text-[11px] text-slate-500">
-              After installing, refresh this page and click &quot;Launch App&quot; again.
+              After installing, refresh this page and click &quot;Connect Wallet&quot; again.
             </p>
           </div>
         )}

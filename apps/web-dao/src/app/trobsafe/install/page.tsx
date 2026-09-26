@@ -1,18 +1,18 @@
 import React from 'react';
 import Link from 'next/link';
-import { Shield, Download, CheckCircle2, Chrome, Puzzle, ArrowRight, ExternalLink } from 'lucide-react';
+import { Shield, Download, CheckCircle2, Chrome, Puzzle, ArrowRight, ExternalLink, Smartphone } from 'lucide-react';
 
 export const metadata = {
   title: 'Install TrobSafe Wallet — EQUORA Genesis DAO',
   description:
-    'TrobSafe is the official Trobium browser wallet extension required to access the EQUORA Genesis DAO dashboard.',
+    'TrobSafe is the official Trobium browser wallet extension and Android mobile app required to access the EQUORA Genesis DAO dashboard.',
 };
 
-const STEPS = [
+const CHROME_STEPS = [
   {
     num: '01',
     title: 'Download the extension',
-    desc: 'Click "Download TrobSafe" below to get the browser extension package (.zip).',
+    desc: 'Click "Download Browser Extension" below to get the browser extension package (.zip).',
   },
   {
     num: '02',
@@ -37,13 +37,41 @@ const STEPS = [
   {
     num: '06',
     title: 'Return to the DAO',
-    desc: 'Come back to EQUORA DAO, click "Launch App", and connect your TrobSafe wallet.',
+    desc: 'Come back to EQUORA DAO, click "Connect Wallet", and connect your TrobSafe wallet.',
+  },
+];
+
+const ANDROID_STEPS = [
+  {
+    num: '01',
+    title: 'Download the APK',
+    desc: 'Tap "Download Android APK" to save the official trobsafe.apk file to your Android device.',
+  },
+  {
+    num: '02',
+    title: 'Allow Installation',
+    desc: 'If prompted with "File might be harmful", tap "Download anyway". Enable "Install unknown apps" in Android settings if needed.',
+  },
+  {
+    num: '03',
+    title: 'Install TrobSafe',
+    desc: 'Open your device downloads, tap trobsafe.apk, and select Install.',
+  },
+  {
+    num: '04',
+    title: 'Setup or Import Wallet',
+    desc: 'Launch TrobSafe, create a new wallet and save your seed phrase, or import your existing Trobium wallet.',
+  },
+  {
+    num: '05',
+    title: 'Access EQUORA via dApp Browser',
+    desc: 'Use the in-app Web3 dApp browser inside TrobSafe to navigate to EQUORA DAO and connect instantly.',
   },
 ];
 
 const FEATURES = [
   'Native Trobium L1 support',
-  'EIP-4361 Sign-In With Ethereum (SIWE)',
+  'EIP-4361 Sign-In With Ethereum / Trobium (SIWE)',
   'Smart contract interaction (seat minting, withdrawals)',
   'Soulbound NFT verification',
   'Non-custodial — your keys stay on your device',
@@ -72,50 +100,65 @@ export default function TrobSafeInstallPage() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EFF6FF] border border-[#BFDBFE]">
             <Shield className="w-4 h-4 text-[#155EEF]" />
-            <span className="text-xs font-bold text-[#155EEF] uppercase tracking-wider">Official Wallet Extension</span>
+            <span className="text-xs font-bold text-[#155EEF] uppercase tracking-wider">Official Trobium Wallet</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-[#071A4A] tracking-tight leading-tight">
             Install TrobSafe Wallet<br />
             <span className="text-[#155EEF]">to Access Genesis DAO</span>
           </h1>
           <p className="text-sm sm:text-base text-[#60739A] max-w-xl mx-auto leading-relaxed">
-            TrobSafe is the secure, non-custodial Trobium wallet browser extension required for all on-chain interactions with the EQUORA Genesis DAO — including seat minting, dividend withdrawals, and governance voting.
+            TrobSafe is the secure, non-custodial Trobium wallet required for all on-chain interactions with the EQUORA Genesis DAO — available as a Desktop browser extension and an Android APK.
           </p>
 
-          {/* Download button */}
+          {/* Download buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
               href="/api/trobsafe/download"
-              className="w-full sm:w-auto px-8 py-4 rounded-full font-bold text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_20px_rgba(21,94,239,0.35)] flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_20px_rgba(21,94,239,0.35)] flex items-center justify-center gap-2 transition-all"
             >
-              <Download className="w-5 h-5" />
-              Download TrobSafe Extension
+              <Download className="w-4 h-4" />
+              Download Extension (.ZIP)
             </a>
+            <a
+              href="/api/trobsafe/apk"
+              download="trobsafe.apk"
+              className="w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm text-[#155EEF] bg-white hover:bg-blue-50/80 border border-[#BFDBFE] shadow-sm flex items-center justify-center gap-2 transition-all"
+            >
+              <Smartphone className="w-4 h-4" />
+              Download Android APK (.APK)
+            </a>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 text-xs text-[#60739A]">
+            <span className="flex items-center gap-1">
+              <Chrome className="w-3.5 h-3.5 text-[#155EEF]" /> Chrome / Brave / Edge
+            </span>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <Smartphone className="w-3.5 h-3.5 text-[#155EEF]" /> Android 8.0+
+            </span>
+            <span>·</span>
             <a
               href="https://trobsafe.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-semibold text-[#155EEF] hover:underline flex items-center gap-1"
+              className="text-[#155EEF] hover:underline flex items-center gap-1 font-semibold"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Official website
+              trobsafe.io
             </a>
           </div>
-
-          <p className="text-[11px] text-[#94A3B8]">
-            Manifest V3 · Chrome 88+ · Edge 88+ · Brave
-          </p>
         </div>
 
-        {/* Install steps */}
+        {/* Desktop Extension Install steps */}
         <div className="bg-white rounded-3xl border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2.5">
-            <Puzzle className="w-5 h-5 text-[#155EEF]" />
-            <h2 className="text-lg font-bold text-[#071A4A]">Installation Steps</h2>
+            <Chrome className="w-5 h-5 text-[#155EEF]" />
+            <h2 className="text-lg font-bold text-[#071A4A]">Desktop Extension Installation</h2>
           </div>
 
           <div className="space-y-5">
-            {STEPS.map((step) => (
+            {CHROME_STEPS.map((step) => (
               <div key={step.num} className="flex items-start gap-4">
                 <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] text-[#155EEF] font-black text-xs flex items-center justify-center shrink-0 font-mono">
                   {step.num}
@@ -138,6 +181,28 @@ export default function TrobSafeInstallPage() {
               </a>
               <span className="text-xs text-[#94A3B8] ml-2">(paste into address bar)</span>
             </div>
+          </div>
+        </div>
+
+        {/* Android APK Install steps */}
+        <div className="bg-white rounded-3xl border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] p-6 sm:p-8 space-y-6">
+          <div className="flex items-center gap-2.5">
+            <Smartphone className="w-5 h-5 text-[#155EEF]" />
+            <h2 className="text-lg font-bold text-[#071A4A]">Android (.APK) Installation</h2>
+          </div>
+
+          <div className="space-y-5">
+            {ANDROID_STEPS.map((step) => (
+              <div key={step.num} className="flex items-start gap-4">
+                <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] text-[#155EEF] font-black text-xs flex items-center justify-center shrink-0 font-mono">
+                  {step.num}
+                </div>
+                <div className="space-y-0.5 min-w-0 pt-1">
+                  <p className="text-sm font-bold text-[#071A4A]">{step.title}</p>
+                  <p className="text-xs text-[#60739A] leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

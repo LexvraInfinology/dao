@@ -39,8 +39,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [devBypass, setDevBypass]             = useState(false);
 
-  // Fetch membership status only when we have an address (check hex or base58)
-  const activeAddress = wallet.hexAddress || wallet.base58Address;
+  // Fetch membership status only when we have an address (prefer base58 for TrobSafe)
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
     useDaoMember(activeAddress);
 

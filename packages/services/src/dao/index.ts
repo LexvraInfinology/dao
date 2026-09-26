@@ -1,6 +1,74 @@
 import prisma from "@equora/database";
+import * as crypto from "crypto";
 import { createPublicClient, http, parseAbi } from "viem";
 import { servicesConfig } from "../config";
+
+export function getAddressVariants(addr: string): string[] {
+  const variants = new Set<string>();
+  const clean = addr.trim();
+  if (!clean) return [];
+  variants.add(clean);
+  variants.add(clean.toLowerCase());
+
+  const hexClean = clean.startsWith("0x") ? clean.slice(2) : clean;
+  if (/^41[0-9a-fA-F]{40}$/.test(hexClean)) {
+    try {
+      const bytes = Buffer.from(hexClean, "hex");
+      const hash1 = crypto.createHash("sha256").update(bytes).digest();
+      const hash2 = crypto.createHash("sha256").update(hash1).digest();
+      const checksum = hash2.subarray(0, 4);
+      const full = Buffer.concat([bytes, checksum]);
+      const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+      const digits = [0];
+      for (let i = 0; i < full.length; i++) {
+        let carry = full[i];
+        for (let j = 0; j < digits.length; j++) {
+          carry += digits[j] << 8;
+          digits[j] = carry % 58;
+          carry = (carry / 58) | 0;
+        }
+        while (carry > 0) {
+          digits.push(carry % 58);
+          carry = (carry / 58) | 0;
+        }
+      }
+      let b58 = "";
+      for (let i = 0; i < full.length && full[i] === 0; i++) b58 += "1";
+      for (let i = digits.length - 1; i >= 0; i--) b58 += ALPHABET[digits[i]];
+      variants.add(b58);
+      variants.add(b58.toLowerCase());
+    } catch (_) {}
+  } else if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(clean)) {
+    try {
+      const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+      const bytes = [0];
+      for (const c of clean) {
+        let val = ALPHABET.indexOf(c);
+        if (val === -1) break;
+        for (let i = 0; i < bytes.length; i++) {
+          val += bytes[i] * 58;
+          bytes[i] = val & 0xff;
+          val >>= 8;
+        }
+        while (val > 0) {
+          bytes.push(val & 0xff);
+          val >>= 8;
+        }
+      }
+      for (const c of clean) {
+        if (c === "1") bytes.push(0);
+        else break;
+      }
+      const raw = Buffer.from(bytes.reverse().slice(0, 21)).toString("hex");
+      variants.add(raw);
+      variants.add("0x" + raw);
+      variants.add(raw.toLowerCase());
+      variants.add(("0x" + raw).toLowerCase());
+    } catch (_) {}
+  }
+
+  return Array.from(variants);
+}
 import {
   PriceData,
   DaoStatsDTO,
@@ -229,15 +297,13 @@ export class DaoService {
   }
 
   async getMemberByAddress(address: string): Promise<MemberDetailsDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const variants = getAddressVariants(address);
     const [member, priceData] = await Promise.all([
       prisma.daoMember.findFirst({
         where: {
           OR: [
-            { address: address },
-            { address: canonicalAddress },
-            { user: { address: address } },
-            { user: { address: canonicalAddress } },
+            ...variants.map((v) => ({ address: v })),
+            ...variants.map((v) => ({ user: { address: v } })),
           ],
         },
         include: {

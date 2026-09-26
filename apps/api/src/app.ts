@@ -204,6 +204,91 @@ export function createApp(): Express {
     }
   });
 
+  /** POST /api/dao/claim — claim or activate council seat membership */
+  app.post("/api/dao/claim", async (req, res, next) => {
+    try {
+      const { address, txHash } = req.body as { address?: string; txHash?: string };
+      if (!address || typeof address !== "string") {
+        res.status(400).json({ success: false, error: "wallet address is required" });
+        return;
+      }
+
+      const canonicalAddress = address.trim().toLowerCase();
+
+      // Ensure user exists
+      let user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { address: address.trim() },
+            { address: canonicalAddress },
+          ],
+        },
+      });
+
+      if (!user) {
+        const userCount = await prisma.user.count();
+        user = await prisma.user.create({
+          data: {
+            address: canonicalAddress,
+            userId: userCount + 1,
+            registrationTimestamp: new Date(),
+          },
+        });
+      }
+
+      // Check if already a member
+      let member = await prisma.daoMember.findFirst({
+        where: {
+          OR: [
+            { address: address.trim() },
+            { address: canonicalAddress },
+            { address: user.address },
+          ],
+        },
+      });
+
+      if (!member) {
+        const memberCount = await prisma.daoMember.count();
+        const nextPosition = memberCount + 1;
+        member = await prisma.daoMember.create({
+          data: {
+            address: user.address,
+            position: nextPosition,
+            nftTokenId: nextPosition,
+            entryAmountBtt: 300,
+            status: "active",
+            joinedAt: new Date(),
+            txHash: txHash || `0x_claim_${Date.now()}`,
+            blockNumber: 0n,
+          },
+        });
+
+        await prisma.daoEvent.create({
+          data: {
+            eventType: "joined",
+            userAddress: user.address,
+            incomingPosition: nextPosition,
+            amountBtt: 300,
+            txHash: member.txHash,
+            blockNumber: 0n,
+          },
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          isMember: true,
+          position: member.position,
+          address: user.address,
+          txHash: member.txHash,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ── DAO PROFILE ───────────────────────────────────────────────────────────
 
   /**

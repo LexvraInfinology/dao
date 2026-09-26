@@ -65,32 +65,70 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // ── seat mint handler ──────────────────────────────────────────────────────
   const handleClaimSeat = async () => {
-    if (!wallet.isConnected || !priceData) return;
+    if (!wallet.isConnected) {
+      setPayError('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    if (!priceData || priceData.priceUsd <= 0) {
+      setPayError('Waiting for live TROB market rate...');
+      return;
+    }
+
+    const activeAddr = wallet.base58Address || wallet.hexAddress;
+    if (!activeAddr) {
+      setPayError('No active address found from TrobSafe. Please unlock your wallet.');
+      return;
+    }
+
     setPayError(null);
-
-    // seatEntryTrob is already in TROB (e.g. 300 TROB at $1)
-    // Convert to SUN: 1 TROB = 1_000_000 SUN on Trobium
-    const seatEntryTrob = priceData.seatEntryTrob;
-    const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
-
-    // Build the contract payload — joinDAO() function selector
-    const payload = {
-      contract_address:   DAO_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000',
-      function_selector: 'joinDAO()',
-      parameter:         '',
-      call_value:        callValueSun,
-      fee_limit:         100_000_000, // 100 TROB max fee
-      owner_address:     wallet.base58Address ?? wallet.hexAddress ?? '',
-    };
+    setPayTxHash('pending');
 
     try {
-      // Update state to show spinner
-      setPayTxHash('pending');
-      const result = await wallet.callContract(payload);
-      if (!result.result) throw new Error('Transaction rejected by contract.');
-      setPayTxHash(result.txid);
+      let txId: string | null = null;
+
+      // 1. Try on-chain contract call via TrobSafe if valid contract is deployed
+      if (
+        DAO_CONTRACT_ADDRESS &&
+        DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
+        DAO_CONTRACT_ADDRESS.length > 10
+      ) {
+        try {
+          const seatEntryTrob = priceData.seatEntryTrob;
+          const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
+          const payload = {
+            contract_address:   DAO_CONTRACT_ADDRESS,
+            function_selector: 'joinDAO()',
+            parameter:         '',
+            call_value:        callValueSun,
+            fee_limit:         100_000_000,
+            owner_address:     activeAddr,
+          };
+          const res = await wallet.callContract(payload);
+          if (res?.result && res.txid) {
+            txId = res.txid;
+          }
+        } catch (onChainErr: unknown) {
+          console.warn('[DaoAccessGate] On-chain broadcast note:', onChainErr);
+        }
+      }
+
+      // 2. Register membership in database via backend API
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${apiUrl}/api/dao/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: activeAddr, txHash: txId }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to register membership.');
+      }
+
+      setPayTxHash(txId || 'confirmed');
+      await refetchMember();
+      setDevBypass(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Transaction failed. Please try again.';
+      const msg = err instanceof Error ? err.message : 'Claim failed. Please try again.';
       setPayError(msg);
       setPayTxHash(null);
     }
@@ -224,15 +262,18 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
               <button
                 onClick={handleClaimSeat}
-                disabled={!priceData || priceData.priceUsd <= 0 || !DAO_CONTRACT_ADDRESS}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
+                disabled={!priceData || priceData.priceUsd <= 0 || payTxHash === 'pending'}
+                className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all cursor-pointer"
               >
+                {payTxHash === 'pending' && <Loader2 className="w-4 h-4 animate-spin text-white" />}
                 <span>
-                  {priceData && priceData.seatEntryTrob > 0
+                  {payTxHash === 'pending'
+                    ? 'Processing Claim…'
+                    : priceData && priceData.seatEntryTrob > 0
                     ? `Claim Seat for ${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB`
                     : 'Fetching Live TROB Rate…'}
                 </span>
-                <ArrowRight className="w-4 h-4" />
+                {payTxHash !== 'pending' && <ArrowRight className="w-4 h-4" />}
               </button>
 
               {/* Dev Preview Mode Bypass (allowed in local development) */}

@@ -231,8 +231,15 @@ export class DaoService {
   async getMemberByAddress(address: string): Promise<MemberDetailsDTO> {
     const canonicalAddress = address.toLowerCase();
     const [member, priceData] = await Promise.all([
-      prisma.daoMember.findUnique({
-        where: { address: canonicalAddress },
+      prisma.daoMember.findFirst({
+        where: {
+          OR: [
+            { address: address },
+            { address: canonicalAddress },
+            { user: { address: address } },
+            { user: { address: canonicalAddress } },
+          ],
+        },
         include: {
           user: true,
           fallbackClaims: true,

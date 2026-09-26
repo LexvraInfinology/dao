@@ -82,3 +82,4 @@ DEVOPS_DEPLOYMENT_INSTRUCTIONS.md
 docs/Equora_Matrix_UI_UX_Designer_Guide.pdf
 docs/Equora_Matrix_UI_UX_Designer_Guide.html
 packages/hardhat/scripts/fund-user.ts
+*.apk

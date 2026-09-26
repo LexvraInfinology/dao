@@ -9,10 +9,11 @@ import { useLounge } from '@/hooks/useApi';
 
 export default function DaoTreasuryPage() {
   const wallet = useWallet();
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
   // Lounge endpoint has claimableDividendsUsd which is our available balance
-  const { data: lounge } = useLounge(wallet.hexAddress);
+  const { data: lounge } = useLounge(activeAddress);
 
-  const initialBalance = lounge?.claimableDividendsUsd ?? 420.50;
+  const initialBalance = lounge?.claimableDividendsUsd ?? 0;
   const [balance, setBalance] = useState<number>(initialBalance);
 
   // Sync when API data arrives
@@ -41,7 +42,7 @@ export default function DaoTreasuryPage() {
           availableBalance={balance}
           onWithdrawSuccess={handleWithdrawSuccess}
           variant="desktop"
-          walletAddress={wallet.hexAddress ?? undefined}
+          walletAddress={activeAddress ?? undefined}
         />
       </div>
 
@@ -51,7 +52,7 @@ export default function DaoTreasuryPage() {
           availableBalance={balance}
           onWithdrawSuccess={handleWithdrawSuccess}
           variant="mobile"
-          walletAddress={wallet.hexAddress ?? undefined}
+          walletAddress={activeAddress ?? undefined}
         />
         <TreasuryBalanceCard
           balance={balance}

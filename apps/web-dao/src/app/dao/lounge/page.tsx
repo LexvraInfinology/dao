@@ -13,14 +13,14 @@ import { useLounge } from '@/hooks/useApi';
 
 export default function MemberLoungePage() {
   const wallet     = useWallet();
-  const { data: lounge, loading } = useLounge(wallet.hexAddress);
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
+  const { data: lounge, loading } = useLounge(activeAddress);
 
-  // Pass live values down as props where components accept them,
-  // components that don't yet accept props use their own defaults.
-  const claimableDividends = lounge?.claimableDividendsUsd ?? 420.50;
-  const capProgressPct     = lounge?.capProgressPct        ?? 85.3;
-  const pushedUsd          = lounge?.pushedUsd             ?? 1280.40;
-  const earningsCapUsd     = lounge?.earningsCapUsd        ?? 900;
+  // Pass live values down as props where components accept them
+  const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
+  const capProgressPct     = lounge?.capProgressPct        ?? 0;
+  const pushedUsd          = lounge?.pushedUsd             ?? 0;
+  const earningsCapUsd     = lounge?.earningsCapUsd        ?? 0;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
@@ -37,7 +37,7 @@ export default function MemberLoungePage() {
           <div className="xl:col-span-5 space-y-6">
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
-              walletAddress={wallet.hexAddress ?? undefined}
+              walletAddress={activeAddress ?? undefined}
             />
             <EarningsCapCard
               variant="desktop"

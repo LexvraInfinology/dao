@@ -82,9 +82,10 @@ export default function CouncilSeatsPage() {
 
     const apiSeats = new Map<number, CouncilSeatDetail>();
     const bttPrice = membersPayload.bttPriceUsd ?? 1;
+    const activeAddress = wallet.base58Address || wallet.hexAddress;
 
     for (const m of membersPayload.members) {
-      apiSeats.set(m.position, mapMemberToSeat(m, wallet.hexAddress, bttPrice));
+      apiSeats.set(m.position, mapMemberToSeat(m, activeAddress, bttPrice));
     }
 
     return COUNCIL_SEATS_LIST.map((staticSeat) => {
@@ -92,7 +93,7 @@ export default function CouncilSeatsPage() {
       if (live) return live;
       return staticSeat;
     });
-  }, [membersPayload, wallet.hexAddress]);
+  }, [membersPayload, wallet.base58Address, wallet.hexAddress]);
 
   // Default selected seat: user's own seat → or next available → or first
   const defaultSeat = useMemo(() => {

@@ -27,7 +27,7 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
   const [txHash, setTxHash]         = useState<string | null>(null);
   const [error, setError]           = useState<string | null>(null);
 
-  const trobRate      = priceData?.priceUsd ?? 0.151688;
+  const trobRate      = priceData?.priceUsd ?? 0;
   const numAmount     = parseFloat(amount) || 0;
   const trobReceived  = trobRate > 0
     ? (numAmount / trobRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

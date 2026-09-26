@@ -76,7 +76,8 @@ export function createApp(): Express {
   app.get("/api/price/trob", async (_req, res, next) => {
     try {
       const price = await priceService.getBttUsdPrice();
-      const trobAmountFor300Usd = price.priceUsd > 0 ? (300 / price.priceUsd) : 300;
+      const seatEntryUsd = servicesConfig.price.seatEntryUsd;
+      const trobAmountForSeat = price.priceUsd > 0 ? (seatEntryUsd / price.priceUsd) : seatEntryUsd;
       res.json({
         success: true,
         data: {
@@ -84,8 +85,8 @@ export function createApp(): Express {
           priceSource: price.priceSource,
           updatedAt: price.updatedAt,
           isStale: price.isStale,
-          seatEntryUsd: 300,
-          seatEntryTrob: Math.ceil(trobAmountFor300Usd * 1000) / 1000,
+          seatEntryUsd: seatEntryUsd,
+          seatEntryTrob: Math.ceil(trobAmountForSeat * 1000) / 1000,
         },
       });
     } catch (err) {

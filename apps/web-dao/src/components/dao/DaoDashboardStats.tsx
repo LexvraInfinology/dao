@@ -33,15 +33,15 @@ export function DaoDashboardStats() {
   const PHASE1_DURATION_S = parseInt(process.env.NEXT_PUBLIC_PHASE1_SECONDS ?? String(18 * 86400 + 14 * 3600 + 22 * 60 + 10), 10);
   const cd = useCountdown(PHASE1_DURATION_S);
 
-  const seatsFilled    = stats?.memberCount ?? 86;
-  const seatsRemaining = stats?.remainingPositions ?? 14;
-  const filledPct      = Math.round((seatsFilled / 100) * 100);
+  const seatsFilled    = stats?.memberCount ?? 0;
+  const seatsRemaining = stats?.remainingPositions ?? (100 - seatsFilled);
+  const filledPct      = Math.min(100, Math.round((seatsFilled / 100) * 100));
 
   // Next seat = first available
   const nextSeatNum    = seatsFilled + 1;
   const cashback       = (300 / nextSeatNum).toFixed(2);
   const netInflow      = (300 - Number(cashback)).toFixed(2);
-  const netInflowTrob  = price ? (Number(netInflow) / price.priceUsd).toFixed(2) : '—';
+  const netInflowTrob  = (price && price.priceUsd > 0) ? (Number(netInflow) / price.priceUsd).toFixed(2) : '—';
 
   // If this user owns a seat, show their position
   const myPosition     = auth.user?.daoPosition;

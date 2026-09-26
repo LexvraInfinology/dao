@@ -9,13 +9,13 @@ interface ProfileMetricsGridProps {
 }
 
 export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile }) => {
-  const totalEarnedUsd = profile?.totalEarnedUsd ?? 1280.40;
-  const bttPrice       = profile?.bttPriceUsd    ?? 0.1517;
+  const totalEarnedUsd = profile?.totalEarnedUsd ?? 0;
+  const bttPrice       = profile?.bttPriceUsd    ?? 0;
   const totalEarnedBtt = bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0;
 
-  const capProgressPct  = profile?.capProgressPct  ?? 85.3;
-  const earningsCapBtt  = profile?.earningsCapBtt  ?? 900;
-  const entryAmountBtt  = profile?.entryAmountBtt  ?? 300;
+  const capProgressPct  = profile?.capProgressPct  ?? 0;
+  const earningsCapBtt  = profile?.earningsCapBtt  ?? 0;
+  const entryAmountBtt  = profile?.entryAmountBtt  ?? 0;
   const remainingCapUsd = Math.max(0, (earningsCapBtt - (profile?.pushedAmountBtt ?? 0)) * bttPrice);
 
   const status   = profile?.status ?? 'active';

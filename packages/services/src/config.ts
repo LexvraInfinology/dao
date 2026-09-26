@@ -19,5 +19,8 @@ export const servicesConfig = {
   },
   price: {
     trobApiUrl: process.env.TROB_PRICE_API_URL || "https://backend.trobchain.com/v1/market/price",
+    defaultBttPrice: parseFloat(process.env.DEFAULT_TROB_PRICE_USD || "1.0"),
+    cacheTtlMs: parseInt(process.env.PRICE_CACHE_TTL_MS || "30000", 10),
+    seatEntryUsd: parseFloat(process.env.DAO_SEAT_ENTRY_USD || "300"),
   },
 };

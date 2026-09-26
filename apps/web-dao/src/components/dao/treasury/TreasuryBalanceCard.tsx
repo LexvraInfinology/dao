@@ -24,12 +24,12 @@ export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const trovRate   = priceData?.priceUsd ?? 0.151688;
+  const trovRate   = priceData?.priceUsd ?? 0;
   const trobAmount = trovRate > 0
     ? (balance / trovRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '—';
 
-  const rateDisplay = trovRate.toFixed(6);
+  const rateDisplay = trovRate > 0 ? trovRate.toFixed(6) : 'Loading…';
 
   return (
     <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-[0_4px_25px_rgba(15,23,42,0.03)] space-y-5 sm:space-y-6">

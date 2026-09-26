@@ -11,14 +11,15 @@ import { useDaoProfile, useTransactions } from '@/hooks/useApi';
 
 export default function DaoProfilePage() {
   const wallet = useWallet();
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
 
   // Full profile from /api/dao/profile/:address
   const { data: profile, loading: profileLoading } =
-    useDaoProfile(wallet.hexAddress);
+    useDaoProfile(activeAddress);
 
   // Recent transactions for the activity stream
   const { data: txData } =
-    useTransactions(wallet.hexAddress, 1, 5);
+    useTransactions(activeAddress, 1, 5);
 
   const recentTxs = txData?.transactions ?? [];
 

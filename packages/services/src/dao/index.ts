@@ -19,10 +19,10 @@ const AGGREGATOR_V3_ABI = parseAbi([
 export class PriceService {
   private client: ReturnType<typeof createPublicClient> | null = null;
   private chainlinkFeedAddress: `0x${string}` | null = null;
-  private defaultBttPrice = 1.0;
+  private defaultBttPrice = servicesConfig.price.defaultBttPrice;
   private cachedPrice: PriceData | null = null;
   private lastFetchTime = 0;
-  private cacheTtlMs = 30_000; // 30 seconds cache
+  private cacheTtlMs = servicesConfig.price.cacheTtlMs;
 
   constructor() {
     const rpcUrl = servicesConfig.blockchain.rpcUrl;

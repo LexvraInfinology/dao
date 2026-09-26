@@ -10,19 +10,20 @@ import { useTransactions } from '@/hooks/useApi';
 
 export default function DaoTransactionsPage() {
   const wallet         = useWallet();
+  const activeAddress  = wallet.base58Address || wallet.hexAddress;
   const [page, setPage] = useState(1);
 
-  const { data: txData, loading, refetch } = useTransactions(wallet.hexAddress, page, 20);
+  const { data: txData, loading, refetch } = useTransactions(activeAddress, page, 20);
 
   const transactions = txData?.transactions ?? [];
   const totalPages   = txData?.pages        ?? 1;
-  const bttPrice     = txData?.bttPriceUsd  ?? 1;
+  const bttPrice     = txData?.bttPriceUsd  ?? 0;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
       <TransactionsHero
         totalTransactions={txData?.total}
-        bttPriceUsd={bttPrice}
+        bttPriceUsd={bttPrice > 0 ? bttPrice : undefined}
       />
 
       {/* Desktop */}

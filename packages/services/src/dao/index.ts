@@ -19,7 +19,6 @@ const AGGREGATOR_V3_ABI = parseAbi([
 export class PriceService {
   private client: ReturnType<typeof createPublicClient> | null = null;
   private chainlinkFeedAddress: `0x${string}` | null = null;
-  private defaultBttPrice = servicesConfig.price.defaultBttPrice;
   private cachedPrice: PriceData | null = null;
   private lastFetchTime = 0;
   private cacheTtlMs = servicesConfig.price.cacheTtlMs;
@@ -117,12 +116,7 @@ export class PriceService {
       };
     }
 
-    return {
-      priceUsd: this.defaultBttPrice,
-      priceSource: "offchain-estimate",
-      updatedAt: new Date(),
-      isStale: false,
-    };
+    throw new Error("Live TROB market rate unavailable: dynamic price feed must be reachable.");
   }
 }
 
@@ -157,8 +151,8 @@ export class DaoService {
         );
 
     const totalPoolReceivedBTT = Number(vaultSplits?._sum?.daoAmount || 0);
-    const totalDistributedUSDEstimate = totalDistributedBTT * (priceData?.priceUsd || 1.0);
-    const totalCollectedUSDEstimate = totalCollectedBTT * (priceData?.priceUsd || 1.0);
+    const totalDistributedUSDEstimate = totalDistributedBTT * (priceData?.priceUsd || 0);
+    const totalCollectedUSDEstimate = totalCollectedBTT * (priceData?.priceUsd || 0);
 
     return {
       memberCount,
@@ -312,8 +306,8 @@ export class DaoService {
         incomingPosition: e.incomingPosition,
         recipientCount: e.recipientCount,
         amountBtt,
-        amountUsdEstimate: amountBtt * (priceData?.priceUsd || 1.0),
-        priceSource: priceData?.priceSource || "offchain-estimate",
+        amountUsdEstimate: amountBtt * (priceData?.priceUsd || 0),
+        priceSource: priceData?.priceSource || "trobchain-api",
         reason: e.reason,
         txHash: e.txHash,
         blockNumber: e.blockNumber != null ? e.blockNumber.toString() : "0",

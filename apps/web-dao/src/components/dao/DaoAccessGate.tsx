@@ -224,13 +224,13 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
               <button
                 onClick={handleClaimSeat}
-                disabled={!priceData || !DAO_CONTRACT_ADDRESS}
+                disabled={!priceData || priceData.priceUsd <= 0 || !DAO_CONTRACT_ADDRESS}
                 className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
               >
                 <span>
-                  Claim Seat for {priceData
-                    ? `${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB`
-                    : '…'}
+                  {priceData && priceData.seatEntryTrob > 0
+                    ? `Claim Seat for ${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB`
+                    : 'Fetching Live TROB Rate…'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </button>

@@ -96,7 +96,7 @@ export interface DaoProposal {
 
 async function fetchJson<T>(
   path: string,
-  fallback: T,
+  fallback?: T,
   token?: string | null
 ): Promise<T> {
   try {
@@ -108,14 +108,14 @@ async function fetchJson<T>(
       headers,
     });
     if (!res.ok) {
-      console.warn(`API ${path} → ${res.status}`);
-      return fallback;
+      if (fallback !== undefined) return fallback;
+      throw new Error(`API ${path} returned ${res.status}`);
     }
     const data = await res.json();
     return (data.data !== undefined ? data.data : data) as T;
   } catch (err) {
-    console.warn(`API network error for ${path}:`, (err as Error).message);
-    return fallback;
+    if (fallback !== undefined) return fallback;
+    throw err;
   }
 }
 
@@ -124,36 +124,12 @@ async function fetchJson<T>(
 class ApiService {
   /** GET /api/dao/stats */
   async getDaoStats(): Promise<DaoStats> {
-    return fetchJson<DaoStats>('/api/dao/stats', {
-      memberCount: 0,
-      activeMembers: 0,
-      blankMembers: 0,
-      cappedMembers: 0,
-      capacity: 100,
-      remainingPositions: 100,
-      entryFeeBtt: 300,
-      earningsCapBtt: 900,
-      totalCollectedBTT: 0,
-      totalCollectedUSDEstimate: 0,
-      totalDistributedBTT: 0,
-      totalDistributedUSDEstimate: 0,
-      isClosed: false,
-      bttPriceUsd: 1.0,
-      priceSource: 'offchain-estimate',
-      priceUpdatedAt: new Date().toISOString(),
-    });
+    return fetchJson<DaoStats>('/api/dao/stats');
   }
 
   /** GET /api/price/trob */
   async getTrobPrice(): Promise<TrobPrice> {
-    return fetchJson<TrobPrice>('/api/price/trob', {
-      priceUsd: 1.0,
-      priceSource: 'offchain-estimate',
-      updatedAt: new Date().toISOString(),
-      isStale: false,
-      seatEntryUsd: 300,
-      seatEntryTrob: 300,
-    });
+    return fetchJson<TrobPrice>('/api/price/trob');
   }
 
   /** GET /api/dao/members */

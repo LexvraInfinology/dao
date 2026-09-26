@@ -56,7 +56,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
   page = 1,
   totalPages = 1,
   onPageChange,
-  bttPriceUsd = 1,
+  bttPriceUsd = 0,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);

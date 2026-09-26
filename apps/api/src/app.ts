@@ -76,8 +76,15 @@ export function createApp(): Express {
   app.get("/api/price/trob", async (_req, res, next) => {
     try {
       const price = await priceService.getBttUsdPrice();
+      if (!price || !price.priceUsd || price.priceUsd <= 0) {
+        res.status(503).json({
+          success: false,
+          error: "Live TROB market rate unavailable: live oracle or API feed required.",
+        });
+        return;
+      }
       const seatEntryUsd = servicesConfig.price.seatEntryUsd;
-      const trobAmountForSeat = price.priceUsd > 0 ? (seatEntryUsd / price.priceUsd) : seatEntryUsd;
+      const trobAmountForSeat = seatEntryUsd / price.priceUsd;
       res.json({
         success: true,
         data: {

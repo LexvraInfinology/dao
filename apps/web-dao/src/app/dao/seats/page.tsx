@@ -81,7 +81,7 @@ export default function CouncilSeatsPage() {
     if (!membersPayload?.members?.length) return COUNCIL_SEATS_LIST;
 
     const apiSeats = new Map<number, CouncilSeatDetail>();
-    const bttPrice = membersPayload.bttPriceUsd ?? 1;
+    const bttPrice = membersPayload.bttPriceUsd ?? price?.priceUsd ?? 0;
     const activeAddress = wallet.base58Address || wallet.hexAddress;
 
     for (const m of membersPayload.members) {

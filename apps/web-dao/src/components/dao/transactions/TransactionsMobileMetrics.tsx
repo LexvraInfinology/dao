@@ -11,7 +11,7 @@ interface TransactionsMobileMetricsProps {
 
 export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps> = ({
   transactions = [],
-  bttPriceUsd = 1,
+  bttPriceUsd = 0,
 }) => {
   const total = transactions.length;
 
@@ -20,8 +20,8 @@ export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps>
   const outflows = transactions.filter((t) => t.isPositive === false)
     .reduce((s, t) => s + t.amountUsd, 0);
 
-  const inflowsTrob  = bttPriceUsd > 0 ? (inflows  / bttPriceUsd) : inflows;
-  const outflowsTrob = bttPriceUsd > 0 ? (outflows / bttPriceUsd) : outflows;
+  const inflowsTrob  = bttPriceUsd > 0 ? (inflows  / bttPriceUsd) : 0;
+  const outflowsTrob = bttPriceUsd > 0 ? (outflows / bttPriceUsd) : 0;
 
   const fmtK = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toFixed(2);

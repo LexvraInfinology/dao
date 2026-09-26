@@ -33,6 +33,26 @@ export async function GET() {
     }
   }
 
+  // Scan public/downloads for any .apk file as fallback
+  const downloadsDir = path.resolve(process.cwd(), 'public', 'downloads');
+  if (fs.existsSync(downloadsDir)) {
+    const files = fs.readdirSync(downloadsDir);
+    const anyApk = files.find((f) => f.toLowerCase().endsWith('.apk'));
+    if (anyApk) {
+      const fullPath = path.join(downloadsDir, anyApk);
+      const buffer = fs.readFileSync(fullPath);
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/vnd.android.package-archive',
+          'Content-Disposition': `attachment; filename="${anyApk}"`,
+          'Content-Length': String(buffer.byteLength),
+          'Cache-Control': 'public, max-age=3600',
+        },
+      });
+    }
+  }
+
   // Fallback to external URL if configured in env
   const fallbackUrl = process.env.TROBSAFE_APK_URL || process.env.NEXT_PUBLIC_TROBSAFE_APK_URL;
   if (fallbackUrl) {

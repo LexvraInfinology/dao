@@ -30,7 +30,6 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
-import { GetAppButton } from '@/components/ui/GetAppButton';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -193,11 +192,6 @@ export const DaoHeader: React.FC = () => {
             <Bell className="w-4 h-4" />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#EF4444] border-2 border-white" />
           </button>
-
-          {/* TrobSafe device download */}
-          <div className="hidden sm:block">
-            <GetAppButton variant="compact" />
-          </div>
 
           {/* Dev Mode Indicator (if not connected and in dev mode) */}
           {!isConnected && isDevMode && (
@@ -478,11 +472,7 @@ export const DaoHeader: React.FC = () => {
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-[#E2ECF9] space-y-2.5">
-              <div className="w-full">
-                <GetAppButton className="w-full" />
-              </div>
-
+            <div className="pt-4 border-t border-[#E2ECF9] space-y-2">
               {isConnected ? (
                 <button
                   onClick={() => { handleDisconnect(); setMobileNavOpen(false); }}

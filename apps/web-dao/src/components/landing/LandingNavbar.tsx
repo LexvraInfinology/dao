@@ -6,7 +6,6 @@ import { Menu, X, ArrowUpRight, Wallet } from 'lucide-react';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
 import { WalletModal } from '@/components/ui/WalletModal';
-import { GetAppButton } from '@/components/ui/GetAppButton';
 import { DevModeButton } from '@/components/ui/DevModeButton';
 
 export const LandingNavbar: React.FC = () => {
@@ -39,7 +38,6 @@ export const LandingNavbar: React.FC = () => {
     { label: 'Levels',       href: '#simulator' },
     { label: 'Pools',        href: '#simulator' },
     { label: 'Network',      href: '#trobchain' },
-    { label: 'Download',     href: '#download-wallet' },
     { label: 'Rewards',      href: '#activity' },
     { label: 'About',        href: '#about' },
   ];
@@ -72,7 +70,7 @@ export const LandingNavbar: React.FC = () => {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-7">
+            <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((item) => (
                 <a
                   key={item.label}
@@ -86,9 +84,6 @@ export const LandingNavbar: React.FC = () => {
 
             {/* Desktop CTA actions */}
             <div className="hidden lg:flex items-center gap-2.5">
-              {/* Device-aware TrobSafe Get App button */}
-              <GetAppButton />
-
               {/* Dev Mode button: Direct bypass to /dao without wallet */}
               <DevModeButton />
 
@@ -174,11 +169,6 @@ export const LandingNavbar: React.FC = () => {
             <div className="pt-3 border-t border-slate-100 space-y-2.5">
               {/* Mobile Dev Mode Button */}
               <DevModeButton variant="drawer" />
-
-              {/* Mobile Get App */}
-              <div className="w-full">
-                <GetAppButton className="w-full" />
-              </div>
 
               {!wallet.isConnected ? (
                 <button

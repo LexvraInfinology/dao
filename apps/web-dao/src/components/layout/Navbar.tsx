@@ -7,7 +7,6 @@ import { LANDING_NAV_ITEMS } from '@/data/navigation';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
-import { GetAppButton } from '@/components/ui/GetAppButton';
 import { DevModeButton } from '@/components/ui/DevModeButton';
 
 export const Navbar: React.FC = () => {
@@ -79,9 +78,6 @@ export const Navbar: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="hidden sm:flex items-center gap-2.5">
-              {/* TrobSafe Download Button for device */}
-              <GetAppButton />
-
               {/* Dev Mode direct bypass to DAO */}
               <DevModeButton />
 
@@ -141,10 +137,6 @@ export const Navbar: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
               {/* Dev Mode button in mobile menu */}
               <DevModeButton variant="drawer" />
-
-              <div className="w-full">
-                <GetAppButton className="w-full" />
-              </div>
 
               <button
                 onClick={() => {

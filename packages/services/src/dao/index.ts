@@ -107,9 +107,9 @@ export class DaoService {
           0
         );
 
-    const totalPoolReceivedBTT = Number(vaultSplits._sum.daoAmount || 0);
-    const totalDistributedUSDEstimate = totalDistributedBTT * priceData.priceUsd;
-    const totalCollectedUSDEstimate = totalCollectedBTT * priceData.priceUsd;
+    const totalPoolReceivedBTT = Number(vaultSplits?._sum?.daoAmount || 0);
+    const totalDistributedUSDEstimate = totalDistributedBTT * (priceData?.priceUsd || 1.0);
+    const totalCollectedUSDEstimate = totalCollectedBTT * (priceData?.priceUsd || 1.0);
 
     return {
       memberCount,
@@ -233,7 +233,7 @@ export class DaoService {
       priceSource: priceData.priceSource,
       status: member.status,
       txHash: member.txHash,
-      fallbackClaims: member.fallbackClaims.map((f: any) => ({
+      fallbackClaims: (member.fallbackClaims || []).map((f: any) => ({
         id: f.id,
         round: f.round,
         amountBtt: Number(f.amountBtt),
@@ -255,7 +255,7 @@ export class DaoService {
     ]);
 
     return events.map((e: any) => {
-      const amountBtt = Number(e.amountBtt);
+      const amountBtt = Number(e.amountBtt || 0);
       return {
         id: e.id,
         eventType: e.eventType,
@@ -263,11 +263,11 @@ export class DaoService {
         incomingPosition: e.incomingPosition,
         recipientCount: e.recipientCount,
         amountBtt,
-        amountUsdEstimate: amountBtt * priceData.priceUsd,
-        priceSource: priceData.priceSource,
+        amountUsdEstimate: amountBtt * (priceData?.priceUsd || 1.0),
+        priceSource: priceData?.priceSource || "offchain-estimate",
         reason: e.reason,
         txHash: e.txHash,
-        blockNumber: e.blockNumber.toString(),
+        blockNumber: e.blockNumber != null ? e.blockNumber.toString() : "0",
         timestamp: e.timestamp,
       };
     });

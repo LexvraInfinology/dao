@@ -13,7 +13,11 @@ export function createApp(): Express {
   const app = express();
 
   // ── Security & Standard Middleware ────────────────────────────────────────
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
 
   const configuredOrigins = (config.corsOrigin || "")
     .split(",")
@@ -23,16 +27,17 @@ export function createApp(): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
+        if (!origin || config.env === "development" || config.corsOrigin === "*") {
+          return callback(null, true);
+        }
         if (
           origin.startsWith("http://localhost:") ||
           origin.startsWith("http://127.0.0.1:") ||
-          configuredOrigins.includes(origin) ||
-          config.corsOrigin === "*"
+          configuredOrigins.includes(origin)
         ) {
           return callback(null, true);
         }
-        callback(new Error("CORS policy violation"));
+        callback(null, false);
       },
       credentials: true,
     })

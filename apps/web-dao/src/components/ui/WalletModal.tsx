@@ -149,30 +149,55 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
                 </p>
               </div>
 
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <a
                   href="/downloads/trobsafe.apk"
                   download="trobsafe.apk"
-                  className="py-2.5 px-3 rounded-xl bg-[#155EEF] hover:bg-[#004EEB] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-[0_4px_12px_rgba(21,94,239,0.3)]"
+                  className="py-2.5 px-2.5 rounded-xl bg-[#155EEF] hover:bg-[#004EEB] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(21,94,239,0.3)]"
                 >
-                  <Smartphone className="w-4 h-4" />
-                  <span>Download APK</span>
+                  <img src="/icons/android.svg" alt="Android" className="w-4 h-4 object-contain" />
+                  <span>Android APK</span>
+                </a>
+                <a
+                  href="https://apps.apple.com/app/trobsafe/id0000000000"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-2.5 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <img src="/icons/apple.svg" alt="iOS" className="w-3.5 h-3.5 object-contain fill-white" />
+                  <span>App Store</span>
                 </a>
                 <a
                   href={TROBSAFE_DOWNLOAD_URL}
-                  className="py-2.5 px-3 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all"
+                  className="py-2.5 px-2.5 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <ExternalLink className="w-4 h-4 text-sky-400" />
-                  <span>Install Extension</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
+                  <span>All Options</span>
                 </a>
               </div>
+
+              {/* Dev Mode direct bypass */}
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem('equora_dao_preview', 'true');
+                    localStorage.setItem('equora_dev_mode', 'true');
+                  } catch { /* ignore */ }
+                  onClose();
+                  window.location.href = '/dao?dev=1';
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>⚡ Dev Mode: Enter DAO without Wallet</span>
+              </button>
             </div>
 
             {/* Custom address input toggle */}
             {!showDirectInput ? (
               <button
                 onClick={() => setShowDirectInput(true)}
-                className="w-full py-2 text-xs text-slate-400 hover:text-white transition-colors text-center border-t border-white/10 pt-3"
+                className="w-full py-2 text-xs text-slate-400 hover:text-white transition-colors text-center border-t border-white/10 pt-3 cursor-pointer"
               >
                 Or enter Trobium address manually ↓
               </button>

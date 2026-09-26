@@ -6,6 +6,7 @@ import { LandingQueueArena } from '@/components/landing/LandingQueueArena';
 import { LandingSimulator } from '@/components/landing/LandingSimulator';
 import { LandingLiveActivity } from '@/components/landing/LandingLiveActivity';
 import { LandingTrobChain } from '@/components/landing/LandingTrobChain';
+import { LandingTrobSafeDownload } from '@/components/landing/LandingTrobSafeDownload';
 import { LandingFaq } from '@/components/landing/LandingFaq';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
@@ -33,11 +34,15 @@ export default function HomePage() {
       {/* 7. TrobChain Section: Why We Choose TrobChain. */}
       <LandingTrobChain />
 
-      {/* 8. FAQ Section: Got Questions? */}
+      {/* 8. Official TrobSafe Wallet Download Section */}
+      <LandingTrobSafeDownload />
+
+      {/* 9. FAQ Section: Got Questions? */}
       <LandingFaq />
 
-      {/* 9. Cosmic Landscape Footer */}
+      {/* 10. Cosmic Landscape Footer */}
       <LandingFooter />
     </main>
   );
 }
+

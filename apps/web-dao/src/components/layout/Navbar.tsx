@@ -7,6 +7,8 @@ import { LANDING_NAV_ITEMS } from '@/data/navigation';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
+import { GetAppButton } from '@/components/ui/GetAppButton';
+import { DevModeButton } from '@/components/ui/DevModeButton';
 
 export const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -76,10 +78,17 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {/* Action Buttons */}
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2.5">
+              {/* TrobSafe Download Button for device */}
+              <GetAppButton />
+
+              {/* Dev Mode direct bypass to DAO */}
+              <DevModeButton />
+
+              {/* Connect / Address */}
               <button
                 onClick={handleConnectClick}
-                className="px-4 h-[40px] rounded-xl font-medium text-sm text-[#071A4A] bg-white hover:bg-slate-50 border border-[#E2ECF9] shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
+                className="px-4 h-[40px] rounded-xl font-medium text-sm text-[#071A4A] bg-white hover:bg-slate-50 border border-[#E2ECF9] shadow-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {wallet.isConnected ? (
                   <>
@@ -130,12 +139,19 @@ export const Navbar: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
+              {/* Dev Mode button in mobile menu */}
+              <DevModeButton variant="drawer" />
+
+              <div className="w-full">
+                <GetAppButton className="w-full" />
+              </div>
+
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   handleConnectClick();
                 }}
-                className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-navy hover:bg-navy-deep transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-navy hover:bg-navy-deep transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
               >
                 <Wallet className="w-4 h-4" />
                 <span>Connect Wallet</span>

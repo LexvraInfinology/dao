@@ -30,6 +30,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
+import { GetAppButton } from '@/components/ui/GetAppButton';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,16 @@ export const DaoHeader: React.FC = () => {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
+  const [isDevMode, setIsDevMode]           = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const dev =
+      sessionStorage.getItem('equora_dao_preview') === 'true' ||
+      localStorage.getItem('equora_dev_mode') === 'true' ||
+      window.location.search.includes('dev=');
+    setIsDevMode(dev);
+  }, []);
 
   const handleConnectClick = () => {
     if (!wallet.isInstalled) {
@@ -64,6 +75,7 @@ export const DaoHeader: React.FC = () => {
     }
     setWalletModalOpen(true);
   };
+
 
   // Read stored address immediately on mount
   useEffect(() => {
@@ -181,6 +193,19 @@ export const DaoHeader: React.FC = () => {
             <Bell className="w-4 h-4" />
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#EF4444] border-2 border-white" />
           </button>
+
+          {/* TrobSafe device download */}
+          <div className="hidden sm:block">
+            <GetAppButton variant="compact" />
+          </div>
+
+          {/* Dev Mode Indicator (if not connected and in dev mode) */}
+          {!isConnected && isDevMode && (
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Dev Mode (Preview)</span>
+            </div>
+          )}
 
           {/* ── Wallet pill / connect button ───────────────────────────── */}
           {isConnected ? (
@@ -453,7 +478,11 @@ export const DaoHeader: React.FC = () => {
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-[#E2ECF9] space-y-2">
+            <div className="pt-4 border-t border-[#E2ECF9] space-y-2.5">
+              <div className="w-full">
+                <GetAppButton className="w-full" />
+              </div>
+
               {isConnected ? (
                 <button
                   onClick={() => { handleDisconnect(); setMobileNavOpen(false); }}

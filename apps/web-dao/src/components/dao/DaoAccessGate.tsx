@@ -53,7 +53,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [devBypass, setDevBypass] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     try {
-      return sessionStorage.getItem('equora_dao_preview') === 'true';
+      const search = window.location.search || '';
+      const isDevParam = search.includes('dev=1') || search.includes('dev=true');
+      const isLocalDev = localStorage.getItem('equora_dev_mode') === 'true';
+      const isSessionDev = sessionStorage.getItem('equora_dao_preview') === 'true';
+      return isDevParam || isLocalDev || isSessionDev;
     } catch {
       return false;
     }
@@ -63,6 +67,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     setDevBypass(true);
     try {
       sessionStorage.setItem('equora_dao_preview', 'true');
+      localStorage.setItem('equora_dev_mode', 'true');
     } catch { /* ignore */ }
   }, []);
 
@@ -71,6 +76,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     const timer = setTimeout(() => setDetectTimeout(true), 800);
     return () => clearTimeout(timer);
   }, []);
+
 
   // Fetch membership status only when we have an address (prefer base58 for TrobSafe)
   const activeAddress = wallet.base58Address || wallet.hexAddress;

@@ -74,8 +74,17 @@ export function useTrobWallet(): TrobWalletState {
   const detectionTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── helpers ──────────────────────────────────────────────────────────────
-  const getTrob = (): TrobWalletAPI | null =>
-    typeof window !== 'undefined' ? (window.trob ?? null) : null;
+  const getTrob = (): TrobWalletAPI | null => {
+    if (typeof window === 'undefined') return null;
+    const w = window as any;
+    const t = w.trob || w.trobLink || w.trobkit || null;
+    return t;
+  };
+
+  const isTrobActive = (t: any): boolean => {
+    if (!t) return false;
+    return Boolean(t.ready || t.installed || typeof t.getDetails === 'function' || typeof t.request === 'function');
+  };
 
   const applyAddress = useCallback((addr: TrobAddress) => {
     const normalized: TrobAddress = {
@@ -100,59 +109,72 @@ export function useTrobWallet(): TrobWalletState {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const tryDetect = () => {
+    const tryDetect = (): boolean => {
       const trob = getTrob();
-      if (trob?.ready) {
-        if (detectionTimer.current) clearTimeout(detectionTimer.current);
-
+      if (isTrobActive(trob)) {
         // Restore previously connected address
         try {
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) {
             const parsed: TrobAddress = JSON.parse(stored);
             if (parsed.base58 || parsed.hex) {
-              // Also sync with what extension reports
-              const liveAddr = trob.defaultAddress;
+              const liveAddr = trob?.defaultAddress;
               const resolvedBase58 = liveAddr?.base58 || parsed.base58;
               const resolvedHex    = liveAddr?.hex    || parsed.hex;
               if (resolvedBase58 || resolvedHex) {
                 applyAddress({ base58: resolvedBase58, hex: resolvedHex });
-                return;
+                return true;
               }
             }
           }
         } catch { /* */ }
 
         // Check if extension already has an address loaded
-        if (trob.defaultAddress?.base58 || trob.defaultAddress?.hex) {
+        if (trob?.defaultAddress?.base58 || trob?.defaultAddress?.hex) {
           applyAddress(trob.defaultAddress);
         } else {
           setStatus('disconnected');
         }
-        return;
+        return true;
       }
-      // Extension not yet injected — keep waiting
+      return false;
     };
 
-    // Poll until found or timed out
-    const pollId = setInterval(tryDetect, 100);
-    detectionTimer.current = setTimeout(() => {
-      clearInterval(pollId);
-      if (!getTrob()?.ready) setStatus('not_installed');
-    }, DETECTION_TIMEOUT_MS);
+    // Immediate check
+    if (tryDetect()) return;
 
-    // Also listen for the custom trobReady event
+    // Fast poll for the first 2 seconds (every 100ms)
+    let pollCount = 0;
+    const fastPoll = setInterval(() => {
+      pollCount++;
+      if (tryDetect()) {
+        clearInterval(fastPoll);
+      } else if (pollCount >= 20) {
+        // After 2s of not finding extension, switch from 'detecting' to 'not_installed'
+        clearInterval(fastPoll);
+        setStatus((prev) => (prev === 'detecting' ? 'not_installed' : prev));
+      }
+    }, 100);
+
+    // Continuous background check every 600ms so enabling extension auto-connects
+    const slowPoll = setInterval(() => {
+      if (tryDetect()) {
+        clearInterval(slowPoll);
+      }
+    }, 600);
+
+    // Also listen for custom trobReady events
     const onTrobReady = () => {
-      clearInterval(pollId);
-      if (detectionTimer.current) clearTimeout(detectionTimer.current);
+      clearInterval(fastPoll);
+      clearInterval(slowPoll);
       tryDetect();
     };
     window.addEventListener('trobReady', onTrobReady);
     window.addEventListener('trobLinkReady', onTrobReady);
 
     return () => {
-      clearInterval(pollId);
-      if (detectionTimer.current) clearTimeout(detectionTimer.current);
+      clearInterval(fastPoll);
+      clearInterval(slowPoll);
       window.removeEventListener('trobReady', onTrobReady);
       window.removeEventListener('trobLinkReady', onTrobReady);
     };

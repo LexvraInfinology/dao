@@ -17,4 +17,7 @@ export const servicesConfig = {
     chainId: parseInt(process.env.CHAIN_ID || "31337", 10),
     rpcUrl: process.env.RPC_URL || "http://127.0.0.1:8545",
   },
+  price: {
+    trobApiUrl: process.env.TROB_PRICE_API_URL || "https://backend.trobchain.com/v1/market/price",
+  },
 };

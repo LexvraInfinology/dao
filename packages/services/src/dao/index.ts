@@ -83,7 +83,8 @@ export class PriceService {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch("https://backend.trobchain.com/v1/market/price", {
+      const apiUrl = servicesConfig.price.trobApiUrl;
+      const res = await fetch(apiUrl, {
         signal: controller.signal,
         headers: { Accept: "application/json" },
       });

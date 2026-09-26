@@ -37,16 +37,19 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [payError, setPayError]               = useState<string | null>(null);
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
+  const [devBypass, setDevBypass]             = useState(false);
 
-  // Fetch membership status only when we have an address
+  // Fetch membership status only when we have an address (check hex or base58)
+  const activeAddress = wallet.hexAddress || wallet.base58Address;
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
-    useDaoMember(wallet.hexAddress);
+    useDaoMember(activeAddress);
 
   // Fetch live TROB price for the $300 calculation
   const { data: priceData } = useTrobPrice(30_000);
 
   // ── Derive gate state ──────────────────────────────────────────────────────
   const gateState: GateState = (() => {
+    if (devBypass)                          return 'access_granted';
     if (wallet.status === 'detecting')      return 'detecting_wallet';
     if (wallet.status === 'not_installed')  return 'not_installed';
     if (!wallet.isConnected)                return 'wallet_required';
@@ -230,6 +233,15 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     : '…'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
+              </button>
+
+              {/* Dev Preview Mode Bypass (allowed in local development) */}
+              <button
+                type="button"
+                onClick={() => setDevBypass(true)}
+                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                ⚡ Dev Preview: Enter DAO Dashboard Without Claiming
               </button>
 
               <p className="mt-3 text-center text-[11px] text-[#94A3B8]">

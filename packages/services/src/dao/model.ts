@@ -1,6 +1,6 @@
 export interface PriceData {
   priceUsd: number;
-  priceSource: "onchain" | "offchain-estimate";
+  priceSource: "onchain" | "offchain-estimate" | "trobchain-api" | string;
   updatedAt: Date;
   isStale: boolean;
 }

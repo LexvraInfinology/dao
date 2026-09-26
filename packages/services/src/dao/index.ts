@@ -20,6 +20,9 @@ export class PriceService {
   private client: ReturnType<typeof createPublicClient> | null = null;
   private chainlinkFeedAddress: `0x${string}` | null = null;
   private defaultBttPrice = 1.0;
+  private cachedPrice: PriceData | null = null;
+  private lastFetchTime = 0;
+  private cacheTtlMs = 30_000; // 30 seconds cache
 
   constructor() {
     const rpcUrl = servicesConfig.blockchain.rpcUrl;
@@ -34,6 +37,11 @@ export class PriceService {
   }
 
   async getBttUsdPrice(): Promise<PriceData> {
+    const now = Date.now();
+    if (this.cachedPrice && now - this.lastFetchTime < this.cacheTtlMs) {
+      return this.cachedPrice;
+    }
+
     if (this.client && this.chainlinkFeedAddress) {
       try {
         const [roundData, decimals] = await Promise.all([
@@ -56,16 +64,56 @@ export class PriceService {
 
         if (!isStale && answer > 0n) {
           const formattedPrice = Number(answer) / 10 ** decimals;
-          return {
+          const result: PriceData = {
             priceUsd: formattedPrice,
             priceSource: "onchain",
             updatedAt: new Date(updatedSeconds * 1000),
             isStale: false,
           };
+          this.cachedPrice = result;
+          this.lastFetchTime = now;
+          return result;
         }
       } catch (err) {
-        // Fall back to off-chain estimate
+        // Fall back to official Trobium market API
       }
+    }
+
+    // Live Trobium Market Price API (used by TrobSafe Wallet extension)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch("https://backend.trobchain.com/v1/market/price", {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const json = (await res.json()) as any;
+        const data = json?.data ?? json;
+        const price = Number(data?.priceUsd);
+        if (Number.isFinite(price) && price > 0) {
+          const result: PriceData = {
+            priceUsd: price,
+            priceSource: "trobchain-api",
+            updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+            isStale: false,
+          };
+          this.cachedPrice = result;
+          this.lastFetchTime = now;
+          return result;
+        }
+      }
+    } catch (err) {
+      console.warn("PriceService: Failed to fetch live TROB price from trobchain.com:", err);
+    }
+
+    if (this.cachedPrice) {
+      return {
+        ...this.cachedPrice,
+        isStale: true,
+      };
     }
 
     return {

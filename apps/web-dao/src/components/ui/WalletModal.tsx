@@ -154,7 +154,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
               </a>
 
               <a
-                href="/api/trobsafe/apk"
+                href="/downloads/trobsafe.apk"
                 download="trobsafe.apk"
                 className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#93C5FD] hover:text-white bg-[#1E3A5F]/60 hover:bg-[#1E3A5F] border border-[#2E5A88] flex items-center justify-center gap-2 transition-all shadow-sm"
               >

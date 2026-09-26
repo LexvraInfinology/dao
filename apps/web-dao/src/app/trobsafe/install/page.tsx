@@ -120,7 +120,7 @@ export default function TrobSafeInstallPage() {
               Download Extension (.ZIP)
             </a>
             <a
-              href="/api/trobsafe/apk"
+              href="/downloads/trobsafe.apk"
               download="trobsafe.apk"
               className="w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm text-[#155EEF] bg-white hover:bg-blue-50/80 border border-[#BFDBFE] shadow-sm flex items-center justify-center gap-2 transition-all"
             >

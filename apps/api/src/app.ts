@@ -271,6 +271,7 @@ export function createApp(): Express {
             amountBtt: 300,
             txHash: member.txHash,
             blockNumber: 0n,
+            timestamp: new Date(),
           },
         });
       }

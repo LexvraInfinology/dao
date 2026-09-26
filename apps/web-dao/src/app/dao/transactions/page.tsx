@@ -1,33 +1,54 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TransactionsHero } from '@/components/dao/transactions/TransactionsHero';
 import { TransactionsTable } from '@/components/dao/transactions/TransactionsTable';
 import { TransactionsMobileMetrics } from '@/components/dao/transactions/TransactionsMobileMetrics';
 import { TransactionsMobileList } from '@/components/dao/transactions/TransactionsMobileList';
+import { useWallet } from '@/context/WalletContext';
+import { useTransactions } from '@/hooks/useApi';
 
 export default function DaoTransactionsPage() {
+  const wallet         = useWallet();
+  const [page, setPage] = useState(1);
+
+  const { data: txData, loading, refetch } = useTransactions(wallet.hexAddress, page, 20);
+
+  const transactions = txData?.transactions ?? [];
+  const totalPages   = txData?.pages        ?? 1;
+  const bttPrice     = txData?.bttPriceUsd  ?? 1;
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
-      {/* 1. Hero Section (Responsive: Desktop with orbital rings & micro-tags vs Mobile compact) */}
-      <TransactionsHero />
+      <TransactionsHero
+        totalTransactions={txData?.total}
+        bttPriceUsd={bttPrice}
+      />
 
-      {/* =========================================================================
-          2. DESKTOP VIEW (Visible on lg and above - exactly matching Desktop - 18)
-         ========================================================================= */}
+      {/* Desktop */}
       <div className="hidden lg:block space-y-6 sm:space-y-8">
-        <TransactionsTable />
+        <TransactionsTable
+          transactions={transactions}
+          loading={loading}
+          onRefresh={refetch}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          bttPriceUsd={bttPrice}
+        />
       </div>
 
-      {/* =========================================================================
-          3. MOBILE VIEW (Visible below lg - exactly matching Transactions Mobile)
-         ========================================================================= */}
+      {/* Mobile */}
       <div className="lg:hidden space-y-4 sm:space-y-5">
-        {/* Mobile Metrics & Filter Bar */}
-        <TransactionsMobileMetrics />
-
-        {/* Mobile Card Feed */}
-        <TransactionsMobileList />
+        <TransactionsMobileMetrics
+          transactions={transactions}
+          bttPriceUsd={bttPrice}
+        />
+        <TransactionsMobileList
+          transactions={transactions}
+          loading={loading}
+          onRefresh={refetch}
+        />
       </div>
     </div>
   );

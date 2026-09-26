@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from '@/context/Providers';
 
 export const metadata: Metadata = {
   title: 'EQUORA_Fi — Higher Ranks. A Brighter Tomorrow.',
@@ -37,7 +38,10 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-screen bg-[#F0F4F8] text-[#071A4A] antialiased selection:bg-[#155EEF] selection:text-white"
       >
-        {children}
+        {/* WalletProvider → AuthProvider must be nested in this order */}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -2,296 +2,207 @@
 
 import React, { useState } from 'react';
 import {
-  RefreshCw,
-  Users,
-  CreditCard,
-  Vote,
-  Armchair,
-  ExternalLink,
-  Info,
-  ArrowLeft,
-  ArrowRight,
+  RefreshCw, Users, CreditCard, Vote, Armchair, ArrowDownLeft,
+  ArrowUpRight, Layers, ExternalLink, Info, ArrowLeft, ArrowRight, Loader2,
 } from 'lucide-react';
-import { DAO_TRANSACTIONS_LIST, DaoTxItem } from '@/data/transactionsData';
+import type { TransactionItem } from '@/hooks/useApi';
 
-export const TransactionsTable: React.FC = () => {
+interface TransactionsTableProps {
+  transactions?: TransactionItem[];
+  loading?: boolean;
+  onRefresh?: () => void;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  bttPriceUsd?: number;
+}
+
+function getTypeIcon(type: string) {
+  const base = 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0';
+  if (type === 'withdrawal')
+    return <div className={`${base} bg-[#FEF2F2] text-[#EF4444]`}><ArrowUpRight className="w-3.5 h-3.5" /></div>;
+  if (type.startsWith('matrix_'))
+    return <div className={`${base} bg-purple-50 text-purple-600`}><Layers className="w-3.5 h-3.5" /></div>;
+  if (type === 'joined' || type === 'council_seat')
+    return <div className={`${base} bg-[#EFF6FF] text-[#155EEF]`}><Armchair className="w-3.5 h-3.5" /></div>;
+  if (type === 'pushed' || type === 'seat_distribution' || type === 'fallback_claimed')
+    return <div className={`${base} bg-[#ECFDF5] text-[#059669]`}><ArrowDownLeft className="w-3.5 h-3.5" /></div>;
+  if (type === 'vote' || type.includes('vote'))
+    return <div className={`${base} bg-purple-50 text-purple-600`}><Vote className="w-3.5 h-3.5" /></div>;
+  return <div className={`${base} bg-[#EFF6FF] text-[#155EEF]`}><Users className="w-3.5 h-3.5" /></div>;
+}
+
+function shortAddr(addr: string) {
+  if (!addr || addr === '—') return addr;
+  if (addr.length > 14) return `${addr.slice(0, 8)}…${addr.slice(-4)}`;
+  return addr;
+}
+
+function timeAgoLabel(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+export const TransactionsTable: React.FC<TransactionsTableProps> = ({
+  transactions = [],
+  loading = false,
+  onRefresh,
+  page = 1,
+  totalPages = 1,
+  onPageChange,
+  bttPriceUsd = 1,
+}) => {
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedTx, setSelectedTx] = useState<DaoTxItem | null>(null);
+  const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
 
   const handleRefresh = () => {
     setRefreshing(true);
+    onRefresh?.();
     setTimeout(() => setRefreshing(false), 800);
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'seat_distribution':
-        return (
-          <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#155EEF] flex items-center justify-center shrink-0">
-            <Users className="w-3.5 h-3.5" />
-          </div>
-        );
-      case 'withdrawal':
-        return (
-          <div className="w-7 h-7 rounded-lg bg-[#FEF2F2] text-[#EF4444] flex items-center justify-center shrink-0">
-            <CreditCard className="w-3.5 h-3.5" />
-          </div>
-        );
-      case 'governance':
-        return (
-          <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <Vote className="w-3.5 h-3.5" />
-          </div>
-        );
-      case 'council_seat':
-        return (
-          <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#155EEF] flex items-center justify-center shrink-0">
-            <Armchair className="w-3.5 h-3.5" />
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="bg-white border border-[#E2ECF9] rounded-3xl p-6 sm:p-8 shadow-[0_4px_25px_rgba(15,23,42,0.03)] space-y-6">
-      {/* Table Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold font-jakarta text-[#071A4A]">
-            Transaction History
-          </h2>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEF5FF] border border-[#BFDBFE]/60 text-[11px] font-bold text-[#155EEF]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
-            <span>LIVE STREAM</span>
-          </span>
+    <div className="bg-white border border-[#E2ECF9] rounded-3xl shadow-[0_4px_25px_rgba(15,23,42,0.03)] overflow-hidden">
+      {/* Table header bar */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2ECF9]">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-base font-bold font-jakarta text-[#071A4A]">Transaction History</h3>
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-[#155EEF]" />}
         </div>
-
-        <div className="flex items-center gap-4 text-xs">
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-1.5 font-bold font-jakarta text-[#155EEF] hover:text-[#0052E6] transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-
-          <button className="font-bold font-jakarta text-[#155EEF] hover:underline flex items-center gap-0.5 cursor-pointer">
-            <span>View All</span>
-            <span>&gt;</span>
+        <div className="flex items-center gap-2">
+          {bttPriceUsd > 0 && (
+            <span className="text-xs text-[#60739A] font-jakarta hidden sm:block">
+              TROB @ <span className="font-bold text-[#071A4A]">${bttPriceUsd.toFixed(4)}</span>
+            </span>
+          )}
+          <button onClick={handleRefresh}
+            className={`p-2 rounded-xl border border-[#E2ECF9] text-[#60739A] hover:text-[#155EEF] hover:border-blue-200 transition-all ${refreshing ? 'animate-spin text-[#155EEF]' : ''}`}
+            title="Refresh">
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-[#F1F5F9] text-[10px] font-bold uppercase tracking-wider text-[#60739A] font-jakarta">
-              <th className="pb-3.5 font-semibold">DATE</th>
-              <th className="pb-3.5 font-semibold">TYPE</th>
-              <th className="pb-3.5 font-semibold">AMOUNT (USD)</th>
-              <th className="pb-3.5 font-semibold">AMOUNT (TROB)</th>
-              <th className="pb-3.5 font-semibold">FROM</th>
-              <th className="pb-3.5 font-semibold">STATUS</th>
-              <th className="pb-3.5 font-semibold text-right">TX HASH</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#F8FAFC] text-xs font-jakarta">
-            {DAO_TRANSACTIONS_LIST.map((tx) => (
-              <tr
-                key={tx.id}
-                className="hover:bg-[#F8FAFC]/90 transition-colors group cursor-pointer"
-                onClick={() => setSelectedTx(tx)}
-              >
-                {/* DATE */}
-                <td className="py-4 text-[#60739A] font-medium whitespace-nowrap">
-                  {tx.date}
-                </td>
-
-                {/* TYPE */}
-                <td className="py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2.5">
-                    {getTypeIcon(tx.type)}
-                    <span className="font-bold text-[#071A4A]">{tx.typeLabel}</span>
-                  </div>
-                </td>
-
-                {/* AMOUNT (USD) */}
-                <td className="py-4 whitespace-nowrap font-black">
-                  <span
-                    className={
-                      tx.isPositive === true
-                        ? 'text-[#0284C7]'
-                        : tx.isPositive === false
-                        ? 'text-[#EF4444]'
-                        : 'text-[#94A3B8]'
-                    }
-                  >
-                    {tx.amountUsd}
-                  </span>
-                </td>
-
-                {/* AMOUNT (TROB) */}
-                <td className="py-4 whitespace-nowrap text-[#60739A] font-medium">
-                  {tx.amountTrob}
-                </td>
-
-                {/* FROM */}
-                <td className="py-4 whitespace-nowrap">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1 font-bold text-[#155EEF] group-hover:underline">
-                      <span>{tx.fromTitle}</span>
-                      {tx.id === 'tx-1' && (
-                        <Info className="w-3 h-3 text-[#94A3B8]" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-[#94A3B8]">
-                      <span>{tx.fromAddress}</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </div>
-                  </div>
-                </td>
-
-                {/* STATUS */}
-                <td className="py-4 whitespace-nowrap">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#EFF6FF] border border-[#BFDBFE]/60 text-[10px] font-bold text-[#155EEF]">
-                    {tx.status}
-                  </span>
-                </td>
-
-                {/* TX HASH */}
-                <td className="py-4 whitespace-nowrap text-right">
-                  <div className="inline-flex items-center gap-1 font-mono font-bold text-[#155EEF] group-hover:underline">
-                    <span>{tx.txHash}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Column headers */}
+      <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#F1F5F9] text-[10px] font-bold uppercase tracking-wider text-[#64748B] font-jakarta">
+        <div className="col-span-1">Type</div>
+        <div className="col-span-3">Details</div>
+        <div className="col-span-2">From</div>
+        <div className="col-span-2">To</div>
+        <div className="col-span-2 text-right">Amount</div>
+        <div className="col-span-1 text-right">Status</div>
+        <div className="col-span-1 text-right">Action</div>
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex items-center justify-between pt-4 border-t border-[#F8FAFC] text-xs font-jakarta">
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-          className="px-3.5 py-1.5 rounded-xl border border-[#E2ECF9] bg-[#F8FAFC] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-[#071A4A] font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Previous</span>
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setCurrentPage(1)}
-            className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
-              currentPage === 1
-                ? 'bg-[#155EEF] text-white shadow-xs'
-                : 'text-[#60739A] hover:bg-slate-100'
-            }`}
-          >
-            1
-          </button>
-          <button
-            onClick={() => setCurrentPage(2)}
-            className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
-              currentPage === 2
-                ? 'bg-[#155EEF] text-white shadow-xs'
-                : 'text-[#60739A] hover:bg-slate-100'
-            }`}
-          >
-            2
-          </button>
-          <button
-            onClick={() => setCurrentPage(3)}
-            className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
-              currentPage === 3
-                ? 'bg-[#155EEF] text-white shadow-xs'
-                : 'text-[#60739A] hover:bg-slate-100'
-            }`}
-          >
-            3
-          </button>
-          <span className="text-[#94A3B8] px-1 font-bold">...</span>
-          <button
-            onClick={() => setCurrentPage(25)}
-            className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
-              currentPage === 25
-                ? 'bg-[#155EEF] text-white shadow-xs'
-                : 'text-[#60739A] hover:bg-slate-100'
-            }`}
-          >
-            25
-          </button>
-        </div>
-
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(25, p + 1))}
-          disabled={currentPage === 25}
-          className="px-3.5 py-1.5 rounded-xl border border-[#E2ECF9] bg-[#F8FAFC] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-[#071A4A] font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-        >
-          <span>Next</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Detail Modal */}
-      {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
-              <h3 className="text-base font-bold text-[#071A4A] font-jakarta flex items-center gap-2">
-                {getTypeIcon(selectedTx.type)}
-                <span>{selectedTx.typeLabel} Details</span>
-              </h3>
-              <button
-                onClick={() => setSelectedTx(null)}
-                className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold"
-              >
-                ✕
-              </button>
+      {/* Rows */}
+      <div className="divide-y divide-[#F8FAFC]">
+        {transactions.length === 0 && !loading && (
+          <div className="px-6 py-12 text-center text-sm text-[#94A3B8] font-jakarta">
+            No transactions found.
+          </div>
+        )}
+        {transactions.map((tx) => (
+          <div key={tx.id}
+            onClick={() => setSelectedTx(tx)}
+            className="grid grid-cols-12 gap-4 px-6 py-3.5 items-center hover:bg-[#F8FAFC] cursor-pointer transition-colors text-xs font-jakarta">
+            {/* Type icon */}
+            <div className="col-span-1">{getTypeIcon(tx.type)}</div>
+            {/* Label + time */}
+            <div className="col-span-3 min-w-0">
+              <div className="font-bold text-[#071A4A] truncate">{tx.typeLabel}</div>
+              <div className="text-[#94A3B8] mt-0.5">{timeAgoLabel(tx.timestamp)}</div>
             </div>
-
-            <div className="space-y-2.5 text-xs text-[#4F6184] font-jakarta">
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">Timestamp:</span>
-                  <span className="font-bold text-[#071A4A]">{selectedTx.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">Amount USD:</span>
-                  <span className="font-bold text-[#071A4A]">{selectedTx.amountUsd}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">Amount TROB:</span>
-                  <span className="font-bold text-[#071A4A]">{selectedTx.amountTrob}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">From Entity:</span>
-                  <span className="font-bold text-[#155EEF]">{selectedTx.fromTitle}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">From Address:</span>
-                  <span className="font-mono text-[#071A4A]">{selectedTx.fromAddress}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#60739A]">Full Hash:</span>
-                  <span className="font-mono text-[10px] text-[#155EEF] truncate max-w-[200px]">{selectedTx.fullTxHash}</span>
-                </div>
-              </div>
+            {/* From */}
+            <div className="col-span-2 font-mono text-[#60739A] truncate">{shortAddr(tx.from)}</div>
+            {/* To */}
+            <div className="col-span-2 font-mono text-[#60739A] truncate">{shortAddr(tx.to)}</div>
+            {/* Amount */}
+            <div className="col-span-2 text-right">
+              {tx.amountBtt > 0 ? (
+                <>
+                  <div className={`font-black ${tx.isPositive === false ? 'text-[#DC2626]' : tx.isPositive ? 'text-[#059669]' : 'text-[#071A4A]'}`}>
+                    {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)}
+                  </div>
+                  <div className="text-[#94A3B8] text-[10px]">
+                    {tx.isPositive === false ? '-' : '+'}{tx.amountBtt.toFixed(2)} TROB
+                  </div>
+                </>
+              ) : (
+                <div className="text-[#94A3B8]">—</div>
+              )}
             </div>
+            {/* Status */}
+            <div className="col-span-1 text-right">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#059669]">
+                <span className="w-1 h-1 rounded-full bg-[#059669]" />{tx.status}
+              </span>
+            </div>
+            {/* Explorer link */}
+            <div className="col-span-1 flex justify-end">
+              <a href={`https://tronscan.io/#/transaction/${tx.txHash}`} target="_blank" rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#155EEF] hover:bg-blue-50 transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
 
-            <button
-              onClick={() => setSelectedTx(null)}
-              className="w-full py-2.5 rounded-xl bg-[#155EEF] text-white font-bold text-xs hover:bg-[#0052E6] transition-all cursor-pointer"
-            >
-              Close
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-[#E2ECF9] flex items-center justify-between text-xs font-jakarta">
+          <span className="text-[#60739A]">Page {page} of {totalPages}</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onPageChange?.(page - 1)} disabled={page <= 1}
+              className="p-1.5 rounded-lg border border-[#E2ECF9] text-[#60739A] hover:text-[#155EEF] disabled:opacity-40">
+              <ArrowLeft className="w-3.5 h-3.5" />
             </button>
+            <button onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages}
+              className="p-1.5 rounded-lg border border-[#E2ECF9] text-[#60739A] hover:text-[#155EEF] disabled:opacity-40">
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Detail modal */}
+      {selectedTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs" onClick={() => setSelectedTx(null)}>
+          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
+              <h3 className="text-sm font-bold text-[#071A4A] font-jakarta">Transaction Details</h3>
+              <button onClick={() => setSelectedTx(null)} className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold">✕</button>
+            </div>
+            <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-1.5 text-xs font-jakarta">
+              {[
+                ['Type',      selectedTx.typeLabel],
+                ['Time',      timeAgoLabel(selectedTx.timestamp)],
+                ['Amount',    selectedTx.amountBtt > 0 ? `$${selectedTx.amountUsd.toFixed(2)} / ${selectedTx.amountBtt.toFixed(2)} TROB` : '—'],
+                ['From',      selectedTx.from],
+                ['To',        selectedTx.to],
+                ['Status',    selectedTx.status],
+                ['Tx Hash',   selectedTx.txHash],
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between gap-2">
+                  <span className="text-[#60739A] shrink-0">{label}:</span>
+                  <span className="font-bold text-[#071A4A] font-mono text-right break-all">{val}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setSelectedTx(null)} className="flex-1 py-2.5 rounded-xl bg-[#155EEF] text-white font-bold text-xs hover:bg-[#0052E6] transition-all">Close</button>
+              <a href={`https://tronscan.io/#/transaction/${selectedTx.txHash}`} target="_blank" rel="noreferrer"
+                className="flex-1 py-2.5 rounded-xl border border-[#E2ECF9] text-[#155EEF] font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1">
+                <ExternalLink className="w-3 h-3" />Explorer
+              </a>
+            </div>
           </div>
         </div>
       )}

@@ -4,9 +4,23 @@ import React, { useState } from 'react';
 import { TreasuryHero } from '@/components/dao/treasury/TreasuryHero';
 import { TreasuryBalanceCard } from '@/components/dao/treasury/TreasuryBalanceCard';
 import { TreasuryWithdrawCard } from '@/components/dao/treasury/TreasuryWithdrawCard';
+import { useWallet } from '@/context/WalletContext';
+import { useLounge } from '@/hooks/useApi';
 
 export default function DaoTreasuryPage() {
-  const [balance, setBalance] = useState<number>(420.50);
+  const wallet = useWallet();
+  // Lounge endpoint has claimableDividendsUsd which is our available balance
+  const { data: lounge } = useLounge(wallet.hexAddress);
+
+  const initialBalance = lounge?.claimableDividendsUsd ?? 420.50;
+  const [balance, setBalance] = useState<number>(initialBalance);
+
+  // Sync when API data arrives
+  React.useEffect(() => {
+    if (lounge?.claimableDividendsUsd != null) {
+      setBalance(lounge.claimableDividendsUsd);
+    }
+  }, [lounge?.claimableDividendsUsd]);
 
   const handleWithdrawSuccess = (amount: number) => {
     setBalance((prev) => Math.max(0, parseFloat((prev - amount).toFixed(2))));
@@ -14,39 +28,36 @@ export default function DaoTreasuryPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
-      {/* 1. Hero Section (Responsive: Desktop with micro-tags & crystal vs Mobile compact) */}
-      <TreasuryHero />
+      <TreasuryHero balance={balance} loungeData={lounge} />
 
-      {/* =========================================================================
-          2. DESKTOP VIEW (Visible on lg and above - exactly matching Desktop - 17)
-             Order: Treasury Balance Card -> Withdraw Card
-         ========================================================================= */}
+      {/* Desktop */}
       <div className="hidden lg:block space-y-6 sm:space-y-8">
-        {/* Treasury Balance Card */}
-        <TreasuryBalanceCard balance={balance} />
-
-        {/* Withdraw Card (2-column layout) */}
+        <TreasuryBalanceCard
+          balance={balance}
+          totalVaultAssets={lounge?.totalReceivedUsd}
+          contractAddress={process.env.NEXT_PUBLIC_DAO_ADDRESS}
+        />
         <TreasuryWithdrawCard
           availableBalance={balance}
           onWithdrawSuccess={handleWithdrawSuccess}
           variant="desktop"
+          walletAddress={wallet.hexAddress ?? undefined}
         />
       </div>
 
-      {/* =========================================================================
-          3. MOBILE VIEW (Visible below lg - exactly matching Treasury Mobile)
-             Order: Withdraw Card -> Treasury Balance Card
-         ========================================================================= */}
+      {/* Mobile */}
       <div className="lg:hidden space-y-4 sm:space-y-5">
-        {/* Withdraw Card (Compact stacked layout) */}
         <TreasuryWithdrawCard
           availableBalance={balance}
           onWithdrawSuccess={handleWithdrawSuccess}
           variant="mobile"
+          walletAddress={wallet.hexAddress ?? undefined}
         />
-
-        {/* Treasury Balance Card (Compact stacked footer) */}
-        <TreasuryBalanceCard balance={balance} />
+        <TreasuryBalanceCard
+          balance={balance}
+          totalVaultAssets={lounge?.totalReceivedUsd}
+          contractAddress={process.env.NEXT_PUBLIC_DAO_ADDRESS}
+        />
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Users,
-  Clock,
   ArrowRight,
   ShieldCheck,
   Shield,
@@ -13,13 +11,12 @@ import {
   Vote,
   Play,
   Calendar,
-  Sparkles,
   Star,
   ChevronDown,
   ChevronUp,
-  UserPlus,
 } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
+import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
 
 export default function DaoDashboardPage() {
   const [videoOpen, setVideoOpen] = useState(false);
@@ -157,9 +154,9 @@ export default function DaoDashboardPage() {
               />
             </div>
 
-            {/* DECENTRALIZED • TRANSPARENT Pill */}
+            {/* DECENTRALIZED â€¢ TRANSPARENT Pill */}
             <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-[#EEF5FF] border border-[#BFDBFE] text-[10px] font-bold text-[#155EEF] tracking-wide uppercase">
-              DECENTRALIZED • TRANSPARENT
+              DECENTRALIZED â€¢ TRANSPARENT
             </div>
           </div>
 
@@ -193,7 +190,7 @@ export default function DaoDashboardPage() {
       </div>
 
       {/* =========================================================================
-          2. STATS ROW: 3 WHITE CARDS (With Mobile Swipeable Container)
+          2. STATS ROW: 3 WHITE CARDS â€” live data from API
          ========================================================================= */}
       <div>
         {/* Mobile Swipe Header */}
@@ -206,120 +203,8 @@ export default function DaoDashboardPage() {
             <ArrowRight className="w-3 h-3" />
           </div>
         </div>
-
-        {/* 3 Stats Cards: Horizontal Snap Scroll on Mobile (< md), Grid on md+ */}
-        <div className="flex md:grid md:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 snap-x snap-mandatory scroll-smooth no-scrollbar">
-          {/* Card 1: Seats Remaining */}
-          <div className="min-w-[280px] xs:min-w-[300px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] flex flex-col justify-between space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EEF5FF] text-[#155EEF] flex items-center justify-center shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-[#60739A] font-jakarta">
-                Seats Remaining
-              </span>
+        <DaoDashboardStats />
             </div>
-
-            <div>
-              <div className="text-3xl sm:text-4xl font-black font-jakarta text-[#071A4A]">
-                14 <span className="text-lg sm:text-xl text-[#94A3B8] font-normal">/ 100</span>
-              </div>
-            </div>
-
-            {/* Progress Bar & Seat Count */}
-            <div className="space-y-1.5 pt-1">
-              <div className="w-full h-2 rounded-full bg-[#E2ECF9] overflow-hidden">
-                <div
-                  className="h-full bg-[#155EEF] rounded-full transition-all duration-500"
-                  style={{ width: '86%' }}
-                />
-              </div>
-              <div className="text-right text-[11px] font-semibold text-[#64748B]">
-                86 seats filled
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Genesis Phase 1 Ends In */}
-          <div className="min-w-[280px] xs:min-w-[300px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] flex flex-col justify-between space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EEF5FF] text-[#155EEF] flex items-center justify-center shrink-0">
-                <Clock className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-[#60739A] font-jakarta">
-                Genesis Phase 1 Ends In
-              </span>
-            </div>
-
-            {/* Countdown Numbers Inline with Colons */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="text-center">
-                <div className="text-xl lg:text-2xl xl:text-3xl font-black font-jakarta text-[#071A4A]">18</div>
-                <div className="text-[9px] lg:text-[10px] font-bold text-[#94A3B8] tracking-wider uppercase mt-1">DAYS</div>
-              </div>
-              <div className="text-base lg:text-lg font-bold text-[#94A3B8] -mt-3">:</div>
-              <div className="text-center">
-                <div className="text-xl lg:text-2xl xl:text-3xl font-black font-jakarta text-[#071A4A]">14</div>
-                <div className="text-[9px] lg:text-[10px] font-bold text-[#94A3B8] tracking-wider uppercase mt-1">HOURS</div>
-              </div>
-              <div className="text-base lg:text-lg font-bold text-[#94A3B8] -mt-3">:</div>
-              <div className="text-center">
-                <div className="text-xl lg:text-2xl xl:text-3xl font-black font-jakarta text-[#071A4A]">22</div>
-                <div className="text-[9px] lg:text-[10px] font-bold text-[#94A3B8] tracking-wider uppercase mt-1">MINS</div>
-              </div>
-              <div className="text-base lg:text-lg font-bold text-[#94A3B8] -mt-3">:</div>
-              <div className="text-center">
-                <div className="text-xl lg:text-2xl xl:text-3xl font-black font-jakarta text-[#071A4A]">10</div>
-                <div className="text-[9px] lg:text-[10px] font-bold text-[#94A3B8] tracking-wider uppercase mt-1">SECS</div>
-              </div>
-            </div>
-
-            <div className="h-4" />
-          </div>
-
-          {/* Card 3: Next Seat Preview */}
-          <div className="min-w-[300px] xs:min-w-[320px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] flex flex-col justify-between space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EEF5FF] text-[#155EEF] flex items-center justify-center shrink-0">
-                <UserPlus className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-[#60739A] font-jakarta">
-                Next Seat Preview
-              </span>
-            </div>
-
-            {/* 4 Data Columns */}
-            <div className="grid grid-cols-4 gap-1 sm:gap-2 pt-1 text-left">
-              <div>
-                <div className="text-base sm:text-lg md:text-sm lg:text-lg xl:text-2xl font-black font-jakarta text-[#071A4A]">#87</div>
-                <div className="text-[9px] lg:text-[10px] xl:text-[11px] text-[#64748B] font-medium mt-1 leading-tight">
-                  Position in Line
-                </div>
-              </div>
-              <div>
-                <div className="text-base sm:text-lg md:text-sm lg:text-lg xl:text-2xl font-black font-jakarta text-[#071A4A]">$300</div>
-                <div className="text-[9px] lg:text-[10px] xl:text-[11px] text-[#64748B] font-medium mt-1 leading-tight">
-                  Gross Deposit
-                </div>
-              </div>
-              <div>
-                <div className="text-base sm:text-lg md:text-sm lg:text-lg xl:text-2xl font-black font-jakarta text-[#10B981]">$3.45</div>
-                <div className="text-[9px] lg:text-[10px] xl:text-[11px] text-[#64748B] font-medium mt-1 leading-tight">
-                  Instant Cashback
-                </div>
-              </div>
-              <div>
-                <div className="text-base sm:text-lg md:text-sm lg:text-lg xl:text-2xl font-black font-jakarta text-[#071A4A]">$296.55</div>
-                <div className="text-[9px] lg:text-[10px] xl:text-[11px] text-[#64748B] font-medium mt-1 leading-tight">
-                  Total In-Flow
-                </div>
-              </div>
-            </div>
-
-            <div className="h-4" />
-          </div>
-        </div>
-      </div>
 
       {/* =========================================================================
           3. CALCULATOR & WHY JOIN SECTION
@@ -651,12 +536,12 @@ export default function DaoDashboardPage() {
       <div className="lg:hidden pt-8 pb-4 text-center space-y-2 text-[11px] text-[#94A3B8] font-jakarta select-none">
         <div className="flex items-center justify-center gap-3 font-semibold text-[#64748B]">
           <span className="hover:text-[#071A4A] cursor-pointer">Docs</span>
-          <span>•</span>
+          <span>â€¢</span>
           <span className="hover:text-[#071A4A] cursor-pointer">Support</span>
-          <span>•</span>
+          <span>â€¢</span>
           <span className="hover:text-[#071A4A] cursor-pointer">Terms</span>
         </div>
-        <div>EQUORA_FI • 120,420 Network Members</div>
+        <div>EQUORA_FI â€¢ 120,420 Network Members</div>
       </div>
 
       {/* Video Modal */}

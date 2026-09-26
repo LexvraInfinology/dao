@@ -8,50 +8,61 @@ import { SoulboundPassCard } from '@/components/dao/lounge/SoulboundPassCard';
 import { ClaimableDividendsCard } from '@/components/dao/lounge/ClaimableDividendsCard';
 import { EarningsCapCard } from '@/components/dao/lounge/EarningsCapCard';
 import { IncomeChannelsCard } from '@/components/dao/lounge/IncomeChannelsCard';
+import { useWallet } from '@/context/WalletContext';
+import { useLounge } from '@/hooks/useApi';
 
 export default function MemberLoungePage() {
+  const wallet     = useWallet();
+  const { data: lounge, loading } = useLounge(wallet.hexAddress);
+
+  // Pass live values down as props where components accept them,
+  // components that don't yet accept props use their own defaults.
+  const claimableDividends = lounge?.claimableDividendsUsd ?? 420.50;
+  const capProgressPct     = lounge?.capProgressPct        ?? 85.3;
+  const pushedUsd          = lounge?.pushedUsd             ?? 1280.40;
+  const earningsCapUsd     = lounge?.earningsCapUsd        ?? 900;
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
-      {/* 1. Hero Section (Responsive: Desktop with orbital rings & micro-tags vs Mobile compact) */}
-      <LoungeHero />
+      <LoungeHero loungeData={lounge} loading={loading} />
 
-      {/* =========================================================================
-          2. DESKTOP VIEW (Visible on lg and above - exactly matching Desktop - 14)
-         ========================================================================= */}
+      {/* Desktop view */}
       <div className="hidden lg:block space-y-6 sm:space-y-8">
-        {/* Four Stat Cards Row */}
-        <LoungeStatCards />
+        <LoungeStatCards loungeData={lounge} />
 
-        {/* Two-Column Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Soulbound Pass Virtual Card + Metadata + Actions (7 cols on xl) */}
           <div className="xl:col-span-7">
-            <SoulboundPassCard />
+            <SoulboundPassCard loungeData={lounge} />
           </div>
-
-          {/* Right Column: Claimable Dividends + 5X Earnings Cap (5 cols on xl) */}
           <div className="xl:col-span-5 space-y-6">
-            <ClaimableDividendsCard />
-            <EarningsCapCard variant="desktop" />
+            <ClaimableDividendsCard
+              initialAmount={claimableDividends}
+              walletAddress={wallet.hexAddress ?? undefined}
+            />
+            <EarningsCapCard
+              variant="desktop"
+              capProgressPct={capProgressPct}
+              pushedUsd={pushedUsd}
+              earningsCapUsd={earningsCapUsd}
+            />
           </div>
         </div>
       </div>
 
-      {/* =========================================================================
-          3. MOBILE VIEW (Visible below lg - exactly matching Member Lounge Mobile)
-         ========================================================================= */}
+      {/* Mobile view */}
       <div className="lg:hidden space-y-4 sm:space-y-5">
-        {/* Compact Member Info Card */}
-        <LoungeCompactMemberCard />
-
-        {/* 5X Earnings Cap Card */}
-        <EarningsCapCard variant="mobile" />
-
-        {/* Claimable Dividends Card */}
-        <ClaimableDividendsCard />
-
-        {/* Income Channels Section */}
-        <IncomeChannelsCard />
+        <LoungeCompactMemberCard loungeData={lounge} />
+        <EarningsCapCard
+          variant="mobile"
+          capProgressPct={capProgressPct}
+          pushedUsd={pushedUsd}
+          earningsCapUsd={earningsCapUsd}
+        />
+        <ClaimableDividendsCard
+          initialAmount={claimableDividends}
+          walletAddress={wallet.hexAddress ?? undefined}
+        />
+        <IncomeChannelsCard loungeData={lounge} />
       </div>
     </div>
   );

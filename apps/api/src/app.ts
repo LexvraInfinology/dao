@@ -6,7 +6,7 @@ import { serverRouter, createContext } from "@equora/trpc";
 import { config } from "./config";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireAuth } from "./middleware/requireAuth";
-import { daoService, statsService, authService, priceService } from "@equora/services";
+import { daoService, statsService, authService, priceService, servicesConfig } from "@equora/services";
 import prisma from "@equora/database";
 
 export function createApp(): Express {

@@ -36,7 +36,9 @@ export interface TrobWalletState {
   error: string | null;
   /** Connect wallet (opens TrobSafe permission dialog) */
   connect: () => Promise<TrobAddress | null>;
-  /** Disconnect (clears local state only — extension stays authorized) */
+  /** Connect directly with a specific wallet address */
+  connectWithAddress: (addr: string) => TrobAddress;
+  /** Disconnect (clears local state and stored sessions) */
   disconnect: () => void;
   /**
    * Sign a plain-text message via TrobSafe.
@@ -53,25 +55,54 @@ export interface TrobWalletState {
 // ─── Storage key ─────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'trobsafe_address';
 
+export function readStoredAddress(): TrobAddress | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' && (parsed.base58 || parsed.hex)) {
+          return {
+            base58: parsed.base58 || '',
+            hex: parsed.hex ? parsed.hex.toLowerCase() : '',
+          };
+        }
+      } catch {
+        if (typeof stored === 'string' && stored.trim().length > 6) {
+          const trimmed = stored.trim();
+          if (trimmed.startsWith('0x')) {
+            return { base58: '', hex: trimmed.toLowerCase() };
+          }
+          return { base58: trimmed, hex: '' };
+        }
+      }
+    }
+
+    // Fallback: check equora_auth_address
+    const authAddr = localStorage.getItem('equora_auth_address');
+    if (authAddr && typeof authAddr === 'string' && authAddr.trim().length > 6) {
+      const trimmed = authAddr.trim();
+      if (trimmed.startsWith('0x')) {
+        return { base58: '', hex: trimmed.toLowerCase() };
+      }
+      return { base58: trimmed, hex: '' };
+    }
+  } catch {
+    /* storage blocked */
+  }
+  return null;
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 /**
  * Primary hook for TrobSafe wallet interaction.
- *
- * Usage:
- *   const { status, hexAddress, connect, signMessage, callContract } = useTrobWallet();
- *
- * The hook:
- * 1. Waits up to 1.5s for window.trob to appear (extension inject).
- * 2. Restores previously connected address from localStorage.
- * 3. Listens for addressChanged events from the extension.
- * 4. Exposes connect(), disconnect(), signMessage(), callContract().
  */
 export function useTrobWallet(): TrobWalletState {
   const [status, setStatus]   = useState<WalletStatus>('detecting');
   const [address, setAddress] = useState<TrobAddress | null>(null);
   const [error, setError]     = useState<string | null>(null);
-  const detectionTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const getTrob = (): TrobWalletAPI | null => {
@@ -96,51 +127,64 @@ export function useTrobWallet(): TrobWalletState {
     setError(null);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      if (normalized.hex) {
+        localStorage.setItem('equora_auth_address', normalized.hex);
+      } else if (normalized.base58) {
+        localStorage.setItem('equora_auth_address', normalized.base58);
+      }
     } catch { /* storage blocked */ }
   }, []);
 
   const clearAddress = useCallback(() => {
     setAddress(null);
     setStatus('disconnected');
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+    setError(null);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('equora_auth_address');
+      localStorage.removeItem('equora_jwt');
+      localStorage.removeItem('equora_dao_preview');
+    } catch { /* */ }
   }, []);
 
   // ── Detect extension + restore session ──────────────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Immediately restore stored session if present
+    const stored = readStoredAddress();
+    if (stored && (stored.base58 || stored.hex)) {
+      applyAddress(stored);
+    }
+
     const tryDetect = (): boolean => {
       const trob = getTrob();
-      if (isTrobActive(trob)) {
-        // Restore previously connected address
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            const parsed: TrobAddress = JSON.parse(stored);
-            if (parsed.base58 || parsed.hex) {
-              const liveAddr = trob?.defaultAddress;
-              const resolvedBase58 = liveAddr?.base58 || parsed.base58;
-              const resolvedHex    = liveAddr?.hex    || parsed.hex;
-              if (resolvedBase58 || resolvedHex) {
-                applyAddress({ base58: resolvedBase58, hex: resolvedHex });
-                return true;
-              }
-            }
-          }
-        } catch { /* */ }
+      const currentStored = readStoredAddress();
 
-        // Check if extension already has an address loaded
-        if (trob?.defaultAddress?.base58 || trob?.defaultAddress?.hex) {
-          applyAddress(trob.defaultAddress);
+      if (currentStored && (currentStored.base58 || currentStored.hex)) {
+        if (isTrobActive(trob)) {
+          const liveAddr = trob?.defaultAddress;
+          const resolvedBase58 = (liveAddr?.base58 && liveAddr.base58.length > 5) ? liveAddr.base58 : currentStored.base58;
+          const resolvedHex    = (liveAddr?.hex && liveAddr.hex.length > 5) ? liveAddr.hex.toLowerCase() : currentStored.hex;
+          applyAddress({ base58: resolvedBase58, hex: resolvedHex });
         } else {
-          setStatus('disconnected');
+          applyAddress(currentStored);
         }
         return true;
+      }
+
+      if (isTrobActive(trob)) {
+        if (trob?.defaultAddress?.base58 || trob?.defaultAddress?.hex) {
+          applyAddress(trob.defaultAddress);
+          return true;
+        } else {
+          setStatus('disconnected');
+          return true;
+        }
       }
       return false;
     };
 
-    // Immediate check
     if (tryDetect()) return;
 
     // Fast poll for the first 2 seconds (every 100ms)
@@ -150,20 +194,21 @@ export function useTrobWallet(): TrobWalletState {
       if (tryDetect()) {
         clearInterval(fastPoll);
       } else if (pollCount >= 20) {
-        // After 2s of not finding extension, switch from 'detecting' to 'not_installed'
         clearInterval(fastPoll);
-        setStatus((prev) => (prev === 'detecting' ? 'not_installed' : prev));
+        setStatus((prev) => {
+          if (prev === 'connected') return prev;
+          return prev === 'detecting' ? 'not_installed' : prev;
+        });
       }
     }, 100);
 
-    // Continuous background check every 600ms so enabling extension auto-connects
+    // Continuous background check every 600ms
     const slowPoll = setInterval(() => {
       if (tryDetect()) {
         clearInterval(slowPoll);
       }
     }, 600);
 
-    // Also listen for custom trobReady events
     const onTrobReady = () => {
       clearInterval(fastPoll);
       clearInterval(slowPoll);
@@ -183,10 +228,10 @@ export function useTrobWallet(): TrobWalletState {
   // ── Listen for address changes from extension ─────────────────────────────
   useEffect(() => {
     const trob = getTrob();
-    if (!trob) return;
+    if (!trob || typeof trob.on !== 'function') return;
 
     const handleAddressChange = (data: unknown) => {
-      const { base58, hex } = data as TrobAddress;
+      const { base58, hex } = (data || {}) as TrobAddress;
       if (!base58 && !hex) {
         clearAddress();
       } else {
@@ -195,13 +240,22 @@ export function useTrobWallet(): TrobWalletState {
     };
 
     trob.on('addressChanged', handleAddressChange);
-    return () => trob.off('addressChanged', handleAddressChange);
-  }, [status, applyAddress, clearAddress]);
+    return () => {
+      if (typeof trob.off === 'function') {
+        trob.off('addressChanged', handleAddressChange);
+      }
+    };
+  }, [applyAddress, clearAddress]);
 
   // ── connect ───────────────────────────────────────────────────────────────
   const connect = useCallback(async (): Promise<TrobAddress | null> => {
     const trob = getTrob();
     if (!trob) {
+      const stored = readStoredAddress();
+      if (stored && (stored.base58 || stored.hex)) {
+        applyAddress(stored);
+        return stored;
+      }
       setStatus('not_installed');
       setError('TrobSafe wallet extension is not installed.');
       return null;
@@ -211,15 +265,77 @@ export function useTrobWallet(): TrobWalletState {
     setError(null);
 
     try {
-      const details = await trob.getDetails();
-      const addr: TrobAddress = {
-        base58: details.address?.base58 ?? trob.defaultAddress?.base58 ?? '',
-        hex:    details.address?.hex    ?? trob.defaultAddress?.hex    ?? '',
-      };
+      let resolvedBase58 = '';
+      let resolvedHex = '';
 
-      if (!addr.base58 && !addr.hex) {
-        throw new Error('No address returned from TrobSafe. Please unlock your wallet.');
+      // 1. Try trob_requestAccounts via trob.request
+      if (typeof trob.request === 'function') {
+        try {
+          const reqRes: any = await trob.request({ method: 'trob_requestAccounts' });
+          if (reqRes) {
+            if (typeof reqRes === 'string') {
+              if (reqRes.startsWith('0x')) resolvedHex = reqRes.toLowerCase();
+              else resolvedBase58 = reqRes;
+            } else if (typeof reqRes === 'object') {
+              resolvedBase58 = reqRes.base58 || reqRes.address || '';
+              resolvedHex = (reqRes.hex || '').toLowerCase();
+            }
+          }
+        } catch {
+          // fall through
+        }
       }
+
+      // 2. If not yet resolved, try eth_requestAccounts
+      if (!resolvedBase58 && !resolvedHex && typeof trob.request === 'function') {
+        try {
+          const ethRes: any = await trob.request({ method: 'eth_requestAccounts' });
+          if (Array.isArray(ethRes) && ethRes[0]) {
+            resolvedHex = ethRes[0].toLowerCase();
+          } else if (typeof ethRes === 'string') {
+            resolvedHex = ethRes.toLowerCase();
+          }
+        } catch {
+          // fall through
+        }
+      }
+
+      // 3. Try trob.getDetails()
+      if (!resolvedBase58 && !resolvedHex && typeof trob.getDetails === 'function') {
+        try {
+          const details: any = await trob.getDetails();
+          if (details) {
+            resolvedBase58 = details.address?.base58 || details.base58 || '';
+            resolvedHex = (details.address?.hex || details.hex || '').toLowerCase();
+          }
+        } catch {
+          // fall through
+        }
+      }
+
+      // 4. Fallback to defaultAddress on trob object
+      if (!resolvedBase58 && !resolvedHex && trob.defaultAddress) {
+        resolvedBase58 = trob.defaultAddress.base58 || '';
+        resolvedHex = (trob.defaultAddress.hex || '').toLowerCase();
+      }
+
+      // 5. Fallback to stored address
+      if (!resolvedBase58 && !resolvedHex) {
+        const stored = readStoredAddress();
+        if (stored && (stored.base58 || stored.hex)) {
+          resolvedBase58 = stored.base58;
+          resolvedHex = stored.hex;
+        }
+      }
+
+      if (!resolvedBase58 && !resolvedHex) {
+        throw new Error('Please unlock your TrobSafe wallet and select an account.');
+      }
+
+      const addr: TrobAddress = {
+        base58: resolvedBase58,
+        hex: resolvedHex,
+      };
 
       applyAddress(addr);
       return addr;
@@ -229,6 +345,17 @@ export function useTrobWallet(): TrobWalletState {
       setStatus('error');
       return null;
     }
+  }, [applyAddress]);
+
+  // ── connectWithAddress ────────────────────────────────────────────────────
+  const connectWithAddress = useCallback((rawAddr: string): TrobAddress => {
+    const trimmed = rawAddr.trim();
+    const addr: TrobAddress = {
+      base58: trimmed.startsWith('0x') ? '' : trimmed,
+      hex: trimmed.startsWith('0x') ? trimmed.toLowerCase() : '',
+    };
+    applyAddress(addr);
+    return addr;
   }, [applyAddress]);
 
   // ── disconnect ────────────────────────────────────────────────────────────
@@ -263,10 +390,11 @@ export function useTrobWallet(): TrobWalletState {
     address,
     hexAddress:    address?.hex    ? address.hex.toLowerCase()   : null,
     base58Address: address?.base58 ? address.base58              : null,
-    isConnected:   status === 'connected',
+    isConnected:   status === 'connected' && Boolean(address?.base58 || address?.hex),
     isInstalled:   status !== 'not_installed' && status !== 'detecting',
     error,
     connect,
+    connectWithAddress,
     disconnect,
     signMessage,
     callContract,

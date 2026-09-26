@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { Crown, Copy, Check, Box } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
+import { useAuthContext } from '@/context/AuthContext';
+import { useDaoMember } from '@/hooks/useApi';
 
 interface AccountIdentityCardProps {
   className?: string;
@@ -9,11 +12,27 @@ interface AccountIdentityCardProps {
 
 export default function AccountIdentityCard({ className = '' }: AccountIdentityCardProps) {
   const [copied, setCopied] = useState(false);
+  const wallet = useWallet();
+  const auth   = useAuthContext();
+  const activeAddress = wallet.base58Address || wallet.hexAddress || '';
+  const { data: memberData } = useDaoMember(activeAddress);
+
+  const displayAddr = activeAddress
+    ? activeAddress.startsWith('T') && activeAddress.length > 10
+      ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
+      : `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
+    : 'Not Connected';
+
+  const memberId = auth.user?.userId ? `#${auth.user.userId}` : memberData?.nftTokenId ? `#${memberData.nftTokenId}` : '#Guest';
+  const seatPosition = memberData?.position ?? auth.user?.daoPosition ?? null;
+  const isMember = memberData?.isMember ?? auth.user?.daoMember ?? false;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText('0x8A3F4c19B8204eA367E3F45E2091F2');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (activeAddress) {
+      navigator.clipboard.writeText(activeAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -35,7 +54,7 @@ export default function AccountIdentityCard({ className = '' }: AccountIdentityC
 
         {/* Member Name */}
         <h2 className="text-2xl font-black text-[#071A4A] tracking-tight mt-6 mb-3 font-jakarta">
-          Member #1042
+          Member {memberId}
         </h2>
 
         {/* Status Badges */}
@@ -43,30 +62,38 @@ export default function AccountIdentityCard({ className = '' }: AccountIdentityC
           {/* Active Member */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0FDF4] border border-[#DCFCE7] text-[#16A34A] text-xs font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-            <span>Active Member</span>
+            <span>{isMember ? 'Active Member' : 'Guest'}</span>
           </div>
 
-          {/* Council Seat #86 */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold">
-            <Crown className="w-3.5 h-3.5 text-[#155EEF]" />
-            <span>Council Seat #86</span>
-          </div>
+          {/* Council Seat */}
+          {seatPosition ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold">
+              <Crown className="w-3.5 h-3.5 text-[#155EEF]" />
+              <span>Council Seat #{seatPosition}</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold">
+              <span>No Council Seat</span>
+            </div>
+          )}
         </div>
 
         {/* Wallet Address Box */}
         <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-xs font-mono text-[#475569]">
-          <span>0x8A3F...91F2</span>
-          <button
-            onClick={handleCopy}
-            className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
-            title="Copy wallet address"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-          </button>
+          <span>{displayAddr}</span>
+          {activeAddress && (
+            <button
+              onClick={handleCopy}
+              className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
+              title="Copy wallet address"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -79,35 +106,39 @@ export default function AccountIdentityCard({ className = '' }: AccountIdentityC
 
         {/* Right Info */}
         <div className="min-w-0 flex-1">
-          {/* Top Line: Member #1042 + Active Member */}
+          {/* Top Line: Member ID + Active Member */}
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-lg font-black text-[#071A4A] tracking-tight">
-              Member #1042
+              Member {memberId}
             </h2>
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[11px] font-semibold border border-[#A7F3D0]/50">
               <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-              <span>Active Member</span>
+              <span>{isMember ? 'Active Member' : 'Guest'}</span>
             </div>
           </div>
 
-          {/* Bottom Line: Council Seat #86 + Wallet Address */}
+          {/* Bottom Line: Council Seat + Wallet Address */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="px-2.5 py-1 rounded-lg bg-[#EFF6FF] border border-[#DBEAFE]/70 text-[#155EEF] text-xs font-semibold">
-              Council Seat #86
-            </span>
+            {seatPosition && (
+              <span className="px-2.5 py-1 rounded-lg bg-[#EFF6FF] border border-[#DBEAFE]/70 text-[#155EEF] text-xs font-semibold">
+                Council Seat #{seatPosition}
+              </span>
+            )}
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F8FAFC] border border-[#E2ECF9] text-[#475569] text-xs font-mono">
-              <span>0x8A3F...91F2</span>
-              <button
-                onClick={handleCopy}
-                className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
-                title="Copy address"
-              >
-                {copied ? (
-                  <Check className="w-3 h-3 text-emerald-600" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-              </button>
+              <span>{displayAddr}</span>
+              {activeAddress && (
+                <button
+                  onClick={handleCopy}
+                  className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
+                  title="Copy address"
+                >
+                  {copied ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

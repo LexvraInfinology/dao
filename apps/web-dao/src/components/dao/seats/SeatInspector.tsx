@@ -51,16 +51,18 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </h3>
           <span
             className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
-              seat.status === 'mine' || seat.status === 'claimed'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              seat.status === 'mine'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
+                : seat.status === 'claimed'
+                ? 'bg-slate-100 text-slate-800 border-slate-300 font-bold'
                 : seat.status === 'defaulted'
                 ? 'bg-rose-50 text-rose-700 border-rose-200'
                 : seat.status === 'next'
-                ? 'bg-blue-50 text-[#155EEF] border-blue-200'
+                ? 'bg-blue-50 text-[#155EEF] border-blue-200 font-bold'
                 : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}
           >
-            {seat.statusBadge}
+            {seat.status === 'mine' ? 'Your Seat' : seat.statusBadge}
           </span>
         </div>
 
@@ -149,8 +151,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           <div className="flex items-center gap-1.5 font-semibold text-[#071A4A]">
             <span
               className={`w-2 h-2 rounded-full ${
-                seat.status === 'mine' || seat.status === 'claimed'
-                  ? 'bg-emerald-500'
+                seat.status === 'mine'
+                  ? 'bg-emerald-500 ring-2 ring-emerald-200'
+                  : seat.status === 'claimed'
+                  ? 'bg-[#0B1528]'
                   : seat.status === 'defaulted'
                   ? 'bg-rose-500'
                   : seat.status === 'next'
@@ -158,27 +162,39 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
                   : 'bg-slate-400'
               }`}
             />
-            <span>{seat.statusText}</span>
+            <span>{seat.status === 'mine' ? 'Your Active Council Seat' : seat.statusText}</span>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="pt-2 space-y-2.5">
-        {isMintable && onMintSeat ? (
+        {seat.status === 'mine' ? (
+          <a
+            href="/dao/lounge"
+            className="w-full py-3 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Manage Seat in Member Lounge</span>
+          </a>
+        ) : isMintable && onMintSeat ? (
           <button
             type="button"
             onClick={() => onMintSeat(seat.seatNumber)}
-            className="w-full py-3 rounded-xl bg-[#155EEF] hover:bg-[#0052E6] text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(21,94,239,0.35)] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-[#155EEF] hover:bg-[#0052E6] text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(21,94,239,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             <span>Claim Seat #{seat.seatNumber} ($300 TROB)</span>
           </button>
+        ) : isMintable && !onMintSeat ? (
+          <div className="w-full py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs text-center font-medium">
+            Active Member · 1 Seat Per Wallet Limit
+          </div>
         ) : null}
 
         {/* View on Explorer Button */}
         <a
-          href="https://explorer.equora.fi"
+          href={process.env.NEXT_PUBLIC_EXPLORER_URL ? `${process.env.NEXT_PUBLIC_EXPLORER_URL}/address/${seat.ownerAddress.replace(' (You)', '')}` : 'https://tronscan.org'}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-3 rounded-xl bg-[#EEF4FF] hover:bg-[#E0EAFF] border border-[#BFDBFE] text-[#155EEF] text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2"

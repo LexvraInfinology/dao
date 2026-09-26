@@ -22,125 +22,111 @@ export interface CouncilActivityItem {
   type: 'claimed' | 'defaulted' | 'earnings';
 }
 
-export const COUNCIL_ACTIVITIES: CouncilActivityItem[] = [
-  {
-    id: 'act-1',
-    timeAgo: '2m ago',
-    title: 'Seat Claimed',
-    seatNumber: 86,
-    type: 'claimed',
-  },
-  {
-    id: 'act-2',
-    timeAgo: '12m ago',
-    title: 'Seat #23 Defaulted',
-    seatNumber: 23,
-    type: 'defaulted',
-  },
-  {
-    id: 'act-3',
-    timeAgo: '28m ago',
-    title: 'Seat Claimed',
-    seatNumber: 85,
-    type: 'claimed',
-  },
-  {
-    id: 'act-4',
-    timeAgo: '1h ago',
-    title: 'Earnings Claimed',
-    seatNumber: 12,
-    type: 'earnings',
-  },
-];
+export interface RawMemberData {
+  position: number;
+  address: string;
+  nftTokenId?: number;
+  pushedAmountBtt?: number;
+  pushedAmountUsdEstimate?: number;
+  status?: string;
+  joinedAt?: string;
+}
 
-// Generate exact 100 seats matching Figma:
-// Seat 12 = Your Seat (Green)
-// Seats 23, 44, 46 = Defaulted Vacancy (Red Dashed)
-// Seat 87 = Next Available (Blue Active)
-// Seats 88-100 = Locked Future (Gray with Lock)
-// All others 1-86 = Claimed (Blue)
-export const COUNCIL_SEATS_LIST: CouncilSeatDetail[] = Array.from({ length: 100 }, (_, index) => {
-  const seatNumber = index + 1;
-  const soulboundId = `#${String(seatNumber).padStart(4, '0')}`;
-
-  if (seatNumber === 12) {
-    return {
-      seatNumber: 12,
-      status: 'mine',
-      ownerAddress: '0x4B71...89F2',
-      lifetimeEarnings: '$1,280.40 TROB',
-      capProgress: 85.3,
-      votingPower: '1.0%',
-      statusText: 'Active & In Good Standing',
-      statusBadge: 'Active Member',
-      soulboundId: '#0012',
-      entryAmount: '$300 TROB',
-      claimedDate: 'Oct 14, 2025',
-    };
+/**
+ * Dynamically builds the exact 100 sovereign seats from live database / on-chain members.
+ * No random hex strings or hardcoded mock accounts.
+ */
+export function buildLiveCouncilSeats(
+  members: RawMemberData[] = [],
+  activeAddress?: string | null,
+  bttPriceUsd = 0
+): CouncilSeatDetail[] {
+  const memberMap = new Map<number, RawMemberData>();
+  for (const m of members) {
+    memberMap.set(m.position, m);
   }
 
-  if (seatNumber === 23 || seatNumber === 44 || seatNumber === 46) {
-    return {
-      seatNumber,
-      status: 'defaulted',
-      ownerAddress: '0x0000...VACANT',
-      lifetimeEarnings: '$0.00 TROB',
-      capProgress: 0,
-      votingPower: '1.0%',
-      statusText: 'Defaulted Vacancy • Open for Takeover',
-      statusBadge: 'Defaulted Vacancy',
-      soulboundId,
-      entryAmount: '$300 TROB',
-    };
-  }
+  const nextAvailableSeat = members.length + 1;
+  const canonicalMyAddress = activeAddress?.toLowerCase() ?? '';
 
-  if (seatNumber === 87) {
-    return {
-      seatNumber: 87,
-      status: 'next',
-      ownerAddress: '0x8A3F...91F2 (You are next)',
-      lifetimeEarnings: '$0.00 TROB',
-      capProgress: 0,
-      votingPower: '1.0%',
-      statusText: 'Next in Queue • Ready for Instant Mint',
-      statusBadge: 'Next Available',
-      soulboundId: '#0087',
-      entryAmount: '$300 TROB',
-    };
-  }
+  return Array.from({ length: 100 }, (_, index) => {
+    const seatNumber = index + 1;
+    const soulboundId = `#${String(seatNumber).padStart(4, '0')}`;
+    const liveMember = memberMap.get(seatNumber);
 
-  if (seatNumber >= 88) {
+    if (liveMember) {
+      const isMine =
+        !!canonicalMyAddress &&
+        liveMember.address.toLowerCase() === canonicalMyAddress;
+      const pushedBtt = liveMember.pushedAmountBtt ?? 0;
+      const earningsUsd =
+        liveMember.pushedAmountUsdEstimate ??
+        pushedBtt * (bttPriceUsd > 0 ? bttPriceUsd : 0.047);
+      const capPct = Math.min(100, Math.round((pushedBtt / 900) * 100));
+
+      const addr = liveMember.address;
+      const shortAddr =
+        addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
+
+      const isDefaulted = liveMember.status === 'blank';
+
+      return {
+        seatNumber,
+        status: isDefaulted ? 'defaulted' : isMine ? 'mine' : 'claimed',
+        ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
+        lifetimeEarnings: `$${earningsUsd.toFixed(2)} TROB`,
+        capProgress: capPct,
+        votingPower: '1.0%',
+        statusText: isDefaulted
+          ? 'Defaulted Vacancy • Open for Takeover'
+          : liveMember.status === 'active'
+          ? 'Active & In Good Standing'
+          : liveMember.status ?? 'Active Member',
+        statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Active Member',
+        soulboundId,
+        entryAmount: '$300 TROB',
+        claimedDate: liveMember.joinedAt
+          ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : 'Genesis',
+      };
+    }
+
+    if (seatNumber === nextAvailableSeat) {
+      return {
+        seatNumber,
+        status: 'next',
+        ownerAddress: 'Available for Claim',
+        lifetimeEarnings: '$0.00 TROB',
+        capProgress: 0,
+        votingPower: '1.0%',
+        statusText: 'Next in Queue • Ready for Instant Mint',
+        statusBadge: 'Next Available',
+        soulboundId,
+        entryAmount: '$300 TROB',
+      };
+    }
+
+    // Locked seats (seatNumber > nextAvailableSeat)
     return {
       seatNumber,
       status: 'locked',
-      ownerAddress: '0x0000...LOCKED',
+      ownerAddress: 'Locked',
       lifetimeEarnings: '$0.00 TROB',
       capProgress: 0,
       votingPower: '1.0%',
-      statusText: 'Locked • Unlocks upon previous seat claim',
+      statusText: `Locked • Unlocks after Seat #${seatNumber - 1} claimed`,
       statusBadge: 'Locked Future',
       soulboundId,
     };
-  }
+  });
+}
 
-  // Claimed seats (1 to 86)
-  const randomHex = Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .padStart(6, '0')
-    .toUpperCase();
-  const earningsVal = (650 + seatNumber * 12.3).toFixed(2);
-  const cap = Math.min(100, Math.round(30 + (seatNumber % 60) * 1.1));
+// Fallback baseline 100-seat scaffold where Seat #1 is next and all others are locked.
+// Zero fake members or random hex addresses.
+export const COUNCIL_SEATS_LIST: CouncilSeatDetail[] = buildLiveCouncilSeats([], null, 0);
 
-  return {
-    seatNumber,
-    status: 'claimed',
-    ownerAddress: `0x${randomHex.slice(0, 4)}...${randomHex.slice(4)}`,
-    lifetimeEarnings: `$${earningsVal} TROB`,
-    capProgress: cap,
-    votingPower: '1.0%',
-    statusText: 'Active & In Good Standing',
-    statusBadge: 'Active Member',
-    soulboundId,
-    entryAmount: '$300 TROB',
-  };
-});
+export const COUNCIL_ACTIVITIES: CouncilActivityItem[] = [];

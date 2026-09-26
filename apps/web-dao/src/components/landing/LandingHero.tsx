@@ -11,8 +11,8 @@ export const LandingHero: React.FC = () => {
   const [videoOpen, setVideoOpen] = useState(false);
   const { data: stats } = useDaoStats(30_000); // refresh every 30s
 
-  const seatsRemaining = stats?.remainingPositions ?? 14;
-  const seatsClaimed   = stats?.memberCount ?? 86;
+  const seatsClaimed   = stats?.memberCount ?? 0;
+  const seatsRemaining = stats?.remainingPositions ?? (100 - seatsClaimed);
 
   return (
     <section className="relative pt-24 sm:pt-32 lg:pt-36 pb-16 lg:pb-24 overflow-hidden min-h-[750px] lg:min-h-[880px] flex items-center bg-[#F0F6FD]">

@@ -12,8 +12,8 @@ interface EarningsCapCardProps {
 
 export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   variant = 'auto',
-  capProgressPct = 56,
-  pushedUsd = 840,
+  capProgressPct = 0,
+  pushedUsd = 0,
   earningsCapUsd = 1500,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);

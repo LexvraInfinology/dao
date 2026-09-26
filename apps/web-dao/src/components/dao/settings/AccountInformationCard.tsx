@@ -12,14 +12,42 @@ import {
   Check,
   ExternalLink,
 } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
+import { useAuthContext } from '@/context/AuthContext';
+import { useDaoMember } from '@/hooks/useApi';
 
 export default function AccountInformationCard() {
   const [copied, setCopied] = useState(false);
+  const wallet = useWallet();
+  const auth   = useAuthContext();
+  const activeAddress = wallet.base58Address || wallet.hexAddress || '';
+  const { data: memberData } = useDaoMember(activeAddress);
+
+  const displayAddr = activeAddress
+    ? activeAddress.startsWith('T') && activeAddress.length > 10
+      ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
+      : `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
+    : 'Not Connected';
+
+  const memberId = auth.user?.userId
+    ? `#${auth.user.userId}`
+    : memberData?.nftTokenId
+    ? `#${memberData.nftTokenId}`
+    : '#Guest';
+
+  const seatPosition = memberData?.position ? `#${memberData.position}` : 'None';
+  const soulboundNft = memberData?.nftTokenId ? `#${String(memberData.nftTokenId).padStart(4, '0')}` : 'None';
+
+  const memberSince = memberData?.joinedAt
+    ? new Date(memberData.joinedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Aug 12, 2026';
 
   const handleCopyWallet = () => {
-    navigator.clipboard.writeText('0x8A3F4c19B8204eA367E3F45E2091F2');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (activeAddress) {
+      navigator.clipboard.writeText(activeAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -38,7 +66,7 @@ export default function AccountInformationCard() {
           </div>
 
           <button
-            onClick={() => alert('Edit profile details')}
+            onClick={() => alert('Profile details are bound on-chain.')}
             className="px-3.5 py-1.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Pen className="w-3.5 h-3.5 text-[#155EEF]" />
@@ -54,7 +82,7 @@ export default function AccountInformationCard() {
               <User className="w-[18px] h-[18px] text-[#155EEF]" />
               <span className="text-sm font-medium text-[#475569]">Member ID</span>
             </div>
-            <span className="text-sm font-bold text-[#071A4A]">#1042</span>
+            <span className="text-sm font-bold text-[#071A4A]">{memberId}</span>
           </div>
 
           {/* 2. Council Seat */}
@@ -63,7 +91,7 @@ export default function AccountInformationCard() {
               <Users className="w-[18px] h-[18px] text-[#155EEF]" />
               <span className="text-sm font-medium text-[#475569]">Council Seat</span>
             </div>
-            <span className="text-sm font-bold text-[#071A4A]">#86</span>
+            <span className="text-sm font-bold text-[#155EEF]">{seatPosition}</span>
           </div>
 
           {/* 3. Connected Wallet */}
@@ -74,28 +102,32 @@ export default function AccountInformationCard() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-[#071A4A]">
-                0x8A3F...91F2
+                {displayAddr}
               </span>
-              <button
-                onClick={handleCopyWallet}
-                className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
-                title="Copy wallet address"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-              </button>
-              <a
-                href="https://trobium.network"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[#64748B] hover:text-[#155EEF] transition-colors"
-                title="View on explorer"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              {activeAddress && (
+                <>
+                  <button
+                    onClick={handleCopyWallet}
+                    className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
+                    title="Copy wallet address"
+                  >
+                    {copied ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <a
+                    href="https://trobium.network"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#64748B] hover:text-[#155EEF] transition-colors"
+                    title="View on explorer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -105,7 +137,7 @@ export default function AccountInformationCard() {
               <ShieldCheck className="w-[18px] h-[18px] text-[#155EEF]" />
               <span className="text-sm font-medium text-[#475569]">Member Since</span>
             </div>
-            <span className="text-xs font-medium text-[#071A4A]">Aug 12, 2026</span>
+            <span className="text-xs font-medium text-[#071A4A]">{memberSince}</span>
           </div>
 
           {/* 5. Soulbound NFT */}
@@ -114,7 +146,7 @@ export default function AccountInformationCard() {
               <Box className="w-[18px] h-[18px] text-[#155EEF]" />
               <span className="text-sm font-medium text-[#475569]">Soulbound NFT</span>
             </div>
-            <span className="text-xs font-bold text-[#071A4A]">#0086</span>
+            <span className="text-xs font-bold text-[#071A4A]">{soulboundNft}</span>
           </div>
         </div>
       </div>
@@ -133,7 +165,7 @@ export default function AccountInformationCard() {
           </div>
 
           <button
-            onClick={() => alert('Edit profile details')}
+            onClick={() => alert('Profile details are bound on-chain.')}
             className="px-3 py-1.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
           >
             <Pen className="w-3.5 h-3.5 text-[#155EEF]" />
@@ -152,7 +184,7 @@ export default function AccountInformationCard() {
               <User className="w-4 h-4 text-[#155EEF]" />
               <span className="text-xs font-medium text-[#475569]">Member ID</span>
             </div>
-            <span className="text-sm font-bold text-[#071A4A]">#1042</span>
+            <span className="text-sm font-bold text-[#071A4A]">{memberId}</span>
           </div>
 
           {/* 2. Council Seat */}
@@ -161,7 +193,7 @@ export default function AccountInformationCard() {
               <Users className="w-4 h-4 text-[#155EEF]" />
               <span className="text-xs font-medium text-[#475569]">Council Seat</span>
             </div>
-            <span className="text-sm font-bold text-[#155EEF]">#86</span>
+            <span className="text-sm font-bold text-[#155EEF]">{seatPosition}</span>
           </div>
 
           {/* 3. Connected Wallet */}
@@ -172,19 +204,21 @@ export default function AccountInformationCard() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-mono font-bold text-[#071A4A]">
-                0x8A3F...91F2
+                {displayAddr}
               </span>
-              <button
-                onClick={handleCopyWallet}
-                className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
-                title="Copy address"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-              </button>
+              {activeAddress && (
+                <button
+                  onClick={handleCopyWallet}
+                  className="text-[#64748B] hover:text-[#155EEF] transition-colors cursor-pointer"
+                  title="Copy address"
+                >
+                  {copied ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -194,7 +228,7 @@ export default function AccountInformationCard() {
               <ShieldCheck className="w-4 h-4 text-[#155EEF]" />
               <span className="text-xs font-medium text-[#475569]">Member Since</span>
             </div>
-            <span className="text-xs font-medium text-[#071A4A]">Aug 12, 2026</span>
+            <span className="text-xs font-medium text-[#071A4A]">{memberSince}</span>
           </div>
 
           {/* 5. Soulbound NFT */}
@@ -203,7 +237,7 @@ export default function AccountInformationCard() {
               <Box className="w-4 h-4 text-[#155EEF]" />
               <span className="text-xs font-medium text-[#475569]">Soulbound NFT</span>
             </div>
-            <span className="text-xs font-bold text-[#071A4A]">#0086</span>
+            <span className="text-xs font-bold text-[#071A4A]">{soulboundNft}</span>
           </div>
         </div>
       </div>

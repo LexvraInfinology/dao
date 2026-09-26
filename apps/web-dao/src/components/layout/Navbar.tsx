@@ -6,12 +6,32 @@ import { Menu, X, Wallet, ExternalLink } from 'lucide-react';
 import { LANDING_NAV_ITEMS } from '@/data/navigation';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
+import { useWallet } from '@/context/WalletContext';
 
 export const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const wallet = useWallet();
+
+  const displayAddr = wallet.base58Address
+    ? `${wallet.base58Address.slice(0, 5)}…${wallet.base58Address.slice(-4)}`
+    : wallet.hexAddress
+    ? `${wallet.hexAddress.slice(0, 6)}…${wallet.hexAddress.slice(-4)}`
+    : null;
+
+  const handleConnectClick = () => {
+    if (wallet.isConnected) {
+      window.location.href = '/dao';
+      return;
+    }
+    // If TrobSafe extension is not installed or active, redirect to the APK/extension installation page
+    if (!wallet.isInstalled) {
+      window.location.href = '/trobsafe/install';
+      return;
+    }
+    setWalletModalOpen(true);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,11 +78,20 @@ export const Navbar: React.FC = () => {
             {/* Action Buttons */}
             <div className="hidden sm:flex items-center gap-3">
               <button
-                onClick={() => setWalletModalOpen(true)}
-                className="w-[166px] h-[40px] rounded-xl font-medium text-sm text-[#071A4A] bg-white hover:bg-slate-50 border border-[#E2ECF9] shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
+                onClick={handleConnectClick}
+                className="px-4 h-[40px] rounded-xl font-medium text-sm text-[#071A4A] bg-white hover:bg-slate-50 border border-[#E2ECF9] shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
               >
-                <Wallet className="w-4 h-4 text-[#155EEF]" />
-                <span>{walletAddress ? walletAddress : 'Connect Wallet'}</span>
+                {wallet.isConnected ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-mono text-xs">{displayAddr}</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4 text-[#155EEF]" />
+                    <span>Connect Wallet</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -104,7 +133,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  setWalletModalOpen(true);
+                  handleConnectClick();
                 }}
                 className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-navy hover:bg-navy-deep transition-all flex items-center justify-center gap-2 shadow-sm"
               >
@@ -126,8 +155,7 @@ export const Navbar: React.FC = () => {
       <WalletModal
         isOpen={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
-        onConnect={(addr) => {
-          setWalletAddress(addr);
+        onConnect={() => {
           setWalletModalOpen(false);
         }}
       />

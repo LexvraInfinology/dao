@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink, Compass, Smartphone } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
@@ -31,13 +33,44 @@ interface DaoAccessGateProps {
 }
 
 export function DaoAccessGate({ children }: DaoAccessGateProps) {
+  const router = useRouter();
   const wallet = useWallet();
   const auth   = useAuthContext();
 
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [payError, setPayError]               = useState<string | null>(null);
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
-  const [devBypass, setDevBypass]             = useState(false);
+  const [detectTimeout, setDetectTimeout]     = useState(false);
+
+  const handleConnectClick = () => {
+    if (!wallet.isInstalled) {
+      router.push('/trobsafe/install');
+      return;
+    }
+    setWalletModalOpen(true);
+  };
+
+  const [devBypass, setDevBypass] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('equora_dao_preview') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const enableBypass = useCallback(() => {
+    setDevBypass(true);
+    try {
+      sessionStorage.setItem('equora_dao_preview', 'true');
+    } catch { /* ignore */ }
+  }, []);
+
+  // Quick fallback timeout for detection probe (800ms max)
+  useEffect(() => {
+    const timer = setTimeout(() => setDetectTimeout(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch membership status only when we have an address (prefer base58 for TrobSafe)
   const activeAddress = wallet.base58Address || wallet.hexAddress;
@@ -50,8 +83,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // ── Derive gate state ──────────────────────────────────────────────────────
   const gateState: GateState = (() => {
     if (devBypass)                          return 'access_granted';
-    if (wallet.status === 'detecting')      return 'detecting_wallet';
-    if (wallet.status === 'not_installed')  return 'not_installed';
+    if (wallet.status === 'detecting' && !detectTimeout) return 'detecting_wallet';
+    if (wallet.status === 'not_installed' || (wallet.status === 'detecting' && detectTimeout && !wallet.isInstalled)) {
+      return 'not_installed';
+    }
     if (!wallet.isConnected)                return 'wallet_required';
     if (memberLoading && !memberData)       return 'checking_member';
     if (memberData?.isMember)               return 'access_granted';
@@ -154,27 +189,41 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           {gateState === 'not_installed' && (
             <GateCard icon={<Download className="w-8 h-8 text-[#155EEF]" />} title="TrobSafe Required">
               <p className="text-sm text-[#64748B] text-center leading-relaxed mb-6">
-                The EQUORA Genesis DAO requires the TrobSafe wallet browser extension.
-                Install it to continue.
+                The EQUORA Genesis DAO requires the TrobSafe wallet to sign transactions and verify Council membership. Available for desktop browsers and Android.
               </p>
-              <a
-                href="/trobsafe/install"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
-              >
-                <Download className="w-4 h-4" />
-                Install TrobSafe Wallet
-              </a>
-              <a
-                href="https://trobsafe.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2.5 w-full py-2.5 rounded-xl text-xs text-[#64748B] hover:text-[#071A4A] border border-[#E2ECF9] flex items-center justify-center gap-1.5 transition-all"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Learn about TrobSafe
-              </a>
+              <div className="space-y-2.5">
+                <a
+                  href="/downloads/trobsafe.apk"
+                  download="trobsafe.apk"
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Download Android APK
+                </a>
+                <a
+                  href="/trobsafe/install"
+                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#155EEF]" />
+                  Install Browser Extension
+                </a>
+                <button
+                  type="button"
+                  onClick={enableBypass}
+                  className="w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  ⚡ Guest Preview: Explore Member Lounge
+                </button>
+                <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
+                  <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                    ← Back to DAO
+                  </Link>
+                  <Link href="/dao/seats" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                    Council Seats Grid →
+                  </Link>
+                </div>
+              </div>
             </GateCard>
           )}
 
@@ -182,15 +231,33 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           {gateState === 'wallet_required' && (
             <GateCard icon={<Wallet className="w-8 h-8 text-[#155EEF]" />} title="Connect Your Wallet">
               <p className="text-sm text-[#64748B] text-center leading-relaxed mb-6">
-                Connect your TrobSafe wallet to access the EQUORA Genesis DAO dashboard.
+                Connect your TrobSafe wallet to verify your Genesis Council seat and access the Member Lounge.
               </p>
-              <button
-                onClick={() => setWalletModalOpen(true)}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Connect TrobSafe Wallet
-              </button>
+              <div className="space-y-2.5">
+                <button
+                  onClick={handleConnectClick}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Connect TrobSafe Wallet
+                </button>
+                <button
+                  type="button"
+                  onClick={enableBypass}
+                  className="w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  ⚡ Guest Preview: Explore Member Lounge
+                </button>
+                <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
+                  <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                    ← Back to DAO
+                  </Link>
+                  <Link href="/dao/seats" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                    Council Seats Grid →
+                  </Link>
+                </div>
+              </div>
             </GateCard>
           )}
 
@@ -279,10 +346,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               {/* Dev Preview Mode Bypass (allowed in local development) */}
               <button
                 type="button"
-                onClick={() => setDevBypass(true)}
-                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                onClick={enableBypass}
+                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                ⚡ Dev Preview: Enter DAO Dashboard Without Claiming
+                ⚡ Dev Preview: Enter Member Lounge Without Claiming
               </button>
 
               <p className="mt-3 text-center text-[11px] text-[#94A3B8]">

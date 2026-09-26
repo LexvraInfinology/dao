@@ -1,9 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Gem } from 'lucide-react';
+import { Gem, ShieldCheck } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
 
 export default function WalletInformationCard() {
+  const wallet = useWallet();
+  const isConnected = wallet.isConnected;
+
   return (
     <>
       {/* ================= DESKTOP VIEW (lg:block) ================= */}
@@ -30,7 +34,7 @@ export default function WalletInformationCard() {
               </div>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-                <span>Supported</span>
+                <span>Mainnet</span>
               </span>
             </div>
           </div>
@@ -39,33 +43,29 @@ export default function WalletInformationCard() {
           <div className="flex items-center justify-between py-2 border-b border-[#F8FAFC]">
             <span className="text-xs font-medium text-[#64748B]">Wallet Type</span>
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#071A4A]">
-              <span>🦊</span>
-              <span>MetaMask</span>
+              <ShieldCheck className="w-4 h-4 text-[#155EEF]" />
+              <span>TrobSafe Wallet</span>
             </div>
           </div>
 
           {/* Row 3: Connection Date */}
           <div className="flex items-center justify-between py-2 border-b border-[#F8FAFC]">
-            <span className="text-xs font-medium text-[#64748B]">Connection Date</span>
+            <span className="text-xs font-medium text-[#64748B]">Connection Protocol</span>
             <span className="text-xs font-medium text-[#071A4A]">
-              Aug 12, 2026, 10:24 AM
+              TrobSafe Web3 Provider (EIP-4361)
             </span>
           </div>
 
-          {/* Row 4: Last Activity */}
-          <div className="flex items-center justify-between py-2 border-b border-[#F8FAFC]">
-            <span className="text-xs font-medium text-[#64748B]">Last Activity</span>
-            <span className="text-xs font-medium text-[#071A4A]">
-              Aug 14, 2026, 04:12 PM
-            </span>
-          </div>
-
-          {/* Row 5: Status */}
+          {/* Row 4: Status */}
           <div className="flex items-center justify-between py-2">
             <span className="text-xs font-medium text-[#64748B]">Status</span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669] text-xs font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-              <span>Active</span>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              isConnected
+                ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669]'
+                : 'bg-slate-100 border border-slate-200 text-slate-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-slate-400'}`} />
+              <span>{isConnected ? 'Active & Connected' : 'Disconnected'}</span>
             </span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function WalletInformationCard() {
           </p>
         </div>
 
-        {/* 5 Shaded Rows */}
+        {/* Shaded Rows */}
         <div className="space-y-1.5 pt-1">
           {/* Row 1: Network */}
           <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-2">
@@ -94,7 +94,7 @@ export default function WalletInformationCard() {
                 <span className="truncate">Trobium Blockchain</span>
               </div>
               <span className="px-2 py-0.5 rounded-md bg-[#EEF5FF] text-[#155EEF] text-[10px] font-semibold shrink-0">
-                Supported
+                Mainnet
               </span>
             </div>
           </div>
@@ -103,33 +103,21 @@ export default function WalletInformationCard() {
           <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-[#64748B]">Wallet Type</span>
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#071A4A]">
-              <span className="w-2 h-2 rounded-full bg-[#0284C7]" />
-              <span>MetaMask</span>
+              <ShieldCheck className="w-4 h-4 text-[#155EEF]" />
+              <span>TrobSafe Wallet</span>
             </div>
           </div>
 
-          {/* Row 3: Connection Date */}
-          <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-[#64748B] shrink-0">Connection Date</span>
-            <span className="text-[11px] sm:text-xs font-bold font-mono text-[#071A4A] text-right">
-              Aug 12, 2026, 10:24 AM
-            </span>
-          </div>
-
-          {/* Row 4: Last Activity */}
-          <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-[#64748B] shrink-0">Last Activity</span>
-            <span className="text-[11px] sm:text-xs font-bold font-mono text-[#071A4A] text-right">
-              Aug 14, 2026, 04:12 PM
-            </span>
-          </div>
-
-          {/* Row 5: Status */}
+          {/* Row 3: Status */}
           <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-[#64748B]">Status</span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669] text-xs font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-              <span>Active</span>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              isConnected
+                ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669]'
+                : 'bg-slate-100 border border-slate-200 text-slate-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-slate-400'}`} />
+              <span>{isConnected ? 'Active & Connected' : 'Disconnected'}</span>
             </span>
           </div>
         </div>

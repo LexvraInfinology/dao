@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, User, Coins, TrendingUp, RotateCcw, Loader2 } from 'lucide-react';
 import { useDaoStats, useDaoEvents, type DaoEventData } from '@/hooks/useApi';
@@ -116,54 +117,18 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
   }
 }
 
-// ─── Fallback static rows (used while API loads) ──────────────────────────────
-const STATIC_ROWS: ActivityRow[] = [
-  {
-    id: 's1', title: 'Seat Claimed', subtitle: 'Genesis Seat #86 claimed • Member #1042',
-    highlight: null, highlightColor: '', timeAgo: 'just now',
-    iconEl: <User className="w-4 h-4 text-[#155EEF]" />, iconBg: 'bg-[#EFF6FF] border border-[#BFDBFE]/50',
-    iconBgMobile: 'bg-[#EFF6FF] border border-[#BFDBFE]/60', iconElMobile: <User className="w-4 h-4 text-[#155EEF]" />,
-  },
-  {
-    id: 's2', title: 'Queue Distribution', subtitle: 'From Seat #85 → Distributed to queue',
-    highlight: '+164.91 TROB', highlightColor: 'text-[#12B76A]', timeAgo: '18s ago',
-    iconEl: <Coins className="w-4 h-4 text-[#155EEF]" />, iconBg: 'bg-[#EFF6FF] border border-[#BFDBFE]/50',
-    iconBgMobile: 'bg-[#ECFDF5] border border-[#A7F3D0]/60', iconElMobile: <Coins className="w-4 h-4 text-[#12B76A]" />,
-  },
-  {
-    id: 's3', title: 'Seat Claimed', subtitle: 'Genesis Seat #85 claimed • Member #0987',
-    highlight: null, highlightColor: '', timeAgo: '1m ago',
-    iconEl: <User className="w-4 h-4 text-[#155EEF]" />, iconBg: 'bg-[#EFF6FF] border border-[#BFDBFE]/50',
-    iconBgMobile: 'bg-[#EFF6FF] border border-[#BFDBFE]/60', iconElMobile: <User className="w-4 h-4 text-[#155EEF]" />,
-  },
-  {
-    id: 's4', title: 'Cap Reached', subtitle: 'Member #1038 reached 5X earnings cap',
-    highlight: '1,500 TROB', highlightColor: 'text-[#6172F3]', timeAgo: '2m ago',
-    iconEl: <TrendingUp className="w-4 h-4 text-[#155EEF]" />, iconBg: 'bg-[#EFF6FF] border border-[#BFDBFE]/50',
-    iconBgMobile: 'bg-[#EEF4FF] border border-[#C7D7FE]/60', iconElMobile: <TrendingUp className="w-4 h-4 text-[#4F46E5]" />,
-  },
-  {
-    id: 's5', title: 'Re-Top Up', subtitle: 'Seat #82 re-top-up completed • $300 TROB',
-    highlight: null, highlightColor: '', timeAgo: '5m ago',
-    iconEl: <RotateCcw className="w-4 h-4 text-[#155EEF]" />, iconBg: 'bg-[#EFF6FF] border border-[#BFDBFE]/50',
-    iconBgMobile: 'bg-[#FEF6EE] border border-[#FDE68A]/60', iconElMobile: <RotateCcw className="w-4 h-4 text-[#F79009]" />,
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const LandingLiveActivity: React.FC = () => {
   // Poll every 10 seconds for live events
   const { data: rawEvents, loading } = useDaoEvents(10, 10_000);
   const { data: stats }              = useDaoStats();
 
   const rows: ActivityRow[] = useMemo(() => {
-    if (!rawEvents || rawEvents.length === 0) return STATIC_ROWS;
+    if (!rawEvents || rawEvents.length === 0) return [];
     return rawEvents.slice(0, 5).map(mapEventToRow);
   }, [rawEvents]);
 
-  const filledSeats    = stats?.memberCount ?? 86;
-  const remainingSeats = stats?.remainingPositions ?? 14;
+  const filledSeats    = stats?.memberCount ?? 0;
+  const remainingSeats = stats?.remainingPositions ?? (100 - filledSeats);
 
   return (
     <section id="activity" className="relative pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-32 lg:pb-36 overflow-hidden">
@@ -212,40 +177,64 @@ export const LandingLiveActivity: React.FC = () => {
 
               {/* Activity rows */}
               <div className="divide-y divide-slate-100/80">
-                {rows.map((item) => (
-                  <div
-                    key={item.id}
-                    className="py-3 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4 hover:bg-white/40 px-1 sm:px-2 rounded-2xl transition-colors"
-                  >
-                    <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
-                      <div className={`hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full items-center justify-center shrink-0 ${item.iconBg}`}>
-                        {item.iconEl}
+                {loading && rows.length === 0 ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="py-3.5 flex items-center justify-between gap-3 animate-pulse px-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-slate-200" />
+                        <div className="space-y-1.5">
+                          <div className="w-28 h-3.5 bg-slate-200 rounded" />
+                          <div className="w-40 h-2.5 bg-slate-100 rounded" />
+                        </div>
                       </div>
-                      <div className={`md:hidden w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${item.iconBgMobile}`}>
-                        {item.iconElMobile}
-                      </div>
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="text-xs sm:text-[14px] font-bold text-[#0B132B] font-inter">{item.title}</div>
-                        <div className="text-[11px] sm:text-xs text-[#64748B] font-inter truncate">{item.subtitle}</div>
-                      </div>
+                      <div className="w-16 h-3 bg-slate-100 rounded" />
                     </div>
-                    <div className="text-right shrink-0">
-                      {item.highlight
-                        ? <span className={`text-xs font-bold font-inter ${item.highlightColor}`}>{item.highlight}</span>
-                        : <span className="text-[11px] text-[#94A3B8] font-inter">{item.timeAgo}</span>
-                      }
+                  ))
+                ) : rows.length === 0 ? (
+                  <div className="py-10 text-center space-y-2">
+                    <div className="text-sm font-bold text-[#0B132B] font-inter">No Live Activity Yet</div>
+                    <div className="text-xs text-slate-500 font-inter max-w-xs mx-auto">
+                      Transactions and seat allocations will stream here in real-time as they are broadcast.
                     </div>
                   </div>
-                ))}
+                ) : (
+                  rows.map((item) => (
+                    <div
+                      key={item.id}
+                      className="py-3 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4 hover:bg-white/40 px-1 sm:px-2 rounded-2xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className={`hidden md:flex w-9 h-9 sm:w-10 sm:h-10 rounded-full items-center justify-center shrink-0 ${item.iconBg}`}>
+                          {item.iconEl}
+                        </div>
+                        <div className={`md:hidden w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${item.iconBgMobile}`}>
+                          {item.iconElMobile}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="text-xs sm:text-[14px] font-bold text-[#0B132B] font-inter">{item.title}</div>
+                          <div className="text-[11px] sm:text-xs text-[#64748B] font-inter truncate">{item.subtitle}</div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {item.highlight
+                          ? <span className={`text-xs font-bold font-inter ${item.highlightColor}`}>{item.highlight}</span>
+                          : <span className="text-[11px] text-[#94A3B8] font-inter">{item.timeAgo}</span>
+                        }
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Card footer */}
               <div className="pt-4 sm:pt-6 mt-1 border-t border-slate-100/90 text-center">
-                <button type="button"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/70 hover:bg-white text-xs sm:text-sm font-semibold font-inter text-[#0B132B] border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all duration-200">
+                <Link
+                  href="/dao/transactions"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/70 hover:bg-white text-xs sm:text-sm font-semibold font-inter text-[#0B132B] border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all duration-200"
+                >
                   <span>View More Activity</span>
                   <ArrowRight className="w-4 h-4 text-[#475467]" />
-                </button>
+                </Link>
               </div>
             </div>
           </div>

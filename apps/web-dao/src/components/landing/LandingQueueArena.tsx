@@ -4,8 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Coins, Calculator, Wallet, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { useDaoStats } from '@/hooks/useApi';
 
 export const LandingQueueArena: React.FC = () => {
+  const { data: stats } = useDaoStats(30_000);
+  const seatsClaimed = stats?.memberCount ?? 0;
+  const pct = Math.min(100, Math.round((seatsClaimed / 100) * 100));
   const cards = [
     {
       icon: <Coins className="w-5 h-5 text-[#155EEF]" />,
@@ -71,8 +75,8 @@ export const LandingQueueArena: React.FC = () => {
               <div className="w-5 h-5 rounded-full bg-blue-50 text-[#155EEF] flex items-center justify-center font-bold text-xs">
                 #
               </div>
-              <span className="text-sm font-bold text-[#0B132B] font-inter">71 / 100</span>
-              <span className="text-xs text-[#64748B] font-medium">Seats Filled (71%)</span>
+              <span className="text-sm font-bold text-[#0B132B] font-inter">{seatsClaimed} / 100</span>
+              <span className="text-xs text-[#64748B] font-medium">Seats Filled ({pct}%)</span>
             </div>
 
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
@@ -97,11 +101,11 @@ export const LandingQueueArena: React.FC = () => {
         {/* Mobile Dedicated Progress Card */}
         <div className="block md:hidden mt-6 p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-md">
           <div className="flex items-center justify-between text-xs font-bold text-[#0B132B] mb-2 font-inter">
-            <span>CURRENT QUEUE: 71 / 100</span>
-            <span className="text-[#155EEF]">71% FILLED</span>
+            <span>CURRENT QUEUE: {seatsClaimed} / 100</span>
+            <span className="text-[#155EEF]">{pct}% FILLED</span>
           </div>
           <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#155EEF] to-[#004EEB] rounded-full w-[71%]" />
+            <div className="h-full bg-gradient-to-r from-[#155EEF] to-[#004EEB] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
         </div>
 

@@ -17,14 +17,14 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
   const [shared, setShared]           = useState(false);
   const [activeModal, setActiveModal] = useState<'explorer' | 'details' | null>(null);
 
-  const seatNumber = loungeData?.soulboundPass?.seatNumber ?? loungeData?.position ?? 12;
+  const seatNumber = loungeData?.soulboundPass?.seatNumber ?? loungeData?.position ?? null;
   const tokenId    = loungeData?.soulboundPass?.tokenId    ?? loungeData?.nftTokenId ?? seatNumber;
-  const sbtId      = `#${String(tokenId).padStart(4, '0')}`;
+  const sbtId      = tokenId ? `#${String(tokenId).padStart(4, '0')}` : '—';
   const memberId   = loungeData?.soulboundPass?.memberId   ?? sbtId;
   const joinedAt   = loungeData?.soulboundPass?.joinedAt
     ? new Date(loungeData.soulboundPass.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Jan 12, 2025';
-  const status     = loungeData?.status ?? 'active';
+    : '—';
+  const status     = loungeData?.status ?? (loungeData?.isMember ? 'active' : 'inactive');
   const ownerAddr  = wallet.base58Address ?? wallet.hexAddress ?? '0x—';
   const shortOwner = ownerAddr.length > 12 ? `${ownerAddr.slice(0, 6)}…${ownerAddr.slice(-4)}` : ownerAddr;
   const nftContractAddress = process.env.NEXT_PUBLIC_NFT_ADDRESS ?? '0x—';
@@ -74,7 +74,9 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
           </div>
         </div>
         <div className="flex items-center gap-2 relative z-10">
-          <span className="text-sm sm:text-base font-bold text-white font-jakarta">Council Seat #{seatNumber}</span>
+          <span className="text-sm sm:text-base font-bold text-white font-jakarta">
+            {seatNumber ? `Council Seat #${seatNumber}` : 'Council Seat Pending'}
+          </span>
           <span className="px-2.5 py-0.5 rounded-full bg-[#032E1D]/90 border border-[#059669]/60 text-[10px] font-semibold text-[#34D399] capitalize">
             {status}
           </span>

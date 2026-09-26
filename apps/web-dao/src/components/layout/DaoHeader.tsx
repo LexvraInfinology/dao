@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -19,13 +19,17 @@ import {
   LogOut,
   Copy,
   CheckCheck,
+  ExternalLink,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { WalletModal } from '@/components/ui/WalletModal';
+import { useDaoMember } from '@/hooks/useApi';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -43,6 +47,7 @@ function shortenAddress(addr: string | null, chars = 4): string {
 
 export const DaoHeader: React.FC = () => {
   const pathname         = usePathname();
+  const router           = useRouter();
   const wallet           = useWallet();
   const auth             = useAuthContext();
 
@@ -50,10 +55,57 @@ export const DaoHeader: React.FC = () => {
   const [walletDropOpen, setWalletDropOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
+  const [storedAddr, setStoredAddr]         = useState<string | null>(null);
 
-  // Display address: prefer base58 (Trobium native), fallback to hex
-  const displayAddress = wallet.base58Address ?? wallet.hexAddress ?? '';
+  const handleConnectClick = () => {
+    if (!wallet.isInstalled) {
+      router.push('/trobsafe/install');
+      return;
+    }
+    setWalletModalOpen(true);
+  };
+
+  // Read stored address immediately on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('trobsafe_address');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.base58 || parsed?.hex) {
+            setStoredAddr(parsed.base58 || parsed.hex);
+            return;
+          }
+        } catch {
+          if (typeof stored === 'string' && stored.length > 6) {
+            setStoredAddr(stored);
+            return;
+          }
+        }
+      }
+      const authAddr = localStorage.getItem('equora_auth_address');
+      if (authAddr && typeof authAddr === 'string' && authAddr.length > 6) {
+        setStoredAddr(authAddr);
+      }
+    } catch {}
+  }, [wallet.isConnected, auth.isAuthenticated]);
+
+  // Display address: prefer base58 (Trobium native), fallback to hex, auth user, or stored address
+  const displayAddress =
+    wallet.base58Address ||
+    wallet.hexAddress ||
+    auth.user?.address ||
+    storedAddr ||
+    '';
+
+  const isConnected =
+    wallet.isConnected ||
+    auth.isAuthenticated ||
+    Boolean(displayAddress && displayAddress.length > 6);
+
   const shortDisplay   = shortenAddress(displayAddress);
+  const { data: memberData } = useDaoMember(displayAddress);
 
   // ── handlers ──────────────────────────────────────────────────────────────
   const handleCopyAddress = async () => {
@@ -69,6 +121,13 @@ export const DaoHeader: React.FC = () => {
     setWalletDropOpen(false);
     auth.signOut();
     wallet.disconnect();
+    setStoredAddr(null);
+    try {
+      localStorage.removeItem('trobsafe_address');
+      localStorage.removeItem('equora_auth_address');
+      localStorage.removeItem('equora_jwt');
+      localStorage.removeItem('equora_dao_preview');
+    } catch { /* */ }
   };
 
   return (
@@ -124,18 +183,24 @@ export const DaoHeader: React.FC = () => {
           </button>
 
           {/* ── Wallet pill / connect button ───────────────────────────── */}
-          {wallet.isConnected ? (
+          {isConnected ? (
             <div className="relative">
               <button
                 onClick={() => setWalletDropOpen((v) => !v)}
-                className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full sm:rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] text-[10px] sm:text-xs font-mono font-semibold text-[#1E293B] shadow-xs hover:bg-[#DBEAFE] transition-colors"
+                className="flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[11px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
+                aria-label="Wallet menu"
               >
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="hidden md:inline">{shortDisplay}</span>
-                <span className="md:hidden">
-                  {displayAddress ? displayAddress.slice(0, 5) + '…' : '…'}
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
+                <span className="hidden sm:inline font-mono tracking-tight text-slate-100">{shortDisplay}</span>
+                <span className="sm:hidden font-mono text-[11px]">
+                  {displayAddress ? displayAddress.slice(0, 5) + '…' : 'Wallet'}
                 </span>
-                <ChevronDown className="w-3 h-3 text-[#64748B]" />
+                {(memberData?.isMember || auth.user?.daoMember) && (
+                  <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Seat #{memberData?.position ?? auth.user?.daoPosition ?? 84}
+                  </span>
+                )}
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${walletDropOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown */}
@@ -145,65 +210,111 @@ export const DaoHeader: React.FC = () => {
                     className="fixed inset-0 z-40"
                     onClick={() => setWalletDropOpen(false)}
                   />
-                  <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-64 bg-white rounded-2xl border border-[#E2ECF9] shadow-xl p-2">
-                    {/* Address row */}
-                    <div className="px-3 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] mb-1.5">
-                      <p className="text-[10px] text-[#94A3B8] font-medium mb-0.5">Connected wallet</p>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-mono text-[#071A4A] truncate">{shortDisplay}</p>
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 sm:w-80 bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-2.5 animate-fadeIn">
+                    {/* Header info card */}
+                    <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#0B1528] to-[#111C33] border border-[#1E293B] text-white mb-2 shadow-sm">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-[10px] font-semibold text-emerald-300 tracking-wider uppercase">
+                            TrobSafe Connected
+                          </span>
+                        </div>
+                        <a
+                          href={`https://tronscan.org/#/address/${displayAddress}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
+                          title="View on Explorer"
+                        >
+                          <span>Explorer</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 bg-black/40 rounded-lg p-2 border border-white/10">
+                        <p className="text-xs font-mono font-semibold text-slate-100 truncate" title={displayAddress}>
+                          {displayAddress}
+                        </p>
                         <button
                           onClick={handleCopyAddress}
-                          className="p-1 rounded-md hover:bg-slate-100 text-[#94A3B8] hover:text-[#071A4A] transition-colors shrink-0"
+                          className="p-1 rounded-md hover:bg-white/10 text-slate-300 hover:text-white transition-colors shrink-0 flex items-center gap-1 text-[10px]"
                           title="Copy address"
                         >
-                          {copied
-                            ? <CheckCheck className="w-3.5 h-3.5 text-emerald-500" />
-                            : <Copy className="w-3.5 h-3.5" />
-                          }
+                          {copied ? (
+                            <>
+                              <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 font-sans">Copied</span>
+                            </>
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
-                      {auth.user && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          {auth.user.daoMember && (
-                            <span className="text-[10px] font-semibold text-[#155EEF] bg-[#EFF6FF] px-2 py-0.5 rounded-full">
-                              Seat #{auth.user.daoPosition}
-                            </span>
-                          )}
-                          {auth.user.userId && (
-                            <span className="text-[10px] text-[#64748B]">
-                              ID #{auth.user.userId}
-                            </span>
-                          )}
-                        </div>
-                      )}
+
+                      {/* Council Tier indicator */}
+                      <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 text-[10px]">Membership Tier</span>
+                        {(memberData?.isMember || auth.user?.daoMember) ? (
+                          <span className="font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                            Council Seat #{memberData?.position ?? auth.user?.daoPosition ?? 84}
+                          </span>
+                        ) : (
+                          <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30">
+                            Genesis Explorer
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Navigation shortcuts */}
-                    <Link
-                      href="/dao/profile"
-                      onClick={() => setWalletDropOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#344054] hover:bg-[#F8FAFC] hover:text-[#071A4A] transition-colors"
-                    >
-                      <User className="w-3.5 h-3.5 text-[#94A3B8]" />
-                      View Profile
-                    </Link>
-                    <Link
-                      href="/dao/settings"
-                      onClick={() => setWalletDropOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#344054] hover:bg-[#F8FAFC] hover:text-[#071A4A] transition-colors"
-                    >
-                      <Settings className="w-3.5 h-3.5 text-[#94A3B8]" />
-                      Settings
-                    </Link>
+                    <div className="space-y-0.5 py-1">
+                      <Link
+                        href="/dao/lounge"
+                        onClick={() => setWalletDropOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#344054] hover:bg-[#F8FAFC] hover:text-[#155EEF] transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Trophy className="w-4 h-4 text-[#94A3B8] group-hover:text-[#155EEF] transition-colors" />
+                          <span>Member Lounge</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#155EEF]">Dividends & Pass →</span>
+                      </Link>
 
-                    <div className="my-1 border-t border-[#F1F5F9]" />
+                      <Link
+                        href="/dao/profile"
+                        onClick={() => setWalletDropOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#344054] hover:bg-[#F8FAFC] hover:text-[#155EEF] transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <User className="w-4 h-4 text-[#94A3B8] group-hover:text-[#155EEF] transition-colors" />
+                          <span>My Profile</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#155EEF]">Badges & Activity →</span>
+                      </Link>
 
+                      <Link
+                        href="/dao/settings"
+                        onClick={() => setWalletDropOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#344054] hover:bg-[#F8FAFC] hover:text-[#155EEF] transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4 text-[#94A3B8] group-hover:text-[#155EEF] transition-colors" />
+                          <span>Settings & Keys</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#155EEF]">Security →</span>
+                      </Link>
+                    </div>
+
+                    <div className="my-1.5 border-t border-[#F1F5F9]" />
+
+                    {/* Sign Out / Disconnect Button */}
                     <button
                       onClick={handleDisconnect}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border border-rose-100 transition-colors shadow-xs"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
-                      Disconnect Wallet
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out / Disconnect</span>
                     </button>
                   </div>
                 </>
@@ -212,23 +323,27 @@ export const DaoHeader: React.FC = () => {
           ) : (
             /* Not connected — show Connect button */
             <button
-              onClick={() => setWalletModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#155EEF] text-white text-xs font-semibold shadow-sm hover:bg-[#004EEB] transition-colors"
+              onClick={handleConnectClick}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#155EEF] text-white text-xs font-semibold shadow-sm hover:bg-[#004EEB] hover:shadow-[0_4px_12px_rgba(21,94,239,0.3)] transition-all"
             >
-              <span className="w-2 h-2 rounded-full bg-white/60 shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-white/70 shrink-0" />
               <span>Connect Wallet</span>
             </button>
           )}
 
           {/* User avatar sphere — desktop only, shown when connected */}
-          {wallet.isConnected && (
-            <div className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#BFDBFE] shrink-0 hidden lg:block">
+          {isConnected && (
+            <button
+              onClick={() => setWalletDropOpen((v) => !v)}
+              className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#BFDBFE] shrink-0 hidden lg:block hover:ring-2 hover:ring-[#155EEF]/40 transition-all"
+              title="Open Wallet Menu"
+            >
               <img
                 src="/dao/Futuristic Glowing Blue 3D Spherical Avatar_margin.png"
                 alt="User Avatar"
                 className="w-full h-full object-cover"
               />
-            </div>
+            </button>
           )}
 
           {/* Mobile hamburger */}
@@ -278,16 +393,31 @@ export const DaoHeader: React.FC = () => {
               </div>
 
               {/* Wallet info in drawer */}
-              {wallet.isConnected && (
-                <div className="px-3 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="text-xs font-mono text-[#071A4A] truncate">{shortDisplay}</span>
+              {isConnected && (
+                <div className="px-3.5 py-3 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] shadow-sm">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Connected</span>
+                    </div>
+                    <button
+                      onClick={handleCopyAddress}
+                      className="p-1 rounded text-slate-300 hover:text-white"
+                      title="Copy"
+                    >
+                      {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
-                  {auth.user?.daoMember && (
-                    <p className="text-[10px] text-[#155EEF] mt-1 font-semibold">
-                      Seat #{auth.user.daoPosition}
-                    </p>
+                  <div className="text-xs font-mono text-slate-100 truncate">
+                    {displayAddress}
+                  </div>
+                  {(memberData?.isMember || auth.user?.daoMember) && (
+                    <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 text-[10px]">Council Seat</span>
+                      <span className="text-emerald-300 font-bold bg-emerald-500/20 px-2 py-0.5 rounded text-[10px]">
+                        Seat #{memberData?.position ?? auth.user?.daoPosition ?? 84}
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
@@ -324,16 +454,17 @@ export const DaoHeader: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-[#E2ECF9] space-y-2">
-              {wallet.isConnected ? (
+              {isConnected ? (
                 <button
                   onClick={() => { handleDisconnect(); setMobileNavOpen(false); }}
-                  className="w-full py-2.5 rounded-xl font-medium text-xs text-center text-red-500 hover:bg-red-50 border border-red-100 transition-colors"
+                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-center text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-2"
                 >
-                  Disconnect Wallet
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out / Disconnect</span>
                 </button>
               ) : (
                 <button
-                  onClick={() => { setWalletModalOpen(true); setMobileNavOpen(false); }}
+                  onClick={() => { handleConnectClick(); setMobileNavOpen(false); }}
                   className="w-full py-2.5 rounded-xl font-semibold text-xs text-center text-white bg-[#155EEF] hover:bg-[#004EEB] transition-colors"
                 >
                   Connect TrobSafe Wallet

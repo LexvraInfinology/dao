@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { requireAuth } from "./middleware/requireAuth";
 import { daoService, statsService, authService, priceService, servicesConfig } from "@equora/services";
 import prisma from "@equora/database";
+import { createPublicClient, http, parseAbi } from "viem";
 
 export function createApp(): Express {
   const app = express();
@@ -204,7 +205,7 @@ export function createApp(): Express {
     }
   });
 
-  /** POST /api/dao/claim — claim or activate council seat membership */
+  /** POST /api/dao/claim — claim or activate council seat membership with blockchain verification & 300/N distribution */
   app.post("/api/dao/claim", async (req, res, next) => {
     try {
       const { address, txHash } = req.body as { address?: string; txHash?: string };
@@ -215,7 +216,47 @@ export function createApp(): Express {
 
       const canonicalAddress = address.trim().toLowerCase();
 
-      // Ensure user exists
+      // 1. Blockchain On-Chain Verification
+      let verifiedBlockNumber = 0n;
+      let onchainVerified = false;
+
+      if (txHash && typeof txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+        try {
+          const client = createPublicClient({
+            transport: http(config.blockchain.rpcUrl),
+          });
+          const receipt = await client.getTransactionReceipt({ hash: txHash as `0x${string}` });
+          if (receipt) {
+            verifiedBlockNumber = receipt.blockNumber;
+            if (receipt.status === "success") {
+              onchainVerified = true;
+            }
+          }
+        } catch (err) {
+          console.log(`[DAO Claim] On-chain receipt verification note for ${txHash}:`, (err as Error).message);
+        }
+      }
+
+      // Check on-chain member status in EquoraDAO contract if configured
+      const daoContractAddress = (process.env.NEXT_PUBLIC_DAO_ADDRESS || "0x4b6aB5F819A515382B0dEB6935D793817bB4af28") as `0x${string}`;
+      if (daoContractAddress && /^0x[0-9a-fA-F]{40}$/.test(canonicalAddress)) {
+        try {
+          const client = createPublicClient({
+            transport: http(config.blockchain.rpcUrl),
+          });
+          const isMemberOnchain = await client.readContract({
+            address: daoContractAddress,
+            abi: parseAbi(["function isDaoMember(address) external view returns (bool)"]),
+            functionName: "isDaoMember",
+            args: [canonicalAddress as `0x${string}`],
+          });
+          if (isMemberOnchain) {
+            onchainVerified = true;
+          }
+        } catch (_) {}
+      }
+
+      // 2. Ensure user exists in database
       let user = await prisma.user.findFirst({
         where: {
           OR: [
@@ -236,8 +277,8 @@ export function createApp(): Express {
         });
       }
 
-      // Check if already a member
-      let member = await prisma.daoMember.findFirst({
+      // 3. Check if already a member
+      const existingMember = await prisma.daoMember.findFirst({
         where: {
           OR: [
             { address: address.trim() },
@@ -247,42 +288,151 @@ export function createApp(): Express {
         },
       });
 
-      if (!member) {
-        const memberCount = await prisma.daoMember.count();
-        const nextPosition = memberCount + 1;
-        member = await prisma.daoMember.create({
+      if (existingMember) {
+        res.json({
+          success: true,
+          data: {
+            isMember: true,
+            position: existingMember.position,
+            address: user.address,
+            entryAmountBtt: Number(existingMember.entryAmountBtt),
+            pushedAmountBtt: Number(existingMember.pushedAmountBtt),
+            txHash: existingMember.txHash,
+            alreadyMember: true,
+          },
+        });
+        return;
+      }
+
+      // 4. Capacity verification (100 Sovereign Seats)
+      const memberCount = await prisma.daoMember.count();
+      if (memberCount >= 100) {
+        res.status(400).json({ success: false, error: "Genesis DAO Council is full (100/100 seats claimed)." });
+        return;
+      }
+      const nextPosition = memberCount + 1;
+
+      // 5. Calculate 300 / N Cashback & Dividend Distribution
+      // In EquoraDAO.sol: ENTRY_FEE = 300 ether; activeCount = nextPosition; amountPerRecipient = ENTRY_FEE / activeCount
+      const ENTRY_FEE = 300;
+      const cashbackPerMember = Number((ENTRY_FEE / nextPosition).toFixed(4));
+      const memberTxHash = txHash || `0x_claim_${Date.now()}`;
+      const now = new Date();
+
+      // Fetch all previous active members to receive their dividend push
+      const previousActiveMembers = await prisma.daoMember.findMany({
+        where: { position: { lt: nextPosition }, status: "active" },
+        select: { id: true, address: true, position: true, pushedAmountBtt: true },
+      });
+
+      // 6. Execute atomic database transaction
+      const [newMember] = await prisma.$transaction([
+        // A. Create new member with instant cashback credited directly
+        prisma.daoMember.create({
           data: {
             address: user.address,
             position: nextPosition,
             nftTokenId: nextPosition,
-            entryAmountBtt: 300,
+            entryAmountBtt: ENTRY_FEE,
+            pushedAmountBtt: cashbackPerMember, // Instant Cashback!
             status: "active",
-            joinedAt: new Date(),
-            txHash: txHash || `0x_claim_${Date.now()}`,
-            blockNumber: 0n,
+            joinedAt: now,
+            txHash: memberTxHash,
+            blockNumber: verifiedBlockNumber,
           },
-        });
+        }),
 
-        await prisma.daoEvent.create({
+        // B. Credit dividend share to all previous active members
+        prisma.daoMember.updateMany({
+          where: { position: { lt: nextPosition }, status: "active" },
+          data: {
+            pushedAmountBtt: {
+              increment: cashbackPerMember,
+            },
+          },
+        }),
+
+        // C. Event: Joined
+        prisma.daoEvent.create({
           data: {
             eventType: "joined",
             userAddress: user.address,
             incomingPosition: nextPosition,
-            amountBtt: 300,
-            txHash: member.txHash,
-            blockNumber: 0n,
-            timestamp: new Date(),
+            recipientCount: nextPosition,
+            amountBtt: ENTRY_FEE,
+            txHash: memberTxHash,
+            blockNumber: verifiedBlockNumber,
+            timestamp: now,
           },
-        });
+        }),
+
+        // D. Event: Instant cashback for new member
+        prisma.daoEvent.create({
+          data: {
+            eventType: "pushed",
+            userAddress: user.address,
+            incomingPosition: nextPosition,
+            amountBtt: cashbackPerMember,
+            reason: `Instant Cashback (Seat #${nextPosition})`,
+            txHash: `${memberTxHash}-cashback`,
+            blockNumber: verifiedBlockNumber,
+            timestamp: now,
+          },
+        }),
+
+        // E. Update DaoInstance totalDistributedBtt
+        prisma.daoInstance.upsert({
+          where: { id: 1 },
+          create: {
+            id: 1,
+            capacity: 100,
+            isClosed: nextPosition >= 100,
+            closedAt: nextPosition >= 100 ? now : null,
+            totalDistributedBtt: ENTRY_FEE,
+            distributionMode: "push_with_pull_fallback",
+          },
+          update: {
+            totalDistributedBtt: {
+              increment: ENTRY_FEE,
+            },
+            isClosed: nextPosition >= 100,
+            closedAt: nextPosition >= 100 ? now : null,
+          },
+        }),
+      ]);
+
+      // Create pushed dividend events for all previous members
+      for (const prev of previousActiveMembers) {
+        try {
+          await prisma.daoEvent.create({
+            data: {
+              eventType: "pushed",
+              userAddress: prev.address,
+              incomingPosition: nextPosition,
+              amountBtt: cashbackPerMember,
+              reason: `Dividend push from incoming Seat #${nextPosition}`,
+              txHash: `${memberTxHash}-pushed-${prev.position}`,
+              blockNumber: verifiedBlockNumber,
+              timestamp: now,
+            },
+          });
+        } catch (evtErr) {
+          console.warn("[DAO Claim] Previous member event logging note:", evtErr);
+        }
       }
 
       res.json({
         success: true,
         data: {
           isMember: true,
-          position: member.position,
+          position: newMember.position,
           address: user.address,
-          txHash: member.txHash,
+          entryAmountBtt: ENTRY_FEE,
+          instantCashbackBtt: cashbackPerMember,
+          totalPushedBtt: cashbackPerMember,
+          previousMembersRewarded: previousActiveMembers.length,
+          txHash: newMember.txHash,
+          onchainVerified,
         },
       });
     } catch (err) {

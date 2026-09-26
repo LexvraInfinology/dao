@@ -1,14 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight, Info, DollarSign, RotateCcw, Wallet } from 'lucide-react';
+import { useDaoStats } from '@/hooks/useApi';
 
 export const LandingSimulator: React.FC = () => {
-  const [selectedSeat, setSelectedSeat] = useState<number>(87);
+  const { data: stats } = useDaoStats(30_000);
+  const seatsClaimed = stats?.memberCount ?? 0;
+  const initialSeat = Math.min(100, Math.max(1, seatsClaimed + 1));
+  const [selectedSeat, setSelectedSeat] = useState<number>(initialSeat);
 
-  // Available seats around selected
-  const seatsRange = [84, 85, 86, 87, 88, 89, 90];
+  useEffect(() => {
+    if (seatsClaimed > 0) {
+      setSelectedSeat(Math.min(100, seatsClaimed + 1));
+    }
+  }, [seatsClaimed]);
+
+  // Dynamic available seats range around selected
+  const seatsRange = useMemo(() => {
+    const range: number[] = [];
+    const start = Math.max(1, Math.min(94, selectedSeat - 3));
+    for (let i = start; i < start + 7 && i <= 100; i++) {
+      range.push(i);
+    }
+    return range;
+  }, [selectedSeat]);
 
   const handlePrev = () => {
     if (selectedSeat > 1) setSelectedSeat((prev) => prev - 1);
@@ -50,7 +67,7 @@ export const LandingSimulator: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#12B76A]" />
               <span className="text-xs sm:text-sm font-bold font-inter text-[#0B132B] tracking-wide">
-                CURRENT QUEUE: 71 / 100
+                CURRENT QUEUE: {seatsClaimed} / 100
               </span>
             </div>
 

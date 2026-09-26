@@ -9,12 +9,11 @@ interface LoungeCompactMemberCardProps {
 }
 
 export const LoungeCompactMemberCard: React.FC<LoungeCompactMemberCardProps> = ({ loungeData }) => {
-  const seatNumber = loungeData?.soulboundPass?.seatNumber ?? loungeData?.position ?? 12;
-  const memberId   = loungeData?.soulboundPass?.memberId   ?? '#0012';
+  const seatNumber = loungeData?.soulboundPass?.seatNumber ?? loungeData?.position ?? null;
   const joinedAt   = loungeData?.soulboundPass?.joinedAt
     ? new Date(loungeData.soulboundPass.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : 'Jan 2025';
-  const status     = loungeData?.status ?? 'active';
+    : '—';
+  const status     = loungeData?.status ?? (loungeData?.isMember ? 'active' : 'inactive');
   const isActive   = status === 'active';
 
   return (
@@ -26,7 +25,7 @@ export const LoungeCompactMemberCard: React.FC<LoungeCompactMemberCardProps> = (
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-lg font-black font-jakarta text-[#071A4A] tracking-tight">
-              #{String(seatNumber).padStart(4, '0')}
+              {seatNumber ? `#${String(seatNumber).padStart(4, '0')}` : '—'}
             </span>
             <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] text-[10px] font-semibold text-[#60739A]">
               Soulbound NFT

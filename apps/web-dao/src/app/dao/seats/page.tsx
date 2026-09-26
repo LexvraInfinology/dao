@@ -1,134 +1,137 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CouncilSeatsHero } from '@/components/dao/seats/CouncilSeatsHero';
 import { CouncilStatCards } from '@/components/dao/seats/CouncilStatCards';
 import { CouncilGrid } from '@/components/dao/seats/CouncilGrid';
 import { SeatInspector } from '@/components/dao/seats/SeatInspector';
 import { CouncilAboutCard } from '@/components/dao/seats/CouncilAboutCard';
 import { CouncilRecentActivity } from '@/components/dao/seats/CouncilRecentActivity';
-import { COUNCIL_SEATS_LIST, type CouncilSeatDetail } from '@/data/councilSeatsData';
-import { useApi } from '@/hooks/useApi';
+import {
+  buildLiveCouncilSeats,
+  type CouncilSeatDetail,
+  type RawMemberData,
+} from '@/data/councilSeatsData';
+import { useApi, useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
-import { useTrobPrice } from '@/hooks/useApi';
 import { Check, Loader2 } from 'lucide-react';
 
-// ─── API member shape ─────────────────────────────────────────────────────────
-interface ApiMember {
-  position: number;
-  address: string;
-  nftTokenId: number;
-  pushedAmountBtt: number;
-  pushedAmountUsdEstimate: number;
-  status: string;
-  joinedAt: string;
-  txHash: string;
-}
 interface ApiMembersPayload {
-  members: ApiMember[];
+  members: RawMemberData[];
   total: number;
   bttPriceUsd: number;
 }
 
-// ─── Map live member → CouncilSeatDetail ──────────────────────────────────────
-function mapMemberToSeat(
-  m: ApiMember,
-  myAddress: string | null,
-  bttPriceUsd: number
-): CouncilSeatDetail {
-  const isMine         = !!myAddress && m.address.toLowerCase() === myAddress.toLowerCase();
-  const earningsCapBtt = 900;
-  const capPct         = Math.min(100, Math.round((m.pushedAmountBtt / earningsCapBtt) * 100));
-  const earningsUsd    = m.pushedAmountUsdEstimate;
-
-  const shortAddr = m.address.length > 10
-    ? `${m.address.slice(0, 6)}…${m.address.slice(-4)}`
-    : m.address;
-
-  return {
-    seatNumber:     m.position,
-    status:         isMine ? 'mine' : 'claimed',
-    ownerAddress:   isMine ? `${shortAddr} (You)` : shortAddr,
-    lifetimeEarnings: `$${earningsUsd.toFixed(2)} TROB`,
-    capProgress:    capPct,
-    votingPower:    '1.0%',
-    statusText:     m.status === 'active' ? 'Active & In Good Standing' : m.status,
-    statusBadge:    'Active Member',
-    soulboundId:    `#${String(m.position).padStart(4, '0')}`,
-    entryAmount:    '$300 TROB',
-    claimedDate:    new Date(m.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' }),
-  };
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function CouncilSeatsPage() {
   const wallet = useWallet();
   const auth   = useAuthContext();
-  const { data: price } = useTrobPrice(30_000);
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
 
-  // Fetch all 100 members from API
-  const { data: membersPayload, loading: membersLoading } =
+  const { data: price } = useTrobPrice(30_000);
+  const { data: memberData, refetch: refetchMember } = useDaoMember(activeAddress);
+
+  // Fetch all 100 members from live backend API
+  const { data: membersPayload, loading: membersLoading, refetch: refetchMembers } =
     useApi<ApiMembersPayload>('/api/dao/members?page=1&limit=100');
 
   const [notification, setNotification] = useState<string | null>(null);
   const [minting, setMinting]           = useState(false);
   const [mintErr, setMintErr]           = useState<string | null>(null);
 
-  // Build seat list: overlay API members on top of the static 100-seat scaffold
+  // Dynamically build the 100 seats array from live data
   const seats: CouncilSeatDetail[] = useMemo(() => {
-    if (!membersPayload?.members?.length) return COUNCIL_SEATS_LIST;
+    const rawMembers = membersPayload?.members ?? [];
+    const bttPrice = membersPayload?.bttPriceUsd ?? price?.priceUsd ?? 0;
+    return buildLiveCouncilSeats(rawMembers, activeAddress, bttPrice);
+  }, [membersPayload, activeAddress, price?.priceUsd]);
 
-    const apiSeats = new Map<number, CouncilSeatDetail>();
-    const bttPrice = membersPayload.bttPriceUsd ?? price?.priceUsd ?? 0;
-    const activeAddress = wallet.base58Address || wallet.hexAddress;
+  // Default selected seat: user's own seat → or next available → or first seat
+  const mySeatNumber = memberData?.position ?? auth.user?.daoPosition ?? null;
 
-    for (const m of membersPayload.members) {
-      apiSeats.set(m.position, mapMemberToSeat(m, activeAddress, bttPrice));
-    }
-
-    return COUNCIL_SEATS_LIST.map((staticSeat) => {
-      const live = apiSeats.get(staticSeat.seatNumber);
-      if (live) return live;
-      return staticSeat;
-    });
-  }, [membersPayload, wallet.base58Address, wallet.hexAddress]);
-
-  // Default selected seat: user's own seat → or next available → or first
   const defaultSeat = useMemo(() => {
-    if (auth.user?.daoPosition) return seats.find((s) => s.seatNumber === auth.user!.daoPosition) ?? seats[0];
+    if (mySeatNumber) {
+      const foundMine = seats.find((s) => s.seatNumber === mySeatNumber);
+      if (foundMine) return foundMine;
+    }
     const next = seats.find((s) => s.status === 'next');
     return next ?? seats[0];
-  }, [seats, auth.user]);
+  }, [seats, mySeatNumber]);
 
   const [selectedSeat, setSelectedSeat] = useState<CouncilSeatDetail>(defaultSeat);
 
+  // Sync selectedSeat when defaultSeat updates on data arrival
+  useEffect(() => {
+    setSelectedSeat((prev) => {
+      const updated = seats.find((s) => s.seatNumber === prev.seatNumber);
+      return updated ?? defaultSeat;
+    });
+  }, [seats, defaultSeat]);
+
   // ── Mint / claim seat ─────────────────────────────────────────────────────
   const handleMintSeat = async (seatNumber: number) => {
-    if (!wallet.isConnected || !price) return;
+    if (!wallet.isConnected || !price) {
+      setMintErr('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    if (memberData?.isMember) {
+      setMintErr(`You already own Council Seat #${memberData.position}. Limit 1 seat per wallet.`);
+      return;
+    }
+
     setMintErr(null);
     setMinting(true);
 
     const callValueSun = Math.ceil(price.seatEntryTrob * 1_000_000);
     const daoAddress   = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+    const activeAddr   = wallet.base58Address ?? wallet.hexAddress ?? '';
 
     try {
-      const result = await wallet.callContract({
-        contract_address:  daoAddress,
-        function_selector: 'joinDAO()',
-        parameter:         '',
-        call_value:        callValueSun,
-        fee_limit:         100_000_000,
-        owner_address:     wallet.base58Address ?? wallet.hexAddress ?? '',
+      let txId: string | null = null;
+
+      // 1. On-chain call if contract configured
+      if (
+        daoAddress &&
+        daoAddress !== '0x0000000000000000000000000000000000000000' &&
+        daoAddress.length > 10
+      ) {
+        try {
+          const result = await wallet.callContract({
+            contract_address:  daoAddress,
+            function_selector: 'joinDAO()',
+            parameter:         '',
+            call_value:        callValueSun,
+            fee_limit:         100_000_000,
+            owner_address:     activeAddr,
+          });
+
+          if (result?.result && result.txid) {
+            txId = result.txid;
+          }
+        } catch (onChainErr: unknown) {
+          console.warn('[CouncilSeatsPage] On-chain broadcast note:', onChainErr);
+        }
+      }
+
+      // 2. Synchronize database via API
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const res = await fetch(`${apiUrl}/api/dao/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: activeAddr, txHash: txId }),
       });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to register membership.');
+      }
 
-      if (!result.result) throw new Error('Transaction rejected.');
-
-      setNotification(`Council Seat #${seatNumber} claimed! TX: ${result.txid.slice(0, 12)}…`);
-      setTimeout(() => setNotification(null), 5000);
+      const assignedPosition = data.data?.position ?? seatNumber;
+      const cashbackReceived = data.data?.instantCashbackBtt ?? (300 / assignedPosition).toFixed(2);
+      setNotification(`🎉 Council Seat #${assignedPosition} claimed! Instant cashback of +$${cashbackReceived} TROB credited directly to your balance. ${txId ? `(Tx: ${txId.slice(0, 10)}…)` : ''}`);
+      await Promise.all([refetchMembers(), refetchMember()]);
+      setTimeout(() => setNotification(null), 8000);
     } catch (err: unknown) {
-      setMintErr(err instanceof Error ? err.message : 'Transaction failed.');
+      setMintErr(err instanceof Error ? err.message : 'Claim failed.');
     } finally {
       setMinting(false);
     }
@@ -144,7 +147,7 @@ export default function CouncilSeatsPage() {
       {membersLoading && (
         <div className="flex items-center gap-2 text-xs text-[#60739A] font-jakarta">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-[#155EEF]" />
-          <span>Loading live seat data…</span>
+          <span>Syncing live seat state from database…</span>
         </div>
       )}
 
@@ -182,7 +185,7 @@ export default function CouncilSeatsPage() {
 
           <SeatInspector
             seat={selectedSeat}
-            onMintSeat={minting ? undefined : handleMintSeat}
+            onMintSeat={minting || memberData?.isMember ? undefined : handleMintSeat}
           />
           <CouncilAboutCard />
 

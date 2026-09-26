@@ -10,7 +10,7 @@ interface ClaimableDividendsCardProps {
 }
 
 export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
-  initialAmount = 420.50,
+  initialAmount = 0,
   walletAddress,
 }) => {
   const wallet   = useWallet();
@@ -74,7 +74,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
 
       <div className="space-y-1">
         <div className="text-3xl sm:text-4xl font-black font-jakarta text-[#071A4A] tracking-tight">
-          ${balance.toFixed(2)} TROB
+          ${balance.toFixed(2)} <span className="text-lg font-normal text-slate-400">USD</span>
         </div>
         <div className="text-xs font-semibold font-jakarta text-[#10B981] flex items-center gap-1.5">
           {balance > 0

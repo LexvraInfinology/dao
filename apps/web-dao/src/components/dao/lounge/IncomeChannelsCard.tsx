@@ -9,7 +9,7 @@ interface IncomeChannelsCardProps {
 }
 
 export const IncomeChannelsCard: React.FC<IncomeChannelsCardProps> = ({ loungeData }) => {
-  const daoEarnedUsd    = loungeData?.incomeChannels?.daoSeats.earnedUsd    ?? 512.40;
+  const daoEarnedUsd    = loungeData?.incomeChannels?.daoSeats.earnedUsd    ?? 0;
   const matrixEarnedUsd = loungeData?.incomeChannels?.matrixSlots.earnedUsd ?? 0;
   const hasMatrix       = !!loungeData?.incomeChannels?.matrixSlots.highestSlot;
   const highestSlot     = loungeData?.incomeChannels?.matrixSlots.highestSlot ?? 0;

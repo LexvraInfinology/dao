@@ -19,6 +19,19 @@ export const LandingNavbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleConnectClick = () => {
+    if (wallet.isConnected) {
+      window.location.href = '/dao';
+      return;
+    }
+    // If TrobSafe extension is not installed or active, redirect to the APK/extension installation page
+    if (!wallet.isInstalled) {
+      window.location.href = '/trobsafe/install';
+      return;
+    }
+    setWalletModalOpen(true);
+  };
+
   const navLinks = [
     { label: 'How It Works', href: '#queue' },
     { label: 'Levels',       href: '#simulator' },
@@ -72,7 +85,7 @@ export const LandingNavbar: React.FC = () => {
             <div className="hidden lg:flex items-center">
               {!wallet.isConnected ? (
                 <button
-                  onClick={() => setWalletModalOpen(true)}
+                  onClick={handleConnectClick}
                   className="px-5 py-2.5 rounded-full font-semibold text-[13px] text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_4px_14px_rgba(21,94,239,0.3)] hover:shadow-[0_6px_20px_rgba(21,94,239,0.4)] transition-all duration-200 flex items-center gap-2"
                 >
                   <Wallet className="w-4 h-4" />
@@ -103,7 +116,7 @@ export const LandingNavbar: React.FC = () => {
             <div className="flex lg:hidden items-center gap-1.5 sm:gap-2.5 shrink-0">
               {!wallet.isConnected ? (
                 <button
-                  onClick={() => setWalletModalOpen(true)}
+                  onClick={handleConnectClick}
                   className="whitespace-nowrap px-3 py-1.5 rounded-full font-semibold text-[11px] sm:text-[12px] text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-sm transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <Wallet className="w-3.5 h-3.5 shrink-0" />
@@ -149,7 +162,10 @@ export const LandingNavbar: React.FC = () => {
             <div className="pt-3 border-t border-slate-100 space-y-2">
               {!wallet.isConnected ? (
                 <button
-                  onClick={() => { setMobileMenuOpen(false); setWalletModalOpen(true); }}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleConnectClick();
+                  }}
                   className="w-full py-3 rounded-full font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-sm"
                 >
                   <Wallet className="w-4 h-4" />

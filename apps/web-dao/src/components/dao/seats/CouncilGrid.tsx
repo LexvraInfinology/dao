@@ -18,11 +18,14 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
   const [filter, setFilter] = useState<'all' | 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked'>('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
+  const mySeat = seats.find((s) => s.status === 'mine');
+  const nextSeat = seats.find((s) => s.status === 'next');
+
   const filterLabels: Record<string, string> = {
     all: 'All Seats',
     claimed: 'Claimed Seats',
-    mine: 'Your Seat (#12)',
-    next: 'Next Available (#87)',
+    mine: mySeat ? `Your Seat (#${mySeat.seatNumber})` : 'Your Seat',
+    next: nextSeat ? `Next Available (#${nextSeat.seatNumber})` : 'Next Available',
     defaulted: 'Defaulted Vacancies',
     locked: 'Locked Future',
   };
@@ -103,21 +106,32 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
           const isSelected = selectedSeat.seatNumber === seat.seatNumber;
           const isFaded = !filteredSeatNumbers.has(seat.seatNumber);
 
-          let tileClasses = 'border border-[#D0E2FF] bg-[#F0F6FF] text-[#155EEF] hover:bg-[#E5EFFF]';
-          let dotColor = 'bg-[#155EEF]';
+          let tileClasses = 'bg-[#0B1528] text-slate-100 border border-[#1E293B] hover:bg-[#132238] shadow-2xs';
+          let topElement: React.ReactNode = (
+            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-400" />
+          );
 
           if (seat.status === 'mine') {
-            tileClasses = 'border-2 border-[#12B76A] bg-[#ECFDF3] text-[#027A48] hover:bg-[#D1FADF]';
-            dotColor = 'bg-[#12B76A]';
+            tileClasses = 'border-2 border-emerald-300 bg-emerald-600 text-white shadow-md z-20';
+            topElement = (
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-200 ring-1 ring-white animate-pulse" />
+            );
           } else if (seat.status === 'defaulted') {
-            tileClasses = 'border-2 border-dashed border-[#F04438] bg-[#FEF3F2] text-[#D92D20] hover:bg-[#FEE4E2]';
-            dotColor = 'bg-[#F04438]';
+            tileClasses = 'border-2 border-dashed border-rose-400 bg-rose-50 text-rose-700 hover:bg-rose-100';
+            topElement = (
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-500 animate-pulse" />
+            );
           } else if (seat.status === 'next') {
-            tileClasses = 'border-2 border-[#155EEF] bg-[#D1E4FF] text-[#155EEF] font-bold hover:bg-[#BFDBFE]';
-            dotColor = 'bg-[#155EEF]';
+            tileClasses = 'border-2 border-blue-300 bg-[#155EEF] text-white font-bold ring-2 ring-blue-400/50 shadow-md animate-pulse z-10';
+            topElement = (
+              <span className="relative flex h-1 sm:h-1.5 w-1 sm:w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-200 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1 sm:h-1.5 w-1 sm:w-1.5 bg-white" />
+              </span>
+            );
           } else if (seat.status === 'locked') {
-            tileClasses = 'border border-[#EAECF0] bg-[#F8FAFC] text-[#98A2B3] hover:bg-slate-100';
-            dotColor = '';
+            tileClasses = 'border border-slate-200/90 bg-[#F1F5F9] text-slate-500 hover:bg-slate-200/70';
+            topElement = <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-slate-400" />;
           }
 
           return (
@@ -127,18 +141,14 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
               onClick={() => onSelectSeat(seat)}
               className={`aspect-square rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex flex-col items-center justify-between transition-all select-none relative ${tileClasses} ${
                 isSelected
-                  ? 'ring-2 ring-[#155EEF] ring-offset-2 scale-105 z-10 shadow-sm'
+                  ? 'ring-2 ring-[#155EEF] ring-offset-2 scale-105 z-30 shadow-md'
                   : ''
               } ${isFaded ? 'opacity-25' : 'opacity-100'}`}
               title={`Seat #${seat.seatNumber} (${seat.status})`}
             >
               {/* Top dot or lock icon */}
               <div className="h-1.5 sm:h-2 flex items-center justify-center mt-0.5">
-                {seat.status === 'locked' ? (
-                  <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#98A2B3]" />
-                ) : (
-                  <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${dotColor}`} />
-                )}
+                {topElement}
               </div>
 
               {/* Seat Number */}
@@ -151,52 +161,56 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
       </div>
 
       {/* Legend Footer */}
-      <div className="pt-2 border-t border-slate-100">
+      <div className="pt-3 border-t border-slate-200/80">
         {/* Desktop Legend */}
-        <div className="hidden md:flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-[#4F6184] font-jakarta">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#155EEF]" />
-            <span>Claimed Seat</span>
+        <div className="hidden md:flex flex-wrap items-center justify-between gap-3 text-xs font-semibold font-jakarta">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200">
+            <span className="w-3 h-3 rounded-md bg-[#0B1528] border border-[#1E293B]" />
+            <span className="text-slate-700">Claimed Seat</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#12B76A]" />
-            <span>Your Seat</span>
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200">
+            <span className="w-3 h-3 rounded-md bg-emerald-600 border border-emerald-400" />
+            <span className="text-emerald-800 font-bold">Your Seat</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#155EEF] ring-2 ring-[#155EEF]/30" />
-            <span>Next Available</span>
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200">
+            <span className="w-3 h-3 rounded-md bg-[#155EEF] border border-blue-300 animate-pulse" />
+            <span className="text-[#155EEF] font-bold">Next Available</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#F04438]" />
-            <span>Defaulted Vacancy</span>
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200">
+            <span className="w-3 h-3 rounded-md bg-rose-100 border border-dashed border-rose-500" />
+            <span className="text-rose-700">Defaulted Vacancy</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[#98A2B3]">
-            <Lock className="w-3 h-3" />
-            <span>Locked Future</span>
+
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
+            <Lock className="w-3 h-3 text-slate-500" />
+            <span className="text-slate-600">Locked Future</span>
           </div>
         </div>
 
         {/* Mobile Legend */}
-        <div className="md:hidden flex flex-wrap items-center justify-between gap-y-1.5 text-[10px] font-semibold text-[#60739A] font-jakarta px-1">
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#155EEF]" />
-            <span>Claimed</span>
+        <div className="md:hidden flex flex-wrap items-center justify-between gap-1.5 text-[10px] font-semibold font-jakarta">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-200">
+            <span className="w-2 h-2 rounded bg-[#0B1528]" />
+            <span className="text-slate-700">Claimed</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#12B76A]" />
-            <span>Your Seat</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
+            <span className="w-2 h-2 rounded bg-emerald-600" />
+            <span className="text-emerald-800 font-bold">You</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#155EEF]" />
-            <span>Next</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 border border-blue-200">
+            <span className="w-2 h-2 rounded bg-[#155EEF]" />
+            <span className="text-[#155EEF] font-bold">Next</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#F04438]" />
-            <span>Defaulted</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 border border-rose-200">
+            <span className="w-2 h-2 rounded bg-rose-400" />
+            <span className="text-rose-700">Vacant</span>
           </div>
-          <div className="flex items-center gap-1 text-[#98A2B3]">
-            <Lock className="w-2.5 h-2.5" />
-            <span>Locked</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+            <Lock className="w-2.5 h-2.5 text-slate-500" />
+            <span className="text-slate-600">Locked</span>
           </div>
         </div>
       </div>

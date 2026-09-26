@@ -42,22 +42,7 @@ export const ProfileRecentActivity: React.FC<ProfileRecentActivityProps> = ({
   transactions = [],
   loading = false,
 }) => {
-  // Static fallback entries for when there are no transactions yet
-  const fallback: TransactionItem[] = [
-    {
-      id: 'f1', type: 'pushed', typeLabel: 'Seat Distribution',
-      amountBtt: 317.94, amountUsd: 48.20, isPositive: true,
-      from: 'Seat #84', to: 'Treasury', txHash: '0x—',
-      timestamp: new Date(Date.now() - 120_000).toISOString(), status: 'Confirmed',
-    },
-    {
-      id: 'f2', type: 'governance', typeLabel: 'Vote Cast',
-      amountBtt: 0, amountUsd: 0, isPositive: null,
-      from: 'You', to: 'Proposal #012', txHash: '0x—',
-      timestamp: new Date(Date.now() - 86_400_000).toISOString(), status: 'Confirmed',
-    },
-  ];
-  const items = transactions.length > 0 ? transactions.slice(0, 3) : fallback;
+  const items = transactions.slice(0, 3);
 
   return (
     <>
@@ -77,37 +62,56 @@ export const ProfileRecentActivity: React.FC<ProfileRecentActivityProps> = ({
         </div>
 
         <div className="space-y-3">
-          {items.map((tx) => (
-            <div key={tx.id} className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-2xl p-4 flex items-center justify-between hover:border-blue-200 transition-colors">
-              <div className="flex items-center gap-3.5 min-w-0">
-                {getIcon(tx.type)}
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold font-jakarta text-[#071A4A]">{tx.typeLabel}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#64748B] text-[9px] font-bold uppercase font-mono">ON-CHAIN</span>
+          {loading && items.length === 0 ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-2xl p-4 flex items-center justify-between animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-slate-200" />
+                  <div className="space-y-1.5">
+                    <div className="w-24 h-3 bg-slate-200 rounded" />
+                    <div className="w-36 h-2.5 bg-slate-100 rounded" />
                   </div>
-                  <div className="text-xs text-[#64748B] font-jakarta truncate">
-                    {tx.from} → {tx.to}
+                </div>
+                <div className="w-16 h-3 bg-slate-200 rounded" />
+              </div>
+            ))
+          ) : items.length === 0 ? (
+            <div className="py-8 text-center text-xs text-[#94A3B8] font-jakarta">
+              No recent on-chain activity recorded for this address yet.
+            </div>
+          ) : (
+            items.map((tx) => (
+              <div key={tx.id} className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-2xl p-4 flex items-center justify-between hover:border-blue-200 transition-colors">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {getIcon(tx.type)}
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold font-jakarta text-[#071A4A]">{tx.typeLabel}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#64748B] text-[9px] font-bold uppercase font-mono">ON-CHAIN</span>
+                    </div>
+                    <div className="text-xs text-[#64748B] font-jakarta truncate">
+                      {tx.from} → {tx.to}
+                    </div>
+                    <div className="text-[11px] text-[#94A3B8] font-jakarta">{timeAgoLabel(tx.timestamp)}</div>
                   </div>
-                  <div className="text-[11px] text-[#94A3B8] font-jakarta">{timeAgoLabel(tx.timestamp)}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  {tx.amountUsd > 0 ? (
+                    <>
+                      <div className={`text-sm font-black font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
+                        {tx.isPositive === false ? '-' : '+'} ${tx.amountUsd.toFixed(2)} USD
+                      </div>
+                      <div className="text-[11px] text-[#64748B] font-jakarta">
+                        ≈ {tx.isPositive === false ? '-' : '+'}{tx.amountBtt.toFixed(2)} TROB
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm font-bold font-jakarta text-[#155EEF]">Recorded</div>
+                  )}
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                {tx.amountUsd > 0 ? (
-                  <>
-                    <div className={`text-sm font-black font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
-                      {tx.isPositive === false ? '-' : '+'} ${tx.amountUsd.toFixed(2)} USD
-                    </div>
-                    <div className="text-[11px] text-[#64748B] font-jakarta">
-                      ≈ {tx.isPositive === false ? '-' : '+'}{tx.amountBtt.toFixed(2)} TROB
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm font-bold font-jakarta text-[#155EEF]">Recorded</div>
-                )}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div className="pt-2 flex items-center justify-between text-[11px] text-[#64748B] font-jakarta">
@@ -132,32 +136,38 @@ export const ProfileRecentActivity: React.FC<ProfileRecentActivityProps> = ({
         </div>
 
         <div className="space-y-2.5">
-          {items.map((tx) => (
-            <div key={tx.id} className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-xl p-3 flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                {getIcon(tx.type, 'xs')}
-                <div className="min-w-0 space-y-0.5">
-                  <div className="text-xs font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</div>
-                  <div className="text-[10px] text-[#64748B] font-jakarta truncate">{tx.from}</div>
-                  <div className="text-[10px] text-[#94A3B8] font-jakarta">{timeAgoLabel(tx.timestamp)}</div>
+          {items.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#94A3B8] font-jakarta">
+              No recent activity recorded yet.
+            </div>
+          ) : (
+            items.map((tx) => (
+              <div key={tx.id} className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  {getIcon(tx.type, 'xs')}
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="text-xs font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</div>
+                    <div className="text-[10px] text-[#64748B] font-jakarta truncate">{tx.from}</div>
+                    <div className="text-[10px] text-[#94A3B8] font-jakarta">{timeAgoLabel(tx.timestamp)}</div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {tx.amountUsd > 0 ? (
+                    <>
+                      <div className={`text-xs font-black font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#0284C7]'}`}>
+                        {tx.isPositive === false ? '-' : '+'}${tx.amountUsd.toFixed(2)}
+                      </div>
+                      <div className="text-[10px] text-[#64748B] font-jakarta">
+                        {tx.amountBtt.toFixed(2)} TROB
+                      </div>
+                    </>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0284C7] text-[10px] font-bold">Recorded</span>
+                  )}
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                {tx.amountUsd > 0 ? (
-                  <>
-                    <div className={`text-xs font-black font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#0284C7]'}`}>
-                      {tx.isPositive === false ? '-' : '+'}${tx.amountUsd.toFixed(2)}
-                    </div>
-                    <div className="text-[10px] text-[#64748B] font-jakarta">
-                      {tx.amountBtt.toFixed(2)} TROB
-                    </div>
-                  </>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0284C7] text-[10px] font-bold">Recorded</span>
-                )}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div className="pt-2 flex items-center justify-center gap-1.5 text-[10px] text-[#64748B] font-jakarta">

@@ -69,15 +69,10 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
       setLocalErr(wallet.error ?? 'Failed to connect. Please try again.');
       return;
     }
-    // Connected — now trigger SIWE sign-in
-    setStep('signing');
-    const ok = await auth.signIn();
-    if (ok) {
-      onConnect?.(addr.hex || addr.base58);
-    } else {
-      setStep('error');
-      setLocalErr(auth.error ?? 'Signature rejected or failed.');
-    }
+    // Connected successfully via TrobSafe
+    setStep('success');
+    const addrStr = addr.base58 || addr.hex || '';
+    onConnect?.(addrStr);
   };
 
   const handleRetry = () => {

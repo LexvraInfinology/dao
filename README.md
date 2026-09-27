@@ -137,3 +137,34 @@ pnpm clean            # Clean all build artifacts across workspaces
 ## 📜 License
 
 MIT License. Developed for Equora.Fi Protocol.
+
+# 1. Install all dependencies across all apps and packages
+pnpm install
+
+# 2. Generate Prisma database client bindings
+pnpm --filter @equora/database db:generate
+
+# 3. Build shared internal packages so apps can resolve them
+pnpm build
+
+# Run All Applications together 
+pnpm dev
+
+# Run all apps only
+pnpm dev:apps
+
+# DB  & Smart contract utilities
+
+# Database (PostgreSQL via Prisma)
+pnpm db:generate    # Re-generate Prisma Client
+pnpm db:push        # Push schema changes to database
+pnpm db:migrate     # Run migration files
+pnpm db:studio      # Open visual Prisma Studio GUI (http://localhost:5555)
+
+# Smart Contracts (Hardhat)
+pnpm compile        # Compile all Solidity contracts
+pnpm test           # Run 34/34 smart contract test suite
+pnpm deploy         # Deploy to local Hardhat node
+pnpm deploy:testnet # Deploy to BSC Testnet
+
+

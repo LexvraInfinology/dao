@@ -272,6 +272,46 @@ export function useDaoProposals(limit = 20) {
   return useApi<unknown[]>(`/api/dao/proposals?limit=${limit}`);
 }
 
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export interface UserSettingsData {
+  id: string;
+  userAddress: string;
+  // Notifications
+  notifDaoActivity: boolean;
+  notifGovernance: boolean;
+  notifCouncilSeat: boolean;
+  notifMatrixBridge: boolean;
+  notifProtocolUpdates: boolean;
+  notifSecurityAlerts: boolean;
+  notifMarketingEvents: boolean;
+  // Privacy
+  privDaoProfileVisible: boolean;
+  privWalletVisible: boolean;
+  privSeatActivity: boolean;
+  privGovernanceActivity: boolean;
+  privEarningsVisible: boolean;
+}
+
+/**
+ * useUserSettings — loads the authenticated user's notification + privacy prefs.
+ * Returns null when not authenticated (token absent).
+ */
+export function useUserSettings(token: string | null) {
+  return useApi<UserSettingsData>('/api/user/settings', { enabled: !!token });
+}
+
+/**
+ * saveUserSettings — persists one or more settings fields to the backend.
+ * Fires-and-forgets; caller handles error display.
+ */
+export async function saveUserSettings(
+  fields: Partial<Omit<UserSettingsData, 'id' | 'userAddress'>>,
+  token: string
+): Promise<UserSettingsData> {
+  return apiPut<UserSettingsData>('/api/user/settings', fields, token);
+}
+
 // ─── POST helper ──────────────────────────────────────────────────────────────
 
 export async function apiPost<T>(
@@ -292,3 +332,26 @@ export async function apiPost<T>(
   if (!res.ok) throw new Error(json?.error ?? `Request failed (${res.status})`);
   return (json.data !== undefined ? json.data : json) as T;
 }
+
+/**
+ * apiPut — generic PUT helper, mirrors apiPost but uses PUT method.
+ */
+export async function apiPut<T>(
+  path: string,
+  body: unknown,
+  token?: string | null
+): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `Request failed (${res.status})`);
+  return (json.data !== undefined ? json.data : json) as T;
+}
+

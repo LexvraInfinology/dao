@@ -9,6 +9,7 @@ EQUORA_Fi is a Web3 decentralized protocol frontend application built with Next.
 - Framework: Next.js 14.2.15 (App Router)
 - Library: React 18.3.1
 - Language: TypeScript 5.6.3
+- State Management: Zustand 5.0.15 (with DevTools, atomic selectors, and SSR hydration utilities)
 - Styling: Tailwind CSS 3.4.14, PostCSS 8.4.47, Autoprefixer 10.4.20
 - Icons: Lucide React 0.453.0
 - Utility Libraries: clsx 2.1.1, tailwind-merge 2.5.4, sharp 0.35.4
@@ -63,6 +64,13 @@ eq/
 │   │   ├── navigation.ts
 │   │   ├── siteContent.ts
 │   │   └── transactionsData.ts
+│   ├── stores/                   # Standardized Zustand state management architecture
+│   │   ├── templates/            # Boilerplate templates for new domain stores
+│   │   ├── utils/                # Atomic selector generator and SSR hydration helpers
+│   │   ├── types.ts              # Store types and action resetters
+│   │   ├── useAppStore.ts        # Foundational application & global UI state store
+│   │   ├── README.md             # In-depth store documentation and guides
+│   │   └── index.ts              # Central state management barrel export
 │   └── types/                    # TypeScript interfaces and shared type declarations
 │       └── index.ts
 ├── next.config.mjs               # Next.js configuration
@@ -113,6 +121,87 @@ eq/
 - `FlipCard.tsx`: Reusable CSS 3D perspective wrapper for two-sided interactive card reveals.
 - `VideoModal.tsx`: Accessible dialog modal for embedded protocol video playback.
 - `WalletModal.tsx`: Web3 wallet connection modal interface.
+
+---
+
+## State Management (Zustand Architecture)
+
+The application utilizes Zustand 5 for lightweight, modular, and reactive state management. It is designed to prepare `web-dao` for future features, eliminating prop-drilling and preserving shared client state across page navigation without triggering hard page reloads.
+
+### Architectural Highlights
+
+1. **State Persistence Across Page Navigation**:
+   - Navigation across the DAO suite (`/dao`, `/dao/seats`, `/dao/treasury`, etc.) is powered by Next.js App Router client-side routing (`<Link href="...">`).
+   - In-memory Zustand stores remain intact during client route transitions. Navigating between views does not discard active selections, draft form state, or cached data.
+2. **Prop-Drilling Prevention via Atomic Selectors**:
+   - Rather than passing state through deeply nested component trees, components directly hook into stores.
+   - The custom `createSelectors` utility auto-generates atomic selector hooks (`useStore.use.<key>()`). Components only re-render when the exact field they subscribe to updates.
+3. **SSR Hydration Safety**:
+   - When stores use `persist` middleware with browser storage (`localStorage`), `useHydratedStore` and `useHydration` utilities prevent React 18 SSR hydration mismatches.
+4. **DevTools & Resetability**:
+   - Every store integrates with Redux DevTools for clear state inspection and action tracking in development.
+   - Every store includes a typed `reset()` action restoring `initialState` cleanly.
+
+### Directory Structure (`src/stores/`)
+
+```
+src/stores/
+├── index.ts                      # Central barrel export for all stores, hooks, and types
+├── types.ts                      # Shared types (AppNotification, StoreResetter)
+├── useAppStore.ts                # Foundational application & global UI state store
+├── utils/
+│   ├── createSelectors.ts        # Auto-generates atomic selector hooks (.use.<property>())
+│   └── useHydratedStore.ts       # SSR hydration-safe hooks for persisted stores
+└── templates/
+    └── createStoreTemplate.ts    # Standard copy-paste template for new domain stores
+```
+
+### Foundational Store: `useAppStore`
+
+Provides foundational, app-wide UI and shell state:
+- `sidebarOpen`: Controls responsive mobile/tablet navigation drawer.
+- `activeModal` & `modalData`: Manages global modal state (wallet connection, video playback, etc.).
+- `notification`: Global notification banner/toast messaging.
+
+```tsx
+'use client';
+
+import { useAppStore } from '@/stores';
+
+export const MyComponent = () => {
+  // Option A: Auto-generated atomic selector (recommended)
+  const sidebarOpen = useAppStore.use.sidebarOpen();
+  const toggleSidebar = useAppStore.use.toggleSidebar();
+
+  // Option B: Standard selector function
+  const activeModal = useAppStore((state) => state.activeModal);
+
+  return (
+    <button onClick={toggleSidebar}>
+      Toggle Drawer (Currently: {sidebarOpen ? 'Open' : 'Closed'})
+    </button>
+  );
+};
+```
+
+### Guide: Adding New Domain Stores
+
+When creating a new domain store (e.g. `useSeatsStore`, `useWalletStore`, `useProposalStore`):
+
+1. **Copy the Template**: Duplicate `src/stores/templates/createStoreTemplate.ts` to `src/stores/use[Domain]Store.ts`.
+2. **Define State & Actions**: Separate data interfaces from action methods:
+   ```typescript
+   export interface DomainState { ... }
+   export interface DomainActions { ... }
+   export type DomainStore = DomainState & DomainActions;
+   ```
+3. **Define `initialState`**: Ensure a clean baseline object is defined and used in your `reset()` action.
+4. **Add Middleware**: Wrap with `devtools` (and optionally `persist` with `createJSONStorage(() => localStorage)` if persistence across browser reloads is needed).
+5. **Export with Selectors**:
+   ```typescript
+   export const useDomainStore = createSelectors(useDomainStoreBase);
+   ```
+6. **Export from Barrel**: Add to `src/stores/index.ts`.
 
 ---
 

@@ -419,3 +419,30 @@ model LeaderboardSnapshot {
   @@index([rank])
   @@index([totalEarned])
 }
+
+// ------------------------------------------------------------------------------
+// 9. USER PREFERENCES (Notifications & Privacy Settings)
+// ------------------------------------------------------------------------------
+
+model UserSettings {
+  id                      String   @id @default(uuid())
+  userAddress             String   @unique
+  // Notification preferences
+  notifDaoActivity        Boolean  @default(true)
+  notifGovernance         Boolean  @default(true)
+  notifCouncilSeat        Boolean  @default(true)
+  notifMatrixBridge       Boolean  @default(true)
+  notifProtocolUpdates    Boolean  @default(true)
+  notifSecurityAlerts     Boolean  @default(true)
+  notifMarketingEvents    Boolean  @default(true)
+  // Privacy preferences
+  privDaoProfileVisible   Boolean  @default(true)
+  privWalletVisible       Boolean  @default(true)
+  privSeatActivity        Boolean  @default(true)
+  privGovernanceActivity  Boolean  @default(true)
+  privEarningsVisible     Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+  createdAt               DateTime @default(now())
+
+  @@index([userAddress])
+}

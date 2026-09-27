@@ -10,13 +10,10 @@
   },
   "dependencies": {
     "@equora/database": "workspace:*",
-    "@equora/logger": "workspace:*",
-    "@equora/types": "workspace:*",
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
     "siwe": "^2.3.2",
-    "viem": "^2.21.53",
-    "zod": "^3.23.8"
+    "viem": "^2.21.53"
   },
   "devDependencies": {
     "@equora/tsconfig": "workspace:*",

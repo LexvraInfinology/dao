@@ -805,6 +805,78 @@ export function createApp(): Express {
     }
   });
 
+  // ── USER SETTINGS (Notifications & Privacy Preferences) ───────────────────
+
+  /**
+   * GET /api/user/settings
+   * Authorization: Bearer <token>
+   * Returns the authenticated user's notification and privacy settings.
+   * If no settings row exists yet, returns the schema defaults.
+   */
+  app.get("/api/user/settings", requireAuth, async (req, res, next) => {
+    try {
+      const { address } = (req as any).user as { address: string };
+      const canonicalAddress = address.trim().toLowerCase();
+
+      const settings = await prisma.userSettings.upsert({
+        where: { userAddress: canonicalAddress },
+        create: { userAddress: canonicalAddress },
+        update: {},
+      });
+
+      res.json({ success: true, data: settings });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * PUT /api/user/settings
+   * Authorization: Bearer <token>
+   * Body: partial UserSettings fields (any combination of notif* and priv* booleans)
+   * Persists the authenticated user's notification and privacy preferences.
+   */
+  app.put("/api/user/settings", requireAuth, async (req, res, next) => {
+    try {
+      const { address } = (req as any).user as { address: string };
+      const canonicalAddress = address.trim().toLowerCase();
+
+      // Whitelist only known boolean fields — reject unknown keys
+      const allowedFields = [
+        "notifDaoActivity", "notifGovernance", "notifCouncilSeat",
+        "notifMatrixBridge", "notifProtocolUpdates", "notifSecurityAlerts",
+        "notifMarketingEvents", "privDaoProfileVisible", "privWalletVisible",
+        "privSeatActivity", "privGovernanceActivity", "privEarningsVisible",
+      ];
+
+      const body = req.body as Record<string, unknown>;
+      const updateData: Record<string, boolean> = {};
+
+      for (const field of allowedFields) {
+        if (field in body && typeof body[field] === "boolean") {
+          updateData[field] = body[field] as boolean;
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        res.status(400).json({ success: false, error: "No valid settings fields provided." });
+        return;
+      }
+
+      const settings = await prisma.userSettings.upsert({
+        where: { userAddress: canonicalAddress },
+        create: { userAddress: canonicalAddress, ...updateData },
+        update: updateData,
+      });
+
+      res.json({ success: true, data: settings });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+
+
   /**
    * POST /api/dao/proposals/:id/vote
    * Authorization: Bearer <token>

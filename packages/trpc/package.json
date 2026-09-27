@@ -10,8 +10,6 @@
   },
   "dependencies": {
     "@equora/services": "workspace:*",
-    "@equora/logger": "workspace:*",
-    "@equora/types": "workspace:*",
     "@trpc/client": "^10.45.2",
     "@trpc/server": "^10.45.2",
     "express": "^4.21.1",

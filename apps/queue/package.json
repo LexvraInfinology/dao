@@ -12,8 +12,7 @@
     "@equora/database": "workspace:*",
     "@equora/logger": "workspace:*",
     "@equora/types": "workspace:*",
-    "dotenv": "^16.4.5",
-    "ioredis": "^5.4.1"
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@equora/tsconfig": "workspace:*",

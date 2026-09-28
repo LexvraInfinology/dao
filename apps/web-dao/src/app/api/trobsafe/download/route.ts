@@ -8,6 +8,8 @@ import fs from 'fs';
 // Streams the pre-packaged TrobSafe browser extension build as a ZIP file.
 // ---------------------------------------------------------------------------
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const possiblePaths = [
     path.resolve(process.cwd(), '..', '..', 'dist', 'trobsafe-wallet.zip'),

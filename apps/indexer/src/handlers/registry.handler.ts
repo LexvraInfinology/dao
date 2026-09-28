@@ -16,7 +16,7 @@ export async function handleUserRegistered(event: {
 
   const regDate = new Date(Number(event.timestamp) * 1000);
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     // 1. Create / Upsert registered user
     await tx.user.upsert({
       where: { address: canonicalUser },

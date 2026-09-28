@@ -18,6 +18,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "build": "turbo run build",
+    "build:dao": "turbo run build --filter=equora-app",
     "db:generate": "pnpm --filter @equora/database db:generate",
     "db:push": "pnpm --filter @equora/database db:push",
     "db:migrate": "pnpm --filter @equora/database db:migrate",

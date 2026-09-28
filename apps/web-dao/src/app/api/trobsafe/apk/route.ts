@@ -8,6 +8,8 @@ import fs from 'fs';
 // Serves the TrobSafe Android APK (84MB+) via high-performance static streaming
 // ---------------------------------------------------------------------------
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const localApk = path.resolve(process.cwd(), 'public', 'downloads', 'trobsafe.apk');
   

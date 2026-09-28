@@ -34,8 +34,9 @@ export const DaoSidebar: React.FC = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[248px] shrink-0 bg-[#FBFCFF] border-r border-[#E2ECF9] hidden lg:flex flex-col justify-between p-4 min-h-screen sticky top-0 z-30 select-none">
-      <div className="space-y-6">
+    <aside className="w-[248px] shrink-0 hidden lg:block select-none">
+      <div className="fixed top-0 left-0 w-[248px] h-screen bg-[#FBFCFF] border-r border-[#E2ECF9] flex flex-col justify-between p-4 z-30 overflow-y-auto">
+        <div className="space-y-6">
         {/* Brand Logo Header */}
         <div className="px-2 pt-2">
           <Link href="/dao" className="flex items-center gap-3 group">
@@ -114,6 +115,7 @@ export const DaoSidebar: React.FC = () => {
             <div className="text-blue-200/90 text-[9px]">Genesis DAO • dao.equora.fi</div>
           </div>
         </div>
+      </div>
       </div>
     </aside>
   );

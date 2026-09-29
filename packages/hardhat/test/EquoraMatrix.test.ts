@@ -40,6 +40,9 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     await funder.sendTransaction({ to: wallet.address, value: ethers.parseEther("0.5") });
     await token.transfer(wallet.address, ethers.parseEther("1000"));
     await token.connect(wallet).approve(await matrix.getAddress(), ethers.MaxUint256);
+    if (dao) {
+      await token.connect(wallet).approve(await dao.getAddress(), ethers.MaxUint256);
+    }
     return wallet;
   }
 
@@ -99,6 +102,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     );
     await vault.setMatrixContract(await matrix.getAddress());
     await matrix.setVaultContract(await vault.getAddress());
+    await matrix.setDaoContract(await dao.getAddress());
     await registry.setAuthorizedContracts(
       await vault.getAddress(),
       await dao.getAddress(),
@@ -245,6 +249,139 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       expect(await salaryPool.pendingPoolBalance() - salaryBalBefore).to.equal(expectedSalary);
       expect(await magicBox.poolBalance() - magicBalBefore).to.equal(expectedMagic);
       expect(await rewardPool.poolBalance() - rewardBalBefore).to.equal(expectedReward);
+    });
+
+    it("should split P7 50/50 when both Downline 1 and Downline 2 are qualified", async function () {
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+
+      // Node 1 (DL1) and Node 2 (DL2) join under matrixOwner
+      await matrix.connect(downline1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(downline2).joinSlot(1, matrixOwner.address);
+
+      // Qualify downline1 (2 direct referrals)
+      const r1 = await createFundedWallet(owner);
+      const r2 = await createFundedWallet(owner);
+      await registry.connect(owner)["registerUser(address,address)"](r1.address, downline1.address);
+      await registry.connect(owner)["registerUser(address,address)"](r2.address, downline1.address);
+      expect(await registry.isQualified(downline1.address)).to.be.true;
+
+      // Qualify downline2 (2 direct referrals)
+      const r3 = await createFundedWallet(owner);
+      const r4 = await createFundedWallet(owner);
+      await registry.connect(owner)["registerUser(address,address)"](r3.address, downline2.address);
+      await registry.connect(owner)["registerUser(address,address)"](r4.address, downline2.address);
+      expect(await registry.isQualified(downline2.address)).to.be.true;
+
+      // Fill P3..P6
+      for (let i = 0; i < 4; i++) {
+        const w = await createFundedWallet(owner);
+        await matrix.connect(w).joinSlot(1, matrixOwner.address);
+      }
+
+      // Record balances before P7
+      const dl1BalBefore = await matrix.userBalance(downline1.address);
+      const dl2BalBefore = await matrix.userBalance(downline2.address);
+
+      // Fill P7 (Downline Spillover position)
+      const p7 = await createFundedWallet(owner);
+      await matrix.connect(p7).joinSlot(1, matrixOwner.address);
+
+      const dl1BalAfter = await matrix.userBalance(downline1.address);
+      const dl2BalAfter = await matrix.userBalance(downline2.address);
+
+      // Both are qualified -> 50/50 split (15 TROB each)
+      const half = SLOT1_COST / 2n;
+      expect(dl1BalAfter - dl1BalBefore).to.equal(half);
+      expect(dl2BalAfter - dl2BalBefore).to.equal(half);
+    });
+
+    it("should route 100% of P7 to Downline 1 when only Downline 1 is qualified", async function () {
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+
+      // Node 1 (DL1) and Node 2 (DL2) join under matrixOwner
+      await matrix.connect(downline1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(downline2).joinSlot(1, matrixOwner.address);
+
+      // Qualify only downline1
+      const r1 = await createFundedWallet(owner);
+      const r2 = await createFundedWallet(owner);
+      await registry.connect(owner)["registerUser(address,address)"](r1.address, downline1.address);
+      await registry.connect(owner)["registerUser(address,address)"](r2.address, downline1.address);
+      expect(await registry.isQualified(downline1.address)).to.be.true;
+      expect(await registry.isQualified(downline2.address)).to.be.false;
+
+      // Fill P3..P6
+      for (let i = 0; i < 4; i++) {
+        const w = await createFundedWallet(owner);
+        await matrix.connect(w).joinSlot(1, matrixOwner.address);
+      }
+
+      const dl1BalBefore = await matrix.userBalance(downline1.address);
+      const dl2BalBefore = await matrix.userBalance(downline2.address);
+
+      // Fill P7
+      const p7 = await createFundedWallet(owner);
+      await matrix.connect(p7).joinSlot(1, matrixOwner.address);
+
+      const dl1BalAfter = await matrix.userBalance(downline1.address);
+      const dl2BalAfter = await matrix.userBalance(downline2.address);
+
+      // Only DL1 is qualified -> 100% (30 TROB) to DL1, 0 to DL2
+      expect(dl1BalAfter - dl1BalBefore).to.equal(SLOT1_COST);
+      expect(dl2BalAfter - dl2BalBefore).to.equal(0n);
+    });
+
+    it("should forward 100% of P7 to protocol pools when neither downline is qualified", async function () {
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+
+      // Node 1 (DL1) and Node 2 (DL2) join under matrixOwner
+      await matrix.connect(downline1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(downline2).joinSlot(1, matrixOwner.address);
+
+      expect(await registry.isQualified(downline1.address)).to.be.false;
+      expect(await registry.isQualified(downline2.address)).to.be.false;
+
+      // Fill P3..P6
+      for (let i = 0; i < 4; i++) {
+        const w = await createFundedWallet(owner);
+        await matrix.connect(w).joinSlot(1, matrixOwner.address);
+      }
+
+      const daoBalBefore = await token.balanceOf(await dao.getAddress());
+      const salaryBalBefore = await salaryPool.pendingPoolBalance();
+
+      // Fill P7
+      const p7 = await createFundedWallet(owner);
+      await matrix.connect(p7).joinSlot(1, matrixOwner.address);
+
+      // Neither qualified -> forwarded to 4 pools (35% DAO, 40% Salary, etc.)
+      const expectedDAO = (SLOT1_COST * 35n) / 100n;
+      const expectedSalary = (SLOT1_COST * 40n) / 100n;
+      expect(await token.balanceOf(await dao.getAddress()) - daoBalBefore).to.equal(expectedDAO);
+      expect(await salaryPool.pendingPoolBalance() - salaryBalBefore).to.equal(expectedSalary);
+    });
+
+    it("should route root matrix owner to last Genesis DAO member when daoContract is configured", async function () {
+      // Have a DAO member join the Genesis DAO
+      const daoMember1 = await createFundedWallet(owner);
+      const daoMember2 = await createFundedWallet(owner);
+      await dao.connect(daoMember1).joinDAO();
+      await dao.connect(daoMember2).joinDAO();
+
+      // daoMember2 is the last member
+      expect(await dao.getLastMember()).to.equal(daoMember2.address);
+
+      // daoMember2 unlocks Slot 1
+      await matrix.connect(daoMember2).joinSlot(1, root.address);
+
+      // A new retail member with no sponsor joins -> routed to last DAO member!
+      const retailUser = await createFundedWallet(owner);
+      await matrix.connect(retailUser).joinSlot(1, ethers.ZeroAddress);
+
+      // Check slot data for daoMember2 -> should have filledNodes = 1
+      const slotData = await matrix.getSlotData(daoMember2.address, 1);
+      expect(slotData.filledNodes).to.equal(1n);
+      expect(slotData.nodes[0]).to.equal(retailUser.address);
     });
 
     it("should complete cycle at P14, store permanent snapshot, and reset to cycle 2", async function () {

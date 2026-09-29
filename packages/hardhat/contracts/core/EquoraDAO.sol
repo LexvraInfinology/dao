@@ -612,6 +612,15 @@ contract EquoraDAO is ReentrancyGuard {
         return daoMembers;
     }
 
+    /**
+     * @dev Returns the last member who joined the Genesis DAO.
+     *      On Day 22, this member becomes the Root Matrix Owner of the Retail Matrix.
+     */
+    function getLastMember() external view returns (address) {
+        if (daoMembers.length == 0) return address(0);
+        return daoMembers[daoMembers.length - 1];
+    }
+
     function isClosed() external view returns (bool) {
         return daoCompleted;
     }

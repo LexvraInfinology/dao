@@ -58,6 +58,12 @@ import "../interfaces/IEquoraNFT.sol";
  *   - Cycle history permanently preserved (never deleted)
  *   - 100% accounting: every wei of cost is distributed
  */
+
+interface IEquoraDAOForMatrix {
+    function getLastMember() external view returns (address);
+    function getAllMembers() external view returns (address[] memory);
+}
+
 contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     // -------------------------------------------------------------------------
@@ -116,6 +122,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     // Optional launch delay to enforce the 21-day exclusive Genesis DAO phase
     uint256 public matrixLaunchTime;
+
+    // Genesis DAO contract — to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
+    address public daoContract;
 
     // -------------------------------------------------------------------------
     // Matrix State
@@ -212,6 +221,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     );
     event BalanceWithdrawn(address indexed user, uint256 amount, uint256 timestamp);
     event VaultContractSet(address indexed vault);
+    event DaoContractSet(address indexed dao);
     event SlotAutoActivated(
         address indexed user,
         uint8   indexed fromSlot,
@@ -249,6 +259,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         require(_vault != address(0), "EquoraMatrix: invalid vault");
         vaultContract = _vault;
         emit VaultContractSet(_vault);
+    }
+
+    function setDaoContract(address _dao) external onlyOwner {
+        require(_dao != address(0), "EquoraMatrix: invalid dao");
+        daoContract = _dao;
+        emit DaoContractSet(_dao);
     }
 
     function setContracts(
@@ -318,19 +334,35 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     /**
+     * @dev Resolves the genesis root matrix owner.
+     *      If Genesis DAO is connected and has members, the LAST member becomes the Root Matrix Owner!
+     *      Otherwise falls back to registry.getRoot().
+     */
+    function _getRootMatrixOwner() internal view returns (address) {
+        if (daoContract != address(0)) {
+            try IEquoraDAOForMatrix(daoContract).getLastMember() returns (address lastDaoMember) {
+                if (lastDaoMember != address(0)) {
+                    return lastDaoMember;
+                }
+            } catch {}
+        }
+        return registry.getRoot();
+    }
+
+    /**
      * @dev Find matrix owner (bubble up sponsor chain, max depth 12),
      *      place new user in next available position, route payment.
      */
     function _placeUserInMatrix(address newUser, uint256 slot, uint256 cost) internal {
         address sponsor = registry.getSponsor(newUser);
-        if (sponsor == address(0)) sponsor = registry.getRoot();
+        if (sponsor == address(0)) sponsor = _getRootMatrixOwner();
 
         address matrixOwner = sponsor;
         uint256 depth = 0;
         while (!userSlots[matrixOwner][slot].isUnlocked && depth < MAX_UPLINE_DEPTH) {
             address up = registry.getSponsor(matrixOwner);
             if (up == address(0) || up == matrixOwner) {
-                matrixOwner = registry.getRoot();
+                matrixOwner = _getRootMatrixOwner();
                 break;
             }
             matrixOwner = up;
@@ -338,7 +370,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         }
 
         if (!userSlots[matrixOwner][slot].isUnlocked) {
-            matrixOwner = registry.getRoot();
+            matrixOwner = _getRootMatrixOwner();
+        }
+
+        // If newUser is the root matrix owner, they have no upline tree above them to place into
+        if (matrixOwner == newUser) {
+            return;
         }
 
         MatrixSlot storage mSlot = userSlots[matrixOwner][slot];
@@ -385,7 +422,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (position == 1) {
             // P1 → Upline 1
             address upline1 = registry.getSponsor(matrixOwner);
-            if (upline1 == address(0)) upline1 = registry.getRoot();
+            if (upline1 == address(0)) upline1 = _getRootMatrixOwner();
             _creditUser(upline1, matrixOwner, cost);
             emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
 
@@ -393,7 +430,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             // P2 → Upline 2
             address up1    = registry.getSponsor(matrixOwner);
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
-            if (upline2 == address(0)) upline2 = registry.getRoot();
+            if (upline2 == address(0)) upline2 = _getRootMatrixOwner();
             _creditUser(upline2, matrixOwner, cost);
             emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
 
@@ -427,32 +464,41 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
                 }
             }
 
-        } else if (position == 7 || position == 10) {
-            // P7, P10 → Downline 1 (node at index 0); if unqualified, reroute to Protocol Pools
+        } else if (position == 7 || position == 10 || position == 13) {
+            // P7, P10, P13 → Downline Spillover:
+            // Checks Downline 1 (nodes[0]) and Downline 2 (nodes[1]) eligibility (>= 2 referrals).
+            // - If BOTH eligible: split 50/50 between DL1 and DL2
+            // - If ONLY DL1 eligible: 100% directly to DL1
+            // - If ONLY DL2 eligible: 100% directly to DL2
+            // - If NEITHER eligible: 100% forwarded to 4 Protocol Pools via EquoraVault
             address dl1 = userSlots[matrixOwner][slot].nodes[0];
-            if (dl1 != address(0) && registry.isQualified(dl1)) {
+            address dl2 = userSlots[matrixOwner][slot].nodes[1];
+            bool q1 = (dl1 != address(0) && registry.isQualified(dl1));
+            bool q2 = (dl2 != address(0) && registry.isQualified(dl2));
+
+            if (q1 && q2) {
+                uint256 half = cost / 2;
+                uint256 rem  = cost - half;
+                userBalance[dl1] += half;
+                totalEarned[dl1] += half;
+                userBalance[dl2] += rem;
+                totalEarned[dl2] += rem;
+                emit SpilloverResolved(matrixOwner, dl1, p, false);
+                emit SpilloverResolved(matrixOwner, dl2, p, false);
+                emit DistributionExecuted(dl1, half, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
+                emit DistributionExecuted(dl2, rem,  PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
+            } else if (q1 && !q2) {
                 userBalance[dl1] += cost;
                 totalEarned[dl1] += cost;
                 emit SpilloverResolved(matrixOwner, dl1, p, false);
                 emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
-            } else {
-                // Ineligible / Not Qualified -> Reroutes back to Protocol Pools!
-                _forwardToVault(matrixOwner, cost);
-                emit SpilloverResolved(matrixOwner, vaultContract, p, true);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
-            }
-
-        } else if (position == 13) {
-            // P13 → Downline 2 (node at index 1); if unqualified, reroute to Protocol Pools
-            address dl2 = userSlots[matrixOwner][slot].nodes[1];
-            if (dl2 != address(0) && registry.isQualified(dl2)) {
+            } else if (!q1 && q2) {
                 userBalance[dl2] += cost;
                 totalEarned[dl2] += cost;
                 emit SpilloverResolved(matrixOwner, dl2, p, false);
                 emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
             } else {
-                // Ineligible / Not Qualified -> Reroutes back to Protocol Pools!
+                // Neither downline is eligible -> 100% to 4 Protocol Pools via EquoraVault
                 _forwardToVault(matrixOwner, cost);
                 emit SpilloverResolved(matrixOwner, vaultContract, p, true);
                 emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);

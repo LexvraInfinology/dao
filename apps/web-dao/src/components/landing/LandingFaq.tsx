@@ -14,7 +14,7 @@ export const LandingFaq: React.FC = () => {
     },
     {
       q: 'How does the 300 / N cashback formula work?',
-      a: 'When you deposit $300 TROB (at the live coin rate of TROB) to claim Seat #N, the protocol calculates your instant cashback as $300 divided by N. For example, Seat #87 receives $300 / 87 = $3.45 TROB refunded immediately to your wallet in the same transaction block.',
+      a: 'When you deposit 300 TROB to claim Seat #N, the smart contract splits the entire 300 TROB equally among all N active members (including you). You receive 300 / N TROB instant cashback directly to your wallet in the same transaction block, and every prior member (Seat 1 to N-1) simultaneously receives 300 / N TROB pushed directly to their wallets. For example: Member 1 gets 300 / 1 = 300 TROB (100% instant cashback); Member 2 gets 300 / 2 = 150 TROB (and Member 1 gets 150 TROB); Member 100 gets 300 / 100 = 3 TROB (and all 100 members each receive 3 TROB).',
     },
     {
       q: 'When is Retail Matrix launching?',
@@ -22,7 +22,7 @@ export const LandingFaq: React.FC = () => {
     },
     {
       q: 'Can I transfer or trade my Council Seat?',
-      a: 'Yes. Each Council Seat is minted as a sovereign ERC-721 compatible NFT on TrobChain and can be transferred or traded on secondary marketplaces at any time.',
+      a: 'No. Each Genesis Council Seat is minted as a Soulbound (Non-Transferable) ERC-721 NFT permanently linked to your wallet address. It cannot be sold, traded, or transferred on secondary markets, guaranteeing that voting power (1 seat = 1 vote = 1.0%) and council membership remain Sybil-resistant and merit-based.',
     },
     {
       q: 'What happens after all 100 seats are filled?',

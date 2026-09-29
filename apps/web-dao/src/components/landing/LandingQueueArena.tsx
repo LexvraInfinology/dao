@@ -21,7 +21,7 @@ export const LandingQueueArena: React.FC = () => {
     {
       icon: <Calculator className="w-5 h-5 text-[#155EEF]" />,
       title: '300 / N Formula',
-      description: 'Instant cashback to your wallet based on queue position.',
+      description: 'Equal split across all N members: instant cashback to you + dividend push to prior seats.',
     },
     {
       icon: <Wallet className="w-5 h-5 text-[#155EEF]" />,
@@ -31,7 +31,7 @@ export const LandingQueueArena: React.FC = () => {
     {
       icon: <TrendingUp className="w-5 h-5 text-[#155EEF]" />,
       title: '500% Baseline ROI',
-      description: 'Council members receive ongoing dividend pool distributions.',
+      description: 'Council members receive ongoing dividend pool distributions up to 1,500 TROB.',
     },
   ];
 
@@ -83,7 +83,7 @@ export const LandingQueueArena: React.FC = () => {
 
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#12B76A]" />
-              <span className="text-sm font-bold text-[#0B132B] font-inter">$300 TROB Entry = $300 / N Cashback</span>
+              <span className="text-sm font-bold text-[#0B132B] font-inter">300 TROB Entry = 300 / N Equal Split</span>
               <span className="text-xs text-[#027A48] font-medium">Smart Contract Verified</span>
             </div>
           </div>

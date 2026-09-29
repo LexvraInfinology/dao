@@ -14,10 +14,14 @@ import "../interfaces/IEquoraRegistry.sol";
  *   Entry Fee: 300 TROB per seat (per logics.xlsx)
  *   Max Members: 100 (hard cap, immutable)
  *
- *   When member N joins, their 300 TROB is split equally among all (N-1) prior members:
- *     Share per existing member = 300 / (N - 1)
- *     Member 1 receives 300 TROB (their own deposit pushed back instantly).
- *     Member 100 receives 300/99 ≈ 3.03 TROB per join after them.
+ *   When member N joins (Position 1 to 100):
+ *     Their 300 TROB entry fee is split equally among all N active members:
+ *       Share per member = 300 / N
+ *     - Member 1 receives 300 / 1 = 300 TROB instant cashback (100% refund, 0 net cost).
+ *     - Member 2 receives 300 / 2 = 150 TROB instant cashback, and Member 1 receives 150 TROB.
+ *     - Member 3 receives 300 / 3 = 100 TROB instant cashback, and Members 1 & 2 each receive 100 TROB.
+ *     - Member 100 receives 300 / 100 = 3 TROB instant cashback, and all 100 members each receive 3 TROB.
+ *     Total Payout = N × (300 / N) ≡ 300 TROB (100% peer distribution, zero platform fees).
  *
  * === 5X EARNINGS CAP + 48-HOUR RE-TOPUP =====================================
  *   - Each member can earn a maximum of 5× their deposit = 1,500 TROB from

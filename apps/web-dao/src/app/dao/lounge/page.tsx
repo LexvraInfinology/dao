@@ -39,6 +39,8 @@ export default function MemberLoungePage() {
           <div className="xl:col-span-5 space-y-6">
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
+              pushedAmountUsd={pushedUsd}
+              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.055))}
               walletAddress={activeAddress ?? undefined}
             />
             <EarningsCapCard
@@ -62,6 +64,8 @@ export default function MemberLoungePage() {
         />
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
+          pushedAmountUsd={pushedUsd}
+          pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.055))}
           walletAddress={activeAddress ?? undefined}
         />
         <IncomeChannelsCard loungeData={lounge} />

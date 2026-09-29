@@ -26,7 +26,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
             <span className="text-[#155EEF]">On-Chain.</span>
           </h1>
           <p className="text-sm text-[#4F6184] leading-relaxed font-jakarta">
-            Track DAO funds and manage your available balance. All withdrawals are made directly in wallet.
+            Track DAO treasury inflows and automated distributions. All cashbacks and pool earnings are pushed directly into member wallets on-chain with zero gas fees.
           </p>
           {balance !== undefined && (
             <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-jakarta">
@@ -81,7 +81,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
           {balance !== undefined && (
             <p className="text-sm font-black text-[#071A4A] font-jakarta">${balance.toFixed(2)} <span className="text-xs font-normal text-[#60739A]">available</span></p>
           )}
-          <p className="text-xs text-[#4F6184] leading-relaxed font-jakarta">Track DAO funds and manage your available balance. All withdrawals are made directly in wallet.</p>
+          <p className="text-xs text-[#4F6184] leading-relaxed font-jakarta">Track DAO treasury inflows and automated distributions. All cashbacks and pool earnings are pushed directly into member wallets on-chain with zero gas fees.</p>
         </div>
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />

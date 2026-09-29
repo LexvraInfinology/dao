@@ -16,7 +16,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
-    "helmet": "^8.0.0"
+    "helmet": "^8.0.0",
+    "viem": "^2.21.53"
   },
   "devDependencies": {
     "@equora/tsconfig": "workspace:*",

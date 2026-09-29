@@ -1,6 +1,8 @@
 import React from 'react';
 import { DaoSidebar } from '@/components/layout/DaoSidebar';
 import { DaoHeader } from '@/components/layout/DaoHeader';
+import { DaoOnboardingModal } from '@/components/dao/DaoOnboardingModal';
+import { DaoWhatsAppCircle } from '@/components/dao/DaoWhatsAppCircle';
 
 export default function DaoLayout({
   children,
@@ -8,7 +10,7 @@ export default function DaoLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#F6F9FF] flex text-[#071A4A] font-jakarta overflow-x-hidden">
+    <div className="min-h-screen bg-[#F6F9FF] flex text-[#071A4A] font-jakarta overflow-x-hidden relative">
       {/* Persistent sidebar — desktop only */}
       <DaoSidebar />
 
@@ -19,6 +21,12 @@ export default function DaoLayout({
           {children}
         </main>
       </div>
+
+      {/* New user onboarding modal gate */}
+      <DaoOnboardingModal />
+
+      {/* Round circle for WhatsApp — strictly for verified DAO seat members */}
+      <DaoWhatsAppCircle variant="floating" />
     </div>
   );
 }

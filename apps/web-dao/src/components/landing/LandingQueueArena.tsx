@@ -9,7 +9,9 @@ import { useDaoStats } from '@/hooks/useApi';
 export const LandingQueueArena: React.FC = () => {
   const { data: stats } = useDaoStats(30_000);
   const seatsClaimed = stats?.memberCount ?? 0;
-  const pct = Math.min(100, Math.round((seatsClaimed / 100) * 100));
+  const isFull = seatsClaimed >= 100;
+  const seatStatus = isFull ? 'All Slots Filled' : 'DAO positions are vacant';
+
   const cards = [
     {
       icon: <Coins className="w-5 h-5 text-[#155EEF]" />,
@@ -34,7 +36,7 @@ export const LandingQueueArena: React.FC = () => {
   ];
 
   return (
-    <section id="queue" className="relative pt-20 pb-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#F0F6FD] to-[#F8FAFC]">
+    <section id="queue" className="relative pt-20 pb-20 lg:pb-28 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#F0F6FD] to-[#F8FAFC] border-b border-slate-200/80">
       {/* Background Arena Image */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-90 select-none">
         <Image
@@ -48,7 +50,7 @@ export const LandingQueueArena: React.FC = () => {
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/50 to-transparent" />
       </div>
 
-      <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Top Header Block */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           {/* Pill Badge */}
@@ -72,11 +74,11 @@ export const LandingQueueArena: React.FC = () => {
           {/* Desktop Status Badges */}
           <div className="hidden md:flex flex-row items-center justify-center gap-3 pt-2">
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
-              <div className="w-5 h-5 rounded-full bg-blue-50 text-[#155EEF] flex items-center justify-center font-bold text-xs">
-                #
+              <div className={`w-5 h-5 rounded-full ${isFull ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-[#155EEF]'} flex items-center justify-center font-bold text-xs`}>
+                <span className={`w-2 h-2 rounded-full ${isFull ? 'bg-amber-500' : 'bg-[#155EEF]'} animate-pulse`} />
               </div>
-              <span className="text-sm font-bold text-[#0B132B] font-inter">{seatsClaimed} / 100</span>
-              <span className="text-xs text-[#64748B] font-medium">Seats Filled ({pct}%)</span>
+              <span className="text-sm font-bold text-[#0B132B] font-inter">{seatStatus}</span>
+              <span className="text-xs text-[#64748B] font-medium">Council Membership</span>
             </div>
 
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
@@ -98,14 +100,11 @@ export const LandingQueueArena: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Dedicated Progress Card */}
+        {/* Mobile Dedicated Status Card */}
         <div className="block md:hidden mt-6 p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-md">
-          <div className="flex items-center justify-between text-xs font-bold text-[#0B132B] mb-2 font-inter">
-            <span>CURRENT QUEUE: {seatsClaimed} / 100</span>
-            <span className="text-[#155EEF]">{pct}% FILLED</span>
-          </div>
-          <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#155EEF] to-[#004EEB] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="flex items-center justify-between text-xs font-bold text-[#0B132B] font-inter">
+            <span>MEMBERSHIP STATUS</span>
+            <span className={isFull ? 'text-amber-600' : 'text-[#155EEF]'}>{seatStatus}</span>
           </div>
         </div>
 

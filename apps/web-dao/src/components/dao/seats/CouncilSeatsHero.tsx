@@ -39,13 +39,13 @@ export const CouncilSeatsHero: React.FC = () => {
             </div>
           </div>
 
-          {/* 3D Crystal Graphic matching Figma */}
+          {/* 3D Trobium Graphic */}
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 flex items-center justify-center shrink-0">
             {/* Ambient Radial Glow Ring */}
             <div className="absolute inset-0 rounded-full bg-blue-100/50 blur-lg pointer-events-none" />
             <img
-              src="/dao/Futuristic 3D Crystalline Soulbound Asset graphic.png"
-              alt="Soulbound Council Seats Crystal"
+              src="/dao/trobiumdashboard.png"
+              alt="Soulbound Council Seats Trobium Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(21,94,239,0.3)] animate-float"
             />
           </div>
@@ -69,12 +69,12 @@ export const CouncilSeatsHero: React.FC = () => {
           </p>
         </div>
 
-        {/* Right 3D Crystal */}
+        {/* Right 3D Emblem */}
         <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-blue-100/60 blur-md pointer-events-none" />
           <img
-            src="/dao/Futuristic 3D Crystalline Soulbound Asset graphic.png"
-            alt="Soulbound Council Seats Crystal"
+            src="/dao/trobiumdashboard.png"
+            alt="Soulbound Council Seats Trobium Emblem"
             className="w-full h-full object-contain drop-shadow-[0_6px_16px_rgba(21,94,239,0.25)] animate-float"
           />
         </div>

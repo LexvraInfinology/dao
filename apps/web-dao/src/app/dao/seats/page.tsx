@@ -114,7 +114,7 @@ export default function CouncilSeatsPage() {
       }
 
       // 2. Synchronize database via API
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -26,7 +26,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
             <span className="text-[#155EEF]">On-Chain.</span>
           </h1>
           <p className="text-sm text-[#4F6184] leading-relaxed font-jakarta">
-            Track DAO funds and manage your available balance.
+            Track DAO funds and manage your available balance. All withdrawals are made directly in wallet.
           </p>
           {balance !== undefined && (
             <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-jakarta">
@@ -59,10 +59,10 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
           <div className="relative w-40 h-40 xl:w-44 xl:h-44 flex items-center justify-center">
             <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
             <div className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none animate-pulse">
-              <img src="/dao/Diamond Crystal Graphic Graphic Accent.png" alt="Accent" className="w-full h-full object-contain" />
+              <img src="/dao/trobiumdashboard.png" alt="Trobium Accent" className="w-full h-full object-contain" />
             </div>
             <div className="relative w-28 h-28 xl:w-32 xl:h-32 animate-float flex items-center justify-center">
-              <img src="/dao/Central 3D Vector Polygonal Floating Ethereum-Style Shape.png" alt="3D Crystal"
+              <img src="/dao/trobiumdashboard.png" alt="3D Treasury Emblem"
                 className="w-full h-full object-contain drop-shadow-[0_12px_24px_rgba(21,94,239,0.35)]" />
             </div>
           </div>
@@ -81,12 +81,12 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
           {balance !== undefined && (
             <p className="text-sm font-black text-[#071A4A] font-jakarta">${balance.toFixed(2)} <span className="text-xs font-normal text-[#60739A]">available</span></p>
           )}
-          <p className="text-xs text-[#4F6184] leading-relaxed font-jakarta">Track DAO funds and manage your available balance.</p>
+          <p className="text-xs text-[#4F6184] leading-relaxed font-jakarta">Track DAO funds and manage your available balance. All withdrawals are made directly in wallet.</p>
         </div>
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 animate-float">
-            <img src="/dao/Central 3D Vector Polygonal Floating Ethereum-Style Shape.png" alt="3D Treasury Jewel"
+            <img src="/dao/trobiumdashboard.png" alt="3D Treasury Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
           </div>
         </div>

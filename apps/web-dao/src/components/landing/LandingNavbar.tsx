@@ -20,15 +20,22 @@ export const LandingNavbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleConnectClick = () => {
+  const handleConnectClick = async () => {
     if (wallet.isConnected) {
       window.location.href = '/dao';
       return;
     }
-    // If TrobSafe extension is not installed or active, redirect to the APK/extension installation page
-    if (!wallet.isInstalled) {
-      window.location.href = '/trobsafe/install';
-      return;
+    // If TrobSafe extension or app is detected, trigger connection without delay!
+    if (wallet.isInstalled) {
+      try {
+        const addr = await wallet.connect();
+        if (addr) {
+          window.location.href = '/dao';
+          return;
+        }
+      } catch {
+        // Fallback to modal
+      }
     }
     setWalletModalOpen(true);
   };

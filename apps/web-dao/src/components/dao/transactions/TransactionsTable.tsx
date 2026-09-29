@@ -145,11 +145,22 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
             </div>
             {/* Explorer link */}
             <div className="col-span-1 flex justify-end">
-              <a href={`https://tronscan.io/#/transaction/${tx.txHash}`} target="_blank" rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#155EEF] hover:bg-blue-50 transition-colors">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              {tx.txHash && tx.txHash.length > 20 && !tx.txHash.startsWith('0x_claim') ? (
+                <a
+                  href={`https://trobiumscan.io/tx/${tx.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#155EEF] hover:bg-blue-50 transition-colors"
+                  title="View on TrobiumScan Explorer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              ) : (
+                <span className="p-1.5 text-slate-300 cursor-not-allowed" title="On-chain block sync pending">
+                  <ExternalLink className="w-3.5 h-3.5 opacity-30" />
+                </span>
+              )}
             </div>
           </div>
         ))}

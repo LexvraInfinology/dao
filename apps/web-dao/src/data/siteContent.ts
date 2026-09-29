@@ -156,7 +156,7 @@ export const REWARD_POOLS: RewardPool[] = [
     ],
     perks: [
       '25% Pool Share Distributed Monthly',
-      'Entry into Alpha Tier Member Discord',
+      'Entry into Alpha Tier Private Telegram',
       'Priority access to Launchpad seed sales',
     ],
   },

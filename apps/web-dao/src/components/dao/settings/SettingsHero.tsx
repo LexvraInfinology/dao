@@ -27,8 +27,8 @@ export default function SettingsHero() {
         <div className="flex items-center gap-6 z-10 shrink-0">
           <div className="relative w-28 h-28 flex items-center justify-center">
             <img
-              src="/dao/Polyhedral Vector.png"
-              alt="Polyhedral Isometric Cube"
+              src="/dao/trobiumdashboard.png"
+              alt="Trobium Emblem"
               className="w-full h-full object-contain drop-shadow-[0_4px_20px_rgba(21,94,239,0.12)]"
             />
           </div>
@@ -69,12 +69,12 @@ export default function SettingsHero() {
           </p>
         </div>
 
-        {/* Right Graphic: 3D Crystalline Ethereum Jewel with glow */}
+        {/* Right Graphic: 3D Trobium Emblem with glow */}
         <div className="relative shrink-0 flex items-center justify-center w-24 h-24">
           <div className="absolute inset-0 bg-[#155EEF]/10 rounded-full blur-xl pointer-events-none" />
           <img
-            src="/dao/3D Crystalline Ethereum Jewel Visual.png"
-            alt="3D Crystalline Ethereum Jewel Visual"
+            src="/dao/trobiumdashboard.png"
+            alt="3D Trobium Emblem"
             className="w-20 h-20 object-contain relative z-10 drop-shadow-[0_4px_16px_rgba(21,94,239,0.18)]"
           />
         </div>

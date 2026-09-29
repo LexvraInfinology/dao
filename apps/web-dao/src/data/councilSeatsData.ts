@@ -61,8 +61,8 @@ export function buildLiveCouncilSeats(
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
       const earningsUsd =
         liveMember.pushedAmountUsdEstimate ??
-        pushedBtt * (bttPriceUsd > 0 ? bttPriceUsd : 0.047);
-      const capPct = Math.min(100, Math.round((pushedBtt / 900) * 100));
+        pushedBtt * (bttPriceUsd > 0 ? bttPriceUsd : 0.05525);
+      const capPct = Math.min(100, Math.round((earningsUsd / 1500) * 100));
 
       const addr = liveMember.address;
       const shortAddr =

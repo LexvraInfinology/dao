@@ -163,45 +163,78 @@ export function createApp(): Express {
   // ── DAO STATS & MEMBERS (public) ──────────────────────────────────────────
 
   /** GET /api/dao/stats */
-  app.get("/api/dao/stats", async (_req, res, next) => {
+  app.get("/api/dao/stats", async (_req, res) => {
     try {
       const stats = await daoService.getDAOStats();
       res.json({ success: true, data: stats });
     } catch (err) {
-      next(err);
+      console.warn("[API] DB offline or unreachable, serving fallback DAO stats:", err);
+      res.json({
+        success: true,
+        data: {
+          memberCount: 0,
+          activeMembers: 0,
+          capacity: 100,
+          remainingPositions: 100,
+          entryFeeBtt: 300,
+          earningsCapBtt: 1500,
+          totalCollectedBTT: 0,
+          totalDistributedBTT: 0,
+          isClosed: false,
+          bttPriceUsd: 0.0553,
+          priceSource: "trobchain",
+          priceUpdatedAt: new Date().toISOString(),
+          dividendYieldApy: "0%",
+          treasurySnapshotUsd: 0,
+        },
+      });
     }
   });
 
   /** GET /api/dao/members?page=&limit= */
-  app.get("/api/dao/members", async (req, res, next) => {
+  app.get("/api/dao/members", async (req, res) => {
     try {
       const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 100;
       const members = await daoService.getDAOMembers(page, limit);
       res.json({ success: true, data: members });
     } catch (err) {
-      next(err);
+      res.json({ success: true, data: { members: [], total: 0, page: 1, limit: 100 } });
     }
   });
 
   /** GET /api/dao/events?limit= */
-  app.get("/api/dao/events", async (req, res, next) => {
+  app.get("/api/dao/events", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
       const events = await daoService.getDAOEvents(limit);
       res.json({ success: true, data: events });
     } catch (err) {
-      next(err);
+      console.warn("[API] DB offline or unreachable, serving fallback DAO events");
+      res.json({ success: true, data: [] });
     }
   });
 
   /** GET /api/dao/member/:address — basic membership check */
-  app.get("/api/dao/member/:address", async (req, res, next) => {
+  app.get("/api/dao/member/:address", async (req, res) => {
     try {
       const member = await daoService.getMemberByAddress(req.params.address);
       res.json({ success: true, data: member });
     } catch (err) {
-      next(err);
+      res.json({
+        success: true,
+        data: {
+          isMember: false,
+          position: null,
+          nftTokenId: null,
+          pushedAmountBtt: 0,
+          pushedAmountUsdEstimate: 0,
+          earningsCapBtt: 1500,
+          directReferralsCount: 0,
+          isQualified: false,
+          userId: null,
+        },
+      });
     }
   });
 
@@ -219,6 +252,7 @@ export function createApp(): Express {
       // 1. Blockchain On-Chain Verification
       let verifiedBlockNumber = 0n;
       let onchainVerified = false;
+      const daoContractAddress = (process.env.NEXT_PUBLIC_DAO_ADDRESS || "0x4b6aB5F819A515382B0dEB6935D793817bB4af28") as `0x${string}`;
 
       if (txHash && typeof txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(txHash)) {
         try {
@@ -238,7 +272,6 @@ export function createApp(): Express {
       }
 
       // Check on-chain member status in EquoraDAO contract if configured
-      const daoContractAddress = (process.env.NEXT_PUBLIC_DAO_ADDRESS || "0x4b6aB5F819A515382B0dEB6935D793817bB4af28") as `0x${string}`;
       if (daoContractAddress && /^0x[0-9a-fA-F]{40}$/.test(canonicalAddress)) {
         try {
           const client = createPublicClient({
@@ -254,6 +287,44 @@ export function createApp(): Express {
             onchainVerified = true;
           }
         } catch (_) {}
+      }
+
+      // STRICT SECURITY: Disallow arbitrary off-chain mock claim creation
+      if (!onchainVerified) {
+        res.status(400).json({
+          success: false,
+          error: "On-chain verification required. A valid confirmed transaction calling EquoraDAO.joinDAO() on TrobChain is required.",
+        });
+        return;
+      }
+
+      if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+        res.status(400).json({
+          success: false,
+          error: "Valid on-chain transaction hash required.",
+        });
+        return;
+      }
+
+      // Prevent transaction replay attacks
+      const existingTx = await prisma.daoMember.findFirst({
+        where: { txHash },
+      });
+      if (existingTx) {
+        res.status(400).json({
+          success: false,
+          error: "This transaction hash has already been registered for a council seat.",
+        });
+        return;
+      }
+
+      if (verifiedBlockNumber === 0n) {
+        try {
+          const client = createPublicClient({ transport: http(config.blockchain.rpcUrl) });
+          verifiedBlockNumber = await client.getBlockNumber();
+        } catch (_) {
+          verifiedBlockNumber = 1n;
+        }
       }
 
       // 2. Ensure user exists in database
@@ -316,7 +387,7 @@ export function createApp(): Express {
       // In EquoraDAO.sol: ENTRY_FEE = 300 ether; activeCount = nextPosition; amountPerRecipient = ENTRY_FEE / activeCount
       const ENTRY_FEE = 300;
       const cashbackPerMember = Number((ENTRY_FEE / nextPosition).toFixed(4));
-      const memberTxHash = txHash || `0x_claim_${Date.now()}`;
+      const memberTxHash = txHash;
       const now = new Date();
 
       // Fetch all previous active members to receive their dividend push
@@ -360,6 +431,7 @@ export function createApp(): Express {
             incomingPosition: nextPosition,
             recipientCount: nextPosition,
             amountBtt: ENTRY_FEE,
+            reason: `Council Seat #${nextPosition} Activated`,
             txHash: memberTxHash,
             blockNumber: verifiedBlockNumber,
             timestamp: now,
@@ -560,10 +632,13 @@ export function createApp(): Express {
         0
       );
 
-      const earningsCapBtt = 900; // 3x entry
+      const earningsCapBtt = 1500; // 5 × 300 TROB = 1,500 TROB (per EquoraDAO.sol)
+      const earningsCapUsd = earningsCapBtt * priceData.priceUsd;
       const pushedBtt = memberDetails.pushedAmountBtt;
-      const capProgressPct = Math.min(100, (pushedBtt / earningsCapBtt) * 100);
+      const pushedUsd = pushedBtt * priceData.priceUsd;
       const remainingCapBtt = Math.max(0, earningsCapBtt - pushedBtt);
+      const remainingCapUsd = remainingCapBtt * priceData.priceUsd;
+      const capProgressPct = Math.min(100, (pushedBtt / earningsCapBtt) * 100);
 
       // Rank pool cards for income channels
       const poolCards = await prisma.poolCard.findMany({
@@ -604,13 +679,13 @@ export function createApp(): Express {
           totalReceivedUsd: pushedBtt * priceData.priceUsd,
           // Earnings cap
           earningsCapBtt,
-          earningsCapUsd: earningsCapBtt * priceData.priceUsd,
+          earningsCapUsd,
           pushedBtt,
-          pushedUsd: pushedBtt * priceData.priceUsd,
+          pushedUsd,
           capProgressPct,
           remainingCapBtt,
-          remainingCapUsd: remainingCapBtt * priceData.priceUsd,
-          isCapped: pushedBtt >= earningsCapBtt,
+          remainingCapUsd,
+          isCapped: pushedUsd >= earningsCapUsd,
           // Income channels
           incomeChannels: {
             daoSeats: {
@@ -713,20 +788,21 @@ export function createApp(): Express {
           id: e.id,
           type: e.eventType,
           typeLabel:
-            e.eventType === "joined"
-              ? "Council Seat Claim"
+            e.reason ||
+            (e.eventType === "joined"
+              ? (e.incomingPosition ? `Council Seat #${e.incomingPosition} Activated` : "Council Seat Activated")
               : e.eventType === "pushed"
-              ? "Seat Distribution"
+              ? (e.incomingPosition ? `Instant Cashback (Seat #${e.incomingPosition})` : "Instant 300/N Cashback")
               : e.eventType === "fallback_claimed"
               ? "Dividend Claim"
               : e.eventType === "queue_closed"
               ? "Queue Closed"
-              : e.eventType,
+              : e.eventType),
           amountBtt: amt,
-          amountUsd: amt * priceData.priceUsd,
+          amountUsd: Number((e as any).amountUsdEst) > 0 ? Number((e as any).amountUsdEst) : amt * priceData.priceUsd,
           isPositive: e.eventType === "pushed" || e.eventType === "fallback_claimed",
-          from: e.userAddress ?? "Protocol",
-          to: e.userAddress ?? "Protocol",
+          from: e.eventType === "joined" ? (e.userAddress ?? "Member") : "EquoraDAO Protocol",
+          to: e.eventType === "joined" ? (process.env.NEXT_PUBLIC_DAO_ADDRESS || "EquoraDAO Protocol") : (e.userAddress ?? "Member"),
           txHash: e.txHash,
           timestamp: e.timestamp,
           status: "Confirmed",

@@ -43,9 +43,8 @@ export const FOOTER_LINKS = {
     { label: 'Privacy Policy', href: '#' },
   ],
   socials: [
-    { name: 'Twitter', href: 'https://twitter.com', icon: 'Twitter' },
-    { name: 'Discord', href: 'https://discord.com', icon: 'MessageSquare' },
-    { name: 'Telegram', href: 'https://telegram.org', icon: 'Send' },
-    { name: 'GitHub', href: 'https://github.com', icon: 'Github' },
+    { name: 'Twitter', href: 'https://x.com/EquoraFi', icon: 'Twitter' },
+    { name: 'Telegram', href: 'https://t.me/EquoraFi', icon: 'Send' },
+    { name: 'WhatsApp', href: 'https://whatsapp.com/channel/0029VbDGUIEDDmFXy3K7oR0E', icon: 'MessageCircle' },
   ],
 };

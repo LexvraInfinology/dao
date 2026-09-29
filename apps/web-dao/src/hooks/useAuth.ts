@@ -42,7 +42,7 @@ export interface AuthState {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? '';
 const TOKEN_KEY   = 'equora_jwt';
 const ADDRESS_KEY = 'equora_auth_address';
 

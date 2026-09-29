@@ -19,12 +19,12 @@ export default function YourPrivacyCard() {
         </p>
       </div>
 
-      {/* Wireframe Faceted Crystal Graphic on bottom-right */}
-      <div className="absolute -right-3 -bottom-6 w-36 h-36 shrink-0 pointer-events-none opacity-85 select-none">
+      {/* Trobium Emblem Graphic on bottom-right */}
+      <div className="absolute -right-3 -bottom-6 w-32 h-32 shrink-0 pointer-events-none opacity-85 select-none">
         <img
-          src="/dao/Background Faceted Crystal Artwork.png"
-          alt="Wireframe Faceted Crystal"
-          className="w-full h-full object-contain"
+          src="/dao/trobiumdashboard.png"
+          alt="Trobium Emblem"
+          className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(21,94,239,0.15)]"
         />
       </div>
     </div>

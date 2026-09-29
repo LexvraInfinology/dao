@@ -230,7 +230,7 @@ export class DaoService {
       capacity: 100,
       remainingPositions: Math.max(0, 100 - activeCount),
       entryFeeBtt: 300,
-      earningsCapBtt: 900,
+      earningsCapBtt: 1500,
       totalCollectedBTT,
       totalCollectedUSDEstimate,
       totalDistributedBTT,
@@ -328,7 +328,7 @@ export class DaoService {
     }
 
     const pushedBtt = Number(member.pushedAmountBtt);
-    const earningsCapBtt = 900;
+    const earningsCapBtt = 1500;
     const capProgressPct = Math.min(100, (pushedBtt / earningsCapBtt) * 100);
 
     return {
@@ -381,7 +381,15 @@ export class DaoService {
         amountBtt,
         amountUsdEstimate: amountBtt * (priceData?.priceUsd || 0),
         priceSource: priceData?.priceSource || "trobchain-api",
-        reason: e.reason,
+        reason:
+          e.reason ||
+          (e.eventType === "joined"
+            ? (e.incomingPosition ? `Council Seat #${e.incomingPosition} Activated` : "Council Seat Activated")
+            : e.eventType === "pushed"
+            ? (e.incomingPosition ? `Instant Cashback (Seat #${e.incomingPosition})` : "Instant 300/N Cashback")
+            : e.eventType === "fallback_claimed"
+            ? "Dividend Reward Claimed"
+            : e.eventType),
         txHash: e.txHash,
         blockNumber: e.blockNumber != null ? e.blockNumber.toString() : "0",
         timestamp: e.timestamp,

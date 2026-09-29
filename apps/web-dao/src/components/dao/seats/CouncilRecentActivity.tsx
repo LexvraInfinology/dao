@@ -64,11 +64,16 @@ export const CouncilRecentActivity: React.FC = () => {
               : 'bg-[#EEF5FF] text-[#155EEF] border-[#BFDBFE]';
 
             const title =
-              isJoined
-                ? 'Seat Claimed'
+              item.reason ||
+              (isJoined
+                ? 'Council Seat Activated'
                 : isDefault
                 ? 'Seat Defaulted'
-                : item.eventType;
+                : isEarnings
+                ? '300/N Instant Cashback'
+                : item.eventType === 'fallback_claimed'
+                ? 'Dividend Claimed'
+                : item.eventType);
 
             return (
               <div

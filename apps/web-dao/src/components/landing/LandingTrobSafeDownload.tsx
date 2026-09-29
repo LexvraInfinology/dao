@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Smartphone, Download, ShieldCheck, ArrowRight, ExternalLink } from 'lucide-react';
+import { AndroidIcon } from '@/components/ui/AndroidIcon';
 
 export const LandingTrobSafeDownload: React.FC = () => {
   return (
@@ -39,8 +40,8 @@ export const LandingTrobSafeDownload: React.FC = () => {
                 download="trobsafe.apk"
                 className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#F8FAFC] hover:bg-[#EFF6FF] border border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-md transition-all group cursor-pointer"
               >
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#071A4A] text-white p-2 shadow-xs group-hover:bg-[#155EEF] transition-colors">
-                  <img src="/icons/android.svg" alt="Android" className="w-6 h-6 object-contain" />
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#071A4A] text-[#3DDC84] p-2.5 shadow-xs group-hover:bg-[#155EEF] group-hover:text-white transition-colors">
+                  <AndroidIcon className="w-6 h-6" />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
@@ -60,7 +61,9 @@ export const LandingTrobSafeDownload: React.FC = () => {
                 className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#F8FAFC] hover:bg-slate-100 border border-slate-200 hover:border-slate-300 shadow-xs hover:shadow-md transition-all group cursor-pointer"
               >
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#071A4A] text-white p-2.5 shadow-xs">
-                  <img src="/icons/apple.svg" alt="App Store" className="w-5 h-5 object-contain fill-white" />
+                  <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.4c.66-.82 1.11-1.96.99-3.1-.96.04-2.12.64-2.8 1.44-.59.69-1.11 1.83-.97 2.94 1.07.08 2.16-.54 2.78-1.28z"/>
+                  </svg>
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
@@ -74,7 +77,7 @@ export const LandingTrobSafeDownload: React.FC = () => {
 
               {/* Google Play */}
               <a
-                href="https://trobium.com/download"
+                href="https://trobium.com/download/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#F8FAFC] hover:bg-slate-100 border border-slate-200 hover:border-slate-300 shadow-xs hover:shadow-md transition-all group cursor-pointer"
@@ -118,7 +121,7 @@ export const LandingTrobSafeDownload: React.FC = () => {
                 download="trobsafe.apk"
                 className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_24px_rgba(21,94,239,0.35)] hover:shadow-[0_12px_28px_rgba(21,94,239,0.45)] transition-all duration-200 cursor-pointer w-full sm:w-auto text-center"
               >
-                <Download className="w-4 h-4" />
+                <AndroidIcon className="w-4 h-4 fill-white" />
                 <span>DOWNLOAD APK</span>
                 <span className="font-semibold opacity-90 text-xs">· v1.0.22</span>
               </a>

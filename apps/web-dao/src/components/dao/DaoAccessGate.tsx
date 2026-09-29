@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink, Compass, Smartphone } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink, Smartphone } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
@@ -42,34 +42,17 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [detectTimeout, setDetectTimeout]     = useState(false);
 
-  const handleConnectClick = () => {
-    if (!wallet.isInstalled) {
-      router.push('/trobsafe/install');
-      return;
+  const handleConnectClick = async () => {
+    if (wallet.isInstalled) {
+      try {
+        const addr = await wallet.connect();
+        if (addr) return;
+      } catch {
+        // Fallback to modal
+      }
     }
     setWalletModalOpen(true);
   };
-
-  const [devBypass, setDevBypass] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const search = window.location.search || '';
-      const isDevParam = search.includes('dev=1') || search.includes('dev=true');
-      const isLocalDev = localStorage.getItem('equora_dev_mode') === 'true';
-      const isSessionDev = sessionStorage.getItem('equora_dao_preview') === 'true';
-      return isDevParam || isLocalDev || isSessionDev;
-    } catch {
-      return false;
-    }
-  });
-
-  const enableBypass = useCallback(() => {
-    setDevBypass(true);
-    try {
-      sessionStorage.setItem('equora_dao_preview', 'true');
-      localStorage.setItem('equora_dev_mode', 'true');
-    } catch { /* ignore */ }
-  }, []);
 
   // Quick fallback timeout for detection probe (800ms max)
   useEffect(() => {
@@ -77,25 +60,23 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     return () => clearTimeout(timer);
   }, []);
 
-
   // Fetch membership status only when we have an address (prefer base58 for TrobSafe)
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
     useDaoMember(activeAddress);
 
-  // Fetch live TROB price for the $300 calculation
+  // Fetch live TROB price for the 300 TROB entry calculation
   const { data: priceData } = useTrobPrice(30_000);
 
-  // ── Derive gate state ──────────────────────────────────────────────────────
+  // ── Derive gate state (strict on-chain verification) ────────────────────────
   const gateState: GateState = (() => {
-    if (devBypass)                          return 'access_granted';
     if (wallet.status === 'detecting' && !detectTimeout) return 'detecting_wallet';
     if (wallet.status === 'not_installed' || (wallet.status === 'detecting' && detectTimeout && !wallet.isInstalled)) {
       return 'not_installed';
     }
     if (!wallet.isConnected)                return 'wallet_required';
     if (memberLoading && !memberData)       return 'checking_member';
-    if (memberData?.isMember)               return 'access_granted';
+    if (memberData?.isMember && (memberData.position ?? 0) > 0) return 'access_granted';
     return 'payment_required';
   })();
 
@@ -154,7 +135,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       }
 
       // 2. Register membership in database via backend API
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +148,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
       setPayTxHash(txId || 'confirmed');
       await refetchMember();
-      setDevBypass(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Claim failed. Please try again.';
       setPayError(msg);
@@ -213,14 +193,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   <Download className="w-3.5 h-3.5 text-[#155EEF]" />
                   Install Browser Extension
                 </a>
-                <button
-                  type="button"
-                  onClick={enableBypass}
-                  className="w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  ⚡ Guest Preview: Explore Member Lounge
-                </button>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
                   <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
                     ← Back to DAO
@@ -246,14 +218,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 >
                   <ShieldCheck className="w-4 h-4" />
                   Connect TrobSafe Wallet
-                </button>
-                <button
-                  type="button"
-                  onClick={enableBypass}
-                  className="w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  ⚡ Guest Preview: Explore Member Lounge
                 </button>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
                   <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
@@ -347,15 +311,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     : 'Fetching Live TROB Rate…'}
                 </span>
                 {payTxHash !== 'pending' && <ArrowRight className="w-4 h-4" />}
-              </button>
-
-              {/* Dev Preview Mode Bypass (allowed in local development) */}
-              <button
-                type="button"
-                onClick={enableBypass}
-                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-[#155EEF]/30 hover:border-[#155EEF] text-[#155EEF] hover:bg-[#EFF6FF] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                ⚡ Dev Preview: Enter Member Lounge Without Claiming
               </button>
 
               <p className="mt-3 text-center text-[11px] text-[#94A3B8]">

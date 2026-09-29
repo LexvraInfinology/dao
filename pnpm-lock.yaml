@@ -38,6 +38,9 @@ importers:
       helmet:
         specifier: ^8.0.0
         version: 8.3.0
+      viem:
+        specifier: ^2.21.53
+        version: 2.56.8(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5)
     devDependencies:
       '@equora/tsconfig':
         specifier: workspace:*

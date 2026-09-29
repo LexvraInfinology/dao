@@ -56,7 +56,7 @@ export function DaoDashboardStats() {
   return (
     <div className="flex md:grid md:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 snap-x snap-mandatory scroll-smooth no-scrollbar">
 
-      {/* ── Card 1: Seats Vacant & Queue Progress ────────────────────── */}
+      {/* ── Card 1: Seats Vacant & Queue Status ────────────────────── */}
       <div className="min-w-[280px] xs:min-w-[300px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.07)] transition-all flex flex-col justify-between space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -64,35 +64,29 @@ export function DaoDashboardStats() {
               <Users className="w-4 h-4 text-sky-400" />
             </div>
             <span className="text-xs font-bold text-slate-600 font-jakarta">
-              Genesis Queue Status
+              Genesis Council
             </span>
           </div>
-          <span className="text-[11px] font-bold text-[#155EEF] bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 rounded-full">
-            {seatsFilled} Claimed
+          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${seatsFilled >= 100 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-[#155EEF] border-blue-200/80'}`}>
+            {seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant'}
           </span>
         </div>
 
         <div>
-          <div className="text-3xl sm:text-4xl font-black font-jakarta text-[#0B132B] tracking-tight">
-            {seatsRemaining}{' '}
-            <span className="text-base sm:text-lg text-slate-500 font-semibold">Vacant / 100</span>
+          <div className="text-2xl sm:text-3xl font-black font-jakarta text-[#0B132B] tracking-tight">
+            {seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant'}
           </div>
           <p className="text-xs text-slate-500 font-jakarta mt-1">
             Fixed 100 sovereign seat governance supply
           </p>
         </div>
 
-        <div className="space-y-1.5 pt-1">
-          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200/60">
-            <div
-              className="h-full bg-gradient-to-r from-[#155EEF] to-[#2563EB] rounded-full transition-all duration-700 shadow-xs"
-              style={{ width: `${Math.max(2, filledPct)}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-            <span>{filledPct}% filled</span>
-            <span className="text-emerald-700 font-bold">{seatsRemaining} seats remaining</span>
-          </div>
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-jakarta">
+          <span className="text-slate-500">Autonomous FIFO Queue</span>
+          <span className="text-emerald-700 font-bold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Active
+          </span>
         </div>
       </div>
 
@@ -226,10 +220,10 @@ export function DaoDashboardStats() {
           <span className="text-slate-500">
             {isMember
               ? (myNftId ? `Soulbound NFT #${myNftId}` : 'Active Council Member')
-              : 'Council Seats Available'}
+              : 'Council Status'}
           </span>
           <span className="text-[#155EEF] font-bold">
-            {isMember ? '25% APY + Matrix' : `${seatsRemaining} open to claim`}
+            {isMember ? '25% APY + Matrix' : (seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant')}
           </span>
         </div>
       </div>

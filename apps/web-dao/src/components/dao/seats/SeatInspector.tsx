@@ -76,7 +76,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 shrink-0 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center p-2.5 backdrop-blur-sm">
             <img
-              src="/dao/Futuristic 3D Crystalline Soulbound Asset graphic.png"
+              src="/dao/trobiumdashboard.png"
               alt="Soulbound NFT"
               className="w-full h-full object-contain animate-float"
             />

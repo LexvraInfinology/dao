@@ -37,25 +37,24 @@ function timeAgoLabel(ts: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function shortAddress(addr: string | null): string {
-  if (!addr) return 'Protocol';
-  if (addr.startsWith('T') && addr.length > 10) return addr.slice(0, 6) + '…' + addr.slice(-4);
-  if (addr.startsWith('0x') && addr.length > 10) return addr.slice(0, 6) + '…' + addr.slice(-4);
+function shortAddress(addr: string | null | undefined): string {
+  if (!addr) return 'Council Member';
+  if (addr.length > 12) return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   return addr;
 }
 
 function mapEventToRow(evt: DaoEventData): ActivityRow {
-  const short = shortAddress(evt.userAddress);
+  const displayAddr = shortAddress(evt.userAddress);
   const timeAgo = timeAgoLabel(evt.timestamp);
 
   switch (evt.eventType) {
     case 'joined':
       return {
         id: evt.id,
-        title: 'Seat Claimed',
-        subtitle: `Genesis Seat #${evt.incomingPosition ?? '?'} claimed • ${short}`,
-        highlight: null,
-        highlightColor: '',
+        title: evt.incomingPosition ? `Council Seat #${evt.incomingPosition} Activated` : 'Council Seat Activated',
+        subtitle: `${displayAddr} entered the Genesis Council.`,
+        highlight: '+$300 TROB',
+        highlightColor: 'text-[#12B76A]',
         timeAgo,
         iconEl:       <User className="w-4 h-4 text-[#155EEF]" />,
         iconBg:       'bg-[#EFF6FF] border border-[#BFDBFE]/50',
@@ -65,8 +64,10 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
     case 'pushed':
       return {
         id: evt.id,
-        title: 'Queue Distribution',
-        subtitle: `Distributed to queue • Seat #${evt.incomingPosition ?? '?'}`,
+        title: evt.reason || (evt.incomingPosition ? `Instant Cashback (Seat #${evt.incomingPosition})` : 'Instant 300/N Cashback'),
+        subtitle: evt.incomingPosition
+          ? `Seat #${evt.incomingPosition} received algorithmic return.`
+          : `${displayAddr} received distribution.`,
         highlight: formatAmount(evt.amountBtt, evt.amountUsdEstimate),
         highlightColor: 'text-[#12B76A]',
         timeAgo,
@@ -78,8 +79,8 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
     case 'fallback_claimed':
       return {
         id: evt.id,
-        title: 'Dividend Claimed',
-        subtitle: `Fallback dividend claimed by ${short}`,
+        title: evt.reason || 'Dividend Claimed',
+        subtitle: `${displayAddr} claimed dividend.`,
         highlight: formatAmount(evt.amountBtt, evt.amountUsdEstimate),
         highlightColor: 'text-[#6172F3]',
         timeAgo,
@@ -91,8 +92,8 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
     case 'queue_closed':
       return {
         id: evt.id,
-        title: 'Queue Closed',
-        subtitle: 'Genesis DAO Council is now complete',
+        title: 'Queue Complete',
+        subtitle: `Genesis DAO Council is now complete`,
         highlight: null,
         highlightColor: '',
         timeAgo,
@@ -104,9 +105,9 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
     default:
       return {
         id: evt.id,
-        title: evt.eventType.replace(/_/g, ' '),
-        subtitle: short,
-        highlight: evt.amountBtt > 0 ? formatAmount(evt.amountBtt, evt.amountUsdEstimate) : null,
+        title: evt.reason || 'Protocol Activity',
+        subtitle: `${displayAddr} performed action.`,
+        highlight: evt.amountBtt > 0 ? formatAmount(evt.amountBtt, evt.amountUsdEstimate) : '+$300 TROB',
         highlightColor: 'text-[#155EEF]',
         timeAgo,
         iconEl:       <Coins className="w-4 h-4 text-[#155EEF]" />,
@@ -120,18 +121,14 @@ function mapEventToRow(evt: DaoEventData): ActivityRow {
 export const LandingLiveActivity: React.FC = () => {
   // Poll every 10 seconds for live events
   const { data: rawEvents, loading } = useDaoEvents(10, 10_000);
-  const { data: stats }              = useDaoStats();
 
   const rows: ActivityRow[] = useMemo(() => {
     if (!rawEvents || rawEvents.length === 0) return [];
     return rawEvents.slice(0, 5).map(mapEventToRow);
   }, [rawEvents]);
 
-  const filledSeats    = stats?.memberCount ?? 0;
-  const remainingSeats = stats?.remainingPositions ?? (100 - filledSeats);
-
   return (
-    <section id="activity" className="relative pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-32 lg:pb-36 overflow-hidden">
+    <section id="activity" className="relative pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-32 lg:pb-36 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image src="/landing/activity-boy.png" alt="Genesis Live Activity" fill priority
           className="object-cover object-[80%_0%] sm:object-[78%_center] lg:object-center" />
@@ -139,7 +136,7 @@ export const LandingLiveActivity: React.FC = () => {
         <div className="absolute inset-x-0 bottom-0 h-32 sm:h-44 bg-gradient-to-t from-white via-white/60 to-transparent" />
       </div>
 
-      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-12 relative z-10">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
           <div className="text-[12px] sm:text-[13px] font-bold font-inter text-[#155EEF] uppercase tracking-widest mb-2.5">
@@ -150,7 +147,7 @@ export const LandingLiveActivity: React.FC = () => {
             <span className="text-[#155EEF]">Always Moving.</span>
           </h2>
           <p className="mt-3 text-sm sm:text-base text-[#475467] font-inter max-w-xl mx-auto leading-relaxed">
-            Track seat claims, queue distributions, and Genesis DAO activity in real time.
+            Track seat deposits, queue distributions, and Genesis DAO activity in real time.
           </p>
         </div>
 
@@ -242,22 +239,15 @@ export const LandingLiveActivity: React.FC = () => {
           <div className="hidden lg:block lg:col-span-5 xl:col-span-5 h-[520px] pointer-events-none" />
         </div>
 
-        {/* Mobile stats capsule */}
-        <div className="block lg:hidden mt-6 sm:mt-8 p-3.5 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-md max-w-sm sm:max-w-md mx-auto grid grid-cols-3 divide-x divide-slate-100 text-center">
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black font-sora text-[#0B132B]">{filledSeats}</div>
-            <div className="text-[10px] sm:text-xs text-[#64748B] font-medium font-inter mt-0.5">Filled Seats</div>
-          </div>
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black font-sora text-[#12B76A]">{remainingSeats}</div>
-            <div className="text-[10px] sm:text-xs text-[#64748B] font-medium font-inter mt-0.5">Remaining</div>
-          </div>
-          <div className="px-2">
-            <div className="text-xl sm:text-2xl font-black font-sora text-[#0B132B]">100</div>
-            <div className="text-[10px] sm:text-xs text-[#64748B] font-medium font-inter mt-0.5">Total Seats</div>
+        {/* Mobile live indicator */}
+        <div className="block lg:hidden mt-6 sm:mt-8 p-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xs max-w-sm mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#0B132B] font-inter">
+            <span className="w-2 h-2 rounded-full bg-[#12B76A] animate-pulse" />
+            <span>Autonomous Protocol Streams Active</span>
           </div>
         </div>
       </div>
     </section>
   );
 };
+

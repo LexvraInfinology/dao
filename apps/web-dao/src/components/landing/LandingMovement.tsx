@@ -11,8 +11,8 @@ export const LandingMovement: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden">
-      <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
+    <section id="about" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Text & Stats Column */}
           <div className="lg:col-span-6 space-y-6 text-left">

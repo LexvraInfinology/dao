@@ -12,7 +12,7 @@ interface TreasuryBalanceCardProps {
 }
 
 export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
-  balance = 420.50,
+  balance = 0,
   totalVaultAssets,
   contractAddress,
 }) => {

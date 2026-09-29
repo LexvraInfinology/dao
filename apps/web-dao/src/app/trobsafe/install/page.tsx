@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Shield, Download, CheckCircle2, Chrome, ArrowRight, ExternalLink, Smartphone, Zap } from 'lucide-react';
+import { AndroidIcon } from '@/components/ui/AndroidIcon';
 
 const CHROME_STEPS = [
   {
@@ -134,7 +135,7 @@ export default function TrobSafeInstallPage() {
               className="p-4 rounded-2xl bg-white border border-[#BFDBFE] hover:border-blue-400 shadow-xs hover:shadow-md transition-all flex items-center gap-3.5 group cursor-pointer"
             >
               <div className="w-11 h-11 rounded-xl bg-[#071A4A] group-hover:bg-[#155EEF] p-2.5 flex items-center justify-center shrink-0 transition-colors">
-                <img src="/icons/android.svg" alt="Android" className="w-6 h-6 object-contain" />
+                <AndroidIcon className="w-6 h-6 text-[#3DDC84] group-hover:text-white transition-colors" />
               </div>
               <div className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Download for</span>
@@ -185,7 +186,7 @@ export default function TrobSafeInstallPage() {
               download="trobsafe.apk"
               className="w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_20px_rgba(21,94,239,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Download className="w-4 h-4" />
+              <AndroidIcon className="w-4 h-4 fill-white" />
               <span>Download APK · v1.0.22</span>
             </a>
             <a
@@ -207,7 +208,7 @@ export default function TrobSafeInstallPage() {
             </span>
             <span>·</span>
             <a
-              href="https://trobium.com/download"
+              href="https://trobium.com/download/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#155EEF] hover:underline flex items-center gap-1 font-semibold"
@@ -221,8 +222,8 @@ export default function TrobSafeInstallPage() {
         {/* Android APK Install steps */}
         <div className="bg-white rounded-3xl border border-[#E2ECF9] shadow-[0_4px_20px_rgba(15,23,42,0.03)] p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#3DDC84]/20 flex items-center justify-center p-1.5">
-              <img src="/icons/android.svg" alt="Android" className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-[#071A4A] flex items-center justify-center p-2">
+              <AndroidIcon className="w-5 h-5 text-[#3DDC84]" />
             </div>
             <h2 className="text-lg font-bold text-[#071A4A]">Android (.APK) Installation Guide</h2>
           </div>

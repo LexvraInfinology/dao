@@ -21,11 +21,11 @@ export default function StayInformedCard() {
           </p>
         </div>
 
-        {/* Right 3D Faceted Crystal Graphic */}
-        <div className="relative w-28 h-32 shrink-0 flex items-center justify-center opacity-90 -mr-2 pointer-events-none">
+        {/* Right 3D Trobium Emblem Graphic */}
+        <div className="relative w-28 h-28 shrink-0 flex items-center justify-center opacity-90 -mr-2 pointer-events-none">
           <img
-            src="/dao/Diamond Crystal Graphic Graphic Accent.png"
-            alt="3D Faceted Crystal Diamond"
+            src="/dao/trobiumdashboard.png"
+            alt="3D Trobium Emblem"
             className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(21,94,239,0.15)]"
           />
         </div>

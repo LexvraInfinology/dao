@@ -13,7 +13,7 @@ interface TreasuryWithdrawCardProps {
 }
 
 export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
-  availableBalance = 420.50,
+  availableBalance = 0,
   onWithdrawSuccess,
   variant = 'auto',
   walletAddress,
@@ -129,11 +129,17 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
   return (
     <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-[0_4px_25px_rgba(15,23,42,0.03)] space-y-5 sm:space-y-6">
       <div>
-        <h2 className="text-base sm:text-lg font-bold font-jakarta text-[#071A4A]">Withdraw</h2>
-        <p className="text-xs text-[#60739A] font-jakarta mt-0.5 hidden lg:block">
-          Move available treasury funds to your connected wallet.
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg font-bold font-jakarta text-[#071A4A]">Withdraw</h2>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-[#059669]">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            All withdrawals are made directly in wallet
+          </span>
+        </div>
+        <p className="text-xs text-[#60739A] font-jakarta mt-1 hidden lg:block">
+          Move available treasury funds directly to your connected wallet.
         </p>
-        <p className="text-xs text-[#60739A] font-jakarta mt-0.5 lg:hidden">
+        <p className="text-xs text-[#60739A] font-jakarta mt-1 lg:hidden">
           Available: <span className="font-bold text-[#071A4A]">${availableBalance.toFixed(2)}</span>
         </p>
       </div>

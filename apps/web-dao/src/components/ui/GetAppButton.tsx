@@ -162,7 +162,7 @@ export const GetAppButton: React.FC<GetAppButtonProps> = ({
 
             {/* Google Play */}
             <a
-              href="https://trobium.com/download"
+              href="https://trobium.com/download/"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setOpen(false)}

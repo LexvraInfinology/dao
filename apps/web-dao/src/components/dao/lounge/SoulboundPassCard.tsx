@@ -69,7 +69,7 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
         </div>
         <div className="relative z-10 flex items-center justify-center my-auto">
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center animate-float">
-            <img src="/dao/Central 3D Vector Polygonal Floating Ethereum-Style Shape.png" alt="Soulbound Jewel"
+            <img src="/dao/trobiumdashboard.png" alt="Soulbound Trobium Emblem"
               className="w-full h-full object-contain drop-shadow-[0_10px_25px_rgba(59,130,246,0.6)]" />
           </div>
         </div>

@@ -35,8 +35,8 @@ export const LandingFaq: React.FC = () => {
   };
 
   return (
-    <section className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden">
-      <div className="max-w-[960px] mx-auto px-5 sm:px-8 relative z-10">
+    <section id="faq" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+      <div className="max-w-[960px] mx-auto px-4 sm:px-8 relative z-10">
         {/* Top Header */}
         <div className="text-center space-y-4 mb-14">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">

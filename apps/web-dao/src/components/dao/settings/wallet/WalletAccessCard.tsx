@@ -21,12 +21,12 @@ export default function WalletAccessCard() {
           </p>
         </div>
 
-        {/* Right Wireframe Diamond Graphic */}
-        <div className="relative w-32 h-36 shrink-0 flex items-center justify-center opacity-85 -mr-4 pointer-events-none">
+        {/* Right Trobium Emblem Graphic */}
+        <div className="relative w-28 h-28 shrink-0 flex items-center justify-center opacity-90 -mr-2 pointer-events-none">
           <img
-            src="/dao/Background Faceted Crystal Artwork.png"
-            alt="Faceted Crystal Wireframe"
-            className="w-full h-full object-contain"
+            src="/dao/trobiumdashboard.png"
+            alt="Trobium Emblem"
+            className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(21,94,239,0.15)]"
           />
         </div>
       </div>

@@ -105,16 +105,24 @@ export function useTrobWallet(): TrobWalletState {
   const [error, setError]     = useState<string | null>(null);
 
   // ── helpers ──────────────────────────────────────────────────────────────
-  const getTrob = (): TrobWalletAPI | null => {
+  const getTrob = (): TrobWalletAPI | any | null => {
     if (typeof window === 'undefined') return null;
     const w = window as any;
-    const t = w.trob || w.trobLink || w.trobkit || null;
+    const t = w.trob || w.trobWeb || w.trobLink || w.trobSafe || w.tronWeb || w.trobkit || null;
     return t;
   };
 
   const isTrobActive = (t: any): boolean => {
     if (!t) return false;
-    return Boolean(t.ready || t.installed || typeof t.getDetails === 'function' || typeof t.request === 'function');
+    return Boolean(
+      t.ready ||
+      t.installed ||
+      t.isTrobSafe ||
+      typeof t.getDetails === 'function' ||
+      typeof t.request === 'function' ||
+      t.defaultAddress?.base58 ||
+      t.defaultAddress?.hex
+    );
   };
 
   const applyAddress = useCallback((addr: TrobAddress) => {
@@ -380,10 +388,32 @@ export function useTrobWallet(): TrobWalletState {
       const trob = getTrob();
       if (!trob) throw new Error('TrobSafe wallet is not installed.');
       if (status !== 'connected') throw new Error('Wallet not connected.');
-      return trob.triggersmartcontract(payload);
+      if (typeof trob.triggersmartcontract === 'function') {
+        return trob.triggersmartcontract(payload);
+      }
+      if (typeof trob.transactionBuilder?.triggerSmartContract === 'function') {
+        const p = (Array.isArray(payload) ? payload[0] : payload) as any;
+        const tx = await trob.transactionBuilder.triggerSmartContract(
+          p.contract_address,
+          p.function_selector,
+          {
+            feeLimit: p.fee_limit || 100_000_000,
+            callValue: p.call_value || 0,
+          },
+          [],
+          p.owner_address
+        );
+        const signedTx = await trob.trx.sign(tx.transaction);
+        const broadcast = await trob.trx.sendRawTransaction(signedTx);
+        return { txid: broadcast.txid || tx.transaction?.txID || 'confirmed', result: Boolean(broadcast.result) };
+      }
+      throw new Error('Contract trigger not supported by current wallet provider.');
     },
     [status]
   );
+
+  const activeTrob = getTrob();
+  const isReallyInstalled = Boolean(activeTrob && isTrobActive(activeTrob));
 
   return {
     status,
@@ -391,7 +421,7 @@ export function useTrobWallet(): TrobWalletState {
     hexAddress:    address?.hex    ? address.hex.toLowerCase()   : null,
     base58Address: address?.base58 ? address.base58              : null,
     isConnected:   status === 'connected' && Boolean(address?.base58 || address?.hex),
-    isInstalled:   status !== 'not_installed' && status !== 'detecting',
+    isInstalled:   isReallyInstalled,
     error,
     connect,
     connectWithAddress,

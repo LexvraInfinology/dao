@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 // ─── Generic fetch hook ───────────────────────────────────────────────────────
 
@@ -113,6 +113,7 @@ export interface DaoEventData {
   incomingPosition: number | null;
   amountBtt: number;
   amountUsdEstimate: number;
+  reason?: string | null;
   txHash: string;
   blockNumber: string;
   timestamp: string;

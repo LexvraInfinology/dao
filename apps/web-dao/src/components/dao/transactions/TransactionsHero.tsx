@@ -44,13 +44,13 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
 
         <div className="flex items-center gap-6 xl:gap-8 shrink-0">
           <div className="relative w-9 h-9 xl:w-10 xl:h-10 shrink-0 mb-8 animate-float">
-            <img src="/dao/Compact 3D Octahedron Visual.png" alt="3D Cube"
+            <img src="/dao/trobiumdashboard.png" alt="Trobium Accent"
               className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(21,94,239,0.35)]" />
           </div>
           <div className="relative w-48 h-36 xl:w-52 xl:h-40 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
             <div className="relative w-full h-full flex items-center justify-center animate-float">
-              <img src="/dao/Transactions_Ethereum_Jewel.png" alt="3D Ethereum Jewel"
+              <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
                 className="w-full h-full object-contain drop-shadow-[0_10px_25px_rgba(21,94,239,0.3)]" />
             </div>
           </div>
@@ -87,7 +87,7 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
         <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
           <div className="relative w-24 h-24 animate-float">
-            <img src="/dao/Transactions_Ethereum_Jewel.png" alt="3D Jewel"
+            <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
           </div>
         </div>

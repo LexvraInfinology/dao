@@ -25,17 +25,18 @@ export const ProfileDaoDetails: React.FC<ProfileDaoDetailsProps> = ({ profile })
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const memberId  = profile?.userId    ? `#${profile.userId}`    : '—';
-  const seatNum   = profile?.position  ? `#${profile.position}`  : '—';
-  const nftId     = profile?.nftTokenId ? `#${String(profile.nftTokenId).padStart(4, '0')}` : '—';
-  const joinedAt  = profile?.joinedAt
+  const isMember  = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
+  const memberId  = isMember && profile?.userId ? `#${profile.userId}` : '—';
+  const seatNum   = isMember && profile?.position ? `#${profile.position}` : 'Unclaimed';
+  const nftId     = isMember && profile?.nftTokenId ? `#${String(profile.nftTokenId).padStart(4, '0')}` : 'Unminted';
+  const joinedAt  = isMember && profile?.joinedAt
     ? new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
 
   const rows = [
     { label: 'Member ID',        value: memberId },
     { label: 'Connected Wallet', value: shortAddr, copyable: true },
-    { label: 'Voting Power',     value: '1.0%  (Genesis Tier)' },
+    { label: 'Voting Power',     value: isMember ? '1.0% (Genesis Tier)' : '0.0% (No Active Seat)' },
     { label: 'Member Since',     value: joinedAt },
   ];
 
@@ -73,15 +74,21 @@ export const ProfileDaoDetails: React.FC<ProfileDaoDetailsProps> = ({ profile })
           {/* Council Seat — link */}
           <div className="py-3 flex items-center justify-between">
             <span className="text-[#64748B] font-medium text-xs">Council Seat</span>
-            <Link href="/dao/seats" className="font-bold text-[#155EEF] hover:underline flex items-center gap-1 text-xs">
-              <span>Seat {seatNum}</span><ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {isMember ? (
+              <Link href="/dao/seats" className="font-bold text-[#155EEF] hover:underline flex items-center gap-1 text-xs">
+                <span>Seat {seatNum}</span><ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <Link href="/dao/seats" className="font-bold text-[#155EEF] hover:underline flex items-center gap-1 text-xs">
+                <span>Unclaimed → Claim</span><ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
 
           {/* Soulbound NFT */}
           <div className="py-3 flex items-center justify-between">
             <span className="text-[#64748B] font-medium text-xs">Soulbound NFT</span>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EEF2FE] text-[#155EEF] font-bold text-xs font-mono">
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-xs font-mono ${isMember ? 'bg-[#EEF2FE] text-[#155EEF]' : 'bg-slate-100 text-slate-500'}`}>
               <Lock className="w-3 h-3" /><span>{nftId}</span>
             </div>
           </div>
@@ -121,7 +128,7 @@ export const ProfileDaoDetails: React.FC<ProfileDaoDetailsProps> = ({ profile })
             { label: 'Member ID',  value: memberId,  shade: true },
             { label: 'Seat',       value: seatNum,   shade: false },
             { label: 'Wallet',     value: shortAddr, shade: true, mono: true },
-            { label: 'Voting',     value: '1.0% (1 Vote)', shade: false },
+            { label: 'Voting',     value: isMember ? '1.0% (1 Vote)' : '0.0% (No Seat)', shade: false },
             { label: 'Joined',     value: joinedAt,  shade: true },
             { label: 'SBT',        value: nftId,     shade: false, icon: true },
           ].map(({ label, value, shade, mono, icon }) => (

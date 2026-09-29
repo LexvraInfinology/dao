@@ -88,8 +88,13 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
         <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-semibold">{error}</div>
       )}
 
+      <div className="flex items-center gap-1.5 text-xs text-[#059669] font-medium font-jakarta bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-xl">
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <span>All withdrawals are made directly in wallet.</span>
+      </div>
+
       <button onClick={handleWithdraw} disabled={balance === 0 || status !== 'idle'}
-        className="w-full py-3.5 px-4 rounded-2xl bg-[#155EEF] hover:bg-[#0052E6] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm sm:text-base transition-all shadow-[0_4px_16px_rgba(21,94,239,0.32)] flex items-center justify-center gap-2">
+        className="w-full py-3.5 px-4 rounded-2xl bg-[#155EEF] hover:bg-[#0052E6] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm sm:text-base transition-all shadow-[0_4px_16px_rgba(21,94,239,0.32)] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed">
         {status === 'claiming'
           ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /><span>Processing On-Chain…</span></>
           : status === 'success'

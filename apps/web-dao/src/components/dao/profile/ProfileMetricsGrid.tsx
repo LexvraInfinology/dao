@@ -13,13 +13,14 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
   const bttPrice       = profile?.bttPriceUsd    ?? 0;
   const totalEarnedBtt = bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0;
 
-  const capProgressPct  = profile?.capProgressPct  ?? 0;
-  const earningsCapBtt  = profile?.earningsCapBtt  ?? 0;
-  const entryAmountBtt  = profile?.entryAmountBtt  ?? 0;
-  const remainingCapUsd = Math.max(0, (earningsCapBtt - (profile?.pushedAmountBtt ?? 0)) * bttPrice);
+  const isMember = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
+  const capProgressPct  = isMember ? (profile?.capProgressPct  ?? 0) : 0;
+  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt  ?? 1500) : 0;
+  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt  ?? 300) : 0;
+  const remainingCapUsd = isMember ? Math.max(0, (earningsCapBtt - (profile?.pushedAmountBtt ?? 0)) * bttPrice) : 0;
 
-  const status   = profile?.status ?? 'active';
-  const isActive = status === 'active';
+  const status   = isMember ? (profile?.status ?? 'active') : 'unclaimed';
+  const isActive = isMember && status === 'active';
 
   return (
     <>
@@ -29,13 +30,13 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
         <div className="bg-white border border-[#E2ECF9] rounded-2xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(15,23,42,0.02)] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold font-jakarta text-[#64748B] uppercase tracking-wider">VOTING POWER</span>
-            <div className="w-7 h-7 rounded-lg bg-[#EEF2FE] text-[#4F46E5] flex items-center justify-center shrink-0">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isMember ? 'bg-[#EEF2FE] text-[#4F46E5]' : 'bg-slate-100 text-slate-400'}`}>
               <Vote className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-2xl font-black font-jakarta text-[#071A4A] tracking-tight">1.0%</div>
+          <div className="text-2xl font-black font-jakarta text-[#071A4A] tracking-tight">{isMember ? '1.0%' : '0.0%'}</div>
           <div className="flex items-center gap-1 text-xs text-[#64748B] font-jakarta pt-0.5">
-            <Info className="w-3.5 h-3.5 text-[#94A3B8]" /><span>1 Seat = 1 Vote</span>
+            <Info className="w-3.5 h-3.5 text-[#94A3B8]" /><span>{isMember ? '1 Seat = 1 Vote' : 'Council Seat Required'}</span>
           </div>
         </div>
 
@@ -90,7 +91,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             <span className="capitalize">{status}</span>
           </div>
           <div className={`text-xs font-semibold font-jakarta pt-0.5 ${isActive ? 'text-[#059669]' : 'text-slate-400'}`}>
-            {isActive ? 'In Good Standing' : status}
+            {isActive ? 'In Good Standing' : 'No Active Seat'}
           </div>
         </div>
       </div>
@@ -102,7 +103,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             <BarChart3 className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-bold font-jakarta text-[#071A4A]">1.0%</div>
+            <div className="text-sm font-bold font-jakarta text-[#071A4A]">{isMember ? '1.0%' : '0.0%'}</div>
             <div className="text-[10px] text-[#64748B] font-jakarta truncate">Voting Power</div>
           </div>
         </div>

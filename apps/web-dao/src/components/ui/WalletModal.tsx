@@ -1,9 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle2, AlertTriangle, Loader2, ShieldCheck, Download, ExternalLink, Wallet, Smartphone } from 'lucide-react';
+import {
+  X,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  ShieldCheck,
+  Download,
+  ExternalLink,
+  Wallet,
+  Smartphone,
+  LogOut,
+  Copy,
+  Check,
+  ArrowRight,
+} from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { AndroidIcon } from '@/components/ui/AndroidIcon';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -11,11 +26,11 @@ interface WalletModalProps {
   onConnect?: (address: string) => void;
 }
 
-// ─── TrobSafe extension download link (points to the dist bundle in /public) ─
-const TROBSAFE_DOWNLOAD_URL = '/trobsafe/install';
-const TROBSAFE_LEARN_URL    = 'https://trobsafe.io';
+// ─── TrobSafe extension download link ─────────────────────────────────────────
+const TROBSAFE_DOWNLOAD_URL = 'https://trobium.com/download/';
+const TROBSAFE_APK_URL      = '/downloads/trobsafe.apk';
 
-type ModalStep = 'detect' | 'connect' | 'signing' | 'success' | 'error';
+type ModalStep = 'detect' | 'connect' | 'signing' | 'success' | 'connected_account' | 'error';
 
 export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect }) => {
   const wallet = useWallet();
@@ -25,17 +40,18 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
 
   const [customAddress, setCustomAddress] = useState('');
   const [showDirectInput, setShowDirectInput] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // ── Sync modal step with wallet + auth state ───────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
 
-    if (wallet.status === 'detecting') {
+    if (wallet.isConnected) {
+      setStep('connected_account');
+    } else if (wallet.status === 'detecting') {
       setStep('detect');
     } else if (wallet.status === 'not_installed') {
       setStep('detect');
-    } else if (wallet.status === 'connected') {
-      setStep('success');
     } else if (wallet.status === 'connecting') {
       setStep('connect');
     } else if (wallet.status === 'error') {
@@ -45,9 +61,9 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
       // disconnected
       setStep(wallet.isInstalled ? 'connect' : 'detect');
     }
-  }, [isOpen, wallet.status, auth.isAuthenticated, wallet.isInstalled, wallet.error]);
+  }, [isOpen, wallet.isConnected, wallet.status, wallet.isInstalled, wallet.error]);
 
-  // Auto-close on success after short delay
+  // Auto-close on new connect success after short delay
   useEffect(() => {
     if (step === 'success') {
       const addrStr = wallet.hexAddress || wallet.base58Address || wallet.address?.hex || wallet.address?.base58 || '';
@@ -58,6 +74,45 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
   }, [step, onClose, onConnect, wallet.hexAddress, wallet.base58Address, wallet.address]);
 
   if (!isOpen) return null;
+
+  const activeAddr =
+    wallet.base58Address ||
+    wallet.hexAddress ||
+    wallet.address?.base58 ||
+    wallet.address?.hex ||
+    auth.user?.address ||
+    '';
+
+  const shortAddr = activeAddr.length > 10
+    ? `${activeAddr.slice(0, 6)}…${activeAddr.slice(-4)}`
+    : activeAddr;
+
+  const handleCopy = async () => {
+    if (!activeAddr) return;
+    try {
+      await navigator.clipboard.writeText(activeAddr);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleDisconnect = () => {
+    wallet.disconnect();
+    auth.signOut();
+    try {
+      localStorage.removeItem('trobsafe_address');
+      localStorage.removeItem('equora_auth_address');
+      localStorage.removeItem('equora_jwt');
+      localStorage.removeItem('equora_dao_preview');
+      localStorage.removeItem('equora_dev_mode');
+    } catch {
+      /* ignore */
+    }
+    setStep(wallet.isInstalled ? 'connect' : 'detect');
+    onClose();
+  };
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
@@ -135,6 +190,67 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
           </div>
         )}
 
+        {/* ── Step: connected_account ───────────────────────────────────── */}
+        {step === 'connected_account' && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    Connected Wallet
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">Trobium L1</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] text-slate-400">Active Address</div>
+                  <div className="text-xs font-mono font-bold text-white truncate max-w-[240px]">
+                    {activeAddr}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors shrink-0"
+                  title="Copy address"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="text-[11px] text-slate-400">
+                Connected via TrobSafe extension & registered in Equora Genesis DAO.
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  window.location.href = '/dao';
+                }}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] transition-all shadow-[0_4px_14px_rgba(21,94,239,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Enter DAO Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-950/70 border border-rose-800/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out & Disconnect Wallet</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Step: not installed / detect fallback ────────────────────── */}
         {step === 'detect' && wallet.status !== 'detecting' && (
           <div className="space-y-4">
@@ -145,34 +261,27 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
               <div>
                 <p className="text-sm font-bold text-white font-inter">TrobSafe Wallet Required</p>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  TrobSafe is required to sign transactions and verify Genesis Council membership.
+                  TrobSafe extension or Android APK is required to sign transactions and verify Genesis Council membership.
                 </p>
               </div>
 
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <a
                   href="/downloads/trobsafe.apk"
                   download="trobsafe.apk"
-                  className="py-2.5 px-2.5 rounded-xl bg-[#155EEF] hover:bg-[#004EEB] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(21,94,239,0.3)]"
+                  className="py-2.5 px-2.5 rounded-xl bg-[#155EEF] hover:bg-[#004EEB] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(21,94,239,0.3)] cursor-pointer"
                 >
-                  <img src="/icons/android.svg" alt="Android" className="w-4 h-4 object-contain" />
-                  <span>Android APK</span>
+                  <AndroidIcon className="w-4 h-4 fill-white" />
+                  <span>Download APK</span>
                 </a>
                 <a
-                  href="https://apps.apple.com/app/trobsafe/id0000000000"
+                  href="https://trobium.com/download/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2.5 px-2.5 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
-                >
-                  <img src="/icons/apple.svg" alt="iOS" className="w-3.5 h-3.5 object-contain fill-white" />
-                  <span>App Store</span>
-                </a>
-                <a
-                  href={TROBSAFE_DOWNLOAD_URL}
-                  className="py-2.5 px-2.5 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                  className="py-2.5 px-2.5 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
-                  <span>All Options</span>
+                  <span>Get Extension</span>
                 </a>
               </div>
 

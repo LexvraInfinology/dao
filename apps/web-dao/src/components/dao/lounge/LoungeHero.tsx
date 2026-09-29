@@ -64,7 +64,7 @@ export const LoungeHero: React.FC<LoungeHeroProps> = ({ loungeData, loading }) =
             <div className="absolute w-28 h-28 lg:w-32 lg:h-32 xl:w-40 xl:h-40 rounded-full border border-blue-200/50 -rotate-45 pointer-events-none" />
             <div className="absolute w-22 h-22 lg:w-26 lg:h-26 xl:w-32 xl:h-32 rounded-full border border-blue-300/40 rotate-12 pointer-events-none" />
             <div className="relative w-20 h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 flex items-center justify-center animate-float">
-              <img src="/dao/Central 3D Vector Polygonal Floating Ethereum-Style Shape.png" alt="3D Ethereum Jewel"
+              <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
                 className="w-full h-full object-contain drop-shadow-[0_12px_24px_rgba(21,94,239,0.35)]" />
             </div>
           </div>
@@ -86,7 +86,7 @@ export const LoungeHero: React.FC<LoungeHeroProps> = ({ loungeData, loading }) =
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 animate-float">
-            <img src="/dao/Central 3D Vector Polygonal Floating Ethereum-Style Shape.png" alt="3D Jewel"
+            <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
           </div>
         </div>

@@ -17,17 +17,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/downloads/trobsafe.apk', req.url));
   }
 
-  const fallbackUrl = process.env.TROBSAFE_APK_URL || process.env.NEXT_PUBLIC_TROBSAFE_APK_URL;
-  if (fallbackUrl) {
-    return NextResponse.redirect(fallbackUrl, { status: 302 });
-  }
-
-  return NextResponse.json(
-    {
-      error: 'TrobSafe APK package not found.',
-      instruction: 'Please place trobsafe.apk into apps/web-dao/public/downloads/.',
-    },
-    { status: 404 }
-  );
+  const fallbackUrl =
+    process.env.TROBSAFE_APK_URL ||
+    process.env.NEXT_PUBLIC_TROBSAFE_APK_URL ||
+    'https://trobium.com/download/';
+  return NextResponse.redirect(fallbackUrl, { status: 302 });
 }
 

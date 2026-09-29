@@ -231,6 +231,7 @@ export const LandingSimulator: React.FC = () => {
           box-sizing: border-box;
           color: var(--ink);
           font-family: Inter, system-ui, sans-serif;
+          transition: max-width .3s ease;
         }
         #simulator .top {
           display: flex;
@@ -620,80 +621,226 @@ export const LandingSimulator: React.FC = () => {
             font-size: 11px;
           }
         }
+
+        /* Responsive Layout: Single column on mobile & tablet (< 1024px), Divided into Two Sections on Large Screens & Laptops (>= 1024px) */
+        #simulator .layout-split {
+          display: block;
+        }
+        #simulator .sec-simulator {
+          width: 100%;
+          min-width: 0;
+        }
+        #simulator .sec-inflow {
+          width: 100%;
+          min-width: 0;
+        }
+
+        @media(min-width: 1024px) {
+          #simulator .card {
+            max-width: 1240px;
+            padding: 44px 48px;
+          }
+          #simulator .layout-split {
+            display: grid;
+            grid-template-columns: 1.12fr 0.88fr;
+            gap: 40px;
+            align-items: center;
+          }
+          #simulator .sec-inflow {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            border-left: 1px solid var(--line);
+            padding-left: 40px;
+          }
+          #simulator .sec-inflow .info {
+            margin-top: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+          }
+          #simulator .sec-inflow .ic {
+            padding: 22px 18px;
+            border-radius: 20px;
+          }
+          #simulator .sec-inflow .ico {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+          }
+          #simulator .sec-inflow .ic h4 {
+            font-size: 11px;
+            margin-bottom: 4px;
+          }
+          #simulator .sec-inflow .amt {
+            font-size: 34px;
+          }
+          #simulator .sec-inflow .amt small {
+            font-size: 15px;
+            margin-left: 4px;
+          }
+          #simulator .sec-inflow .ic p {
+            font-size: 12.5px;
+            line-height: 1.42;
+            margin-top: 8px;
+          }
+          #simulator .sec-inflow .x5 {
+            margin-top: 12px;
+            gap: 3px;
+          }
+          #simulator .sec-inflow .x5 i {
+            height: 6px;
+          }
+          #simulator .sec-inflow .note {
+            margin-top: 24px;
+            font-size: 13px;
+          }
+          #simulator .sec-inflow .cta {
+            margin-top: 20px;
+            padding: 16px 32px;
+            font-size: 15px;
+          }
+        }
+
+        @media(min-width: 1280px) {
+          #simulator .card {
+            max-width: 1300px;
+            padding: 48px 54px;
+          }
+          #simulator .layout-split {
+            gap: 48px;
+          }
+          #simulator .sec-inflow {
+            padding-left: 48px;
+          }
+          #simulator .sec-inflow .info {
+            gap: 16px;
+          }
+          #simulator .sec-inflow .ic {
+            padding: 26px 22px;
+            border-radius: 22px;
+          }
+          #simulator .sec-inflow .ico {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+          }
+          #simulator .sec-inflow .ic h4 {
+            font-size: 12px;
+            margin-bottom: 6px;
+          }
+          #simulator .sec-inflow .amt {
+            font-size: 40px;
+          }
+          #simulator .sec-inflow .amt small {
+            font-size: 18px;
+            margin-left: 6px;
+          }
+          #simulator .sec-inflow .ic p {
+            font-size: 13.5px;
+          }
+          #simulator .sec-inflow .x5 {
+            margin-top: 14px;
+            gap: 4px;
+          }
+          #simulator .sec-inflow .x5 i {
+            height: 7px;
+          }
+          #simulator .sec-inflow .note {
+            margin-top: 28px;
+            font-size: 14px;
+          }
+          #simulator .sec-inflow .cta {
+            margin-top: 22px;
+            padding: 18px 38px;
+            font-size: 16px;
+          }
+        }
       `}</style>
 
       <section className="card" id="sec" ref={secRef}>
-        <div className="top">
-          <span><i></i>Seat benefit example</span>
-          <span className="r"><i></i>Your seat: #<b id="n2" ref={n2Ref}>100</b></span>
-        </div>
-
-        <h2>Earlier seat. <em>Bigger return.</em></h2>
-        <p className="sub">Every seat is <b>$300</b>. Your seat number decides how much comes back to you.</p>
-
-        <div className="hero">
-          <div className="seat">Your seat<strong>#<span id="n" ref={nRef}>1</span></strong></div>
-          <div className="ret">Back to you<strong id="v" ref={vRef}>$300</strong></div>
-        </div>
-
-        <div className="chart" id="chart" ref={chartRef} aria-hidden="true" />
-        <div className="axis"><span>Seat 1</span><span>Seat 100</span></div>
-        <input type="range" id="r" ref={rangeRef} min="1" max="100" defaultValue="100" aria-label="Choose seat number" />
-
-        <div className="split">
-          <div id="pe" ref={peRef} />
-          <div id="py" ref={pyRef} />
-        </div>
-        <div className="legend">
-          <span><i style={{ background: 'var(--green)' }} />To earlier seats</span>
-          <span><i style={{ background: 'var(--blue)' }} />Back to you</span>
-        </div>
-
-        <div className="math" id="m" ref={mRef} />
-        <div className="chips" id="chips" ref={chipsRef} />
-
-        <div className="info">
-          <div className="ic">
-            <div className="ico">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
+        <div className="layout-split">
+          {/* Section 1: Interactive Seat Benefit Simulator (Screenshot 1) */}
+          <div className="sec-simulator">
+            <div className="top">
+              <span><i></i>Seat benefit example</span>
+              <span className="r"><i></i>Your seat: #<b id="n2" ref={n2Ref}>100</b></span>
             </div>
-            <h4>Deposit contribution</h4>
-            <div className="amt">$300<small>Trob</small></div>
-            <p>Uniform protocol entry contribution across all Genesis seats.</p>
+
+            <h2>Earlier seat. <em>Bigger return.</em></h2>
+            <p className="sub">Every seat is <b>$300</b>. Your seat number decides how much comes back to you.</p>
+
+            <div className="hero">
+              <div className="seat">Your seat<strong>#<span id="n" ref={nRef}>1</span></strong></div>
+              <div className="ret">Back to you<strong id="v" ref={vRef}>$300</strong></div>
+            </div>
+
+            <div className="chart" id="chart" ref={chartRef} aria-hidden="true" />
+            <div className="axis"><span>Seat 1</span><span>Seat 100</span></div>
+            <input type="range" id="r" ref={rangeRef} min="1" max="100" defaultValue="100" aria-label="Choose seat number" />
+
+            <div className="split">
+              <div id="pe" ref={peRef} />
+              <div id="py" ref={pyRef} />
+            </div>
+            <div className="legend">
+              <span><i style={{ background: 'var(--green)' }} />To earlier seats</span>
+              <span><i style={{ background: 'var(--blue)' }} />Back to you</span>
+            </div>
+
+            <div className="math" id="m" ref={mRef} />
+            <div className="chips" id="chips" ref={chipsRef} />
           </div>
 
-          <div className="ic g">
-            <div className="ico">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 7l-8.5 8.5-5-5L2 17" />
-                <path d="M16 7h6v6" />
+          {/* Section 2: Deposit Contribution, Max Inflow Cap & CTA (Screenshot 2) */}
+          <div className="sec-inflow">
+            <div className="info">
+              <div className="ic">
+                <div className="ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </svg>
+                </div>
+                <h4>Deposit contribution</h4>
+                <div className="amt">$300<small>Trob</small></div>
+                <p>Uniform protocol entry contribution across all Genesis seats.</p>
+              </div>
+
+              <div className="ic g">
+                <div className="ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 7l-8.5 8.5-5-5L2 17" />
+                    <path d="M16 7h6v6" />
+                  </svg>
+                </div>
+                <h4>Max inflow (cap)</h4>
+                <div className="amt">$<span id="cap" ref={capRef}>1,500</span><small>Trob</small></div>
+                <div className="x5" id="x5" ref={x5Ref}>
+                  <i></i><i></i><i></i><i></i><i></i>
+                </div>
+                <p>500% baseline earnings cap on initial deposit with continuous dividend distributions.</p>
+              </div>
+            </div>
+
+            <div className="note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
               </svg>
+              Council seats are allocated sequentially by the smart contract upon deposit.
             </div>
-            <h4>Max inflow (cap)</h4>
-            <div className="amt">$<span id="cap" ref={capRef}>1,500</span><small>Trob</small></div>
-            <div className="x5" id="x5" ref={x5Ref}>
-              <i></i><i></i><i></i><i></i><i></i>
-            </div>
-            <p>500% baseline earnings cap on initial deposit with continuous dividend distributions.</p>
+
+            <Link href="/dao" className="cta">
+              Join Genesis Council ($300 TROB)
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
           </div>
         </div>
-
-        <div className="note">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 16v-4M12 8h.01" />
-          </svg>
-          Council seats are allocated sequentially by the smart contract upon deposit.
-        </div>
-
-        <Link href="/dao" className="cta">
-          Join Genesis Council ($300 TROB)
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
-        </Link>
       </section>
     </section>
   );

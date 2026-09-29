@@ -46,7 +46,17 @@ export function buildLiveCouncilSeats(
     memberMap.set(m.position, m);
   }
 
-  const nextAvailableSeat = members.length + 1;
+  // Sequential scan from Seat 1 to 100: identify lowest vacant/blank seat
+  let lowestVacantSeat: number | null = null;
+  for (let s = 1; s <= 100; s++) {
+    const m = memberMap.get(s);
+    if (m && m.status === 'blank') {
+      lowestVacantSeat = s;
+      break;
+    }
+  }
+
+  const nextAvailableSeat = lowestVacantSeat !== null ? null : (members.length < 100 ? members.length + 1 : null);
   const canonicalMyAddress = activeAddress?.toLowerCase() ?? '';
 
   return Array.from({ length: 100 }, (_, index) => {
@@ -69,16 +79,17 @@ export function buildLiveCouncilSeats(
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
       const isDefaulted = liveMember.status === 'blank';
+      const isPriorityTakeover = seatNumber === lowestVacantSeat;
 
       return {
         seatNumber,
         status: isDefaulted ? 'defaulted' : isMine ? 'mine' : 'claimed',
-        ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
+        ownerAddress: isDefaulted ? 'Defaulted Vacancy (Open for Takeover)' : isMine ? `${shortAddr} (You)` : shortAddr,
         lifetimeEarnings: `$${earningsUsd.toFixed(2)} TROB`,
         capProgress: capPct,
         votingPower: '1.0%',
         statusText: isDefaulted
-          ? 'Defaulted Vacancy • Open for Takeover'
+          ? (isPriorityTakeover ? 'Defaulted Vacancy • Priority Queue Takeover' : 'Defaulted Vacancy • Open for Takeover')
           : liveMember.status === 'active'
           ? 'Active & In Good Standing'
           : liveMember.status ?? 'Active Member',

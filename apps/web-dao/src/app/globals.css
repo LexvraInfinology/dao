@@ -1,10 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --font-poppins: 'Poppins', sans-serif;
   --font-sora: 'Sora', sans-serif;
   --font-inter: 'Inter', sans-serif;
   --font-jakarta: 'Plus Jakarta Sans', sans-serif;
@@ -21,6 +22,18 @@ body {
   color: #0F1B35;
   font-family: var(--font-inter);
   overflow-x: hidden;
+}
+
+/* Landing Page Poppins Typography Scope (Strictly isolated to landing page) */
+.landing-page-root {
+  --font-inter: var(--font-poppins), 'Poppins', sans-serif;
+  --font-sora: var(--font-poppins), 'Poppins', sans-serif;
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+.landing-page-root .font-inter,
+.landing-page-root .font-sora {
+  font-family: var(--font-poppins), 'Poppins', sans-serif !important;
 }
 
 /* 3D Flip Card Styles */

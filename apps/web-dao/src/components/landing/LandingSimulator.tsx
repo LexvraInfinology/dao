@@ -230,7 +230,7 @@ export const LandingSimulator: React.FC = () => {
           box-shadow: 0 30px 80px -30px rgba(10,17,40,.18);
           box-sizing: border-box;
           color: var(--ink);
-          font-family: Inter, system-ui, sans-serif;
+          font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
           transition: max-width .3s ease;
         }
         #simulator .top {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Poppins } from 'next/font/google';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingMovement } from '@/components/landing/LandingMovement';
@@ -10,9 +11,16 @@ import { LandingTrobSafeDownload } from '@/components/landing/LandingTrobSafeDow
 import { LandingFaq } from '@/components/landing/LandingFaq';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
+
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#F0F4F8] text-[#0B132B] selection:bg-[#155EEF] selection:text-white font-inter overflow-x-clip">
+    <main className={`${poppins.variable} font-poppins landing-page-root min-h-screen bg-[#F0F4F8] text-[#0B132B] selection:bg-[#155EEF] selection:text-white overflow-x-clip`}>
       {/* 1. Header / Navbar */}
       <LandingNavbar />
 

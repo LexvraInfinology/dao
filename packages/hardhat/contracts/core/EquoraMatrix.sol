@@ -474,8 +474,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             userBalance[user] += amount;
             totalEarned[user] += amount;
         } else {
-            // Ineligible / Did not meet referral criteria -> reroutes to Protocol Pools!
-            _forwardToVault(fallbackOwner, amount);
+            // Ineligible / Did not meet referral criteria -> fallback to matrixOwner (never root)
+            userBalance[fallbackOwner] += amount;
+            totalEarned[fallbackOwner] += amount;
         }
     }
 

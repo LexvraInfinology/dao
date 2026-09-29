@@ -14,6 +14,14 @@ export async function handleDAOPositionJoined(event: {
   const position = Number(event.position);
   const nftTokenId = Number(event.tokenId);
 
+  // If this seat was previously occupied by another address (vacant takeover), clear the prior record
+  const priorOccupant = await prisma.daoMember.findFirst({
+    where: { position, address: { not: canonicalUser } },
+  });
+  if (priorOccupant) {
+    await prisma.daoMember.delete({ where: { id: priorOccupant.id } });
+  }
+
   await prisma.$transaction([
     prisma.user.upsert({
       where: { address: canonicalUser },
@@ -291,7 +299,7 @@ export async function handleEarningsCapHit(event: {
         eventType: "cap_hit",
         userAddress: canonicalMember,
         amountBtt: earnings,
-        reason: `3X Cap Reached. 48h Retopup Deadline: ${deadlineDate.toISOString()}`,
+        reason: `5X Cap Reached. 48h Retopup Deadline: ${deadlineDate.toISOString()}`,
         txHash: `${event.txHash}-cap-${canonicalMember}`,
         blockNumber: event.blockNumber,
         timestamp: new Date(),
@@ -299,7 +307,7 @@ export async function handleEarningsCapHit(event: {
     }),
   ]);
 
-  console.log(`🎯 [Indexer] Member ${canonicalMember} hit 3X Cap (${earnings} BTT)! 48h Window Open.`);
+  console.log(`🎯 [Indexer] Member ${canonicalMember} hit 5X Cap (${earnings} TROB)! 48h Window Open.`);
 }
 
 export async function handleSlotBlanked(event: {

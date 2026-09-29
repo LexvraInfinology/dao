@@ -54,6 +54,8 @@ export default function CouncilSeatsPage() {
       const foundMine = seats.find((s) => s.seatNumber === mySeatNumber);
       if (foundMine) return foundMine;
     }
+    const defaulted = seats.find((s) => s.status === 'defaulted');
+    if (defaulted) return defaulted;
     const next = seats.find((s) => s.status === 'next');
     return next ?? seats[0];
   }, [seats, mySeatNumber]);

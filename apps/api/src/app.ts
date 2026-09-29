@@ -375,26 +375,97 @@ export function createApp(): Express {
         return;
       }
 
-      // 4. Capacity verification (100 Sovereign Seats)
-      const memberCount = await prisma.daoMember.count();
-      if (memberCount >= 100) {
-        res.status(400).json({ success: false, error: "Genesis DAO Council is full (100/100 seats claimed)." });
+      // 4. Capacity & Sequential Queue Verification (Seats 1 to 100)
+      // Check if on-chain contract already assigned a specific position
+      let onchainAssignedPosition = 0;
+      if (daoContractAddress && /^0x[0-9a-fA-F]{40}$/.test(canonicalAddress)) {
+        try {
+          const client = createPublicClient({ transport: http(config.blockchain.rpcUrl) });
+          const pos = await client.readContract({
+            address: daoContractAddress,
+            abi: parseAbi(["function memberPosition(address) external view returns (uint256)"]),
+            functionName: "memberPosition",
+            args: [canonicalAddress as `0x${string}`],
+          });
+          if (pos && Number(pos) > 0) {
+            onchainAssignedPosition = Number(pos);
+          }
+        } catch (_) {}
+      }
+
+      // Fetch all existing council seats in order from 1 to 100
+      const existingMembers = await prisma.daoMember.findMany({
+        orderBy: { position: "asc" },
+      });
+      const memberMap = new Map<number, typeof existingMembers[0]>();
+      for (const m of existingMembers) {
+        memberMap.set(m.position, m);
+      }
+
+      // 1 to 100 Sequential scan: find lowest vacant/defaulted seat (FIFO queue takeover)
+      let lowestDefaultedSeat: number | null = null;
+      for (let s = 1; s <= 100; s++) {
+        const m = memberMap.get(s);
+        if (m && (m.status === "blank" || m.status === "defaulted")) {
+          lowestDefaultedSeat = s;
+          break;
+        }
+      }
+
+      // Determine assigned position
+      let assignedPosition = onchainAssignedPosition;
+      if (!assignedPosition) {
+        if (lowestDefaultedSeat !== null) {
+          // Takeover lowest defaulted vacant seat (scanned 1 to 100)
+          assignedPosition = lowestDefaultedSeat;
+        } else {
+          // Scan for lowest unminted seat from 1 to 100
+          for (let s = 1; s <= 100; s++) {
+            if (!memberMap.has(s)) {
+              assignedPosition = s;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!assignedPosition || assignedPosition > 100) {
+        res.status(400).json({
+          success: false,
+          error: "Genesis DAO Council is full (100/100 seats active in good standing).",
+        });
         return;
       }
-      const nextPosition = memberCount + 1;
 
-      // 5. Calculate 300 / N Cashback & Dividend Distribution
-      // In EquoraDAO.sol: ENTRY_FEE = 300 ether; activeCount = nextPosition; amountPerRecipient = ENTRY_FEE / activeCount
+      const isTakeover = memberMap.has(assignedPosition) && (memberMap.get(assignedPosition)!.status === "blank" || memberMap.get(assignedPosition)!.status === "defaulted");
+
+      // 5. Calculate Dynamic 300 / N Cashback & Dividend Distribution
       const ENTRY_FEE = 300;
-      const cashbackPerMember = Number((ENTRY_FEE / nextPosition).toFixed(4));
       const memberTxHash = txHash;
       const now = new Date();
 
-      // Fetch all previous active members to receive their dividend push
-      const previousActiveMembers = await prisma.daoMember.findMany({
-        where: { position: { lt: nextPosition }, status: "active" },
-        select: { id: true, address: true, position: true, pushedAmountBtt: true },
-      });
+      // Active members receiving rewards
+      let activeRecipients: typeof existingMembers = [];
+      let cashbackPerMember = 0;
+
+      if (isTakeover) {
+        // In EquoraDAO.sol: _distributeRetopup distributes ENTRY_FEE to all OTHER active members
+        activeRecipients = existingMembers.filter((m) => m.position !== assignedPosition && m.status === "active");
+        cashbackPerMember = activeRecipients.length > 0 ? Number((ENTRY_FEE / activeRecipients.length).toFixed(4)) : 0;
+      } else {
+        // In EquoraDAO.sol: _distributeEntryFee distributes ENTRY_FEE to all active members from 1 to assignedPosition (including new joiner)
+        activeRecipients = existingMembers.filter((m) => m.position < assignedPosition && m.status === "active");
+        const activeCount = activeRecipients.length + 1; // plus the new joiner
+        cashbackPerMember = Number((ENTRY_FEE / activeCount).toFixed(4));
+      }
+
+      // Check if another member held this position (takeover)
+      const priorOccupant = memberMap.get(assignedPosition);
+      if (priorOccupant && priorOccupant.address !== user.address) {
+        await prisma.daoMember.delete({ where: { id: priorOccupant.id } });
+      }
+
+      const instantCashbackForNewMember = isTakeover ? 0 : cashbackPerMember;
 
       // 6. Execute atomic database transaction
       const [newMember] = await prisma.$transaction([
@@ -402,10 +473,10 @@ export function createApp(): Express {
         prisma.daoMember.create({
           data: {
             address: user.address,
-            position: nextPosition,
-            nftTokenId: nextPosition,
+            position: assignedPosition,
+            nftTokenId: assignedPosition,
             entryAmountBtt: ENTRY_FEE,
-            pushedAmountBtt: cashbackPerMember, // Instant Cashback!
+            pushedAmountBtt: instantCashbackForNewMember, // Instant Cashback!
             status: "active",
             joinedAt: now,
             txHash: memberTxHash,
@@ -413,44 +484,54 @@ export function createApp(): Express {
           },
         }),
 
-        // B. Credit dividend share to all previous active members
-        prisma.daoMember.updateMany({
-          where: { position: { lt: nextPosition }, status: "active" },
-          data: {
-            pushedAmountBtt: {
-              increment: cashbackPerMember,
-            },
-          },
-        }),
+        // B. Credit dividend share to active recipients
+        ...(activeRecipients.length > 0
+          ? [
+              prisma.daoMember.updateMany({
+                where: { id: { in: activeRecipients.map((r) => r.id) } },
+                data: {
+                  pushedAmountBtt: {
+                    increment: cashbackPerMember,
+                  },
+                },
+              }),
+            ]
+          : []),
 
         // C. Event: Joined
         prisma.daoEvent.create({
           data: {
             eventType: "joined",
             userAddress: user.address,
-            incomingPosition: nextPosition,
-            recipientCount: nextPosition,
+            incomingPosition: assignedPosition,
+            recipientCount: isTakeover ? activeRecipients.length : assignedPosition,
             amountBtt: ENTRY_FEE,
-            reason: `Council Seat #${nextPosition} Activated`,
+            reason: isTakeover
+              ? `Council Seat #${assignedPosition} Vacancy Taken Over`
+              : `Council Seat #${assignedPosition} Activated`,
             txHash: memberTxHash,
             blockNumber: verifiedBlockNumber,
             timestamp: now,
           },
         }),
 
-        // D. Event: Instant cashback for new member
-        prisma.daoEvent.create({
-          data: {
-            eventType: "pushed",
-            userAddress: user.address,
-            incomingPosition: nextPosition,
-            amountBtt: cashbackPerMember,
-            reason: `Instant Cashback (Seat #${nextPosition})`,
-            txHash: `${memberTxHash}-cashback`,
-            blockNumber: verifiedBlockNumber,
-            timestamp: now,
-          },
-        }),
+        // D. Event: Instant cashback for new member (if fresh join)
+        ...(instantCashbackForNewMember > 0
+          ? [
+              prisma.daoEvent.create({
+                data: {
+                  eventType: "pushed",
+                  userAddress: user.address,
+                  incomingPosition: assignedPosition,
+                  amountBtt: instantCashbackForNewMember,
+                  reason: `Instant Cashback (Seat #${assignedPosition})`,
+                  txHash: `${memberTxHash}-cashback`,
+                  blockNumber: verifiedBlockNumber,
+                  timestamp: now,
+                },
+              }),
+            ]
+          : []),
 
         // E. Update DaoInstance totalDistributedBtt
         prisma.daoInstance.upsert({
@@ -458,8 +539,8 @@ export function createApp(): Express {
           create: {
             id: 1,
             capacity: 100,
-            isClosed: nextPosition >= 100,
-            closedAt: nextPosition >= 100 ? now : null,
+            isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
+            closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
             totalDistributedBtt: ENTRY_FEE,
             distributionMode: "push_with_pull_fallback",
           },
@@ -467,22 +548,22 @@ export function createApp(): Express {
             totalDistributedBtt: {
               increment: ENTRY_FEE,
             },
-            isClosed: nextPosition >= 100,
-            closedAt: nextPosition >= 100 ? now : null,
+            isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
+            closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
           },
         }),
       ]);
 
-      // Create pushed dividend events for all previous members
-      for (const prev of previousActiveMembers) {
+      // Create pushed dividend events for all rewarded members
+      for (const prev of activeRecipients) {
         try {
           await prisma.daoEvent.create({
             data: {
               eventType: "pushed",
               userAddress: prev.address,
-              incomingPosition: nextPosition,
+              incomingPosition: assignedPosition,
               amountBtt: cashbackPerMember,
-              reason: `Dividend push from incoming Seat #${nextPosition}`,
+              reason: `Dividend push from Seat #${assignedPosition}`,
               txHash: `${memberTxHash}-pushed-${prev.position}`,
               blockNumber: verifiedBlockNumber,
               timestamp: now,
@@ -500,9 +581,9 @@ export function createApp(): Express {
           position: newMember.position,
           address: user.address,
           entryAmountBtt: ENTRY_FEE,
-          instantCashbackBtt: cashbackPerMember,
-          totalPushedBtt: cashbackPerMember,
-          previousMembersRewarded: previousActiveMembers.length,
+          instantCashbackBtt: instantCashbackForNewMember,
+          totalPushedBtt: instantCashbackForNewMember,
+          previousMembersRewarded: activeRecipients.length,
           txHash: newMember.txHash,
           onchainVerified,
         },

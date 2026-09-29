@@ -50,7 +50,7 @@ export function buildLiveCouncilSeats(
   let lowestVacantSeat: number | null = null;
   for (let s = 1; s <= 100; s++) {
     const m = memberMap.get(s);
-    if (m && m.status === 'blank') {
+    if (m && (m.status === 'blank' || m.status === 'defaulted')) {
       lowestVacantSeat = s;
       break;
     }
@@ -78,7 +78,7 @@ export function buildLiveCouncilSeats(
       const shortAddr =
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
-      const isDefaulted = liveMember.status === 'blank';
+      const isDefaulted = liveMember.status === 'blank' || liveMember.status === 'defaulted';
       const isPriorityTakeover = seatNumber === lowestVacantSeat;
 
       return {

@@ -17,14 +17,14 @@ export const LandingTrobSafeDownload: React.FC = () => {
           {/* ── Left Column: Downloads & Actions ── */}
           <div className="space-y-6">
             {/* Chip */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] text-xs font-bold text-[#155EEF] uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] text-[11px] font-medium text-[#155EEF] uppercase tracking-[0.08em]">
               <Smartphone className="w-3.5 h-3.5" />
               <span>Mobile Wallet</span>
             </div>
 
             {/* Headline */}
             <div className="space-y-3">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#071A4A] tracking-tight leading-[1.08] uppercase">
+              <h2 className="text-2xl sm:text-3xl lg:text-[42px] font-semibold text-[#071A4A] tracking-tight leading-tight uppercase">
                 Download <span className="text-[#155EEF]">TrobSAFE</span>
               </h2>
               <p className="text-sm sm:text-base text-[#475467] leading-relaxed max-w-xl">
@@ -44,10 +44,10 @@ export const LandingTrobSafeDownload: React.FC = () => {
                   <AndroidIcon className="w-6 h-6" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
+                  <span className="block text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
                     Download for
                   </span>
-                  <span className="block text-sm font-bold text-[#071A4A] group-hover:text-[#155EEF] transition-colors">
+                  <span className="block text-xs sm:text-sm font-semibold text-[#071A4A] group-hover:text-[#155EEF] transition-colors">
                     Android APK
                   </span>
                 </span>
@@ -66,10 +66,10 @@ export const LandingTrobSafeDownload: React.FC = () => {
                   </svg>
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
+                  <span className="block text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
                     Download on the
                   </span>
-                  <span className="block text-sm font-bold text-[#071A4A]">
+                  <span className="block text-xs sm:text-sm font-semibold text-[#071A4A]">
                     App Store
                   </span>
                 </span>
@@ -86,10 +86,10 @@ export const LandingTrobSafeDownload: React.FC = () => {
                   <img src="/icons/google-play.svg" alt="Google Play" className="w-5 h-5 object-contain" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
+                  <span className="block text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.08em] text-[#64748B]">
                     Get it on
                   </span>
-                  <span className="block text-sm font-bold text-[#071A4A]">
+                  <span className="block text-xs sm:text-sm font-semibold text-[#071A4A]">
                     Google Play
                   </span>
                 </span>
@@ -104,10 +104,10 @@ export const LandingTrobSafeDownload: React.FC = () => {
                   <Download className="w-5 h-5" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#155EEF]">
+                  <span className="block text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.08em] text-[#155EEF]">
                     Web Browser
                   </span>
-                  <span className="block text-sm font-bold text-[#071A4A]">
+                  <span className="block text-xs sm:text-sm font-semibold text-[#071A4A]">
                     Chrome Extension
                   </span>
                 </span>
@@ -119,11 +119,11 @@ export const LandingTrobSafeDownload: React.FC = () => {
               <a
                 href="/downloads/trobsafe.apk"
                 download="trobsafe.apk"
-                className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_24px_rgba(21,94,239,0.35)] hover:shadow-[0_12px_28px_rgba(21,94,239,0.45)] transition-all duration-200 cursor-pointer w-full sm:w-auto text-center"
+                className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl font-semibold uppercase tracking-[0.06em] text-xs sm:text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_8px_24px_rgba(21,94,239,0.35)] hover:shadow-[0_12px_28px_rgba(21,94,239,0.45)] transition-all duration-200 cursor-pointer w-full sm:w-auto text-center"
               >
                 <AndroidIcon className="w-4 h-4 fill-white" />
                 <span>DOWNLOAD APK</span>
-                <span className="font-semibold opacity-90 text-xs">· v1.0.22</span>
+                <span className="font-medium opacity-90 text-xs">· v1.0.22</span>
               </a>
               <p className="text-[11px] text-[#64748B]">
                 Direct Android install (Android package · ~81MB). Enable &ldquo;Install unknown apps&rdquo; if your device asks.
@@ -149,7 +149,7 @@ export const LandingTrobSafeDownload: React.FC = () => {
                 />
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-black text-[#071A4A] tracking-tight uppercase">
+              <h3 className="text-lg sm:text-xl font-semibold text-[#071A4A] tracking-tight uppercase">
                 TrobSAFE
               </h3>
 
@@ -167,11 +167,11 @@ export const LandingTrobSafeDownload: React.FC = () => {
             {/* Steps List */}
             <ol className="relative mt-8 space-y-4 border-t border-slate-200/80 pt-6 text-left">
               <li className="flex items-start gap-3.5">
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-black text-[#071A4A] font-mono">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-semibold text-[#071A4A] font-mono tabular-nums">
                   1
                 </span>
                 <div>
-                  <span className="block text-xs font-bold text-[#071A4A]">Install</span>
+                  <span className="block text-xs font-semibold text-[#071A4A]">Install</span>
                   <span className="block text-[11px] leading-relaxed text-[#64748B] mt-0.5">
                     Download the Android APK or get TrobSAFE from the App Store when available.
                   </span>
@@ -179,11 +179,11 @@ export const LandingTrobSafeDownload: React.FC = () => {
               </li>
 
               <li className="flex items-start gap-3.5">
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-black text-[#071A4A] font-mono">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-semibold text-[#071A4A] font-mono tabular-nums">
                   2
                 </span>
                 <div>
-                  <span className="block text-xs font-bold text-[#071A4A]">Secure your keys</span>
+                  <span className="block text-xs font-semibold text-[#071A4A]">Secure your keys</span>
                   <span className="block text-[11px] leading-relaxed text-[#64748B] mt-0.5">
                     Create or restore a wallet. Your private keys never leave your device.
                   </span>
@@ -191,11 +191,11 @@ export const LandingTrobSafeDownload: React.FC = () => {
               </li>
 
               <li className="flex items-start gap-3.5">
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-black text-[#071A4A] font-mono">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#071A4A]/10 text-xs font-semibold text-[#071A4A] font-mono tabular-nums">
                   3
                 </span>
                 <div>
-                  <span className="block text-xs font-bold text-[#071A4A]">Manage TROB</span>
+                  <span className="block text-xs font-semibold text-[#071A4A]">Manage TROB</span>
                   <span className="block text-[11px] leading-relaxed text-[#64748B] mt-0.5">
                     Send, receive, and track balances with transparent network state.
                   </span>

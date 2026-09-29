@@ -34,17 +34,17 @@ export const LandingTrobChain: React.FC = () => {
         {/* Top Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-10 sm:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
-            <span className="text-[12px] font-semibold tracking-wider text-[#155EEF] font-inter uppercase">
+            <span className="text-[11px] font-medium tracking-[0.08em] text-[#155EEF] uppercase">
               Built on TrobChain
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl lg:text-[48px] font-bold font-inter text-[#0B132B] leading-[1.12] tracking-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-[42px] font-semibold uppercase text-[#0B132B] leading-tight tracking-tight">
             Why We Choose<br />
             <span className="text-[#155EEF]">TrobChain.</span>
           </h2>
 
-          <p className="text-[15px] sm:text-[16px] text-[#475467] leading-relaxed font-inter max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-[#475467] leading-relaxed max-w-2xl mx-auto">
             Institutional-grade throughput, sub-second finality, and zero gas volatility. The ideal foundation for sovereign DAO governance.
           </p>
         </div>
@@ -74,10 +74,10 @@ export const LandingTrobChain: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shadow-xs">
                     {feat.icon}
                   </div>
-                  <h3 className="text-base font-bold font-inter text-[#0B132B]">
+                  <h3 className="text-xs sm:text-sm font-semibold text-[#0B132B]">
                     {feat.title}
                   </h3>
-                  <p className="text-xs sm:text-[13px] text-[#475467] leading-relaxed font-inter">
+                  <p className="text-xs text-[#475467] leading-relaxed">
                     {feat.description}
                   </p>
                 </div>
@@ -87,7 +87,7 @@ export const LandingTrobChain: React.FC = () => {
             {/* Bottom Banner */}
             <div className="p-4 sm:p-5 rounded-2xl bg-[#EFF8FF] border border-[#D1E9FF] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-center sm:text-left">
-                <span className="text-xs font-bold text-[#155EEF] font-inter uppercase tracking-wide">
+                <span className="text-xs font-semibold text-[#155EEF] uppercase tracking-wider">
                   50,000+ TPS Capacity
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
@@ -100,7 +100,7 @@ export const LandingTrobChain: React.FC = () => {
                 href="https://trobiumscan.io"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#155EEF] hover:text-[#004EEB] transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#155EEF] hover:text-[#004EEB] transition-colors"
               >
                 <span>Explore on TrobiumScan</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />

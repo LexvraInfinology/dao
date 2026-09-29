@@ -139,14 +139,14 @@ export const LandingLiveActivity: React.FC = () => {
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-          <div className="text-[12px] sm:text-[13px] font-bold font-inter text-[#155EEF] uppercase tracking-widest mb-2.5">
+          <div className="text-[11px] font-semibold text-[#155EEF] uppercase tracking-[0.12em] mb-2.5">
             LIVE ACTIVITY
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-[50px] font-bold font-inter text-[#0B132B] leading-[1.12] tracking-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-[42px] font-semibold uppercase text-[#0B132B] leading-tight tracking-tight">
             The Genesis Queue Is<br />
             <span className="text-[#155EEF]">Always Moving.</span>
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-[#475467] font-inter max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-sm sm:text-base text-[#475467] max-w-xl mx-auto leading-relaxed">
             Track seat deposits, queue distributions, and Genesis DAO activity in real time.
           </p>
         </div>
@@ -159,11 +159,11 @@ export const LandingLiveActivity: React.FC = () => {
               <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-slate-100/90">
                 <div className="flex items-center gap-2.5">
                   <span className="w-2 h-2 rounded-full bg-[#155EEF] animate-pulse" />
-                  <span className="text-xs sm:text-sm font-black font-inter tracking-wider text-[#0B132B] uppercase">LIVE</span>
+                  <span className="text-xs font-semibold tracking-wider text-[#0B132B] uppercase">LIVE</span>
                   <span className="h-3.5 w-px bg-slate-300" />
-                  <span className="text-xs sm:text-sm font-semibold font-inter text-[#475467]">Genesis DAO Activity</span>
+                  <span className="text-xs sm:text-sm font-semibold text-[#475467]">Genesis DAO Activity</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-medium font-inter text-[#475467]">
+                <div className="flex items-center gap-2 text-xs font-medium text-[#475467]">
                   {loading
                     ? <Loader2 className="w-3 h-3 animate-spin text-[#155EEF]" />
                     : <span className="w-2 h-2 rounded-full bg-[#12B76A]" />
@@ -189,8 +189,8 @@ export const LandingLiveActivity: React.FC = () => {
                   ))
                 ) : rows.length === 0 ? (
                   <div className="py-10 text-center space-y-2">
-                    <div className="text-sm font-bold text-[#0B132B] font-inter">No Live Activity Yet</div>
-                    <div className="text-xs text-slate-500 font-inter max-w-xs mx-auto">
+                    <div className="text-sm font-semibold text-[#0B132B]">No Live Activity Yet</div>
+                    <div className="text-xs text-slate-500 max-w-xs mx-auto">
                       Transactions and seat allocations will stream here in real-time as they are broadcast.
                     </div>
                   </div>
@@ -208,14 +208,14 @@ export const LandingLiveActivity: React.FC = () => {
                           {item.iconElMobile}
                         </div>
                         <div className="min-w-0 space-y-0.5">
-                          <div className="text-xs sm:text-[14px] font-bold text-[#0B132B] font-inter">{item.title}</div>
-                          <div className="text-[11px] sm:text-xs text-[#64748B] font-inter truncate">{item.subtitle}</div>
+                          <div className="text-xs sm:text-sm font-semibold text-[#0B132B]">{item.title}</div>
+                          <div className="text-[11px] sm:text-xs text-[#64748B] truncate">{item.subtitle}</div>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
                         {item.highlight
-                          ? <span className={`text-xs font-bold font-inter ${item.highlightColor}`}>{item.highlight}</span>
-                          : <span className="text-[11px] text-[#94A3B8] font-inter">{item.timeAgo}</span>
+                          ? <span className={`text-xs sm:text-sm font-semibold tabular-nums ${item.highlightColor}`}>{item.highlight}</span>
+                          : <span className="text-[11px] text-[#94A3B8] tabular-nums">{item.timeAgo}</span>
                         }
                       </div>
                     </div>

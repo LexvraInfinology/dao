@@ -40,17 +40,17 @@ export const LandingFaq: React.FC = () => {
         {/* Top Header */}
         <div className="text-center space-y-3 sm:space-y-3.5 mb-8 sm:mb-10 lg:mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
-            <span className="text-[11px] sm:text-[11.5px] font-semibold tracking-wider text-[#155EEF] font-inter uppercase">
+            <span className="text-[11px] font-medium tracking-[0.08em] text-[#155EEF] uppercase">
               FAQ
             </span>
           </div>
 
-          <h2 className="text-2xl min-[360px]:text-[26px] sm:text-3xl lg:text-[38px] font-bold font-inter text-[#0B132B] leading-[1.14] tracking-tight">
+          <h2 className="text-2xl min-[360px]:text-[26px] sm:text-3xl lg:text-[38px] font-semibold uppercase text-[#0B132B] leading-tight tracking-tight">
             Got<br />
             <span className="text-[#155EEF]">Questions?</span>
           </h2>
 
-          <p className="text-[13px] min-[360px]:text-[13.5px] sm:text-[14.5px] text-[#475467] leading-relaxed font-inter max-w-xl mx-auto">
+          <p className="text-xs sm:text-sm text-[#475467] leading-relaxed max-w-xl mx-auto">
             Everything you need to know about the Genesis Queue, Council Seats, and Protocol Governance.
           </p>
         </div>
@@ -76,7 +76,7 @@ export const LandingFaq: React.FC = () => {
                 >
                   <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
                     <div
-                      className={`w-[26px] h-[26px] sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 text-[11px] sm:text-xs font-bold font-inter ${
+                      className={`w-[26px] h-[26px] sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${
                         isOpen
                           ? 'bg-[#155EEF] text-white'
                           : 'bg-white border border-slate-200 text-[#155EEF]'
@@ -84,7 +84,7 @@ export const LandingFaq: React.FC = () => {
                     >
                       ?
                     </div>
-                    <span className="text-[13.5px] min-[360px]:text-[14px] sm:text-[15px] lg:text-[15.5px] font-semibold font-inter text-[#0B132B] leading-snug">
+                    <span className="text-xs sm:text-sm lg:text-[14.5px] font-semibold text-[#0B132B] leading-snug">
                       {faq.q}
                     </span>
                   </div>
@@ -99,7 +99,7 @@ export const LandingFaq: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="px-4 pb-4.5 sm:px-5.5 sm:pb-5 text-[12.5px] min-[360px]:text-[13px] sm:text-[13.5px] lg:text-[14px] text-[#475467] leading-relaxed font-inter border-t border-slate-100 pt-3">
+                  <div className="px-4 pb-4.5 sm:px-5.5 sm:pb-5 text-xs sm:text-[13px] text-[#475467] leading-relaxed border-t border-slate-100 pt-3">
                     {faq.a}
                   </div>
                 )}

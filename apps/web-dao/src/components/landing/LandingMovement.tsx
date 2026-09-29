@@ -18,19 +18,19 @@ export const LandingMovement: React.FC = () => {
           <div className="lg:col-span-6 space-y-6 text-left">
             {/* Pill Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
-              <span className="text-[12px] font-semibold tracking-wider text-[#155EEF] font-inter uppercase">
+              <span className="text-[11px] font-medium tracking-[0.08em] text-[#155EEF] uppercase">
                 Who We Are
               </span>
             </div>
 
             {/* Headline */}
-            <h2 className="text-3xl sm:text-4xl lg:text-[48px] font-bold font-inter text-[#0B132B] leading-[1.12] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-[42px] font-semibold uppercase text-[#0B132B] leading-tight tracking-tight">
               We&apos;re not just a DAO.<br />
               <span className="text-[#155EEF]">We&apos;re a movement.</span>
             </h2>
 
             {/* Paragraphs */}
-            <div className="space-y-4 text-[15px] sm:text-[16px] text-[#475467] leading-relaxed font-inter">
+            <div className="space-y-4 text-sm sm:text-base text-[#475467] leading-relaxed">
               <p>
                 100 early believers who saw the power of decentralized governance and decided to build something permanent. Not a temporary hype cycle. A sovereign collective with real treasury yield.
               </p>
@@ -46,10 +46,10 @@ export const LandingMovement: React.FC = () => {
                   key={s.label}
                   className="p-2 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl bg-[#F8FAFC] border border-slate-200/80 text-center shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:shadow-md transition-shadow"
                 >
-                  <div className="text-lg sm:text-2xl md:text-3xl font-bold font-sora text-[#0B132B] tracking-tight">
+                  <div className="text-lg sm:text-2xl md:text-3xl font-semibold leading-none tabular-nums text-[#0B132B]">
                     {s.value}
                   </div>
-                  <div className="text-[9.5px] sm:text-xs text-[#64748B] font-medium mt-0.5 sm:mt-1 truncate">
+                  <div className="text-[9px] sm:text-[10px] text-[#64748B] font-medium uppercase tracking-[0.08em] mt-1.5 truncate">
                     {s.label}
                   </div>
                 </div>
@@ -70,7 +70,7 @@ export const LandingMovement: React.FC = () => {
                 />
 
                 {/* Floating Badge Top Right: 100 SEATS ONLY */}
-                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-4 py-2 rounded-full bg-[#155EEF] text-white text-[12px] font-bold tracking-wide shadow-[0_4px_16px_rgba(21,94,239,0.5)] border border-blue-400/50 backdrop-blur-md">
+                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-3.5 py-1.5 rounded-full bg-[#155EEF] text-white text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider shadow-[0_4px_16px_rgba(21,94,239,0.5)] border border-blue-400/50 backdrop-blur-md">
                   100 SEATS ONLY
                 </div>
 
@@ -81,7 +81,7 @@ export const LandingMovement: React.FC = () => {
                       <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  <span className="text-xs font-bold text-[#0B132B] font-inter">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#0B132B]">
                     Multiverse
                   </span>
                 </div>

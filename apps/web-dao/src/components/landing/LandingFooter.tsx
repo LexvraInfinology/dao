@@ -66,12 +66,12 @@ export const LandingFooter: React.FC = () => {
                 <div className="w-9 h-9 shrink-0 flex items-center justify-center">
                   <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
                 </div>
-                <span className="text-[18px] font-bold font-inter tracking-tight text-[#0F172A]">
+                <span className="text-[17px] sm:text-[18px] font-semibold tracking-wide uppercase text-[#0F172A]">
                   EQUORA<span className="text-[#155EEF]">.FI</span>
                 </span>
               </Link>
 
-              <p className="text-xs sm:text-[13px] text-[#475467] leading-relaxed font-inter max-w-sm">
+              <p className="text-sm leading-relaxed text-[#475467] max-w-sm">
                 The sovereign decentralized autonomous organization powered by 100 genesis council members. Built on TrobChain.
               </p>
 
@@ -114,7 +114,7 @@ export const LandingFooter: React.FC = () => {
 
             {/* Column 2: Product (2 cols) */}
             <div className="lg:col-span-2 space-y-3.5">
-              <h4 className="text-xs font-bold font-inter text-[#0B132B] uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-[#0B132B] uppercase tracking-wider">
                 Product
               </h4>
               <ul className="space-y-2.5">
@@ -122,7 +122,7 @@ export const LandingFooter: React.FC = () => {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-xs sm:text-[13px] text-[#475467] hover:text-[#155EEF] transition-colors"
+                      className="text-xs sm:text-sm font-medium text-[#475467] hover:text-[#155EEF] transition-colors"
                     >
                       {link.label}
                     </a>
@@ -133,7 +133,7 @@ export const LandingFooter: React.FC = () => {
 
             {/* Column 3: Company (2 cols) */}
             <div className="lg:col-span-2 space-y-3.5">
-              <h4 className="text-xs font-bold font-inter text-[#0B132B] uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-[#0B132B] uppercase tracking-wider">
                 Company
               </h4>
               <ul className="space-y-2.5">
@@ -141,7 +141,7 @@ export const LandingFooter: React.FC = () => {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-xs sm:text-[13px] text-[#475467] hover:text-[#155EEF] transition-colors"
+                      className="text-xs sm:text-sm font-medium text-[#475467] hover:text-[#155EEF] transition-colors"
                     >
                       {link.label}
                     </a>
@@ -152,7 +152,7 @@ export const LandingFooter: React.FC = () => {
 
             {/* Column 4: Resources (2 cols) */}
             <div className="lg:col-span-2 space-y-3.5">
-              <h4 className="text-xs font-bold font-inter text-[#0B132B] uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-[#0B132B] uppercase tracking-wider">
                 Resources
               </h4>
               <ul className="space-y-2.5">
@@ -160,7 +160,7 @@ export const LandingFooter: React.FC = () => {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-xs sm:text-[13px] text-[#475467] hover:text-[#155EEF] transition-colors"
+                      className="text-xs sm:text-sm font-medium text-[#475467] hover:text-[#155EEF] transition-colors"
                     >
                       {link.label}
                     </a>
@@ -171,7 +171,7 @@ export const LandingFooter: React.FC = () => {
 
             {/* Column 5: Stay in the loop (2 cols) */}
             <div className="lg:col-span-2 space-y-3.5">
-              <h4 className="text-xs font-bold font-inter text-[#0B132B] uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-[#0B132B] uppercase tracking-wider">
                 Stay In The Loop
               </h4>
               <p className="text-[11px] sm:text-xs text-[#64748B] leading-relaxed">

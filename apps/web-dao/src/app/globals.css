@@ -24,16 +24,49 @@ body {
   overflow-x: hidden;
 }
 
-/* Landing Page Poppins Typography Scope (Strictly isolated to landing page) */
-.landing-page-root {
-  --font-inter: var(--font-poppins), 'Poppins', sans-serif;
-  --font-sora: var(--font-poppins), 'Poppins', sans-serif;
-  font-family: var(--font-poppins), 'Poppins', sans-serif;
+/* Poppins Fallback override matching Trobium font metrics */
+@font-face {
+  font-family: 'Poppins Fallback';
+  src: local('Arial');
+  ascent-override: 93.62%;
+  descent-override: 31.21%;
+  line-gap-override: 8.92%;
+  size-adjust: 112.16%;
 }
 
-.landing-page-root .font-inter,
-.landing-page-root .font-sora {
-  font-family: var(--font-poppins), 'Poppins', sans-serif !important;
+/* Landing Page Poppins Typography Scope (Strictly isolated to landing page) */
+.landing-page-root {
+  --font-sans: var(--font-poppins), 'Poppins', 'Poppins Fallback', system-ui, -apple-system, sans-serif;
+  --font-inter: var(--font-sans);
+  --font-sora: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.landing-page-root *,
+.landing-page-root *::before,
+.landing-page-root *::after {
+  font-family: inherit;
+}
+
+.landing-page-root .font-mono,
+.landing-page-root code,
+.landing-page-root pre,
+.landing-page-root kbd {
+  font-family: var(--font-mono) !important;
+}
+
+/* Trobium Typography Tokens Scoped to Landing Page */
+.landing-page-root .chip {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* 3D Flip Card Styles */

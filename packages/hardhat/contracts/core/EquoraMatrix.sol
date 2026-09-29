@@ -63,6 +63,8 @@ interface IEquoraDAOForMatrix {
     function getLastMember() external view returns (address);
     function getAllMembers() external view returns (address[] memory);
     function daoLaunchTimestamp() external view returns (uint256);
+    function getLaunchTimestamp() external view returns (uint256);
+    function timeRemainingInWindow() external view returns (uint256);
     function daoCompleted() external view returns (bool);
 }
 
@@ -322,6 +324,23 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             return block.timestamp >= matrixLaunchTime;
         }
         return true;
+    }
+
+    /**
+     * @dev Returns remaining seconds in the 21-day Genesis DAO phase before Retail Matrix launch.
+     *      Matches the exact countdown timer on the Matrix Bridge page.
+     */
+    function getRemainingLaunchSeconds() external view returns (uint256) {
+        if (daoContract != address(0)) {
+            try IEquoraDAOForMatrix(daoContract).timeRemainingInWindow() returns (uint256 rem) {
+                return rem;
+            } catch {}
+        }
+        if (matrixLaunchTime > 0) {
+            if (block.timestamp >= matrixLaunchTime) return 0;
+            return matrixLaunchTime - block.timestamp;
+        }
+        return 21 days;
     }
 
     event TreeGraphStarted(

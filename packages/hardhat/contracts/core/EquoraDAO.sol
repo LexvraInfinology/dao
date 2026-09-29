@@ -33,8 +33,8 @@ import "../interfaces/IEquoraRegistry.sol";
  *   - Retopup resets their lifetime earnings counter.
  *
  * === SEAT EXPIRY WINDOW ======================================================
- *   - Each seat must be filled within 15 days of the previous seat being filled.
- *   - If 15 days pass with no new join, the DAO queue expires permanently.
+ *   - Each seat must be filled within 21 days of the previous seat being filled.
+ *   - If 21 days pass with no new join, the DAO queue expires permanently.
  *
  * === ELIGIBILITY =============================================================
  *   - Open to any participant (0 referrals required, no sponsor/referral ID needed)
@@ -54,7 +54,7 @@ contract EquoraDAO is ReentrancyGuard {
 
     uint256 public constant ENTRY_FEE              = 300 * 10 ** 18; // 300 TROB
     uint256 public constant MAX_MEMBERS            = 100;
-    uint256 public constant SEAT_WINDOW            = 15 days;
+    uint256 public constant SEAT_WINDOW            = 21 days;
     uint256 public constant EARNINGS_CAP           = 1500 * 10 ** 18; // 5 × 300 TROB = 1,500 TROB
     uint256 public constant RETOPUP_WINDOW         = 48 hours;
 
@@ -152,6 +152,10 @@ contract EquoraDAO is ReentrancyGuard {
 
         paymentToken = IERC20(_paymentToken);
         registry     = IEquoraRegistry(_registry);
+
+        // Initialize DAO launch timestamp for 21-day founding window
+        daoLaunchTimestamp = block.timestamp;
+        lastJoinTimestamp  = block.timestamp;
 
         // Deploy Soulbound Membership NFT — this contract is sole minter
         membershipNFT = new EquoraDAOMembership(address(this));
@@ -414,7 +418,7 @@ contract EquoraDAO is ReentrancyGuard {
 
     /**
      * @dev Check and mark expiry. Called at the top of joinDAO().
-     *      Expiry: last join was > 15 days ago AND queue is not complete.
+     *      Expiry: founding window is 21 days from launch.
      */
     function _checkExpiry() internal {
         if (daoCompleted || daoExpired) return;
@@ -578,6 +582,14 @@ contract EquoraDAO is ReentrancyGuard {
         poolClaimable     = getPendingPoolShare(user);
     }
 
+    /**
+     * @dev Explicit getter for Genesis DAO launch timestamp.
+     *      Used by EquoraMatrix to synchronize the 21-day founding window.
+     */
+    function getLaunchTimestamp() external view returns (uint256) {
+        return daoLaunchTimestamp;
+    }
+
     function getDAOStats()
         external view
         returns (
@@ -593,8 +605,19 @@ contract EquoraDAO is ReentrancyGuard {
             uint256 totalPoolDistributedAmount
         )
     {
-        bool exp = false; // Permanent queue — no 15-day inactivity timeout
+        bool exp = false; // Permanent queue — no 21-day inactivity timeout
         uint256 rem = 0;
+        if (!daoCompleted && !exp) {
+            uint256 startTs = daoLaunchTimestamp > 0 ? daoLaunchTimestamp : lastJoinTimestamp;
+            if (startTs > 0) {
+                uint256 deadline = startTs + SEAT_WINDOW;
+                if (deadline > block.timestamp) {
+                    rem = deadline - block.timestamp;
+                }
+            } else {
+                rem = SEAT_WINDOW;
+            }
+        }
 
         uint256 blanks = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
@@ -651,8 +674,17 @@ contract EquoraDAO is ReentrancyGuard {
         return false;
     }
 
-    function timeRemainingInWindow() external pure returns (uint256) {
-        return 0;
+    /**
+     * @dev Returns remaining seconds in the 21-day founding window.
+     *      Exact match with the 21-day countdown on the Matrix Bridge page.
+     */
+    function timeRemainingInWindow() external view returns (uint256) {
+        if (daoCompleted || daoExpired) return 0;
+        uint256 startTs = daoLaunchTimestamp > 0 ? daoLaunchTimestamp : lastJoinTimestamp;
+        if (startTs == 0) return SEAT_WINDOW; // 21 days
+        uint256 deadline = startTs + SEAT_WINDOW;
+        if (block.timestamp >= deadline) return 0;
+        return deadline - block.timestamp;
     }
 
     /**

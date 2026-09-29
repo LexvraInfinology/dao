@@ -18,7 +18,7 @@ const TIER_STANDARD = ethers.parseEther("30");   // 30 TROB
 const TIER_DAO      = ethers.parseEther("300");  // 300 TROB
 
 const DAY     = 86400;
-const DAYS_15 = 15 * DAY;
+const DAYS_21 = 21 * DAY;
 const DAYS_28 = 28 * DAY;
 const DAYS_85 = 85 * DAY;
 
@@ -245,13 +245,13 @@ describe("Equora.Fi — Full Protocol Suite", function () {
       expect(bal2Before - bal2After3).to.equal(ethers.parseEther("200")); // deposited 300, got 100 back
     });
 
-    it("should keep DAO queue permanent without 15-day expiry", async () => {
+    it("should keep DAO queue permanent without 21-day expiry", async () => {
       await registerUser(users[0], 10000);
       await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
       await dao.connect(users[0]).joinDAO();
 
-      // Fast-forward 30 days
-      await time.increase(DAYS_15 * 2);
+      // Fast-forward 42 days (2 * 21 days)
+      await time.increase(DAYS_21 * 2);
 
       // DAO should never expire
       expect(await dao.isExpired()).to.be.false;

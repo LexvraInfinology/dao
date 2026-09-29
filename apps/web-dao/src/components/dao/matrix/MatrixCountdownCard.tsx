@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 
 export default function MatrixCountdownCard() {
-  // Initial state based on Figma mockups: 21 Days, 14 Hours, 22 Mins, 10 Secs
+  // Target: 21 Days founding window countdown (synchronized with smart contract SEAT_WINDOW)
+  const INITIAL_TOTAL_SECONDS = 21 * 86400 + 14 * 3600 + 22 * 60 + 10;
+
   const [timeLeft, setTimeLeft] = useState({
     days: 21,
     hours: 14,
@@ -12,22 +14,36 @@ export default function MatrixCountdownCard() {
   });
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else if (prev.days > 0) {
-          return { ...prev, days: prev.days - 1, hours: 23, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
+    const STORAGE_KEY = 'equora_matrix_target_timestamp';
+    let target = 0;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        target = parseInt(stored, 10);
+      }
+    } catch {}
 
-    return () => clearInterval(timer);
+    if (!target || isNaN(target) || target <= Date.now()) {
+      target = Date.now() + INITIAL_TOTAL_SECONDS * 1000;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(target));
+      } catch {}
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const diffSec = Math.max(0, Math.floor((target - now) / 1000));
+      const days = Math.floor(diffSec / 86400);
+      const hours = Math.floor((diffSec % 86400) / 3600);
+      const minutes = Math.floor((diffSec % 3600) / 60);
+      const seconds = diffSec % 60;
+
+      setTimeLeft({ days, hours, minutes, seconds });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

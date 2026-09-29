@@ -62,6 +62,8 @@ import "../interfaces/IEquoraNFT.sol";
 interface IEquoraDAOForMatrix {
     function getLastMember() external view returns (address);
     function getAllMembers() external view returns (address[] memory);
+    function daoLaunchTimestamp() external view returns (uint256);
+    function daoCompleted() external view returns (bool);
 }
 
 contract EquoraMatrix is Ownable, ReentrancyGuard {
@@ -284,6 +286,30 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         matrixLaunchTime = _launchTime;
     }
 
+    /**
+     * @dev Sync matrix launch time from Genesis DAO launch timestamp + 21 days.
+     *      Ensures automatic Day 22 opening after the 21-day founding window.
+     */
+    function syncLaunchTimeFromDAO() external onlyOwner {
+        if (daoContract != address(0)) {
+            try IEquoraDAOForMatrix(daoContract).daoLaunchTimestamp() returns (uint256 launchTs) {
+                if (launchTs > 0) {
+                    matrixLaunchTime = launchTs + 21 days;
+                }
+            } catch {}
+        }
+    }
+
+    /**
+     * @dev Check if the matrix is open for retail enrollment.
+     */
+    function isMatrixOpen() public view returns (bool) {
+        if (matrixLaunchTime > 0) {
+            return block.timestamp >= matrixLaunchTime;
+        }
+        return true;
+    }
+
     // -------------------------------------------------------------------------
     // Join Slot
     // -------------------------------------------------------------------------
@@ -294,9 +320,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      Slots 2-12: previous slot must be unlocked.
      */
     function joinSlot(uint256 slot, address sponsor) external nonReentrant {
-        if (matrixLaunchTime > 0) {
-            require(block.timestamp >= matrixLaunchTime, "EquoraMatrix: matrix locked during 21-day Genesis DAO phase");
-        }
+        require(isMatrixOpen(), "EquoraMatrix: matrix locked during 21-day Genesis DAO phase");
         require(slot >= 1 && slot <= TOTAL_SLOTS,         "EquoraMatrix: invalid slot");
         require(slot == 1,                                "EquoraMatrix: only slot 1 can be joined directly; higher slots are auto-unlocked");
         require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
@@ -357,15 +381,17 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      place new user in next available position, route payment.
      */
     function _placeUserInMatrix(address newUser, uint256 slot, uint256 cost) internal {
+        address rootOwner = _getRootMatrixOwner();
+
         address sponsor = registry.getSponsor(newUser);
-        if (sponsor == address(0)) sponsor = _getRootMatrixOwner();
+        if (sponsor == address(0)) sponsor = rootOwner;
 
         address matrixOwner = sponsor;
         uint256 depth = 0;
         while (!userSlots[matrixOwner][slot].isUnlocked && depth < MAX_UPLINE_DEPTH) {
             address up = registry.getSponsor(matrixOwner);
             if (up == address(0) || up == matrixOwner) {
-                matrixOwner = _getRootMatrixOwner();
+                matrixOwner = rootOwner;
                 break;
             }
             matrixOwner = up;
@@ -373,7 +399,18 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         }
 
         if (!userSlots[matrixOwner][slot].isUnlocked) {
-            matrixOwner = _getRootMatrixOwner();
+            matrixOwner = rootOwner;
+        }
+
+        // Auto-activate slot for root matrix owner if not yet unlocked
+        if (matrixOwner == rootOwner && !userSlots[matrixOwner][slot].isUnlocked) {
+            userSlots[matrixOwner][slot].isUnlocked   = true;
+            userSlots[matrixOwner][slot].currentCycle = 1;
+            userSlots[matrixOwner][slot].filledNodes  = 0;
+            if (slot > highestSlot[matrixOwner]) {
+                highestSlot[matrixOwner] = slot;
+            }
+            emit SlotJoined(matrixOwner, slot, 0, address(0), block.timestamp);
         }
 
         // If newUser is the root matrix owner, they have no upline tree above them to place into
@@ -501,15 +538,13 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address dl2 = userSlots[matrixOwner][slot].nodes[1];
 
         if (dl1 != address(0) && registry.isQualified(dl1)) {
-            userBalance[dl1] += cost;
-            totalEarned[dl1] += cost;
             p7PaidRecipient[matrixOwner][slot][cycle] = dl1;
+            _pushMatrixPayment(dl1, cost);
             emit SpilloverResolved(matrixOwner, dl1, 7, false);
             emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 7);
         } else if (dl2 != address(0) && registry.isQualified(dl2)) {
-            userBalance[dl2] += cost;
-            totalEarned[dl2] += cost;
             p7PaidRecipient[matrixOwner][slot][cycle] = dl2;
+            _pushMatrixPayment(dl2, cost);
             emit SpilloverResolved(matrixOwner, dl2, 7, false);
             emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 7);
         } else {
@@ -527,13 +562,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address alreadyPaid = p7PaidRecipient[matrixOwner][slot][cycle];
 
         if (dl2 != address(0) && registry.isQualified(dl2) && dl2 != alreadyPaid) {
-            userBalance[dl2] += cost;
-            totalEarned[dl2] += cost;
+            _pushMatrixPayment(dl2, cost);
             emit SpilloverResolved(matrixOwner, dl2, 10, false);
             emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 10);
         } else if (dl1 != address(0) && registry.isQualified(dl1) && dl1 != alreadyPaid) {
-            userBalance[dl1] += cost;
-            totalEarned[dl1] += cost;
+            _pushMatrixPayment(dl1, cost);
             emit SpilloverResolved(matrixOwner, dl1, 10, false);
             emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 10);
         } else {
@@ -574,8 +607,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             if (c != address(0) && registry.isQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
                 uint256 payout = isFirst ? (share + rem) : share;
                 isFirst = false;
-                userBalance[c] += payout;
-                totalEarned[c] += payout;
+                _pushMatrixPayment(c, payout);
                 emit SpilloverResolved(matrixOwner, c, 13, false);
                 emit DistributionExecuted(c, payout, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 13);
             }
@@ -587,17 +619,35 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     /**
+     * @dev Push matrix payment directly to user's wallet via paymentToken.transfer.
+     *      Recipients receive their earnings automatically on-chain with zero gas fees.
+     *      Anti-griefing: if direct transfer fails, held in userBalance for manual withdrawal.
+     */
+    function _pushMatrixPayment(address recipient, uint256 amount) internal {
+        if (recipient == address(0) || amount == 0) return;
+        totalEarned[recipient] += amount;
+
+        bool ok = false;
+        try paymentToken.transfer(recipient, amount) returns (bool res) {
+            ok = res;
+        } catch {}
+
+        if (!ok) {
+            userBalance[recipient] += amount;
+        }
+    }
+
+    /**
      * @dev Credit user balance with qualification check.
-     *      Unqualified recipient → reroutes directly to Protocol Pools via EquoraVault.
+     *      Unqualified recipient → reroutes directly to Matrix Owner.
+     *      Root Matrix Owner is always considered qualified.
      */
     function _creditUser(address user, address fallbackOwner, uint256 amount) internal {
-        if (registry.isQualified(user)) {
-            userBalance[user] += amount;
-            totalEarned[user] += amount;
+        if (registry.isQualified(user) || user == _getRootMatrixOwner()) {
+            _pushMatrixPayment(user, amount);
         } else {
             // Ineligible / Did not meet referral criteria -> fallback to matrixOwner (never root)
-            userBalance[fallbackOwner] += amount;
-            totalEarned[fallbackOwner] += amount;
+            _pushMatrixPayment(fallbackOwner, amount);
         }
     }
 
@@ -605,9 +655,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      * @dev Credit matrix owner's balance and track per-slot earnings.
      */
     function _creditOwner(address matrixOwner, uint256 slot, uint256 amount) internal {
-        userBalance[matrixOwner] += amount;
-        totalEarned[matrixOwner] += amount;
         userSlots[matrixOwner][slot].totalEarned += amount;
+        _pushMatrixPayment(matrixOwner, amount);
     }
 
     /**
@@ -619,9 +668,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         totalPoolForwarded += amount;
 
         if (vaultContract == address(0)) {
-            // Safety fallback before wiring: credit matrix owner temporarily
-            userBalance[matrixOwner] += amount;
-            totalEarned[matrixOwner] += amount;
+            // Safety fallback before wiring: push to matrix owner temporarily
+            _pushMatrixPayment(matrixOwner, amount);
             return;
         }
 

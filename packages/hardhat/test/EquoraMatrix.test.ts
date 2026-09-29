@@ -168,19 +168,21 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
 
-      // P1 joins under matrixOwner -> goes to upline1
+      // P1 joins under matrixOwner -> goes directly to upline1 wallet
       const p1Wallet = await createFundedWallet(owner);
-      const upline1BalBefore = await matrix.userBalance(upline1.address);
+      const upline1BalBefore = await token.balanceOf(upline1.address);
       await matrix.connect(p1Wallet).joinSlot(1, matrixOwner.address);
-      const upline1BalAfter = await matrix.userBalance(upline1.address);
+      const upline1BalAfter = await token.balanceOf(upline1.address);
       expect(upline1BalAfter - upline1BalBefore).to.equal(SLOT1_COST);
+      expect(await matrix.totalEarned(upline1.address)).to.equal(SLOT1_COST);
 
-      // P2 joins under matrixOwner -> goes to upline2
+      // P2 joins under matrixOwner -> goes directly to upline2 wallet
       const p2Wallet = await createFundedWallet(owner);
-      const upline2BalBefore = await matrix.userBalance(upline2.address);
+      const upline2BalBefore = await token.balanceOf(upline2.address);
       await matrix.connect(p2Wallet).joinSlot(1, matrixOwner.address);
-      const upline2BalAfter = await matrix.userBalance(upline2.address);
+      const upline2BalAfter = await token.balanceOf(upline2.address);
       expect(upline2BalAfter - upline2BalBefore).to.equal(SLOT1_COST);
+      expect(await matrix.totalEarned(upline2.address)).to.equal(SLOT1_COST);
     });
 
     it("should fallback to matrixOwner (never root) when upline is unqualified", async function () {
@@ -189,18 +191,19 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
 
-      const rootBalBefore = await matrix.userBalance(root.address);
-      const ownerBalBefore = await matrix.userBalance(matrixOwner.address);
+      const rootBalBefore = await token.balanceOf(root.address);
+      const ownerBalBefore = await token.balanceOf(matrixOwner.address);
 
       const p1Wallet = await createFundedWallet(owner);
       await matrix.connect(p1Wallet).joinSlot(1, matrixOwner.address);
 
-      const rootBalAfter = await matrix.userBalance(root.address);
-      const ownerBalAfter = await matrix.userBalance(matrixOwner.address);
+      const rootBalAfter = await token.balanceOf(root.address);
+      const ownerBalAfter = await token.balanceOf(matrixOwner.address);
 
-      // Root receives 0; matrix owner receives the fallback payout
+      // Root receives 0; matrix owner receives the fallback payout directly in wallet
       expect(rootBalAfter).to.equal(rootBalBefore);
       expect(ownerBalAfter - ownerBalBefore).to.equal(SLOT1_COST);
+      expect(await matrix.totalEarned(matrixOwner.address)).to.equal(SLOT1_COST);
     });
 
     it("should route P3, P6, P8, P9, P11, P12 directly to matrixOwner", async function () {
@@ -212,11 +215,11 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(p1).joinSlot(1, matrixOwner.address);
       await matrix.connect(p2).joinSlot(1, matrixOwner.address);
 
-      // Fill P3 -> should go to matrixOwner
+      // Fill P3 -> should go directly to matrixOwner wallet
       const p3 = await createFundedWallet(owner);
-      const ownerBeforeP3 = await matrix.userBalance(matrixOwner.address);
+      const ownerBeforeP3 = await token.balanceOf(matrixOwner.address);
       await matrix.connect(p3).joinSlot(1, matrixOwner.address);
-      const ownerAfterP3 = await matrix.userBalance(matrixOwner.address);
+      const ownerAfterP3 = await token.balanceOf(matrixOwner.address);
       expect(ownerAfterP3 - ownerBeforeP3).to.equal(SLOT1_COST);
     });
 
@@ -279,14 +282,14 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       }
 
       // Record balances before P7
-      const dl1BalBefore = await matrix.userBalance(downline1.address);
-      const dl2BalBefore = await matrix.userBalance(downline2.address);
+      const dl1BalBefore = await token.balanceOf(downline1.address);
+      const dl2BalBefore = await token.balanceOf(downline2.address);
 
-      // Fill P7 (Targets Node 1) -> 100% to DL1
+      // Fill P7 (Targets Node 1) -> 100% to DL1 directly in wallet
       const p7 = await createFundedWallet(owner);
       await matrix.connect(p7).joinSlot(1, matrixOwner.address);
 
-      const dl1BalAfterP7 = await matrix.userBalance(downline1.address);
+      const dl1BalAfterP7 = await token.balanceOf(downline1.address);
       expect(dl1BalAfterP7 - dl1BalBefore).to.equal(SLOT1_COST);
 
       // Fill P8 and P9
@@ -299,8 +302,8 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       const p10 = await createFundedWallet(owner);
       await matrix.connect(p10).joinSlot(1, matrixOwner.address);
 
-      const dl1BalAfterP10 = await matrix.userBalance(downline1.address);
-      const dl2BalAfterP10 = await matrix.userBalance(downline2.address);
+      const dl1BalAfterP10 = await token.balanceOf(downline1.address);
+      const dl2BalAfterP10 = await token.balanceOf(downline2.address);
 
       // DL1 was NOT paid a second time; DL2 got paid once
       expect(dl1BalAfterP10).to.equal(dl1BalAfterP7);
@@ -329,10 +332,10 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       }
 
       // P7: DL1 is unqualified -> fallback to DL2!
-      const dl2BalBefore = await matrix.userBalance(downline2.address);
+      const dl2BalBefore = await token.balanceOf(downline2.address);
       const p7 = await createFundedWallet(owner);
       await matrix.connect(p7).joinSlot(1, matrixOwner.address);
-      const dl2BalAfterP7 = await matrix.userBalance(downline2.address);
+      const dl2BalAfterP7 = await token.balanceOf(downline2.address);
       expect(dl2BalAfterP7 - dl2BalBefore).to.equal(SLOT1_COST);
 
       // Fill P8 and P9
@@ -346,7 +349,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       const p10 = await createFundedWallet(owner);
       await matrix.connect(p10).joinSlot(1, matrixOwner.address);
 
-      const dl2BalAfterP10 = await matrix.userBalance(downline2.address);
+      const dl2BalAfterP10 = await token.balanceOf(downline2.address);
       // DL2 must NOT be paid double time!
       expect(dl2BalAfterP10).to.equal(dl2BalAfterP7);
 
@@ -395,40 +398,47 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
         await matrix.connect(w).joinSlot(1, matrixOwner.address);
       }
 
-      const node3Before = await matrix.userBalance(node3.address);
-      const node4Before = await matrix.userBalance(node4.address);
+      const node3Before = await token.balanceOf(node3.address);
+      const node4Before = await token.balanceOf(node4.address);
 
-      // Fill P13 (Option B scan across 3, 4, 5, 6) -> 50/50 split between Node 3 & Node 4
+      // Fill P13 (Option B scan across 3, 4, 5, 6) -> 50/50 split between Node 3 & Node 4 directly to wallet
       const p13 = await createFundedWallet(owner);
       await matrix.connect(p13).joinSlot(1, matrixOwner.address);
 
-      const node3After = await matrix.userBalance(node3.address);
-      const node4After = await matrix.userBalance(node4.address);
+      const node3After = await token.balanceOf(node3.address);
+      const node4After = await token.balanceOf(node4.address);
 
       const half = SLOT1_COST / 2n;
       expect(node3After - node3Before).to.equal(half);
       expect(node4After - node4Before).to.equal(half);
     });
 
-    it("should route root matrix owner to last Genesis DAO member when daoContract is configured", async function () {
+    it("should route root matrix owner to last Genesis DAO member and auto-unlock Slot 1", async function () {
       // Have a DAO member join the Genesis DAO
       const daoMember1 = await createFundedWallet(owner);
       const daoMember2 = await createFundedWallet(owner);
       await dao.connect(daoMember1).joinDAO();
       await dao.connect(daoMember2).joinDAO();
 
+      // Verify DAO members were auto-registered in EquoraRegistry with 5-digit codes
+      expect(await registry.isRegistered(daoMember1.address)).to.be.true;
+      expect(await registry.isRegistered(daoMember2.address)).to.be.true;
+      expect(Number(await registry.getCodeByUser(daoMember2.address))).to.be.gte(10001);
+
       // daoMember2 is the last member
       expect(await dao.getLastMember()).to.equal(daoMember2.address);
 
-      // daoMember2 unlocks Slot 1
-      await matrix.connect(daoMember2).joinSlot(1, root.address);
+      // daoMember2 has NOT manually joined or bought Slot 1 yet
+      const beforeSlot = await matrix.getSlotData(daoMember2.address, 1);
+      expect(beforeSlot.isUnlocked).to.be.false;
 
-      // A new retail member with no sponsor joins -> routed to last DAO member!
+      // A new retail member with no sponsor joins on Day 22 -> routed to last DAO member!
       const retailUser = await createFundedWallet(owner);
       await matrix.connect(retailUser).joinSlot(1, ethers.ZeroAddress);
 
-      // Check slot data for daoMember2 -> should have filledNodes = 1
+      // Check slot data for daoMember2 -> should be auto-unlocked with filledNodes = 1
       const slotData = await matrix.getSlotData(daoMember2.address, 1);
+      expect(slotData.isUnlocked).to.be.true;
       expect(slotData.filledNodes).to.equal(1n);
       expect(slotData.nodes[0]).to.equal(retailUser.address);
     });
@@ -457,23 +467,29 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     });
   });
 
-  describe("Withdrawals", function () {
-    it("should allow matrix owner to withdraw earned internal balance", async function () {
+  describe("Withdrawals & Direct Wallet Payouts", function () {
+    it("should push payouts directly to wallet with zero manual withdrawal needed", async function () {
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
 
-      // Unqualified fallback gives matrixOwner P1
+      const tokenBalBefore = await token.balanceOf(matrixOwner.address);
+
+      // Unqualified fallback gives matrixOwner P1 directly in wallet
       const p1 = await createFundedWallet(owner);
       await matrix.connect(p1).joinSlot(1, matrixOwner.address);
 
-      const bal = await matrix.userBalance(matrixOwner.address);
-      expect(bal).to.be.gt(0n);
-
-      const tokenBalBefore = await token.balanceOf(matrixOwner.address);
-      await matrix.connect(matrixOwner).withdraw(bal);
       const tokenBalAfter = await token.balanceOf(matrixOwner.address);
-
-      expect(tokenBalAfter - tokenBalBefore).to.equal(bal);
+      expect(tokenBalAfter - tokenBalBefore).to.equal(SLOT1_COST);
       expect(await matrix.userBalance(matrixOwner.address)).to.equal(0n);
+      expect(await matrix.totalEarned(matrixOwner.address)).to.equal(SLOT1_COST);
+    });
+
+    it("should validate zero and insufficient fallback balance on withdraw", async function () {
+      await expect(matrix.connect(matrixOwner).withdraw(SLOT1_COST)).to.be.revertedWith(
+        "EquoraMatrix: insufficient balance"
+      );
+      await expect(matrix.connect(matrixOwner).withdraw(0)).to.be.revertedWith(
+        "EquoraMatrix: amount must be > 0"
+      );
     });
   });
 });

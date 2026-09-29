@@ -210,6 +210,8 @@ contract EquoraDAO is ReentrancyGuard {
             slotBlank[oldMember]        = false;
             capHitTimestamp[oldMember]  = 0;
             memberPosition[oldMember]   = 0;
+            lifetimeEarnings[oldMember] = 0;
+            memberRewardDebt[oldMember] = 0;
 
             daoMembers[vacantIndex]     = msg.sender;
             isDaoMember[msg.sender]     = true;
@@ -217,6 +219,9 @@ contract EquoraDAO is ReentrancyGuard {
             memberPosition[msg.sender]  = position;
             memberRewardDebt[msg.sender] = accPoolSharePerMember;
             lastJoinTimestamp           = block.timestamp;
+
+            // Auto-register new joiner in EquoraRegistry if not yet registered
+            _registerUserInRegistry(msg.sender);
 
             tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
@@ -237,6 +242,9 @@ contract EquoraDAO is ReentrancyGuard {
         if (position == 1) daoLaunchTimestamp = block.timestamp;
         lastJoinTimestamp = block.timestamp;
 
+        // Auto-register new joiner in EquoraRegistry if not yet registered
+        _registerUserInRegistry(msg.sender);
+
         tokenId = membershipNFT.mint(msg.sender, position);
         emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
@@ -249,6 +257,20 @@ contract EquoraDAO is ReentrancyGuard {
         }
 
         return position;
+    }
+
+    /**
+     * @dev Internal helper to register a DAO joiner in EquoraRegistry.
+     *      Ensures all 100 DAO members have 5-digit referral codes from Day 1.
+     */
+    function _registerUserInRegistry(address user) internal {
+        if (address(registry) != address(0)) {
+            try registry.isRegistered(user) returns (bool reg) {
+                if (!reg) {
+                    try registry.registerUser(user, address(0)) {} catch {}
+                }
+            } catch {}
+        }
     }
 
     // ─── Re-topup (5X Cap Reset) ───────────────────────────────────────────────

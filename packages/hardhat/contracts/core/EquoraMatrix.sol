@@ -151,6 +151,14 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     mapping(address => uint256) public highestSlot;
 
     // -------------------------------------------------------------------------
+    // 30$ Deposit Active Direct Referrals Tracking
+    // -------------------------------------------------------------------------
+
+    mapping(address => uint256) public activeDirectReferrals;
+    mapping(address => mapping(address => bool)) public hasDirectReferralDeposited;
+    mapping(address => address[]) private _activeDirectReferralsList;
+
+    // -------------------------------------------------------------------------
     // Global Stats
     // -------------------------------------------------------------------------
 
@@ -231,6 +239,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address indexed user,
         uint8   indexed fromSlot,
         uint8   indexed activatedSlot,
+        uint256 timestamp
+    );
+    event ActiveDirectReferralCounted(
+        address indexed sponsor,
+        address indexed referral,
+        uint256 totalActiveDirects,
         uint256 timestamp
     );
 
@@ -379,7 +393,19 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address sponsorAddr = registry.getSponsor(msg.sender);
         emit SlotJoined(msg.sender, slot, cost, sponsorAddr, block.timestamp);
 
-        if (registry.isQualified(msg.sender) || msg.sender == _getRootMatrixOwner()) {
+        // Record 30$ deposit direct referral for sponsor upon Slot 1 deposit
+        if (slot == 1 && sponsorAddr != address(0) && !hasDirectReferralDeposited[sponsorAddr][msg.sender]) {
+            hasDirectReferralDeposited[sponsorAddr][msg.sender] = true;
+            activeDirectReferrals[sponsorAddr]++;
+            _activeDirectReferralsList[sponsorAddr].push(msg.sender);
+            emit ActiveDirectReferralCounted(sponsorAddr, msg.sender, activeDirectReferrals[sponsorAddr], block.timestamp);
+
+            if (isMatrixQualified(sponsorAddr) && userSlots[sponsorAddr][1].isUnlocked) {
+                emit TreeGraphStarted(sponsorAddr, 1, block.timestamp);
+            }
+        }
+
+        if (isMatrixQualified(msg.sender)) {
             emit TreeGraphStarted(msg.sender, uint8(slot), block.timestamp);
         }
 
@@ -410,7 +436,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      * @dev Find matrix owner (bubble up sponsor chain, max depth 12),
      *      place new user in next available position, route payment.
      *      A user's personal tree graph only starts receiving placements when they have
-     *      achieved 2 direct referrals eligibility (or are the Genesis Root Matrix Owner).
+     *      achieved 2 direct referrals eligibility with 30$ deposit each (or are the Genesis Root Matrix Owner).
      *      If an upline in the chain has not met 2 direct referrals, the placement skips them
      *      and bubbles up to an eligible upline sponsor or the root matrix owner.
      */
@@ -423,7 +449,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address matrixOwner = sponsor;
         uint256 depth = 0;
         while (
-            (!userSlots[matrixOwner][slot].isUnlocked || (!registry.isQualified(matrixOwner) && matrixOwner != rootOwner)) &&
+            (!userSlots[matrixOwner][slot].isUnlocked || (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) &&
             depth < MAX_UPLINE_DEPTH
         ) {
             address up = registry.getSponsor(matrixOwner);
@@ -435,7 +461,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             depth++;
         }
 
-        if (!userSlots[matrixOwner][slot].isUnlocked || (!registry.isQualified(matrixOwner) && matrixOwner != rootOwner)) {
+        if (!userSlots[matrixOwner][slot].isUnlocked || (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) {
             matrixOwner = rootOwner;
         }
 
@@ -500,7 +526,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (position == 1) {
             // P1 → Upline 1
             address upline1 = registry.getSponsor(matrixOwner);
-            if (upline1 != address(0) && (registry.isQualified(upline1) || upline1 == _getRootMatrixOwner())) {
+            if (upline1 != address(0) && isMatrixQualified(upline1)) {
                 _pushMatrixPayment(upline1, cost);
                 emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
             } else {
@@ -514,7 +540,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             // P2 → Upline 2
             address up1     = registry.getSponsor(matrixOwner);
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
-            if (upline2 != address(0) && (registry.isQualified(upline2) || upline2 == _getRootMatrixOwner())) {
+            if (upline2 != address(0) && isMatrixQualified(upline2)) {
                 _pushMatrixPayment(upline2, cost);
                 emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
             } else {
@@ -587,12 +613,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address dl1 = userSlots[matrixOwner][slot].nodes[0];
         address dl2 = userSlots[matrixOwner][slot].nodes[1];
 
-        if (dl1 != address(0) && registry.isQualified(dl1)) {
+        if (dl1 != address(0) && isMatrixQualified(dl1)) {
             p7PaidRecipient[matrixOwner][slot][cycle] = dl1;
             _pushMatrixPayment(dl1, cost);
             emit SpilloverResolved(matrixOwner, dl1, 7, false);
             emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 7);
-        } else if (dl2 != address(0) && registry.isQualified(dl2)) {
+        } else if (dl2 != address(0) && isMatrixQualified(dl2)) {
             p7PaidRecipient[matrixOwner][slot][cycle] = dl2;
             _pushMatrixPayment(dl2, cost);
             emit SpilloverResolved(matrixOwner, dl2, 7, false);
@@ -611,11 +637,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address dl2 = userSlots[matrixOwner][slot].nodes[1];
         address alreadyPaid = p7PaidRecipient[matrixOwner][slot][cycle];
 
-        if (dl2 != address(0) && registry.isQualified(dl2) && dl2 != alreadyPaid) {
+        if (dl2 != address(0) && isMatrixQualified(dl2) && dl2 != alreadyPaid) {
             _pushMatrixPayment(dl2, cost);
             emit SpilloverResolved(matrixOwner, dl2, 10, false);
             emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 10);
-        } else if (dl1 != address(0) && registry.isQualified(dl1) && dl1 != alreadyPaid) {
+        } else if (dl1 != address(0) && isMatrixQualified(dl1) && dl1 != alreadyPaid) {
             _pushMatrixPayment(dl1, cost);
             emit SpilloverResolved(matrixOwner, dl1, 10, false);
             emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 10);
@@ -635,7 +661,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         for (uint256 i = 2; i <= 5; i++) {
             address c = userSlots[matrixOwner][slot].nodes[i];
-            if (c != address(0) && registry.isQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
+            if (c != address(0) && isMatrixQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
                 count++;
             }
         }
@@ -654,7 +680,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         for (uint256 i = 2; i <= 5; i++) {
             address c = userSlots[matrixOwner][slot].nodes[i];
-            if (c != address(0) && registry.isQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
+            if (c != address(0) && isMatrixQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
                 uint256 payout = isFirst ? (share + rem) : share;
                 isFirst = false;
                 _pushMatrixPayment(c, payout);
@@ -808,15 +834,71 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Checks if a user is qualified in the matrix.
+     *      A user is qualified when they have successfully directed at least 2 direct referrals
+     *      who have EACH made a deposit for 30$ worth of TROB (unlocked Slot 1).
+     *      Genesis Root Matrix Owner is exempt as the root apex of the entire retail tree.
+     */
+    function isMatrixQualified(address user) public view returns (bool) {
+        if (user == _getRootMatrixOwner()) return true;
+        return getActiveDirectReferralsCount(user) >= 2;
+    }
+
+    /**
+     * @dev Returns count of direct referrals who have successfully deposited 30$ worth of TROB (Slot 1).
+     */
+    function getActiveDirectReferralsCount(address user) public view returns (uint256) {
+        uint256 tracked = activeDirectReferrals[user];
+        if (tracked >= 2) return tracked;
+
+        // Scan direct referrals registered under user to count those who deposited for Slot 1
+        address[] memory directs = registry.getDirectReferrals(user);
+        uint256 count = 0;
+        for (uint256 i = 0; i < directs.length; i++) {
+            if (userSlots[directs[i]][1].isUnlocked) {
+                count++;
+                if (count >= 2) return count;
+            }
+        }
+        return count > tracked ? count : tracked;
+    }
+
+    /**
+     * @dev Returns the list of direct referrals who have successfully deposited 30$ worth of TROB (Slot 1).
+     */
+    function getActiveDirectReferrals(address user) external view returns (address[] memory) {
+        return _activeDirectReferralsList[user];
+    }
+
+    /**
      * @dev Checks if a user's 14-node matrix tree graph is officially started and accepting placements.
      *      Requires:
      *      1. Slot is unlocked.
-     *      2. User has achieved 2 direct referrals eligibility (or is the Genesis Root Matrix Owner).
+     *      2. User has achieved 2 direct referrals eligibility with 30$ deposit each (or is the Genesis Root Matrix Owner).
      */
     function isMatrixTreeStarted(address user, uint256 slot) public view returns (bool) {
         if (!userSlots[user][slot].isUnlocked) return false;
-        if (user == _getRootMatrixOwner()) return true;
-        return registry.isQualified(user);
+        return isMatrixQualified(user);
+    }
+
+    /**
+     * @dev Returns the 14 nodes of a user's slot tree graph along with their 5-digit member codes and member IDs.
+     *      As members register & deposit in the matrix, their IDs are shown on their sponsor's graph!
+     */
+    function getSlotNodesWithCodes(address user, uint256 slot) external view returns (
+        address[14] memory nodeAddresses,
+        uint32[14]  memory nodeCodes,
+        uint256[14] memory nodeMemberIds
+    ) {
+        MatrixSlot storage m = userSlots[user][slot];
+        nodeAddresses = m.nodes;
+        for (uint256 i = 0; i < TREE_NODES; i++) {
+            address nodeAddr = m.nodes[i];
+            if (nodeAddr != address(0)) {
+                nodeCodes[i]     = registry.getCodeByUser(nodeAddr);
+                nodeMemberIds[i] = registry.getUserId(nodeAddr);
+            }
+        }
     }
 
     function getAllSlotsStatus(address user) external view returns (

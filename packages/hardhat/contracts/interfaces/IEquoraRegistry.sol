@@ -18,4 +18,5 @@ interface IEquoraRegistry {
     // 5-digit referral code system
     function getUserByCode(uint32 code) external view returns (address);
     function getCodeByUser(address user) external view returns (uint32);
+    function getUserId(address user) external view returns (uint256);
 }

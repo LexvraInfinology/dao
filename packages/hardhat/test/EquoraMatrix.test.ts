@@ -149,52 +149,50 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       );
     });
 
-    it("should enforce that a user tree graph is only started upon achieving 2 direct referrals eligibility", async function () {
-      // 1. matrixOwner is already qualified (has downline1 and downline2) and starts Slot 1
-      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
-      expect(await matrix.isMatrixTreeStarted(matrixOwner.address, 1)).to.be.true;
-
-      // 2. testUser joins Slot 1 under matrixOwner without having 2 direct referrals
+    it("should enforce that a user tree graph is only started upon achieving 2 direct referrals eligibility with 30$ deposit each", async function () {
+      // 1. testUser joins Slot 1 under matrixOwner
       const testUser = await createFundedWallet(owner);
       await matrix.connect(testUser).joinSlot(1, matrixOwner.address);
       const testUserSlot = await matrix.getSlotData(testUser.address, 1);
       expect(testUserSlot.isUnlocked).to.be.true;
 
-      // testUser has 0 referrals -> tree graph NOT started
-      expect(await registry.isQualified(testUser.address)).to.be.false;
+      // testUser has 0 referrals who deposited 30$ -> tree graph NOT started
+      expect(await matrix.isMatrixQualified(testUser.address)).to.be.false;
       expect(await matrix.isMatrixTreeStarted(testUser.address, 1)).to.be.false;
 
-      // 3. downlineA joins with sponsor = testUser
-      // Since testUser's tree graph is not started, placement skips testUser and bubbles up to matrixOwner!
-      const downlineA = await createFundedWallet(owner);
-      await matrix.connect(downlineA).joinSlot(1, testUser.address);
-
-      // testUser's tree graph has 0 filled nodes (skipped!)
-      const testUserSlotAfterSkip = await matrix.getSlotData(testUser.address, 1);
-      expect(testUserSlotAfterSkip.filledNodes).to.equal(0n);
-
-      // matrixOwner received downlineA in their tree graph
-      const matrixOwnerSlot = await matrix.getSlotData(matrixOwner.address, 1);
-      expect(matrixOwnerSlot.filledNodes).to.equal(2n); // testUser at node 0, downlineA at node 1
-
-      // 4. testUser now completes 2 direct referrals in the registry
+      // 2. First direct referral (ref1) deposits 30$ under testUser
       const ref1 = await createFundedWallet(owner);
+      await matrix.connect(ref1).joinSlot(1, testUser.address);
+
+      // ref1 fills Node 1 in testUser's matrix
+      const slotAfterRef1 = await matrix.getSlotData(testUser.address, 1);
+      expect(slotAfterRef1.filledNodes).to.equal(1n);
+      expect(slotAfterRef1.nodes[0]).to.equal(ref1.address);
+      // Still only 1 direct referral with 30$ deposit -> not yet fully qualified
+      expect(await matrix.isMatrixQualified(testUser.address)).to.be.false;
+
+      // 3. Second direct referral (ref2) deposits 30$ under testUser
       const ref2 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](ref1.address, testUser.address);
-      await registry.connect(owner)["registerUser(address,address)"](ref2.address, testUser.address);
+      await matrix.connect(ref2).joinSlot(1, testUser.address);
 
-      // Now testUser has achieved 2 direct referrals eligibility!
-      expect(await registry.isQualified(testUser.address)).to.be.true;
+      // ref2 fills Node 2 in testUser's matrix
+      const slotAfterRef2 = await matrix.getSlotData(testUser.address, 1);
+      expect(slotAfterRef2.filledNodes).to.equal(2n);
+      expect(slotAfterRef2.nodes[1]).to.equal(ref2.address);
+
+      // Now testUser has achieved 2 direct referrals eligibility with 30$ deposit each!
+      expect(await matrix.isMatrixQualified(testUser.address)).to.be.true;
       expect(await matrix.isMatrixTreeStarted(testUser.address, 1)).to.be.true;
+      expect(await matrix.getActiveDirectReferralsCount(testUser.address)).to.equal(2n);
 
-      // 5. downlineB joins with sponsor = testUser
-      // Now testUser's tree graph IS started! Placement lands directly in testUser's tree!
-      const downlineB = await createFundedWallet(owner);
-      await matrix.connect(downlineB).joinSlot(1, testUser.address);
-
-      const testUserSlotActive = await matrix.getSlotData(testUser.address, 1);
-      expect(testUserSlotActive.filledNodes).to.equal(1n);
-      expect(testUserSlotActive.nodes[0]).to.equal(downlineB.address);
+      // 4. Verify getSlotNodesWithCodes returns node addresses and 5-digit member codes
+      const [nodeAddrs, nodeCodes, nodeMemberIds] = await matrix.getSlotNodesWithCodes(testUser.address, 1);
+      expect(nodeAddrs[0]).to.equal(ref1.address);
+      expect(nodeAddrs[1]).to.equal(ref2.address);
+      expect(Number(nodeCodes[0])).to.be.gte(10001);
+      expect(Number(nodeCodes[1])).to.be.gte(10001);
+      expect(Number(nodeMemberIds[0])).to.be.gte(1);
+      expect(Number(nodeMemberIds[1])).to.be.gte(1);
     });
 
     it("should allow user registration through matrix contract without joining a slot", async function () {
@@ -212,19 +210,19 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
   describe("14-Node Payout Routing", function () {
     it("should route P1 and P2 to upline 1 and upline 2 when qualified", async function () {
-      // Qualify upline1 (2 referrals)
+      // Qualify upline1 (2 direct referrals with 30$ deposit each)
       const d1 = await createFundedWallet(owner);
       const d2 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](d1.address, upline1.address);
-      await registry.connect(owner)["registerUser(address,address)"](d2.address, upline1.address);
-      expect(await registry.isQualified(upline1.address)).to.be.true;
+      await matrix.connect(d1).joinSlot(1, upline1.address);
+      await matrix.connect(d2).joinSlot(1, upline1.address);
+      expect(await matrix.isMatrixQualified(upline1.address)).to.be.true;
 
-      // Qualify upline2 (2 referrals)
+      // Qualify upline2 (2 direct referrals with 30$ deposit each)
       const d3 = await createFundedWallet(owner);
       const d4 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](d3.address, upline2.address);
-      await registry.connect(owner)["registerUser(address,address)"](d4.address, upline2.address);
-      expect(await registry.isQualified(upline2.address)).to.be.true;
+      await matrix.connect(d3).joinSlot(1, upline2.address);
+      await matrix.connect(d4).joinSlot(1, upline2.address);
+      expect(await matrix.isMatrixQualified(upline2.address)).to.be.true;
 
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
 
@@ -336,19 +334,19 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(downline1).joinSlot(1, matrixOwner.address);
       await matrix.connect(downline2).joinSlot(1, matrixOwner.address);
 
-      // Qualify downline1 (2 direct referrals)
+      // Qualify downline1 (2 direct referrals with 30$ deposit each)
       const r1 = await createFundedWallet(owner);
       const r2 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](r1.address, downline1.address);
-      await registry.connect(owner)["registerUser(address,address)"](r2.address, downline1.address);
-      expect(await registry.isQualified(downline1.address)).to.be.true;
+      await matrix.connect(r1).joinSlot(1, downline1.address);
+      await matrix.connect(r2).joinSlot(1, downline1.address);
+      expect(await matrix.isMatrixQualified(downline1.address)).to.be.true;
 
-      // Qualify downline2 (2 direct referrals)
+      // Qualify downline2 (2 direct referrals with 30$ deposit each)
       const r3 = await createFundedWallet(owner);
       const r4 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](r3.address, downline2.address);
-      await registry.connect(owner)["registerUser(address,address)"](r4.address, downline2.address);
-      expect(await registry.isQualified(downline2.address)).to.be.true;
+      await matrix.connect(r3).joinSlot(1, downline2.address);
+      await matrix.connect(r4).joinSlot(1, downline2.address);
+      expect(await matrix.isMatrixQualified(downline2.address)).to.be.true;
 
       // Fill P3..P6
       for (let i = 0; i < 4; i++) {
@@ -392,13 +390,13 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(downline1).joinSlot(1, matrixOwner.address);
       await matrix.connect(downline2).joinSlot(1, matrixOwner.address);
 
-      // Qualify ONLY downline2
+      // Qualify ONLY downline2 (2 direct referrals with 30$ deposit each)
       const r1 = await createFundedWallet(owner);
       const r2 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](r1.address, downline2.address);
-      await registry.connect(owner)["registerUser(address,address)"](r2.address, downline2.address);
-      expect(await registry.isQualified(downline1.address)).to.be.false;
-      expect(await registry.isQualified(downline2.address)).to.be.true;
+      await matrix.connect(r1).joinSlot(1, downline2.address);
+      await matrix.connect(r2).joinSlot(1, downline2.address);
+      expect(await matrix.isMatrixQualified(downline1.address)).to.be.false;
+      expect(await matrix.isMatrixQualified(downline2.address)).to.be.true;
 
       // Fill P3..P6
       for (let i = 0; i < 4; i++) {
@@ -451,21 +449,21 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(node5).joinSlot(1, matrixOwner.address); // P5
       await matrix.connect(node6).joinSlot(1, matrixOwner.address); // P6
 
-      // Qualify Node 3 and Node 4
+      // Qualify Node 3 and Node 4 (2 direct referrals with 30$ deposit each)
       const q1 = await createFundedWallet(owner);
       const q2 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](q1.address, node3.address);
-      await registry.connect(owner)["registerUser(address,address)"](q2.address, node3.address);
+      await matrix.connect(q1).joinSlot(1, node3.address);
+      await matrix.connect(q2).joinSlot(1, node3.address);
 
       const q3 = await createFundedWallet(owner);
       const q4 = await createFundedWallet(owner);
-      await registry.connect(owner)["registerUser(address,address)"](q3.address, node4.address);
-      await registry.connect(owner)["registerUser(address,address)"](q4.address, node4.address);
+      await matrix.connect(q3).joinSlot(1, node4.address);
+      await matrix.connect(q4).joinSlot(1, node4.address);
 
-      expect(await registry.isQualified(node3.address)).to.be.true;
-      expect(await registry.isQualified(node4.address)).to.be.true;
-      expect(await registry.isQualified(node5.address)).to.be.false;
-      expect(await registry.isQualified(node6.address)).to.be.false;
+      expect(await matrix.isMatrixQualified(node3.address)).to.be.true;
+      expect(await matrix.isMatrixQualified(node4.address)).to.be.true;
+      expect(await matrix.isMatrixQualified(node5.address)).to.be.false;
+      expect(await matrix.isMatrixQualified(node6.address)).to.be.false;
 
       // Fill P7..P12
       for (let i = 7; i <= 12; i++) {

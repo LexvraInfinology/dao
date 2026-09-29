@@ -3,6 +3,7 @@
 import React from 'react';
 import MatrixCountdownCard from '@/components/dao/matrix/MatrixCountdownCard';
 import MatrixFeatureCards from '@/components/dao/matrix/MatrixFeatureCards';
+import MatrixTreeGraph from '@/components/dao/matrix/MatrixTreeGraph';
 
 export default function MatrixBridgePage() {
   return (
@@ -53,6 +54,9 @@ export default function MatrixBridgePage() {
           <span>Active on 2 Directs</span>
         </div>
       </div>
+
+      {/* 14-Node Visual Matrix Tree Graph */}
+      <MatrixTreeGraph />
     </div>
   );
 }

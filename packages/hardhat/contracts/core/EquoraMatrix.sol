@@ -136,6 +136,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // user => slot => permanent cycle history (append-only, never deleted)
     mapping(address => mapping(uint256 => MatrixCycleSnapshot[])) public cycleSnapshots;
 
+    // matrixOwner => slot => cycle => recipient of P7 downline payout (anti-double payout protection)
+    mapping(address => mapping(uint256 => mapping(uint256 => address))) public p7PaidRecipient;
+
     // -------------------------------------------------------------------------
     // User Financials
     // -------------------------------------------------------------------------
@@ -465,44 +468,116 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
 
         } else if (position == 7 || position == 10 || position == 13) {
-            // P7, P10, P13 → Downline Spillover:
-            // Checks Downline 1 (nodes[0]) and Downline 2 (nodes[1]) eligibility (>= 2 referrals).
-            // - If BOTH eligible: split 50/50 between DL1 and DL2
-            // - If ONLY DL1 eligible: 100% directly to DL1
-            // - If ONLY DL2 eligible: 100% directly to DL2
-            // - If NEITHER eligible: 100% forwarded to 4 Protocol Pools via EquoraVault
-            address dl1 = userSlots[matrixOwner][slot].nodes[0];
-            address dl2 = userSlots[matrixOwner][slot].nodes[1];
-            bool q1 = (dl1 != address(0) && registry.isQualified(dl1));
-            bool q2 = (dl2 != address(0) && registry.isQualified(dl2));
+            _routeDownlineSpillover(matrixOwner, slot, position, cycle, cost);
+        }
+    }
 
-            if (q1 && q2) {
-                uint256 half = cost / 2;
-                uint256 rem  = cost - half;
-                userBalance[dl1] += half;
-                totalEarned[dl1] += half;
-                userBalance[dl2] += rem;
-                totalEarned[dl2] += rem;
-                emit SpilloverResolved(matrixOwner, dl1, p, false);
-                emit SpilloverResolved(matrixOwner, dl2, p, false);
-                emit DistributionExecuted(dl1, half, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
-                emit DistributionExecuted(dl2, rem,  PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
-            } else if (q1 && !q2) {
-                userBalance[dl1] += cost;
-                totalEarned[dl1] += cost;
-                emit SpilloverResolved(matrixOwner, dl1, p, false);
-                emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, p);
-            } else if (!q1 && q2) {
-                userBalance[dl2] += cost;
-                totalEarned[dl2] += cost;
-                emit SpilloverResolved(matrixOwner, dl2, p, false);
-                emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, p);
-            } else {
-                // Neither downline is eligible -> 100% to 4 Protocol Pools via EquoraVault
-                _forwardToVault(matrixOwner, cost);
-                emit SpilloverResolved(matrixOwner, vaultContract, p, true);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+    /**
+     * @dev Route downline spillover positions (P7, P10, P13).
+     *      - P7: Targets Node 1 first. If unqualified -> fallback to Node 2. If neither -> pools.
+     *      - P10: Targets Node 2 second. Anti-double payout prevents paying either node twice.
+     *      - P13: Option B queue scan across downline's downlines (Nodes 3, 4, 5, 6).
+     *             Splits equally among qualified candidates. If none -> pools.
+     */
+    function _routeDownlineSpillover(
+        address matrixOwner,
+        uint256 slot,
+        uint256 position,
+        uint256 cycle,
+        uint256 cost
+    ) internal {
+        if (position == 7) {
+            _routeP7(matrixOwner, slot, cycle, cost);
+        } else if (position == 10) {
+            _routeP10(matrixOwner, slot, cycle, cost);
+        } else if (position == 13) {
+            _routeP13(matrixOwner, slot, cycle, cost);
+        }
+    }
+
+    function _routeP7(address matrixOwner, uint256 slot, uint256 cycle, uint256 cost) internal {
+        uint8 s = uint8(slot);
+        address dl1 = userSlots[matrixOwner][slot].nodes[0];
+        address dl2 = userSlots[matrixOwner][slot].nodes[1];
+
+        if (dl1 != address(0) && registry.isQualified(dl1)) {
+            userBalance[dl1] += cost;
+            totalEarned[dl1] += cost;
+            p7PaidRecipient[matrixOwner][slot][cycle] = dl1;
+            emit SpilloverResolved(matrixOwner, dl1, 7, false);
+            emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 7);
+        } else if (dl2 != address(0) && registry.isQualified(dl2)) {
+            userBalance[dl2] += cost;
+            totalEarned[dl2] += cost;
+            p7PaidRecipient[matrixOwner][slot][cycle] = dl2;
+            emit SpilloverResolved(matrixOwner, dl2, 7, false);
+            emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 7);
+        } else {
+            _forwardToVault(matrixOwner, cost);
+            emit SpilloverResolved(matrixOwner, vaultContract, 7, true);
+            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 7);
+            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 7, block.timestamp);
+        }
+    }
+
+    function _routeP10(address matrixOwner, uint256 slot, uint256 cycle, uint256 cost) internal {
+        uint8 s = uint8(slot);
+        address dl1 = userSlots[matrixOwner][slot].nodes[0];
+        address dl2 = userSlots[matrixOwner][slot].nodes[1];
+        address alreadyPaid = p7PaidRecipient[matrixOwner][slot][cycle];
+
+        if (dl2 != address(0) && registry.isQualified(dl2) && dl2 != alreadyPaid) {
+            userBalance[dl2] += cost;
+            totalEarned[dl2] += cost;
+            emit SpilloverResolved(matrixOwner, dl2, 10, false);
+            emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 10);
+        } else if (dl1 != address(0) && registry.isQualified(dl1) && dl1 != alreadyPaid) {
+            userBalance[dl1] += cost;
+            totalEarned[dl1] += cost;
+            emit SpilloverResolved(matrixOwner, dl1, 10, false);
+            emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 10);
+        } else {
+            _forwardToVault(matrixOwner, cost);
+            emit SpilloverResolved(matrixOwner, vaultContract, 10, true);
+            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 10);
+            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 10, block.timestamp);
+        }
+    }
+
+    function _routeP13(address matrixOwner, uint256 slot, uint256 cycle, uint256 cost) internal {
+        uint8 s = uint8(slot);
+        uint256 count = 0;
+        address dl1 = userSlots[matrixOwner][slot].nodes[0];
+        address dl2 = userSlots[matrixOwner][slot].nodes[1];
+
+        for (uint256 i = 2; i <= 5; i++) {
+            address c = userSlots[matrixOwner][slot].nodes[i];
+            if (c != address(0) && registry.isQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            _forwardToVault(matrixOwner, cost);
+            emit SpilloverResolved(matrixOwner, vaultContract, 13, true);
+            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 13);
+            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 13, block.timestamp);
+            return;
+        }
+
+        uint256 share = cost / count;
+        uint256 rem = cost - (share * count);
+        bool isFirst = true;
+
+        for (uint256 i = 2; i <= 5; i++) {
+            address c = userSlots[matrixOwner][slot].nodes[i];
+            if (c != address(0) && registry.isQualified(c) && c != matrixOwner && c != dl1 && c != dl2) {
+                uint256 payout = isFirst ? (share + rem) : share;
+                isFirst = false;
+                userBalance[c] += payout;
+                totalEarned[c] += payout;
+                emit SpilloverResolved(matrixOwner, c, 13, false);
+                emit DistributionExecuted(c, payout, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 13);
             }
         }
     }

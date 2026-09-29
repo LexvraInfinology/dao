@@ -185,7 +185,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       expect(await matrix.totalEarned(upline2.address)).to.equal(SLOT1_COST);
     });
 
-    it("should fallback to matrixOwner (never root) when upline is unqualified", async function () {
+    it("should route directly to 4 automated protocol pools when upline is unqualified", async function () {
       // upline1 has only 1 direct referral (matrixOwner) -> unqualified
       expect(await registry.isQualified(upline1.address)).to.be.false;
 
@@ -193,17 +193,32 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
       const rootBalBefore = await token.balanceOf(root.address);
       const ownerBalBefore = await token.balanceOf(matrixOwner.address);
+      const daoBalBefore = await token.balanceOf(await dao.getAddress());
+      const salaryBalBefore = await salaryPool.pendingPoolBalance();
+      const magicBalBefore = await magicBox.poolBalance();
+      const rewardBalBefore = await rewardPool.poolBalance();
 
+      // P1 joins under matrixOwner -> since upline1 is unqualified, routes directly to 4 pools!
       const p1Wallet = await createFundedWallet(owner);
       await matrix.connect(p1Wallet).joinSlot(1, matrixOwner.address);
 
       const rootBalAfter = await token.balanceOf(root.address);
       const ownerBalAfter = await token.balanceOf(matrixOwner.address);
 
-      // Root receives 0; matrix owner receives the fallback payout directly in wallet
+      // Neither root nor matrixOwner receives the funds
       expect(rootBalAfter).to.equal(rootBalBefore);
-      expect(ownerBalAfter - ownerBalBefore).to.equal(SLOT1_COST);
-      expect(await matrix.totalEarned(matrixOwner.address)).to.equal(SLOT1_COST);
+      expect(ownerBalAfter).to.equal(ownerBalBefore);
+
+      // 4 Protocol Pools receive the funds directly: 35% DAO, 40% Salary, 10% Magic, 15% Rewards
+      const expectedDAO = (SLOT1_COST * 35n) / 100n;
+      const expectedSalary = (SLOT1_COST * 40n) / 100n;
+      const expectedMagic = (SLOT1_COST * 10n) / 100n;
+      const expectedReward = (SLOT1_COST * 15n) / 100n;
+
+      expect(await token.balanceOf(await dao.getAddress()) - daoBalBefore).to.equal(expectedDAO);
+      expect(await salaryPool.pendingPoolBalance() - salaryBalBefore).to.equal(expectedSalary);
+      expect(await magicBox.poolBalance() - magicBalBefore).to.equal(expectedMagic);
+      expect(await rewardPool.poolBalance() - rewardBalBefore).to.equal(expectedReward);
     });
 
     it("should route P3, P6, P8, P9, P11, P12 directly to matrixOwner", async function () {
@@ -471,11 +486,17 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     it("should push payouts directly to wallet with zero manual withdrawal needed", async function () {
       await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
 
+      // Fill P1 and P2 (which route to protocol pools since upline is unqualified)
+      const p1 = await createFundedWallet(owner);
+      const p2 = await createFundedWallet(owner);
+      await matrix.connect(p1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(p2).joinSlot(1, matrixOwner.address);
+
       const tokenBalBefore = await token.balanceOf(matrixOwner.address);
 
-      // Unqualified fallback gives matrixOwner P1 directly in wallet
-      const p1 = await createFundedWallet(owner);
-      await matrix.connect(p1).joinSlot(1, matrixOwner.address);
+      // P3 is direct owner income -> pushed directly to matrixOwner's wallet
+      const p3 = await createFundedWallet(owner);
+      await matrix.connect(p3).joinSlot(1, matrixOwner.address);
 
       const tokenBalAfter = await token.balanceOf(matrixOwner.address);
       expect(tokenBalAfter - tokenBalBefore).to.equal(SLOT1_COST);

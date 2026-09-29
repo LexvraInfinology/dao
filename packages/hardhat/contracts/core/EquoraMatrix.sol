@@ -462,17 +462,29 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (position == 1) {
             // P1 → Upline 1
             address upline1 = registry.getSponsor(matrixOwner);
-            if (upline1 == address(0)) upline1 = _getRootMatrixOwner();
-            _creditUser(upline1, matrixOwner, cost);
-            emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
+            if (upline1 != address(0) && (registry.isQualified(upline1) || upline1 == _getRootMatrixOwner())) {
+                _pushMatrixPayment(upline1, cost);
+                emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
+            } else {
+                // Unqualified or missing upline -> routed directly to the 4 automated protocol pools!
+                _forwardToVault(matrixOwner, cost);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
+                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+            }
 
         } else if (position == 2) {
             // P2 → Upline 2
-            address up1    = registry.getSponsor(matrixOwner);
+            address up1     = registry.getSponsor(matrixOwner);
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
-            if (upline2 == address(0)) upline2 = _getRootMatrixOwner();
-            _creditUser(upline2, matrixOwner, cost);
-            emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
+            if (upline2 != address(0) && (registry.isQualified(upline2) || upline2 == _getRootMatrixOwner())) {
+                _pushMatrixPayment(upline2, cost);
+                emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
+            } else {
+                // Unqualified or missing upline -> routed directly to the 4 automated protocol pools!
+                _forwardToVault(matrixOwner, cost);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
+                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+            }
 
         } else if (
             position == 3  || position == 6  ||
@@ -637,19 +649,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         }
     }
 
-    /**
-     * @dev Credit user balance with qualification check.
-     *      Unqualified recipient → reroutes directly to Matrix Owner.
-     *      Root Matrix Owner is always considered qualified.
-     */
-    function _creditUser(address user, address fallbackOwner, uint256 amount) internal {
-        if (registry.isQualified(user) || user == _getRootMatrixOwner()) {
-            _pushMatrixPayment(user, amount);
-        } else {
-            // Ineligible / Did not meet referral criteria -> fallback to matrixOwner (never root)
-            _pushMatrixPayment(fallbackOwner, amount);
-        }
-    }
+
 
     /**
      * @dev Credit matrix owner's balance and track per-slot earnings.

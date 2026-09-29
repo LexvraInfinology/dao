@@ -218,7 +218,7 @@ contract EquoraDAO is ReentrancyGuard {
             memberRewardDebt[msg.sender] = accPoolSharePerMember;
             lastJoinTimestamp           = block.timestamp;
 
-            tokenId = membershipNFT.mint(msg.sender, position);
+            tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
             // Distribute entry fee to all active members except new joiner

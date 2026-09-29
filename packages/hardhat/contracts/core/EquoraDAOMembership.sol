@@ -29,6 +29,9 @@ contract EquoraDAOMembership is ERC721 {
     error SoulboundTransferBlocked();
     error MaxSupplyExceeded();
     error AlreadyMember();
+    error NotMember();
+
+    bool private _reassigning;
 
     modifier onlyDAO() {
         if (msg.sender != daoContract) revert OnlyDAO();
@@ -46,7 +49,6 @@ contract EquoraDAOMembership is ERC721 {
      * @param position 1-indexed queue position (1 to 100)
      * @return tokenId The minted token ID (same as position)
      */
-
     function mint(address to, uint256 position) external onlyDAO returns (uint256 tokenId) {
         if (position < 1 || position > MAX_SUPPLY) revert MaxSupplyExceeded();
         if (memberTokenId[to] != 0) revert AlreadyMember();
@@ -61,8 +63,33 @@ contract EquoraDAOMembership is ERC721 {
     }
 
     /**
+     * @dev Reassign an existing seat NFT when an expired member forfeits their seat after missing the 48h retopup window.
+     *      Can ONLY be called by the immutable EquoraDAO contract during vacant seat takeover.
+     * @param from Previous defaulted member address
+     * @param to New incoming member address
+     * @param position Seat number being taken over (1 to 100)
+     * @return tokenId The reassigned token ID
+     */
+    function reassignSeat(address from, address to, uint256 position) external onlyDAO returns (uint256 tokenId) {
+        if (position < 1 || position > MAX_SUPPLY) revert MaxSupplyExceeded();
+        if (memberTokenId[to] != 0) revert AlreadyMember();
+        if (memberTokenId[from] != position) revert NotMember();
+
+        tokenId = position;
+        tokenPosition[tokenId] = position;
+        memberTokenId[from] = 0;
+        memberTokenId[to] = tokenId;
+
+        _reassigning = true;
+        _transfer(from, to, tokenId);
+        _reassigning = false;
+
+        emit MembershipMinted(to, tokenId, position);
+    }
+
+    /**
      * @dev Enforce soulbound property in OpenZeppelin ERC721 v5.
-     *      Allows minting (from == address(0)), but blocks transfers.
+     *      Allows minting (from == address(0)) and DAO reassignments, but blocks peer-to-peer transfers.
      */
     function _update(
         address to,
@@ -70,8 +97,8 @@ contract EquoraDAOMembership is ERC721 {
         address auth
     ) internal override returns (address) {
         address from = _ownerOf(tokenId);
-        // If from is not address(0), it is a transfer or burn -> block transfers
-        if (from != address(0)) {
+        // If from is not address(0), block transfers unless it is an authorized DAO seat reassignment
+        if (from != address(0) && !_reassigning) {
             revert SoulboundTransferBlocked();
         }
         return super._update(to, tokenId, auth);

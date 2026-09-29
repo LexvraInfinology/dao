@@ -52,4 +52,26 @@ describe("EquoraDAOMembership — Soulbound ERC-721 Verification", function () {
       )
     ).to.be.revertedWithCustomError(membershipNFT, "SoulboundTransferBlocked");
   });
+
+  it("Should allow authorized DAO to reassign a defaulted seat to a new member", async function () {
+    await membershipNFT.connect(daoSigner).mint(user1.address, 1);
+    expect(await membershipNFT.ownerOf(1)).to.equal(user1.address);
+    expect(await membershipNFT.isMember(user1.address)).to.be.true;
+
+    // DAO reassigns seat 1 from user1 to user2
+    await membershipNFT.connect(daoSigner).reassignSeat(user1.address, user2.address, 1);
+
+    expect(await membershipNFT.ownerOf(1)).to.equal(user2.address);
+    expect(await membershipNFT.isMember(user1.address)).to.be.false;
+    expect(await membershipNFT.isMember(user2.address)).to.be.true;
+    expect(await membershipNFT.getPosition(user2.address)).to.equal(1n);
+    expect(await membershipNFT.totalSupply()).to.equal(1n);
+  });
+
+  it("Should revert if an unauthorized caller attempts to reassign a seat", async function () {
+    await membershipNFT.connect(daoSigner).mint(user1.address, 1);
+    await expect(
+      membershipNFT.connect(user1).reassignSeat(user1.address, user2.address, 1)
+    ).to.be.revertedWithCustomError(membershipNFT, "OnlyDAO");
+  });
 });

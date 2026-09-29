@@ -29,10 +29,10 @@ export const LandingSimulator: React.FC = () => {
   const priorMembersCount = pos - 1;
 
   return (
-    <section id="simulator" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="simulator" className="pt-8 sm:pt-12 lg:pt-14 pb-12 sm:pb-16 lg:pb-20 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Top Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-12 sm:mb-14">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-10 lg:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
             <span className="text-[12px] font-semibold tracking-wider text-[#155EEF] font-inter uppercase">
               Interactive 300 / N Architecture

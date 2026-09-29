@@ -12,7 +12,7 @@ import { LandingFooter } from '@/components/landing/LandingFooter';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#F0F4F8] text-[#0B132B] selection:bg-[#155EEF] selection:text-white font-inter">
+    <main className="min-h-screen bg-[#F0F4F8] text-[#0B132B] selection:bg-[#155EEF] selection:text-white font-inter overflow-x-clip">
       {/* 1. Header / Navbar */}
       <LandingNavbar />
 

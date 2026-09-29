@@ -7,7 +7,7 @@ import { AndroidIcon } from '@/components/ui/AndroidIcon';
 
 export const LandingTrobSafeDownload: React.FC = () => {
   return (
-    <section id="download-wallet" className="relative py-16 sm:py-24 bg-white border-t border-b border-slate-200/80 overflow-hidden font-inter">
+    <section id="download-wallet" className="relative pt-8 sm:pt-12 pb-8 sm:pb-12 bg-white border-t border-b border-slate-200/80 overflow-hidden font-inter">
       {/* Background radial gradient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-blue-500/5 via-sky-400/5 to-transparent blur-3xl pointer-events-none" />
 

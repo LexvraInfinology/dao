@@ -29,10 +29,10 @@ export const LandingTrobChain: React.FC = () => {
   ];
 
   return (
-    <section id="trobchain" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="trobchain" className="pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Top Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+        <div className="text-center max-w-3xl mx-auto space-y-4 mb-10 sm:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
             <span className="text-[12px] font-semibold tracking-wider text-[#155EEF] font-inter uppercase">
               Built on TrobChain
@@ -65,11 +65,11 @@ export const LandingTrobChain: React.FC = () => {
 
           {/* Right Column: 4 Feature Cards & Banner */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               {features.map((feat) => (
                 <div
                   key={feat.title}
-                  className="p-5 sm:p-6 rounded-2xl bg-[#F8FAFC] border border-slate-200/80 hover:bg-white hover:border-[#D1E9FF] hover:shadow-[0_8px_25px_rgba(21,94,239,0.06)] transition-all duration-200 space-y-2.5"
+                  className="p-4 sm:p-5 rounded-2xl bg-[#FAFCFF] border border-slate-200/70 hover:bg-white hover:border-[#D1E9FF] hover:shadow-[0_8px_25px_rgba(21,94,239,0.06)] transition-all duration-200 space-y-2"
                 >
                   <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shadow-xs">
                     {feat.icon}

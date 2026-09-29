@@ -11,7 +11,7 @@ export const LandingMovement: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="py-20 lg:py-28 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="about" className="pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Text & Stats Column */}
@@ -40,16 +40,16 @@ export const LandingMovement: React.FC = () => {
             </div>
 
             {/* 3 Stat Cards Row */}
-            <div className="pt-4 grid grid-cols-3 gap-2.5 sm:gap-4">
+            <div className="pt-4 grid grid-cols-3 gap-1.5 sm:gap-4">
               {stats.map((s) => (
                 <div
                   key={s.label}
-                  className="p-3 sm:p-4 md:p-5 rounded-2xl bg-[#F8FAFC] border border-slate-200/80 text-center shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:shadow-md transition-shadow"
+                  className="p-2 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl bg-[#F8FAFC] border border-slate-200/80 text-center shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:shadow-md transition-shadow"
                 >
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold font-sora text-[#0B132B] tracking-tight">
+                  <div className="text-lg sm:text-2xl md:text-3xl font-bold font-sora text-[#0B132B] tracking-tight">
                     {s.value}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-[#64748B] font-medium mt-1 truncate">
+                  <div className="text-[9.5px] sm:text-xs text-[#64748B] font-medium mt-0.5 sm:mt-1 truncate">
                     {s.label}
                   </div>
                 </div>

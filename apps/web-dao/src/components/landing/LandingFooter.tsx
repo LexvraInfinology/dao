@@ -44,7 +44,7 @@ export const LandingFooter: React.FC = () => {
   ];
 
   return (
-    <footer className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#EAF2FF] to-[#DCE9FF]">
+    <footer className="relative pt-10 sm:pt-12 lg:pt-14 pb-12 sm:pb-16 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#EAF2FF] to-[#DCE9FF]">
       {/* Background Cosmic Mountain Artwork */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image

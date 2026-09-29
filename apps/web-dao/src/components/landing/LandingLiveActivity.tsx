@@ -128,12 +128,12 @@ export const LandingLiveActivity: React.FC = () => {
   }, [rawEvents]);
 
   return (
-    <section id="activity" className="relative pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-32 lg:pb-36 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
+    <section id="activity" className="relative pt-10 sm:pt-14 lg:pt-16 pb-10 sm:pb-14 lg:pb-16 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image src="/landing/activity-boy.png" alt="Genesis Live Activity" fill priority
           className="object-cover object-[80%_0%] sm:object-[78%_center] lg:object-center" />
-        <div className="absolute inset-x-0 top-0 h-28 sm:h-36 bg-gradient-to-b from-white via-white/80 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-44 bg-gradient-to-t from-white via-white/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-20 sm:h-28 bg-gradient-to-b from-white via-white/80 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 sm:h-32 bg-gradient-to-t from-white via-white/60 to-transparent" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
@@ -239,13 +239,6 @@ export const LandingLiveActivity: React.FC = () => {
           <div className="hidden lg:block lg:col-span-5 xl:col-span-5 h-[520px] pointer-events-none" />
         </div>
 
-        {/* Mobile live indicator */}
-        <div className="block lg:hidden mt-6 sm:mt-8 p-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xs max-w-sm mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#0B132B] font-inter">
-            <span className="w-2 h-2 rounded-full bg-[#12B76A] animate-pulse" />
-            <span>Autonomous Protocol Streams Active</span>
-          </div>
-        </div>
       </div>
     </section>
   );

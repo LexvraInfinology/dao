@@ -148,6 +148,66 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
         "EquoraMatrix: already unlocked"
       );
     });
+
+    it("should enforce that a user tree graph is only started upon achieving 2 direct referrals eligibility", async function () {
+      // 1. matrixOwner is already qualified (has downline1 and downline2) and starts Slot 1
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+      expect(await matrix.isMatrixTreeStarted(matrixOwner.address, 1)).to.be.true;
+
+      // 2. testUser joins Slot 1 under matrixOwner without having 2 direct referrals
+      const testUser = await createFundedWallet(owner);
+      await matrix.connect(testUser).joinSlot(1, matrixOwner.address);
+      const testUserSlot = await matrix.getSlotData(testUser.address, 1);
+      expect(testUserSlot.isUnlocked).to.be.true;
+
+      // testUser has 0 referrals -> tree graph NOT started
+      expect(await registry.isQualified(testUser.address)).to.be.false;
+      expect(await matrix.isMatrixTreeStarted(testUser.address, 1)).to.be.false;
+
+      // 3. downlineA joins with sponsor = testUser
+      // Since testUser's tree graph is not started, placement skips testUser and bubbles up to matrixOwner!
+      const downlineA = await createFundedWallet(owner);
+      await matrix.connect(downlineA).joinSlot(1, testUser.address);
+
+      // testUser's tree graph has 0 filled nodes (skipped!)
+      const testUserSlotAfterSkip = await matrix.getSlotData(testUser.address, 1);
+      expect(testUserSlotAfterSkip.filledNodes).to.equal(0n);
+
+      // matrixOwner received downlineA in their tree graph
+      const matrixOwnerSlot = await matrix.getSlotData(matrixOwner.address, 1);
+      expect(matrixOwnerSlot.filledNodes).to.equal(2n); // testUser at node 0, downlineA at node 1
+
+      // 4. testUser now completes 2 direct referrals in the registry
+      const ref1 = await createFundedWallet(owner);
+      const ref2 = await createFundedWallet(owner);
+      await registry.connect(owner)["registerUser(address,address)"](ref1.address, testUser.address);
+      await registry.connect(owner)["registerUser(address,address)"](ref2.address, testUser.address);
+
+      // Now testUser has achieved 2 direct referrals eligibility!
+      expect(await registry.isQualified(testUser.address)).to.be.true;
+      expect(await matrix.isMatrixTreeStarted(testUser.address, 1)).to.be.true;
+
+      // 5. downlineB joins with sponsor = testUser
+      // Now testUser's tree graph IS started! Placement lands directly in testUser's tree!
+      const downlineB = await createFundedWallet(owner);
+      await matrix.connect(downlineB).joinSlot(1, testUser.address);
+
+      const testUserSlotActive = await matrix.getSlotData(testUser.address, 1);
+      expect(testUserSlotActive.filledNodes).to.equal(1n);
+      expect(testUserSlotActive.nodes[0]).to.equal(downlineB.address);
+    });
+
+    it("should allow user registration through matrix contract without joining a slot", async function () {
+      const newUser = await createFundedWallet(owner);
+      expect(await registry.isRegistered(newUser.address)).to.be.false;
+
+      await matrix.connect(newUser)["register(address)"](matrixOwner.address);
+      expect(await registry.isRegistered(newUser.address)).to.be.true;
+      expect(await registry.getSponsor(newUser.address)).to.equal(matrixOwner.address);
+
+      const code = await registry.getCodeByUser(newUser.address);
+      expect(Number(code)).to.be.gte(10001);
+    });
   });
 
   describe("14-Node Payout Routing", function () {

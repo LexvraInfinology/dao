@@ -310,13 +310,39 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         return true;
     }
 
+    event TreeGraphStarted(
+        address indexed user,
+        uint8   indexed slot,
+        uint256 timestamp
+    );
+
+    // -------------------------------------------------------------------------
+    // User Registration
+    // -------------------------------------------------------------------------
+
+    /**
+     * @dev Register a user in the registry without joining a slot yet.
+     *      Allows users to get their 5-digit referral code and build their 2 direct referrals
+     *      before their matrix tree graph starts.
+     */
+    function register(address sponsor) external returns (bool) {
+        return registry.registerUser(msg.sender, sponsor);
+    }
+
+    /**
+     * @dev Register a user in the registry via 5-digit sponsor code.
+     */
+    function register(uint32 sponsorCode) external returns (bool) {
+        return registry.registerUser(msg.sender, sponsorCode);
+    }
+
     // -------------------------------------------------------------------------
     // Join Slot
     // -------------------------------------------------------------------------
 
     /**
      * @dev Join or unlock a specific matrix slot.
-     *      Slot 1: any registered user (2 direct referrals required via Registry).
+     *      Slot 1: any registered user (personal tree graph starts upon 2 direct referrals).
      *      Slots 2-12: previous slot must be unlocked.
      */
     function joinSlot(uint256 slot, address sponsor) external nonReentrant {
@@ -332,7 +358,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         totalVolumeProcessed += cost;
 
-        // Register user on first join (slot 1)
+        // Register user on first join (slot 1) if not already registered
         if (!registry.isRegistered(msg.sender)) {
             registry.registerUser(msg.sender, sponsor);
         }
@@ -352,6 +378,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         address sponsorAddr = registry.getSponsor(msg.sender);
         emit SlotJoined(msg.sender, slot, cost, sponsorAddr, block.timestamp);
+
+        if (registry.isQualified(msg.sender) || msg.sender == _getRootMatrixOwner()) {
+            emit TreeGraphStarted(msg.sender, uint8(slot), block.timestamp);
+        }
 
         _placeUserInMatrix(msg.sender, slot, cost);
     }
@@ -379,6 +409,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     /**
      * @dev Find matrix owner (bubble up sponsor chain, max depth 12),
      *      place new user in next available position, route payment.
+     *      A user's personal tree graph only starts receiving placements when they have
+     *      achieved 2 direct referrals eligibility (or are the Genesis Root Matrix Owner).
+     *      If an upline in the chain has not met 2 direct referrals, the placement skips them
+     *      and bubbles up to an eligible upline sponsor or the root matrix owner.
      */
     function _placeUserInMatrix(address newUser, uint256 slot, uint256 cost) internal {
         address rootOwner = _getRootMatrixOwner();
@@ -388,7 +422,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         address matrixOwner = sponsor;
         uint256 depth = 0;
-        while (!userSlots[matrixOwner][slot].isUnlocked && depth < MAX_UPLINE_DEPTH) {
+        while (
+            (!userSlots[matrixOwner][slot].isUnlocked || (!registry.isQualified(matrixOwner) && matrixOwner != rootOwner)) &&
+            depth < MAX_UPLINE_DEPTH
+        ) {
             address up = registry.getSponsor(matrixOwner);
             if (up == address(0) || up == matrixOwner) {
                 matrixOwner = rootOwner;
@@ -398,7 +435,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             depth++;
         }
 
-        if (!userSlots[matrixOwner][slot].isUnlocked) {
+        if (!userSlots[matrixOwner][slot].isUnlocked || (!registry.isQualified(matrixOwner) && matrixOwner != rootOwner)) {
             matrixOwner = rootOwner;
         }
 
@@ -411,6 +448,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
                 highestSlot[matrixOwner] = slot;
             }
             emit SlotJoined(matrixOwner, slot, 0, address(0), block.timestamp);
+            emit TreeGraphStarted(matrixOwner, uint8(slot), block.timestamp);
         }
 
         // If newUser is the root matrix owner, they have no upline tree above them to place into
@@ -767,6 +805,18 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     ) {
         MatrixSlot storage m = userSlots[user][slot];
         return (m.isUnlocked, m.currentCycle, m.filledNodes, m.nodes, m.totalEarned);
+    }
+
+    /**
+     * @dev Checks if a user's 14-node matrix tree graph is officially started and accepting placements.
+     *      Requires:
+     *      1. Slot is unlocked.
+     *      2. User has achieved 2 direct referrals eligibility (or is the Genesis Root Matrix Owner).
+     */
+    function isMatrixTreeStarted(address user, uint256 slot) public view returns (bool) {
+        if (!userSlots[user][slot].isUnlocked) return false;
+        if (user == _getRootMatrixOwner()) return true;
+        return registry.isQualified(user);
     }
 
     function getAllSlotsStatus(address user) external view returns (

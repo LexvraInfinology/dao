@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Crown, Layers, Sparkles } from 'lucide-react';
+import { Calendar, Crown, Layers, Sparkles, Users } from 'lucide-react';
 import { useTrobPrice } from '@/hooks/useApi';
 
 export default function MatrixFeatureCards() {
@@ -11,7 +11,7 @@ export default function MatrixFeatureCards() {
   return (
     <>
       {/* ================= DESKTOP VIEW (hidden md:grid) ================= */}
-      <div className="hidden md:grid md:grid-cols-4 gap-4 max-w-5xl mx-auto font-jakarta">
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-5 gap-3.5 max-w-5xl mx-auto font-jakarta">
         {/* Card 1: Launch */}
         <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#E2ECF9] p-5 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex items-start gap-3.5 hover:border-[#BFDBFE] transition-colors">
           <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE]/60 flex items-center justify-center text-[#155EEF] shrink-0 mt-0.5">
@@ -30,25 +30,43 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Card 2: Matrix */}
+        {/* Card 2: Matrix Entry */}
         <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#E2ECF9] p-5 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex items-start gap-3.5 hover:border-[#BFDBFE] transition-colors">
           <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE]/60 flex items-center justify-center text-[#155EEF] shrink-0 mt-0.5">
             <Layers className="w-5 h-5" />
           </div>
           <div>
             <div className="text-xs text-[#64748B] font-medium">
-              Matrix
+              Entry Cost
             </div>
             <div className="text-lg font-bold text-[#071A4A] tracking-tight mt-0.5">
               $30 Entry
             </div>
             <p className="text-xs text-[#64748B] mt-1 leading-snug">
-              {trobForSlot1 ? `≈ ${trobForSlot1.toLocaleString()} TROB live rate.` : 'Accessible to all members.'}
+              {trobForSlot1 ? `≈ ${trobForSlot1.toLocaleString()} TROB live rate.` : 'Slot 1 entry fee.'}
             </p>
           </div>
         </div>
 
-        {/* Card 3: DAO Share */}
+        {/* Card 3: Tree Graph Eligibility */}
+        <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#E2ECF9] p-5 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex items-start gap-3.5 hover:border-[#BFDBFE] transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0 mt-0.5">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs text-emerald-700 font-medium">
+              Tree Graph
+            </div>
+            <div className="text-lg font-bold text-[#071A4A] tracking-tight mt-0.5">
+              2 Directs
+            </div>
+            <p className="text-xs text-[#64748B] mt-1 leading-snug">
+              Required to start personal tree.
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: DAO Share */}
         <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#E2ECF9] p-5 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex items-start gap-3.5 hover:border-[#BFDBFE] transition-colors">
           <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE]/60 flex items-center justify-center text-[#155EEF] shrink-0 mt-0.5">
             <Sparkles className="w-5 h-5" />
@@ -66,7 +84,7 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Card 4: Genesis Root */}
+        {/* Card 5: Genesis Root */}
         <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#E2ECF9] p-5 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex items-start gap-3.5 hover:border-[#BFDBFE] transition-colors">
           <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
             <Crown className="w-5 h-5" />
@@ -107,7 +125,7 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Mobile Card 2: Matrix */}
+        {/* Mobile Card 2: Matrix Entry */}
         <div className="bg-white rounded-2xl border border-[#E2ECF9] p-4 shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE]/60 flex items-center justify-center text-[#155EEF] shrink-0">
@@ -115,10 +133,10 @@ export default function MatrixFeatureCards() {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-[#64748B] font-medium">
-                Matrix
+                Entry Cost
               </div>
               <div className="text-xs text-[#64748B] mt-0.5 truncate">
-                {trobForSlot1 ? `≈ ${trobForSlot1.toLocaleString()} TROB live rate` : 'Accessible to all members.'}
+                {trobForSlot1 ? `≈ ${trobForSlot1.toLocaleString()} TROB live rate` : 'Slot 1 entry fee.'}
               </div>
             </div>
           </div>
@@ -127,7 +145,27 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Mobile Card 3: DAO Share */}
+        {/* Mobile Card 3: Tree Graph Eligibility */}
+        <div className="bg-white rounded-2xl border border-[#E2ECF9] p-4 shadow-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs text-emerald-700 font-medium">
+                Tree Graph
+              </div>
+              <div className="text-xs text-[#64748B] mt-0.5 truncate">
+                2 direct referrals required to start tree.
+              </div>
+            </div>
+          </div>
+          <div className="text-base font-bold text-[#071A4A] tracking-tight shrink-0">
+            2 Directs
+          </div>
+        </div>
+
+        {/* Mobile Card 4: DAO Share */}
         <div className="bg-white rounded-2xl border border-[#E2ECF9] p-4 shadow-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE]/60 flex items-center justify-center text-[#155EEF] shrink-0">

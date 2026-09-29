@@ -31,8 +31,28 @@ export default function MatrixBridgePage() {
       {/* Live Countdown Card */}
       <MatrixCountdownCard />
 
-      {/* 3 Feature Highlights (Desktop 3-col grid vs Mobile stacked) */}
+      {/* 5 Feature Highlights (Desktop 5-col grid vs Mobile stacked) */}
       <MatrixFeatureCards />
+
+      {/* Tree Graph Start Requirement Info Banner */}
+      <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_2px_15px_rgba(21,94,239,0.02)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0 font-bold text-sm mt-0.5">
+            2×
+          </div>
+          <div>
+            <div className="font-bold text-[#071A4A] text-sm sm:text-base">
+              Personal Tree Graph Eligibility
+            </div>
+            <p className="text-xs sm:text-sm text-[#64748B] mt-1 leading-relaxed max-w-2xl">
+              Any member can join Slot 1 ($30). Your personal 14-node tree graph and downline spillover placements officially start once you complete <strong className="text-[#071A4A]">2 direct referrals</strong> (Genesis Root Matrix Owner is automatically active as the top apex).
+            </p>
+          </div>
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200/80 shrink-0 self-start sm:self-auto">
+          <span>Active on 2 Directs</span>
+        </div>
+      </div>
     </div>
   );
 }

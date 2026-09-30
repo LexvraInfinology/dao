@@ -47,9 +47,9 @@ export default function MatrixCountdownCard() {
   }, []);
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-white rounded-xl sm:rounded-2xl border border-[#E2EEF9] shadow-[0_4px_20px_rgba(60,120,177,0.06)] overflow-hidden font-sans">
+    <div className="w-full max-w-xl mx-auto bg-white rounded-xl sm:rounded-2xl border border-[#E2EEF9] shadow-[0_4px_20px_rgba(14,98,228,0.06)] overflow-hidden font-sans">
       {/* Top Blue Accent Highlight Bar */}
-      <div className="h-1 w-full bg-[#3C78B1]" />
+      <div className="h-1 w-full bg-[#0E62E4]" />
 
       {/* Timer Units Container */}
       <div className="px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
@@ -122,7 +122,7 @@ export default function MatrixCountdownCard() {
           href={process.env.NEXT_PUBLIC_MATRIX_URL || 'https://equorafi.com'}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-semibold text-xs shadow-xs transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-semibold text-xs shadow-xs transition-colors"
         >
           <span>Matrix Domain</span>
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

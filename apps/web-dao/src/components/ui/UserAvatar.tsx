@@ -96,7 +96,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       style={{ width: size, height: size }}
     >
       <div
-        className={`w-full h-full ${roundedClassName} overflow-hidden shadow-xs border border-[#BFDBFE]/60 bg-gradient-to-br from-[#EBF3FA] to-[#D5E6F5] relative flex items-center justify-center`}
+        className={`w-full h-full ${roundedClassName} overflow-hidden shadow-xs border border-[#BFDBFE] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] relative flex items-center justify-center`}
       >
         <img
           src={currentSrc}
@@ -124,7 +124,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       {allowRandomize && (
         <button
           onClick={handleShuffle}
-          className={`absolute -top-1.5 -right-1.5 p-1 rounded-full bg-white/95 text-[#3C78B1] hover:text-[#14304A] hover:bg-white border border-[#BFDBFE] shadow-sm transition-all duration-200 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 ${
+          className={`absolute -top-1.5 -right-1.5 p-1 rounded-full bg-white/95 text-[#0E62E4] hover:text-[#0B52C4] hover:bg-white border border-[#BFDBFE] shadow-sm transition-all duration-200 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 ${
             isRotating ? 'rotate-180 scale-110' : ''
           }`}
           title="Randomize Profile Avatar"

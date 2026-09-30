@@ -19,9 +19,9 @@ export const CouncilStatCards: React.FC = () => {
       {/* ── Responsive grid: 2 cols on mobile, 4 cols on desktop ─────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
         {/* Card 1: Seats Remaining */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="flex items-start justify-between">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] text-[#3C78B1] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
               <AppWindow className="w-4 h-4" />
             </div>
             <div className="text-right">
@@ -35,15 +35,15 @@ export const CouncilStatCards: React.FC = () => {
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between gap-1.5">
             <span className="text-[10px] text-[#4F6D87]">{seatsFilled} claimed</span>
             <div className="w-16 sm:w-20 bg-[#E2EEF9] rounded-full h-1.5 overflow-hidden flex items-center">
-              <div className="h-full bg-[#3C78B1] rounded-full transition-all duration-700" style={{ width: `${filledPct}%` }} />
+              <div className="h-full bg-[#0E62E4] rounded-full transition-all duration-700" style={{ width: `${filledPct}%` }} />
             </div>
           </div>
         </div>
 
         {/* Card 2: Next Seat in Line */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="flex items-start justify-between">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] text-[#3C78B1] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
               <User className="w-4 h-4" />
             </div>
             <div className="text-right">
@@ -55,17 +55,17 @@ export const CouncilStatCards: React.FC = () => {
             <span className="text-emerald-700 font-medium">
               Back: <strong className="text-[#14304A]">${cashback}</strong>
             </span>
-            <span className="inline-flex items-center gap-1 text-[#3C78B1] font-semibold bg-[#EBF3FA] px-1.5 py-0.5 rounded text-[10px]">
-              <span className="w-1 h-1 rounded-full bg-[#3C78B1] animate-pulse" />
+            <span className="inline-flex items-center gap-1 text-[#0E62E4] font-semibold bg-[#EFF6FF] px-1.5 py-0.5 rounded text-[10px]">
+              <span className="w-1 h-1 rounded-full bg-[#0E62E4] animate-pulse" />
               Open
             </span>
           </div>
         </div>
 
         {/* Card 3: Entry Amount */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="flex items-start justify-between">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] text-[#3C78B1] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
               <Clock className="w-4 h-4" />
             </div>
             <div className="text-right">
@@ -75,12 +75,12 @@ export const CouncilStatCards: React.FC = () => {
           </div>
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between text-[10px]">
             <span className="text-[#4F6D87]">Fixed $300</span>
-            <span className="text-[#3C78B1] font-medium">300/N Return</span>
+            <span className="text-[#0E62E4] font-medium">300/N Return</span>
           </div>
         </div>
 
         {/* Card 4: Referrals */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="flex items-start justify-between">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
               <Users className="w-4 h-4" />

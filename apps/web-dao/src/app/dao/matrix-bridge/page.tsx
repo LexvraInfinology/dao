@@ -11,16 +11,16 @@ export default function MatrixBridgePage() {
       {/* Header Section (Centered) */}
       <div className="text-center flex flex-col items-center">
         {/* Status Pill Badge: COMING SOON */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#EBF3FA] border border-[#3C78B1]/25 mb-3 select-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3C78B1] animate-pulse" />
-          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-[#3C78B1]">
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#EFF6FF] border border-[#0E62E4]/25 mb-3 select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0E62E4] animate-pulse" />
+          <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-[#0E62E4]">
             COMING SOON
           </span>
         </div>
 
         {/* Main Heading: The Matrix Is Coming. */}
         <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-bold text-[#14304A] tracking-tight leading-tight">
-          The <span className="text-[#3C78B1]">Matrix</span> Is Coming.
+          The <span className="text-[#0E62E4]">Matrix</span> Is Coming.
         </h1>
 
         {/* Subtitle */}
@@ -36,7 +36,7 @@ export default function MatrixBridgePage() {
       <MatrixFeatureCards />
 
       {/* Tree Graph Start Requirement Info Banner */}
-      <div className="bg-white border border-[#E2EEF9] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
+      <div className="bg-white border border-[#E2EEF9] rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0 font-bold text-xs mt-0.5">
             2×

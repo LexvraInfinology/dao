@@ -148,7 +148,7 @@ export default function CouncilSeatsPage() {
       {/* Loading overlay */}
       {membersLoading && (
         <div className="flex items-center gap-2 text-xs text-[#4F6D87] font-sans">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3C78B1]" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
           <span>Syncing live seat state from database…</span>
         </div>
       )}

@@ -64,18 +64,18 @@ export default function DaoDashboardPage() {
       {/* =======================================================================
           1. HERO SECTION — Member-Aware, Trobium Styled & Tightly Packed
          ======================================================================= */}
-      <div className="relative rounded-2xl overflow-hidden bg-white border border-[#3C78B1]/18 p-4 sm:p-6 lg:p-7 shadow-[0_4px_20px_rgba(60,120,177,0.06)]">
-        <div className="ambient-glow top-0 right-1/4 w-80 h-80 bg-[#3C78B1]/10 pointer-events-none" />
+      <div className="relative rounded-2xl overflow-hidden bg-white border border-[#0E62E4]/18 p-4 sm:p-6 lg:p-7 shadow-[0_4px_20px_rgba(14,98,228,0.06)]">
+        <div className="ambient-glow top-0 right-1/4 w-80 h-80 bg-[#0E62E4]/10 pointer-events-none" />
 
         {/* --- DESKTOP HERO --- */}
         <div className="hidden lg:grid grid-cols-12 gap-6 items-center relative z-10">
           <div className="col-span-7 space-y-3">
-            <span className="chip text-[10px] tracking-[0.08em] font-semibold text-[#3C78B1] bg-[#3C78B1]/10 border border-[#3C78B1]/20 px-2.5 py-0.5 rounded-lg">
+            <span className="chip text-[10px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg">
               Genesis DAO Phase 1
             </span>
 
             <h1 className="text-2xl xl:text-3xl font-bold text-[#17334F] tracking-tight leading-tight uppercase">
-              Genesis <span className="text-[#3C78B1]">DAO</span> Council
+              Genesis <span className="text-[#0E62E4]">DAO</span> Council
             </h1>
 
             <h2 className="text-xs xl:text-sm font-semibold text-[#3E6180] leading-snug">
@@ -89,7 +89,7 @@ export default function DaoDashboardPage() {
             {/* ── CTA: Member vs Non-Member ── */}
             {memberLoading ? (
               <div className="flex items-center gap-2 text-xs text-[#4F6D87] pt-1">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3C78B1]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
                 <span>Checking membership…</span>
               </div>
             ) : isMember ? (
@@ -151,16 +151,16 @@ export default function DaoDashboardPage() {
               <div>PEOPLE</div>
               <div>PROTOCOL</div>
               <div>PROGRESS</div>
-              <div className="w-6 h-[2px] bg-[#3C78B1] ml-auto rounded-full mt-1" />
+              <div className="w-6 h-[2px] bg-[#0E62E4] ml-auto rounded-full mt-1" />
             </div>
 
             <div className="relative w-48 h-48 flex items-center justify-center mr-2">
-              <div className="absolute w-40 h-40 rounded-full bg-[#3C78B1]/10 blur-xl pointer-events-none" />
+              <div className="absolute w-40 h-40 rounded-full bg-[#0E62E4]/10 blur-xl pointer-events-none" />
               <div className="relative w-36 h-36 animate-float flex items-center justify-center">
                 <img
                   src="/dao/trobiumdashboard.png"
                   alt="Genesis DAO 3D Emblem"
-                  className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(60,120,177,0.22)]"
+                  className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(14,98,228,0.22)]"
                 />
               </div>
             </div>
@@ -175,11 +175,11 @@ export default function DaoDashboardPage() {
 
         {/* --- MOBILE HERO --- */}
         <div className="lg:hidden text-center space-y-3 relative z-10">
-          <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#3C78B1] bg-[#3C78B1]/10 border border-[#3C78B1]/20 px-2.5 py-0.5 rounded-lg inline-flex">
+          <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg inline-flex">
             Genesis DAO Phase 1
           </span>
           <h1 className="text-xl sm:text-2xl font-bold text-[#17334F] tracking-tight uppercase">
-            Genesis <span className="text-[#3C78B1]">DAO</span> Council
+            Genesis <span className="text-[#0E62E4]">DAO</span> Council
           </h1>
           <p className="text-xs font-medium text-[#3E6180] max-w-xs mx-auto leading-snug">
             100 sovereign seats. One protocol. A stronger tomorrow.
@@ -187,14 +187,14 @@ export default function DaoDashboardPage() {
 
           <div className="relative py-1 flex flex-col items-center justify-center">
             <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
-              <div className="absolute w-28 h-28 rounded-full bg-[#3C78B1]/10 blur-lg pointer-events-none" />
+              <div className="absolute w-28 h-28 rounded-full bg-[#0E62E4]/10 blur-lg pointer-events-none" />
               <img
                 src="/dao/trobiumdashboard.png"
                 alt="Genesis DAO 3D Emblem"
-                className="w-full h-full object-contain animate-float drop-shadow-[0_6px_16px_rgba(60,120,177,0.2)]"
+                className="w-full h-full object-contain animate-float drop-shadow-[0_6px_16px_rgba(14,98,228,0.2)]"
               />
             </div>
-            <div className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#3C78B1]/10 border border-[#3C78B1]/20 text-[9px] font-semibold text-[#3C78B1] tracking-wide uppercase">
+            <div className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase">
               DECENTRALIZED &bull; TRANSPARENT
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function DaoDashboardPage() {
           <div className="pt-1">
             {memberLoading ? (
               <div className="flex items-center justify-center gap-2 text-xs text-[#4F6D87] py-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3C78B1]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
                 <span>Checking membership…</span>
               </div>
             ) : isMember ? (
@@ -249,7 +249,7 @@ export default function DaoDashboardPage() {
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Zero Referrals Required</span>
               </div>
-              <Link href="/dao/seats" className="text-[#3C78B1] hover:underline flex items-center gap-0.5 font-semibold">
+              <Link href="/dao/seats" className="text-[#0E62E4] hover:underline flex items-center gap-0.5 font-semibold">
                 <span>Seats &rarr;</span>
               </Link>
             </div>
@@ -265,7 +265,7 @@ export default function DaoDashboardPage() {
           <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#4F6D87]">
             PROTOCOL METRICS
           </div>
-          <div className="text-[10px] font-semibold text-[#3C78B1] flex items-center gap-1">
+          <div className="text-[10px] font-semibold text-[#0E62E4] flex items-center gap-1">
             <span>Founding 100 Seats</span>
           </div>
         </div>
@@ -277,7 +277,7 @@ export default function DaoDashboardPage() {
          ======================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
         {/* Left: Financial Architecture & 4-Item Calculation Grid */}
-        <div className="lg:col-span-8 p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-8 p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-4">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -292,7 +292,7 @@ export default function DaoDashboardPage() {
               <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
                 stats?.memberCount && stats.memberCount >= 100
                   ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : 'bg-[#3C78B1]/10 border-[#3C78B1]/20 text-[#3C78B1]'
+                  : 'bg-[#0E62E4]/10 border-[#0E62E4]/20 text-[#0E62E4]'
               }`}>
                 {stats?.memberCount && stats.memberCount >= 100 ? 'Queue Complete' : 'Genesis Queue Open'}
               </span>
@@ -308,7 +308,7 @@ export default function DaoDashboardPage() {
             <div className="space-y-3 pt-1">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                 {/* 1. Deposit — Solid Sky Blue box matching Trobium */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-[#3C78B1] to-[#2B6094] text-white shadow-xs space-y-1">
+                <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-[#0E62E4] to-[#0A3F9A] text-white shadow-xs space-y-1">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-white/80">
                     DEPOSIT
                   </div>
@@ -321,8 +321,8 @@ export default function DaoDashboardPage() {
                 </div>
 
                 {/* 2. Instant Cashback */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/16 text-[#17334F] space-y-1">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#3C78B1]">
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#0E62E4]">
                     CASHBACK
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
@@ -334,7 +334,7 @@ export default function DaoDashboardPage() {
                 </div>
 
                 {/* 3. Total Inflow */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/16 text-[#17334F] space-y-1">
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-[#1F8A5B]">
                     TOTAL INFLOW
                   </div>
@@ -349,7 +349,7 @@ export default function DaoDashboardPage() {
                 </div>
 
                 {/* 4. Max Return Cap */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/16 text-[#17334F] space-y-1">
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
                   <div className="text-[9px] font-semibold uppercase tracking-wider text-[#4F6D87]">
                     MAX INFLOW
                   </div>
@@ -363,7 +363,7 @@ export default function DaoDashboardPage() {
               </div>
 
               {/* Status bar — 100% contained, no text clipping or overflow */}
-              <div className="p-3 sm:p-3.5 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/16 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2 h-2 rounded-full bg-[#1F8A5B] animate-pulse shrink-0" />
                   <span className="font-semibold text-[#17334F] text-[11px] truncate">
@@ -376,14 +376,14 @@ export default function DaoDashboardPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#3C78B1]/10">
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#0E62E4]/10">
                   <span className="text-[10px] font-semibold text-[#1F8A5B] bg-[#1F8A5B]/10 px-2 py-0.5 rounded border border-[#1F8A5B]/20">
                     1.0% Vote Weight
                   </span>
                   {isMember ? (
                     <Link
                       href="/dao/lounge"
-                      className="text-[11px] font-semibold text-[#3C78B1] hover:underline flex items-center gap-1"
+                      className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1"
                     >
                       <span>Member Lounge</span>
                       <ArrowRight className="w-3 h-3" />
@@ -391,7 +391,7 @@ export default function DaoDashboardPage() {
                   ) : (
                     <Link
                       href="/dao/seats"
-                      className="text-[11px] font-semibold text-[#3C78B1] hover:underline flex items-center gap-1"
+                      className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1"
                     >
                       <span>Inspect Grid</span>
                       <ArrowRight className="w-3 h-3" />
@@ -404,7 +404,7 @@ export default function DaoDashboardPage() {
         </div>
 
         {/* Right: Governance Principles */}
-        <div className="lg:col-span-4 p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] space-y-3 flex flex-col justify-between">
+        <div className="lg:col-span-4 p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] space-y-3 flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#4F6D87]">
               GOVERNANCE PRINCIPLES
@@ -420,8 +420,8 @@ export default function DaoDashboardPage() {
                 { icon: Eye, title: 'On-Chain Transparency', desc: 'All ledger states verifiable on blockchain.' },
                 { icon: Vote, title: '1.0% Governance Power', desc: '1 Seat = 1 Vote across all protocol upgrades.' },
               ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#F3F8FD] transition-colors">
-                  <div className="w-7 h-7 rounded-lg bg-[#3C78B1]/10 text-[#3C78B1] flex items-center justify-center shrink-0 mt-0.5 border border-[#3C78B1]/15">
+                <div key={title} className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#EFF6FF] transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 mt-0.5 border border-[#0E62E4]/15">
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -439,7 +439,7 @@ export default function DaoDashboardPage() {
           4. RECENT ACTIVITY FEED — Live Real Events
          ======================================================================= */}
       {events && events.length > 0 && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)]">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#1F8A5B] animate-pulse" />
@@ -450,12 +450,12 @@ export default function DaoDashboardPage() {
                 Real-Time
               </span>
             </div>
-            <Link href="/dao/transactions" className="text-[11px] font-semibold text-[#3C78B1] hover:underline flex items-center gap-1">
+            <Link href="/dao/transactions" className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1">
               <span>View all</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-[#3C78B1]/10">
+          <div className="divide-y divide-[#0E62E4]/10">
             {events.map((event) => {
               const isJoined = event.eventType === 'joined';
               const isCashback = event.eventType === 'pushed' || event.eventType === 'seat_distribution';
@@ -469,18 +469,18 @@ export default function DaoDashboardPage() {
               );
 
               return (
-                <div key={event.id} className="flex items-center justify-between py-2.5 hover:bg-[#F3F8FD]/60 transition-colors px-1 rounded-lg">
+                <div key={event.id} className="flex items-center justify-between py-2.5 hover:bg-[#EFF6FF]/60 transition-colors px-1 rounded-lg">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className={`w-7 h-7 rounded-lg ${
-                      isJoined ? 'bg-[#3C78B1]/10 text-[#3C78B1]' : 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
-                    } flex items-center justify-center shrink-0 border border-[#3C78B1]/15`}>
+                      isJoined ? 'bg-[#0E62E4]/10 text-[#0E62E4]' : 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
+                    } flex items-center justify-center shrink-0 border border-[#0E62E4]/15`}>
                       {isJoined ? <ShieldCheck className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-[#17334F] flex items-center gap-1.5 truncate">
                         <span className="truncate">{title}</span>
                         {event.incomingPosition && (
-                          <span className="text-[9px] font-semibold text-[#3C78B1] bg-[#3C78B1]/10 border border-[#3C78B1]/20 px-1.5 py-0.2 rounded shrink-0">
+                          <span className="text-[9px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-1.5 py-0.2 rounded shrink-0">
                             Seat #{event.incomingPosition}
                           </span>
                         )}
@@ -514,10 +514,10 @@ export default function DaoDashboardPage() {
          ======================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Card 1: The Vision */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <button
             onClick={() => setVideoOpen(true)}
-            className="relative w-full sm:w-24 h-24 sm:h-20 rounded-xl overflow-hidden bg-[#17334F] shrink-0 flex items-center justify-center group shadow-xs border border-[#3C78B1]/20 cursor-pointer"
+            className="relative w-full sm:w-24 h-24 sm:h-20 rounded-xl overflow-hidden bg-[#17334F] shrink-0 flex items-center justify-center group shadow-xs border border-[#0E62E4]/20 cursor-pointer"
             aria-label="Play Vision Video"
           >
             <img
@@ -539,7 +539,7 @@ export default function DaoDashboardPage() {
             </h4>
             <button
               onClick={() => setVideoOpen(true)}
-              className="text-[11px] font-semibold text-[#3C78B1] hover:underline inline-flex items-center gap-1 mt-0.5 transition-colors cursor-pointer"
+              className="text-[11px] font-semibold text-[#0E62E4] hover:underline inline-flex items-center gap-1 mt-0.5 transition-colors cursor-pointer"
             >
               <span>Watch Protocol Video</span>
               <ArrowRight className="w-3 h-3" />
@@ -548,9 +548,9 @@ export default function DaoDashboardPage() {
         </div>
 
         {/* Card 2: Retail Matrix Launch */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#3C78B1]/10 text-[#3C78B1] flex items-center justify-center shrink-0 border border-[#3C78B1]/20 mt-0.5 sm:mt-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 border border-[#0E62E4]/20 mt-0.5 sm:mt-0">
               <Calendar className="w-5 h-5" />
             </div>
 
@@ -559,7 +559,7 @@ export default function DaoDashboardPage() {
                 <h4 className="text-xs sm:text-sm font-semibold text-[#17334F] leading-snug truncate">
                   Phase 2: Retail Matrix Launch
                 </h4>
-                <span className="text-[9px] font-semibold text-[#3C78B1] bg-[#3C78B1]/10 px-1.5 py-0.5 rounded border border-[#3C78B1]/20 shrink-0">
+                <span className="text-[9px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-1.5 py-0.5 rounded border border-[#0E62E4]/20 shrink-0">
                   Day 22
                 </span>
               </div>
@@ -569,7 +569,7 @@ export default function DaoDashboardPage() {
                   href="https://equorafi.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#3C78B1] hover:underline font-semibold"
+                  className="text-[#0E62E4] hover:underline font-semibold"
                 >
                   equorafi.com
                 </a>{' '}
@@ -580,7 +580,7 @@ export default function DaoDashboardPage() {
 
           <Link
             href="/dao/matrix-bridge"
-            className="w-8 h-8 rounded-lg bg-[#3C78B1]/10 hover:bg-[#3C78B1]/20 text-[#3C78B1] flex items-center justify-center shrink-0 transition-colors shadow-2xs border border-[#3C78B1]/20"
+            className="w-8 h-8 rounded-lg bg-[#0E62E4]/10 hover:bg-[#0E62E4]/20 text-[#0E62E4] flex items-center justify-center shrink-0 transition-colors shadow-2xs border border-[#0E62E4]/20"
             title="Go to Matrix Bridge"
           >
             <ArrowRight className="w-3.5 h-3.5" />

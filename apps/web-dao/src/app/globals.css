@@ -151,11 +151,11 @@ body {
   opacity: 0.4;
 }
 
-/* Trobium Global Design Utility Classes */
+/* Trobium Global Design Utility Classes (Vibrant Trobium Logo Blue) */
 .btn-primary {
   color: #fff;
   letter-spacing: 0.05em;
-  background-color: #3C78B1;
+  background-color: #0E62E4;
   border-radius: 10px;
   justify-content: center;
   align-items: center;
@@ -163,22 +163,23 @@ body {
   padding: 0.6rem 1.15rem;
   font-size: 0.75rem;
   font-weight: 600;
-  transition: background-color 0.15s, transform 0.15s;
+  transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
   display: inline-flex;
-  box-shadow: 0 4px 14px rgba(60, 120, 177, 0.25);
+  box-shadow: 0 4px 14px rgba(14, 98, 228, 0.32);
   cursor: pointer;
 }
 
 .btn-primary:hover {
-  background-color: #5FA2D1;
+  background-color: #0B52C4;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(14, 98, 228, 0.4);
 }
 
 .btn-ghost {
-  color: #3C78B1;
+  color: #0E62E4;
   letter-spacing: 0.05em;
   background-color: #fff;
-  border: 1px solid rgba(60, 120, 177, 0.35);
+  border: 1px solid rgba(14, 98, 228, 0.35);
   border-radius: 10px;
   justify-content: center;
   align-items: center;
@@ -192,16 +193,16 @@ body {
 }
 
 .btn-ghost:hover {
-  background-color: rgba(60, 120, 177, 0.08);
-  border-color: #3C78B1;
+  background-color: rgba(14, 98, 228, 0.08);
+  border-color: #0E62E4;
 }
 
 .chip {
-  color: #3C78B1;
+  color: #0E62E4;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background-color: rgba(60, 120, 177, 0.08);
-  border: 1px solid rgba(60, 120, 177, 0.2);
+  background-color: rgba(14, 98, 228, 0.08);
+  border: 1px solid rgba(14, 98, 228, 0.22);
   border-radius: 8px;
   align-items: center;
   gap: 0.35rem;

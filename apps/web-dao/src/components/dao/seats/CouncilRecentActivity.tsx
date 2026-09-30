@@ -17,18 +17,18 @@ export const CouncilRecentActivity: React.FC = () => {
   const { data: events, loading } = useDaoEvents(5, 15_000);
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] space-y-3 font-sans">
+    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3 font-sans">
       {/* Title Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#14304A]">
             RECENT ACTIVITY
           </h4>
-          {loading && <Loader2 className="w-3 h-3 animate-spin text-[#3C78B1]" />}
+          {loading && <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" />}
         </div>
         <Link
           href="/dao/transactions"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#3C78B1] hover:text-[#5FA2D1] transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[#0E62E4] hover:text-[#0B52C4] transition-colors"
         >
           <span>View All</span>
           <ArrowRight className="w-3 h-3" />
@@ -53,7 +53,7 @@ export const CouncilRecentActivity: React.FC = () => {
               ? 'bg-emerald-500'
               : isJoined
               ? 'bg-[#14304A]'
-              : 'bg-[#3C78B1]';
+              : 'bg-[#0E62E4]';
 
             const badgeClasses = isDefault
               ? 'bg-rose-50 text-[#D92D20] border-rose-200'
@@ -61,7 +61,7 @@ export const CouncilRecentActivity: React.FC = () => {
               ? 'bg-emerald-50 text-[#047857] border-emerald-200'
               : isJoined
               ? 'bg-slate-100 text-slate-800 border-slate-300'
-              : 'bg-[#EBF3FA] text-[#3C78B1] border-[#3C78B1]/30';
+              : 'bg-[#EFF6FF] text-[#0E62E4] border-[#0E62E4]/30';
 
             const title =
               item.reason ||

@@ -163,9 +163,9 @@ export const DaoHeader: React.FC = () => {
             </div>
             <div>
               <div className="text-[11px] font-black font-inter tracking-tight text-[#17334F] leading-tight">
-                EQUORA<span className="text-[#3C78B1]">.FI</span>
+                EQUORA<span className="text-[#0E62E4]">.FI</span>
               </div>
-              <div className="text-[8px] font-bold font-inter text-[#3C78B1] tracking-wider leading-none">
+              <div className="text-[8px] font-bold font-inter text-[#0E62E4] tracking-wider leading-none">
                 GENESIS DAO
               </div>
             </div>
@@ -177,7 +177,7 @@ export const DaoHeader: React.FC = () => {
             <input
               type="text"
               placeholder="Search member ID / wallet / transaction…"
-              className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/18 text-xs text-[#17334F] placeholder-[#4F6D87] focus:outline-none focus:border-[#3C78B1] focus:bg-white transition-all font-sans"
+              className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/20 text-xs text-[#17334F] placeholder-[#4F6D87] focus:outline-none focus:border-[#0E62E4] focus:bg-white transition-all font-sans"
             />
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-white border border-[#E2ECF9] text-[10px] text-[#94A3B8] font-mono shadow-xs">
               /
@@ -304,37 +304,37 @@ export const DaoHeader: React.FC = () => {
                       <Link
                         href="/dao/lounge"
                         onClick={() => setWalletDropOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#F0F7FD] hover:text-[#3C78B1] transition-colors group"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <Trophy className="w-4 h-4 text-[#7CB3E1] group-hover:text-[#3C78B1] transition-colors" />
+                          <Trophy className="w-4 h-4 text-[#60A5FA] group-hover:text-[#0E62E4] transition-colors" />
                           <span>Member Lounge</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 group-hover:text-[#3C78B1]">Dividends & Pass →</span>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#0E62E4]">Dividends & Pass →</span>
                       </Link>
 
                       <Link
                         href="/dao/profile"
                         onClick={() => setWalletDropOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#F0F7FD] hover:text-[#3C78B1] transition-colors group"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <User className="w-4 h-4 text-[#7CB3E1] group-hover:text-[#3C78B1] transition-colors" />
+                          <User className="w-4 h-4 text-[#60A5FA] group-hover:text-[#0E62E4] transition-colors" />
                           <span>My Profile</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 group-hover:text-[#3C78B1]">Badges & Activity →</span>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#0E62E4]">Badges & Activity →</span>
                       </Link>
 
                       <Link
                         href="/dao/settings"
                         onClick={() => setWalletDropOpen(false)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#F0F7FD] hover:text-[#3C78B1] transition-colors group"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <Settings className="w-4 h-4 text-[#7CB3E1] group-hover:text-[#3C78B1] transition-colors" />
+                          <Settings className="w-4 h-4 text-[#60A5FA] group-hover:text-[#0E62E4] transition-colors" />
                           <span>Settings & Keys</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 group-hover:text-[#3C78B1]">Security →</span>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#0E62E4]">Security →</span>
                       </Link>
 
                       {isSeatMember && (
@@ -387,7 +387,7 @@ export const DaoHeader: React.FC = () => {
           {isConnected && (
             <button
               onClick={() => setWalletDropOpen((v) => !v)}
-              className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#3C78B1]/30 shrink-0 hidden lg:block hover:ring-2 hover:ring-[#3C78B1]/40 transition-all"
+              className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#0E62E4]/30 shrink-0 hidden lg:block hover:ring-2 hover:ring-[#0E62E4]/40 transition-all"
               title="Open Wallet Menu"
             >
               <UserAvatar
@@ -402,7 +402,7 @@ export const DaoHeader: React.FC = () => {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="lg:hidden p-1.5 rounded-lg text-[#17334F] hover:bg-[#F3F8FD] transition-colors"
+            className="lg:hidden p-1.5 rounded-lg text-[#17334F] hover:bg-[#EFF6FF] transition-colors"
             aria-label="Toggle Navigation Drawer"
           >
             {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -412,16 +412,16 @@ export const DaoHeader: React.FC = () => {
 
       {/* Mobile sub-banner */}
       {(pathname === '/dao' || pathname === '/dao/seats') && (
-        <div className="lg:hidden w-full bg-white border-b border-[#3C78B1]/15 px-4 sm:px-6 py-1.5 flex items-center justify-between text-[10px] font-semibold font-sans select-none">
-          <div className="flex items-center gap-1.5 text-[#3C78B1]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#3C78B1]" />
+        <div className="lg:hidden w-full bg-white border-b border-[#0E62E4]/15 px-4 sm:px-6 py-1.5 flex items-center justify-between text-[10px] font-semibold font-sans select-none">
+          <div className="flex items-center gap-1.5 text-[#0E62E4]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0E62E4]" />
             <span className="tracking-wider uppercase">GENESIS DAO PHASE 1</span>
           </div>
           <a
             href="https://dao.equora.fi"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#3C78B1] hover:underline uppercase tracking-wider font-semibold"
+            className="text-[#0E62E4] hover:underline uppercase tracking-wider font-semibold"
           >
             DAO.EQUORA.FI
           </a>
@@ -434,7 +434,7 @@ export const DaoHeader: React.FC = () => {
           <div className="w-72 sm:w-80 bg-white h-full p-5 flex flex-col justify-between border-l border-[#E2ECF9] shadow-2xl">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#E2EEF9]">
-                <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#3C78B1] font-sans">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#0E62E4] font-sans">
                   PROTOCOL NAVIGATION
                 </div>
                 <button
@@ -500,11 +500,11 @@ export const DaoHeader: React.FC = () => {
                       onClick={() => setMobileNavOpen(false)}
                       className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                         isActive
-                          ? 'bg-[#EBF3FA] text-[#3C78B1] font-bold shadow-xs'
-                          : 'text-[#4F6D87] hover:text-[#14304A] hover:bg-[#F7FBFF]'
+                          ? 'bg-[#EFF6FF] text-[#0E62E4] font-bold shadow-xs'
+                          : 'text-[#4F6D87] hover:text-[#0E62E4] hover:bg-[#F7FBFF]'
                       }`}
                     >
-                      <span className={isActive ? 'text-[#3C78B1]' : 'text-[#7CB3E1]'}>
+                      <span className={isActive ? 'text-[#0E62E4]' : 'text-[#60A5FA]'}>
                         {item.label === 'Dashboard'     && <Home className="w-4 h-4" />}
                         {item.label === 'Council Seats' && <Users className="w-4 h-4" />}
                         {item.label === 'Member Lounge' && <Trophy className="w-4 h-4" />}
@@ -533,7 +533,7 @@ export const DaoHeader: React.FC = () => {
               ) : (
                 <button
                   onClick={() => { handleConnectClick(); setMobileNavOpen(false); }}
-                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-center text-white bg-[#3C78B1] hover:bg-[#5FA2D1] transition-colors shadow-xs"
+                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-center text-white bg-[#0E62E4] hover:bg-[#0B52C4] transition-colors shadow-xs"
                 >
                   Connect TrobSafe Wallet
                 </button>

@@ -173,7 +173,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         <div className="flex items-start justify-between pb-4 border-b border-white/10 mb-5">
           <div className="flex items-center gap-3">
             {/* TrobSafe logo-ish icon */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3C78B1] to-[#2B5A85] flex items-center justify-center shadow-[0_4px_12px_rgba(60,120,177,0.35)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0E62E4] to-[#0A3F9A] flex items-center justify-center shadow-[0_4px_12px_rgba(14,98,228,0.35)]">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -199,7 +199,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         {/* ── Step: detecting ──────────────────────────────────────────── */}
         {step === 'detect' && wallet.status === 'detecting' && (
           <div className="py-8 flex flex-col items-center gap-4 text-center">
-            <Loader2 className="w-10 h-10 text-[#3C78B1] animate-spin" />
+            <Loader2 className="w-10 h-10 text-[#0E62E4] animate-spin" />
             <p className="text-sm text-slate-300">Detecting TrobSafe extension…</p>
           </div>
         )}
@@ -247,7 +247,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
                   onClose();
                   window.location.href = '/dao';
                 }}
-                className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm text-white bg-[#3C78B1] hover:bg-[#5FA2D1] transition-all shadow-[0_4px_14px_rgba(60,120,177,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] transition-all shadow-[0_4px_14px_rgba(14,98,228,0.35)] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Enter DAO Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
@@ -269,7 +269,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         {step === 'detect' && wallet.status !== 'detecting' && (
           <div className="space-y-3.5">
             <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-[#1E3A5F] text-center space-y-2.5">
-              <div className="w-11 h-11 rounded-xl bg-[#3C78B1]/20 border border-[#3C78B1]/40 flex items-center justify-center mx-auto text-[#7CB3E1]">
+              <div className="w-11 h-11 rounded-xl bg-[#0E62E4]/20 border border-[#0E62E4]/40 flex items-center justify-center mx-auto text-[#60A5FA]">
                 <Download className="w-5 h-5" />
               </div>
               <div>
@@ -284,7 +284,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
                   href={TROBSAFE_CHROME_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2.5 px-3 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(60,120,177,0.3)] cursor-pointer"
+                  className="py-2.5 px-3 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(14,98,228,0.35)] cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-white" />
                   <span>Chrome Web Store</span>
@@ -331,12 +331,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
                   placeholder="Enter Trobium (T...) or 0x address"
                   value={customAddress}
                   onChange={(e) => setCustomAddress(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-[#1E3A5F] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#3C78B1] font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-[#1E3A5F] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0E62E4] font-mono"
                 />
                 <button
                   onClick={() => handleConnectCustom()}
                   disabled={!customAddress.trim()}
-                  className="w-full py-2 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] disabled:opacity-50 text-white text-xs font-semibold transition-colors"
+                  className="w-full py-2 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] disabled:opacity-50 text-white text-xs font-semibold transition-colors"
                 >
                   Connect with Address
                 </button>
@@ -349,7 +349,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         {step === 'connect' && (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-[#1E3A5F] flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#3C78B1] to-[#2B5A85] flex items-center justify-center shadow-[0_4px_16px_rgba(60,120,177,0.35)] shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0E62E4] to-[#0A3F9A] flex items-center justify-center shadow-[0_4px_16px_rgba(14,98,228,0.35)] shrink-0">
                 <Wallet className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -364,7 +364,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
 
             <button
               onClick={handleConnect}
-              className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-[#3C78B1] hover:bg-[#5FA2D1] shadow-[0_6px_18px_rgba(60,120,177,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3 rounded-xl font-semibold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_6px_18px_rgba(14,98,228,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Connect TrobSafe Extension</span>
@@ -375,8 +375,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         {/* ── Step: waiting for signature ──────────────────────────────── */}
         {step === 'signing' && (
           <div className="py-8 flex flex-col items-center gap-5 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#3C78B1]/10 border border-[#3C78B1]/30 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-[#3C78B1] animate-spin" />
+            <div className="w-16 h-16 rounded-full bg-[#0E62E4]/10 border border-[#0E62E4]/30 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-[#0E62E4] animate-spin" />
             </div>
             <div>
               <p className="text-sm font-bold text-white">Waiting for your signature</p>
@@ -385,7 +385,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
               </p>
             </div>
             {auth.status === 'verifying' && (
-              <p className="text-xs text-[#3C78B1] font-medium animate-pulse">Verifying signature…</p>
+              <p className="text-xs text-[#0E62E4] font-medium animate-pulse">Verifying signature…</p>
             )}
           </div>
         )}
@@ -426,7 +426,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={handleRetry}
-                className="py-2.5 rounded-xl font-semibold text-xs text-white bg-[#3C78B1] hover:bg-[#5FA2D1] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="py-2.5 rounded-xl font-semibold text-xs text-white bg-[#0E62E4] hover:bg-[#0B52C4] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
               >
                 <span>Wake Up / Retry</span>
               </button>

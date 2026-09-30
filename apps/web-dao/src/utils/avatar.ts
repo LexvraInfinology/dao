@@ -86,7 +86,7 @@ export function generateLocalSvgAvatar(seed: string): string {
   const hash = hashString(seed);
 
   const gradients = [
-    ['#3C78B1', '#14304A'],
+    ['#0E62E4', '#0A2B66'],
     ['#0284C7', '#0F172A'],
     ['#2563EB', '#1E3A8A'],
     ['#0D9488', '#115E59'],

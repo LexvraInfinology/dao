@@ -44,7 +44,7 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
   if (loading && !profile) {
     return (
       <div className="rounded-3xl bg-white border border-[#E2ECF9] p-8 flex items-center justify-center gap-2 text-sm text-[#4F6D87] font-sans">
-        <Loader2 className="w-4 h-4 animate-spin text-[#3C78B1]" />Loading profile…
+        <Loader2 className="w-4 h-4 animate-spin text-[#0E62E4]" />Loading profile…
       </div>
     );
   }
@@ -78,19 +78,19 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold font-sans text-[#3C78B1] uppercase tracking-wider">SOVEREIGN ID:</span>
-              <span className="px-2 py-0.5 rounded-md bg-[#EBF3FA] text-[#14304A] font-mono font-bold text-xs">{nftId}</span>
+              <span className="text-[11px] font-bold font-sans text-[#0E62E4] uppercase tracking-wider">SOVEREIGN ID:</span>
+              <span className="px-2 py-0.5 rounded-md bg-[#EFF6FF] text-[#14304A] font-mono font-bold text-xs">{nftId}</span>
             </div>
             <div className="flex items-center gap-3 pt-1 flex-wrap">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F7FBFF] border border-[#DCE7F6] text-xs font-mono font-semibold text-[#14304A]">
-                <div className="w-3.5 h-3.5 rounded-xs bg-[#3C78B1] flex items-center justify-center text-white text-[8px]">⬡</div>
+                <div className="w-3.5 h-3.5 rounded-xs bg-[#0E62E4] flex items-center justify-center text-white text-[8px]">⬡</div>
                 <span>{shortAddr}</span>
-                <button onClick={handleCopy} className="text-[#4F6D87] hover:text-[#3C78B1] transition-colors ml-0.5" title="Copy address">
+                <button onClick={handleCopy} className="text-[#4F6D87] hover:text-[#0E62E4] transition-colors ml-0.5" title="Copy address">
                   {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                 </button>
               </div>
               <a href={`https://tronscan.io/#/address/${displayAddr}`} target="_blank" rel="noreferrer"
-                className="text-xs font-bold font-sans text-[#3C78B1] hover:underline flex items-center gap-1">
+                className="text-xs font-bold font-sans text-[#0E62E4] hover:underline flex items-center gap-1">
                 <span>TrobiumScan</span><ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -112,7 +112,7 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
             </div>
           </div>
           <Link href="/dao/seats"
-            className="w-full py-2.5 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
+            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
             <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -133,15 +133,15 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
           <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-2">
               <h2 className="text-xl font-black font-sans text-[#14304A] tracking-tight">Member {memberId}</h2>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-[#EBF3FA] text-[#3C78B1]' : 'bg-slate-100 text-slate-500'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-[#3C78B1]' : 'bg-slate-400'}`} />
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-[#EFF6FF] text-[#0E62E4]' : 'bg-slate-100 text-slate-500'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-[#0E62E4]' : 'bg-slate-400'}`} />
                 {isActive ? 'Active' : (profile?.status ?? 'Unknown')}
               </span>
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF3FA] text-xs font-mono font-semibold text-[#14304A]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3C78B1]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF6FF] text-xs font-mono font-semibold text-[#14304A]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0E62E4]" />
               <span>{shortAddr}</span>
-              <button onClick={handleCopy} className="text-[#4F6D87] hover:text-[#3C78B1] transition-colors ml-0.5">
+              <button onClick={handleCopy} className="text-[#4F6D87] hover:text-[#0E62E4] transition-colors ml-0.5">
                 {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
               </button>
             </div>
@@ -151,10 +151,10 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
         <div className="bg-[#F7FBFF] border border-[#E2ECF9] rounded-2xl p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold font-sans text-[#4F6D87] uppercase tracking-wider">ASSIGNED POSITION</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#EBF3FA] text-[#3C78B1] text-[9px] font-bold">Tier 1 Genesis</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0E62E4] text-[9px] font-bold">Tier 1 Genesis</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white border border-[#E2ECF9] text-[#3C78B1] flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-9 h-9 rounded-xl bg-white border border-[#E2ECF9] text-[#0E62E4] flex items-center justify-center shrink-0 shadow-2xs">
               <Landmark className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -163,7 +163,7 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
             </div>
           </div>
           <Link href="/dao/seats"
-            className="w-full py-2.5 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
+            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
             <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>

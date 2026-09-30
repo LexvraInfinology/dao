@@ -13,8 +13,8 @@ export default function MatrixFeatureCards() {
       {/* ================= DESKTOP VIEW (hidden md:grid) ================= */}
       <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-5 gap-2.5 max-w-5xl mx-auto font-sans">
         {/* Card 1: Launch */}
-        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex items-start gap-2.5 hover:border-[#3C78B1]/40 transition-colors">
-          <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0 mt-0.5">
+        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
+          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0 mt-0.5">
             <Calendar className="w-4 h-4" />
           </div>
           <div>
@@ -31,8 +31,8 @@ export default function MatrixFeatureCards() {
         </div>
 
         {/* Card 2: Matrix Entry */}
-        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex items-start gap-2.5 hover:border-[#3C78B1]/40 transition-colors">
-          <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0 mt-0.5">
+        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
+          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0 mt-0.5">
             <Layers className="w-4 h-4" />
           </div>
           <div>
@@ -49,7 +49,7 @@ export default function MatrixFeatureCards() {
         </div>
 
         {/* Card 3: Tree Graph Eligibility */}
-        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex items-start gap-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 shrink-0 mt-0.5">
             <Users className="w-4 h-4" />
           </div>
@@ -67,15 +67,15 @@ export default function MatrixFeatureCards() {
         </div>
 
         {/* Card 4: DAO Share */}
-        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex items-start gap-2.5 hover:border-[#3C78B1]/40 transition-colors">
-          <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0 mt-0.5">
+        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
+          <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0 mt-0.5">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
             <div className="text-[10px] text-[#4F6D87] font-medium">
               DAO Share
             </div>
-            <div className="text-base font-bold text-[#3C78B1] tracking-tight mt-0.5">
+            <div className="text-base font-bold text-[#0E62E4] tracking-tight mt-0.5">
               35%
             </div>
             <p className="text-[11px] text-[#4F6D87] mt-0.5 leading-snug">
@@ -85,7 +85,7 @@ export default function MatrixFeatureCards() {
         </div>
 
         {/* Card 5: Genesis Root */}
-        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] flex items-start gap-2.5 hover:border-[#3C78B1]/40 transition-colors">
+        <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
             <Crown className="w-4 h-4" />
           </div>
@@ -108,7 +108,7 @@ export default function MatrixFeatureCards() {
         {/* Mobile Card 1: Launch */}
         <div className="bg-white rounded-xl border border-[#E2EEF9] p-3 shadow-xs flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
               <Calendar className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -128,7 +128,7 @@ export default function MatrixFeatureCards() {
         {/* Mobile Card 2: Matrix Entry */}
         <div className="bg-white rounded-xl border border-[#E2EEF9] p-3 shadow-xs flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
               <Layers className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -168,7 +168,7 @@ export default function MatrixFeatureCards() {
         {/* Mobile Card 4: DAO Share */}
         <div className="bg-white rounded-xl border border-[#E2EEF9] p-3 shadow-xs flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/20 flex items-center justify-center text-[#3C78B1] shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -180,7 +180,7 @@ export default function MatrixFeatureCards() {
               </div>
             </div>
           </div>
-          <div className="text-sm font-bold text-[#3C78B1] tracking-tight shrink-0">
+          <div className="text-sm font-bold text-[#0E62E4] tracking-tight shrink-0">
             35%
           </div>
         </div>

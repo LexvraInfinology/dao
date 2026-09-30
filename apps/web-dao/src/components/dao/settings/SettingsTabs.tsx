@@ -47,11 +47,11 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
               onClick={() => onTabChange(tab.id)}
               className={`flex items-center gap-2 pb-2.5 -mb-[1px] text-xs font-semibold transition-all cursor-pointer ${
                 isActive
-                  ? 'text-[#3C78B1] border-b-2 border-[#3C78B1]'
+                  ? 'text-[#0E62E4] border-b-2 border-[#0E62E4]'
                   : 'text-[#4F6D87] hover:text-[#14304A]'
               }`}
             >
-              <span className={isActive ? 'text-[#3C78B1]' : 'text-[#7CB3E1]'}>
+              <span className={isActive ? 'text-[#0E62E4]' : 'text-[#60A5FA]'}>
                 {tab.icon}
               </span>
               <span>{tab.label}</span>
@@ -71,7 +71,7 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
               onClick={() => onTabChange(tab.id)}
               className={`pb-2 -mb-[1px] text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                 isActive
-                  ? 'text-[#3C78B1] border-b-2 border-[#3C78B1] font-bold'
+                  ? 'text-[#0E62E4] border-b-2 border-[#0E62E4] font-bold'
                   : 'text-[#4F6D87] hover:text-[#14304A]'
               }`}
             >

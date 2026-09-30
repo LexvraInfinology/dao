@@ -77,10 +77,10 @@ export function DaoDashboardStats() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
 
       {/* ── Card 1: Seats Vacant & Queue Status ────────────────────── */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#3C78B1]/10 text-[#3C78B1]">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#0E62E4]/10 text-[#0E62E4]">
               <Users className="w-4 h-4" />
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F]">
@@ -90,7 +90,7 @@ export function DaoDashboardStats() {
           <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
             seatsFilled >= 100
               ? 'bg-amber-50 text-amber-700 border-amber-200'
-              : 'bg-[#3C78B1]/10 text-[#3C78B1] border-[#3C78B1]/20'
+              : 'bg-[#0E62E4]/10 text-[#0E62E4] border-[#0E62E4]/20'
           }`}>
             {seatsFilled >= 100 ? 'Queue Filled' : 'Queue Active'}
           </span>
@@ -105,15 +105,15 @@ export function DaoDashboardStats() {
             <span>{filledPct}% Filled</span>
           </div>
           {/* Subtle Progress Bar */}
-          <div className="w-full h-1.5 bg-[#F3F8FD] rounded-full overflow-hidden mt-2 border border-[#3C78B1]/10">
+          <div className="w-full h-1.5 bg-[#EFF6FF] rounded-full overflow-hidden mt-2 border border-[#0E62E4]/10">
             <div
-              className="h-full bg-gradient-to-r from-[#3C78B1] to-[#5FA2D1] rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#0E62E4] to-[#0B52C4] rounded-full transition-all duration-500"
               style={{ width: `${Math.max(5, filledPct)}%` }}
             />
           </div>
         </div>
 
-        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+        <div className="pt-2 border-t border-[#0E62E4]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
           <span>Autonomous FIFO Queue</span>
           <span className="text-[#1F8A5B] font-semibold flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#1F8A5B] animate-pulse" />
@@ -123,17 +123,17 @@ export function DaoDashboardStats() {
       </div>
 
       {/* ── Card 2: Countdown Timer ──────────────────────────────────── */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#3C78B1]/10 text-[#3C78B1]">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#0E62E4]/10 text-[#0E62E4]">
               <Clock className="w-4 h-4" />
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F]">
               Genesis Window
             </span>
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#3C78B1] bg-[#3C78B1]/10 border border-[#3C78B1]/20 px-2 py-0.5 rounded-md">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2 py-0.5 rounded-md">
             21-Day Phase
           </span>
         </div>
@@ -161,18 +161,18 @@ export function DaoDashboardStats() {
           ))}
         </div>
 
-        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+        <div className="pt-2 border-t border-[#0E62E4]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
           <span>Retail Matrix Launch</span>
-          <span className="font-semibold text-[#3C78B1]">Day 22 &bull; equorafi.com</span>
+          <span className="font-semibold text-[#0E62E4]">Day 22 &bull; equorafi.com</span>
         </div>
       </div>
 
       {/* ── Card 3: User's Council Position & Personal Data ───────────── */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all sm:col-span-2 lg:col-span-1">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-3.5 transition-all sm:col-span-2 lg:col-span-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${
-              isMember ? 'bg-[#1F8A5B]/10 text-[#1F8A5B]' : 'bg-[#3C78B1]/10 text-[#3C78B1]'
+              isMember ? 'bg-[#1F8A5B]/10 text-[#1F8A5B]' : 'bg-[#0E62E4]/10 text-[#0E62E4]'
             }`}>
               {isMember ? <ShieldCheck className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
             </span>
@@ -184,7 +184,7 @@ export function DaoDashboardStats() {
           <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
             isMember
               ? 'bg-[#1F8A5B]/10 text-[#1F8A5B] border-[#1F8A5B]/25'
-              : 'bg-[#3C78B1]/10 text-[#3C78B1] border-[#3C78B1]/20'
+              : 'bg-[#0E62E4]/10 text-[#0E62E4] border-[#0E62E4]/20'
           }`}>
             {isMember ? `Seat #${myPosition}` : 'Open Entry'}
           </span>
@@ -193,7 +193,7 @@ export function DaoDashboardStats() {
         {isMember ? (
           /* Member Live Economics */
           <div className="grid grid-cols-3 gap-2 pt-0.5 text-left">
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 $300.00
               </div>
@@ -201,7 +201,7 @@ export function DaoDashboardStats() {
                 Deposit
               </div>
             </div>
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#1F8A5B] truncate tabular-nums">
                 +${myCashback}
               </div>
@@ -209,7 +209,7 @@ export function DaoDashboardStats() {
                 Cashback
               </div>
             </div>
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 ${myNetCost}
               </div>
@@ -221,7 +221,7 @@ export function DaoDashboardStats() {
         ) : (
           /* Clean Non-Member Overview */
           <div className="grid grid-cols-3 gap-2 pt-0.5 text-left">
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 $300
               </div>
@@ -229,7 +229,7 @@ export function DaoDashboardStats() {
                 Entry Fee
               </div>
             </div>
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#1F8A5B] truncate tabular-nums">
                 300 / N
               </div>
@@ -237,7 +237,7 @@ export function DaoDashboardStats() {
                 Cashback
               </div>
             </div>
-            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+            <div className="p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
               <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 1.0%
               </div>
@@ -248,13 +248,13 @@ export function DaoDashboardStats() {
           </div>
         )}
 
-        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+        <div className="pt-2 border-t border-[#0E62E4]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
           <span>
             {isMember
               ? (myNftId ? `Soulbound SBT #${myNftId}` : 'Active Council Member')
               : 'Permanent Soulbound Seat'}
           </span>
-          <span className="font-semibold text-[#3C78B1]">
+          <span className="font-semibold text-[#0E62E4]">
             {isMember ? '35% Matrix Share' : 'Zero Referrals Required'}
           </span>
         </div>

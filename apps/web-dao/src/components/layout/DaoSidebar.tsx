@@ -45,9 +45,9 @@ export const DaoSidebar: React.FC = () => {
             </div>
             <div>
               <div className="text-sm font-black font-inter tracking-tight text-[#17334F] leading-tight">
-                EQUORA<span className="text-[#3C78B1]">.FI</span>
+                EQUORA<span className="text-[#0E62E4]">.FI</span>
               </div>
-              <div className="text-[10px] font-semibold font-inter text-[#3C78B1] tracking-wider">
+              <div className="text-[10px] font-semibold font-inter text-[#0E62E4] tracking-wider">
                 GENESIS DAO
               </div>
             </div>
@@ -66,11 +66,11 @@ export const DaoSidebar: React.FC = () => {
                 href={item.href}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-sans transition-all duration-200 ${
                   isActive
-                    ? 'bg-[#3C78B1]/10 text-[#17334F] font-bold border border-[#3C78B1]/20 shadow-xs'
-                    : 'text-[#4F6D87] font-medium hover:text-[#17334F] hover:bg-[#F3F8FD]'
+                    ? 'bg-[#0E62E4]/10 text-[#0E62E4] font-bold border border-[#0E62E4]/25 shadow-xs'
+                    : 'text-[#4F6D87] font-medium hover:text-[#0E62E4] hover:bg-[#EFF6FF]'
                 }`}
               >
-                <span className={isActive ? 'text-[#3C78B1]' : 'text-[#5E7B94]'}>
+                <span className={isActive ? 'text-[#0E62E4]' : 'text-[#64748B]'}>
                   {NAV_ICONS[item.label] || <Shield className="w-4 h-4" />}
                 </span>
                 <span>{item.label}</span>

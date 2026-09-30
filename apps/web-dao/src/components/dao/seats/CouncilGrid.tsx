@@ -43,7 +43,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
   const filteredSeatNumbers = new Set(filteredSeats.map((s) => s.seatNumber));
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-3 sm:p-5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] space-y-3.5 sm:space-y-4 font-sans">
+    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-3 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3.5 sm:space-y-4 font-sans">
       {/* Header with Title and Filter Dropdown */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 relative">
         <div>
@@ -86,12 +86,12 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
                     }}
                     className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-medium text-left transition-colors ${
                       filter === key
-                        ? 'bg-[#EBF3FA] text-[#3C78B1] font-bold'
+                        ? 'bg-[#EFF6FF] text-[#0E62E4] font-bold'
                         : 'text-[#14304A] hover:bg-[#F7FBFF]'
                     }`}
                   >
                     <span>{filterLabels[key]}</span>
-                    {filter === key && <Check className="w-3.5 h-3.5 text-[#3C78B1]" />}
+                    {filter === key && <Check className="w-3.5 h-3.5 text-[#0E62E4]" />}
                   </button>
                 ))}
               </div>
@@ -122,7 +122,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-500 animate-pulse" />
             );
           } else if (seat.status === 'next') {
-            tileClasses = 'border-2 border-sky-300 bg-[#3C78B1] text-white font-bold ring-2 ring-[#3C78B1]/40 shadow-md animate-pulse z-10';
+            tileClasses = 'border-2 border-sky-300 bg-[#0E62E4] text-white font-bold ring-2 ring-[#0E62E4]/40 shadow-md animate-pulse z-10';
             topElement = (
               <span className="relative flex h-1 sm:h-1.5 w-1 sm:w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-200 opacity-75" />
@@ -141,7 +141,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
               onClick={() => onSelectSeat(seat)}
               className={`aspect-square rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex flex-col items-center justify-between transition-all select-none relative ${tileClasses} ${
                 isSelected
-                  ? 'ring-2 ring-[#3C78B1] ring-offset-2 scale-105 z-30 shadow-md'
+                  ? 'ring-2 ring-[#0E62E4] ring-offset-2 scale-105 z-30 shadow-md'
                   : ''
               } ${isFaded ? 'opacity-25' : 'opacity-100'}`}
               title={`Seat #${seat.seatNumber} (${seat.status})`}
@@ -174,9 +174,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="text-emerald-800 font-bold">Your Seat</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EBF3FA] border border-[#3C78B1]/30">
-            <span className="w-2.5 h-2.5 rounded bg-[#3C78B1] border border-sky-300 animate-pulse" />
-            <span className="text-[#3C78B1] font-bold">Next Available</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EFF6FF] border border-[#0E62E4]/30">
+            <span className="w-2.5 h-2.5 rounded bg-[#0E62E4] border border-sky-300 animate-pulse" />
+            <span className="text-[#0E62E4] font-bold">Next Available</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200">
@@ -200,9 +200,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="w-2 h-2 rounded bg-emerald-600" />
             <span className="text-emerald-800 font-bold">You</span>
           </div>
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#EBF3FA] border border-[#3C78B1]/30">
-            <span className="w-2 h-2 rounded bg-[#3C78B1]" />
-            <span className="text-[#3C78B1] font-bold">Next</span>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#EFF6FF] border border-[#0E62E4]/30">
+            <span className="w-2 h-2 rounded bg-[#0E62E4]" />
+            <span className="text-[#0E62E4] font-bold">Next</span>
           </div>
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200">
             <span className="w-2 h-2 rounded bg-rose-400" />

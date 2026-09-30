@@ -26,7 +26,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(60,120,177,0.06)] space-y-4 font-sans">
+    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
       {/* Top Header Row (Desktop has SEAT INSPECTOR + X; Mobile has Seat # + Badges) */}
       <div className="hidden md:flex items-center justify-between pb-2.5 border-b border-[#E2EEF9]">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#4F6D87]">
@@ -58,7 +58,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
                 : seat.status === 'defaulted'
                 ? 'bg-rose-50 text-rose-700 border-rose-200'
                 : seat.status === 'next'
-                ? 'bg-[#EBF3FA] text-[#3C78B1] border-[#3C78B1]/30 font-bold'
+                ? 'bg-[#EFF6FF] text-[#0E62E4] border-[#0E62E4]/30 font-bold'
                 : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}
           >
@@ -102,7 +102,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             <button
               type="button"
               onClick={handleCopyAddress}
-              className="p-1 hover:bg-slate-100 rounded text-[#4F6D87] hover:text-[#3C78B1] transition-colors"
+              className="p-1 hover:bg-slate-100 rounded text-[#4F6D87] hover:text-[#0E62E4] transition-colors"
               title="Copy Address"
             >
               {copied ? (
@@ -158,7 +158,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
                   : seat.status === 'defaulted'
                   ? 'bg-rose-500'
                   : seat.status === 'next'
-                  ? 'bg-[#3C78B1] animate-pulse'
+                  ? 'bg-[#0E62E4] animate-pulse'
                   : 'bg-slate-400'
               }`}
             />
@@ -181,7 +181,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           <button
             type="button"
             onClick={() => onMintSeat(seat.seatNumber)}
-            className="w-full py-2.5 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Claim Seat #{seat.seatNumber} ($300 TROB)</span>
@@ -197,7 +197,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           href={process.env.NEXT_PUBLIC_EXPLORER_URL ? `${process.env.NEXT_PUBLIC_EXPLORER_URL}/address/${seat.ownerAddress.replace(' (You)', '')}` : 'https://tronscan.org'}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full py-2.5 rounded-xl bg-[#F7FBFF] hover:bg-[#EBF3FA] border border-[#E2EEF9] text-[#3C78B1] text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-xl bg-[#F7FBFF] hover:bg-[#EFF6FF] border border-[#E2EEF9] text-[#0E62E4] text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
         >
           <span>View on Explorer</span>
           <ExternalLink className="w-3.5 h-3.5" />
@@ -206,7 +206,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         {/* View Member Profile Button */}
         <a
           href="/dao/profile"
-          className="w-full py-2.5 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5"
         >
           <span>View Member Profile</span>
         </a>

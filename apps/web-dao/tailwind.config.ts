@@ -33,10 +33,17 @@ const config: Config = {
           darker: "#021033",
         },
         brand: {
-          DEFAULT: "#155EEF",
-          royal: "#005CFF",
-          dark: "#0052E6",
-          light: "#EEF5FF",
+          DEFAULT: "#0E62E4",
+          royal: "#0B52C4",
+          dark: "#0A3F9A",
+          light: "#EFF6FF",
+        },
+        trobium: {
+          DEFAULT: "#0E62E4",
+          hover: "#0B52C4",
+          accent: "#2575FC",
+          ice: "#EFF6FF",
+          border: "#BFDBFE",
         },
         slate: {
           sub: "#4A5565",

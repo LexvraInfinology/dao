@@ -54,12 +54,17 @@ export const DaoHeader: React.FC = () => {
   const wallet           = useWallet();
   const auth             = useAuthContext();
 
+  const [mounted, setMounted]               = useState(false);
   const [mobileNavOpen, setMobileNavOpen]   = useState(false);
   const [walletDropOpen, setWalletDropOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
   const [isDevMode, setIsDevMode]           = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -105,17 +110,19 @@ export const DaoHeader: React.FC = () => {
   }, [wallet.isConnected, auth.isAuthenticated]);
 
   // Display address: prefer base58 (Trobium native), fallback to hex, auth user, or stored address
-  const displayAddress =
+  const displayAddress = mounted ? (
     wallet.base58Address ||
     wallet.hexAddress ||
     auth.user?.address ||
     storedAddr ||
-    '';
+    ''
+  ) : '';
 
-  const isConnected =
+  const isConnected = mounted && Boolean(
     wallet.isConnected ||
     auth.isAuthenticated ||
-    Boolean(displayAddress && displayAddress.length > 6);
+    (displayAddress && displayAddress.length > 6)
+  );
 
   const shortDisplay   = shortenAddress(displayAddress);
   const { data: memberData } = useDaoMember(displayAddress);

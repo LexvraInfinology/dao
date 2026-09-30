@@ -100,9 +100,10 @@ export function readStoredAddress(): TrobAddress | null {
  * Primary hook for TrobSafe wallet interaction.
  */
 export function useTrobWallet(): TrobWalletState {
-  const [status, setStatus]   = useState<WalletStatus>('detecting');
-  const [address, setAddress] = useState<TrobAddress | null>(null);
-  const [error, setError]     = useState<string | null>(null);
+  const [status, setStatus]           = useState<WalletStatus>('detecting');
+  const [address, setAddress]         = useState<TrobAddress | null>(null);
+  const [error, setError]             = useState<string | null>(null);
+  const [isInstalled, setIsInstalled] = useState<boolean>(false);
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const getTrob = (): TrobWalletAPI | any | null => {
@@ -204,7 +205,24 @@ export function useTrobWallet(): TrobWalletState {
       applyAddress(stored);
     }
 
+    const checkInstalled = (): boolean => {
+      const trob = getTrob();
+      const w = typeof window !== 'undefined' ? (window as any) : null;
+      const hasBridge = Boolean(
+        w?.__trobsafeBridge ||
+        (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
+      );
+      const isInst = Boolean((trob && isTrobActive(trob)) || hasBridge);
+      if (isInst) {
+        setIsInstalled(true);
+      }
+      return isInst;
+    };
+
+    checkInstalled();
+
     const tryDetect = (): boolean => {
+      checkInstalled();
       const trob = getTrob();
       const currentStored = readStoredAddress();
       const w = typeof window !== 'undefined' ? (window as any) : null;
@@ -284,6 +302,8 @@ export function useTrobWallet(): TrobWalletState {
       if (typeof window === 'undefined' || event.source !== window) return;
       const data = event.data;
       if (!data || !data.__trobsafe) return;
+
+      setIsInstalled(true);
 
       if (data.type === 'TROBSAFE_SET_ADDRESS' || data.type === 'TROBSAFE_ADDRESS_CHANGED') {
         const b58 = String(data.base58 ?? '').trim();
@@ -565,21 +585,13 @@ export function useTrobWallet(): TrobWalletState {
     [status]
   );
 
-  const wObj = typeof window !== 'undefined' ? (window as any) : null;
-  const hasBridgeInstalled = Boolean(
-    wObj?.__trobsafeBridge ||
-    (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
-  );
-  const activeTrob = getTrob();
-  const isReallyInstalled = Boolean((activeTrob && isTrobActive(activeTrob)) || hasBridgeInstalled);
-
   return {
     status,
     address,
     hexAddress:    address?.hex    ? address.hex.toLowerCase()   : null,
     base58Address: address?.base58 ? address.base58              : null,
     isConnected:   status === 'connected' && Boolean(address?.base58 || address?.hex),
-    isInstalled:   isReallyInstalled,
+    isInstalled,
     error,
     connect,
     connectWithAddress,

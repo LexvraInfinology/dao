@@ -57,9 +57,14 @@ export const DaoSidebar: React.FC = () => {
   const wallet = useWallet();
   const auth = useAuthContext();
 
+  const [mounted, setMounted] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [storedAddr, setStoredAddr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Read stored address immediately on mount
   useEffect(() => {
@@ -87,17 +92,19 @@ export const DaoSidebar: React.FC = () => {
     } catch {}
   }, [wallet.isConnected, auth.isAuthenticated]);
 
-  const displayAddress =
+  const displayAddress = mounted ? (
     wallet.base58Address ||
     wallet.hexAddress ||
     auth.user?.address ||
     storedAddr ||
-    '';
+    ''
+  ) : '';
 
-  const isConnected =
+  const isConnected = mounted && Boolean(
     wallet.isConnected ||
     auth.isAuthenticated ||
-    Boolean(displayAddress && displayAddress.length > 6);
+    (displayAddress && displayAddress.length > 6)
+  );
 
   const shortDisplay = shortenAddress(displayAddress);
   const { data: memberData } = useDaoMember(displayAddress);

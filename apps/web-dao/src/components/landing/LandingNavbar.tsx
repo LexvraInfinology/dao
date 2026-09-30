@@ -31,6 +31,7 @@ function shortenAddress(addr: string | null, chars = 4): string {
 
 export const LandingNavbar: React.FC = () => {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -39,6 +40,10 @@ export const LandingNavbar: React.FC = () => {
 
   const wallet = useWallet();
   const auth = useAuthContext();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -84,17 +89,19 @@ export const LandingNavbar: React.FC = () => {
     } catch {}
   }, [wallet.isConnected, auth.isAuthenticated]);
 
-  const displayAddress =
+  const displayAddress = mounted ? (
     wallet.base58Address ||
     wallet.hexAddress ||
     auth.user?.address ||
     storedAddr ||
-    '';
+    ''
+  ) : '';
 
-  const isConnected =
+  const isConnected = mounted && Boolean(
     wallet.isConnected ||
     auth.isAuthenticated ||
-    Boolean(displayAddress && displayAddress.length > 6);
+    (displayAddress && displayAddress.length > 6)
+  );
 
   const shortAddress = shortenAddress(displayAddress) || 'Connected';
   const { data: memberData } = useDaoMember(displayAddress);
@@ -190,7 +197,7 @@ export const LandingNavbar: React.FC = () => {
               {/* Dev Mode button: Direct bypass to /dao without wallet */}
               <DevModeButton />
 
-              {!wallet.isConnected ? (
+              {(!mounted || !wallet.isConnected) ? (
                 <button
                   onClick={handleConnectClick}
                   className="h-10 px-5 rounded-xl font-semibold text-xs uppercase tracking-[0.06em] text-white bg-[#155EEF] hover:bg-[#124bcf] active:bg-[#0e3ea6] shadow-[0_1px_3px_rgba(21,94,239,0.3),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(21,94,239,0.3)] border border-blue-400/20 transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-[0.98]"
@@ -221,7 +228,7 @@ export const LandingNavbar: React.FC = () => {
 
             {/* Mobile CTA + hamburger */}
             <div className="flex lg:hidden items-center gap-2 shrink-0">
-              {!wallet.isConnected ? (
+              {(!mounted || !wallet.isConnected) ? (
                 <button
                   onClick={handleConnectClick}
                   className="whitespace-nowrap h-9 px-3.5 sm:px-4 rounded-xl font-semibold text-[11px] sm:text-xs uppercase tracking-[0.04em] text-white bg-[#155EEF] hover:bg-[#124bcf] active:bg-[#0e3ea6] shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-[0.98]"

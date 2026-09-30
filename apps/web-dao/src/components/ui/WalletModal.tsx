@@ -40,6 +40,7 @@ type ModalStep = 'detect' | 'connect' | 'signing' | 'success' | 'connected_accou
  * Sleek, modern slide-out drawer matching Trobium & Equora design systems.
  */
 export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect }) => {
+  const [mounted, setMounted] = useState(false);
   const wallet = useWallet();
   const auth   = useAuthContext();
   const [step, setStep]         = useState<ModalStep>('detect');
@@ -48,6 +49,10 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
   const [customAddress, setCustomAddress] = useState('');
   const [showDirectInput, setShowDirectInput] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync step with wallet state
   useEffect(() => {
@@ -140,6 +145,10 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
   const handleDownloadApkClick = () => {
     triggerApkDownload();
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className={`fixed inset-0 z-50 overflow-hidden pointer-events-none ${isOpen ? '' : 'invisible'}`}>

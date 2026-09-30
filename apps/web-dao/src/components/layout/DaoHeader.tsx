@@ -31,6 +31,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle, WHATSAPP_DAO_GROUP_URL } from '@/components/dao/DaoWhatsAppCircle';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -393,10 +394,11 @@ export const DaoHeader: React.FC = () => {
               className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#3C78B1]/30 shrink-0 hidden lg:block hover:ring-2 hover:ring-[#3C78B1]/40 transition-all"
               title="Open Wallet Menu"
             >
-              <img
-                src="/dao/Futuristic Glowing Blue 3D Spherical Avatar_margin.png"
-                alt="User Avatar"
-                className="w-full h-full object-cover"
+              <UserAvatar
+                address={displayAddress}
+                userId={auth.user?.userId || memberData?.userId}
+                size={36}
+                roundedClassName="rounded-full"
               />
             </button>
           )}
@@ -450,21 +452,31 @@ export const DaoHeader: React.FC = () => {
               {/* Wallet info in drawer */}
               {isConnected && (
                 <div className="px-3.5 py-3 rounded-xl bg-[#14304A] text-white border border-[#234668] shadow-sm">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Connected</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <UserAvatar
+                        address={displayAddress}
+                        userId={auth.user?.userId || memberData?.userId}
+                        size={32}
+                        roundedClassName="rounded-lg"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Connected</span>
+                        </div>
+                        <div className="text-xs font-mono text-slate-100 truncate max-w-[140px]">
+                          {displayAddress}
+                        </div>
+                      </div>
                     </div>
                     <button
                       onClick={handleCopyAddress}
-                      className="p-1 rounded text-slate-300 hover:text-white"
+                      className="p-1 rounded text-slate-300 hover:text-white shrink-0 ml-1"
                       title="Copy"
                     >
                       {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
-                  </div>
-                  <div className="text-xs font-mono text-slate-100 truncate">
-                    {displayAddress}
                   </div>
                   {(memberData?.position || auth.user?.daoPosition) && (
                     <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">

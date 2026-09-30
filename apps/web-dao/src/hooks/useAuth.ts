@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useWallet } from '@/context/WalletContext';
+import { getStoredAvatarSeed } from '@/utils/avatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export function useAuth(): AuthState {
         daoPosition:    profile.daoPosition,
         nftBadgesCount: profile.nftBadgesCount,
       });
+      getStoredAvatarSeed(profile.address);
       setToken(jwt);
       setStatus('authenticated');
     } catch {
@@ -247,6 +249,7 @@ export function useAuth(): AuthState {
       };
 
       persist(jwt, address);
+      getStoredAvatarSeed(address);
       setToken(jwt);
       setUser(authUser);
       setStatus('authenticated');

@@ -38,20 +38,20 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
   return (
     <>
       {/* ================= DESKTOP TABS (lg:flex) ================= */}
-      <div className="hidden lg:flex items-center gap-5 xl:gap-8 border-b border-[#E2ECF9] px-2 font-jakarta">
+      <div className="hidden lg:flex items-center gap-5 xl:gap-8 border-b border-[#E2EEF9] px-1 font-sans">
         {desktopTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 pb-3.5 -mb-[1px] text-sm font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 -mb-[1px] text-xs font-semibold transition-all cursor-pointer ${
                 isActive
-                  ? 'text-[#155EEF] border-b-2 border-[#155EEF]'
-                  : 'text-[#475569] hover:text-[#071A4A]'
+                  ? 'text-[#3C78B1] border-b-2 border-[#3C78B1]'
+                  : 'text-[#4F6D87] hover:text-[#14304A]'
               }`}
             >
-              <span className={isActive ? 'text-[#155EEF]' : 'text-[#64748B]'}>
+              <span className={isActive ? 'text-[#3C78B1]' : 'text-[#7CB3E1]'}>
                 {tab.icon}
               </span>
               <span>{tab.label}</span>
@@ -61,7 +61,7 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
       </div>
 
       {/* ================= MOBILE TABS (lg:hidden) ================= */}
-      <div className="lg:hidden flex items-center gap-6 overflow-x-auto no-scrollbar border-b border-[#E2ECF9] px-1 font-jakarta">
+      <div className="lg:hidden flex items-center gap-5 overflow-x-auto no-scrollbar border-b border-[#E2EEF9] px-1 font-sans">
         {mobileTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -69,10 +69,10 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
               key={tab.id}
               ref={isActive ? activeMobileTabRef : null}
               onClick={() => onTabChange(tab.id)}
-              className={`pb-2.5 -mb-[1px] text-sm font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+              className={`pb-2 -mb-[1px] text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                 isActive
-                  ? 'text-[#155EEF] border-b-2 border-[#155EEF] font-bold'
-                  : 'text-[#64748B] hover:text-[#071A4A]'
+                  ? 'text-[#3C78B1] border-b-2 border-[#3C78B1] font-bold'
+                  : 'text-[#4F6D87] hover:text-[#14304A]'
               }`}
             >
               {tab.label}

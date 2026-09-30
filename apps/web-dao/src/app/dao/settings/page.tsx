@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import SettingsHero from '@/components/dao/settings/SettingsHero';
 import SettingsTabs, { SettingsTabType } from '@/components/dao/settings/SettingsTabs';
 import AccountInformationCard from '@/components/dao/settings/AccountInformationCard';
-import AccountIdentityCard from '@/components/dao/settings/AccountIdentityCard';
 import SettingsDangerZone from '@/components/dao/settings/SettingsDangerZone';
 
 // Security tab components
@@ -27,14 +26,13 @@ import WalletAccessCard from '@/components/dao/settings/wallet/WalletAccessCard'
 // Privacy tab components
 import ProfileVisibilityCard from '@/components/dao/settings/privacy/ProfileVisibilityCard';
 import DaoActivityPrivacyCard from '@/components/dao/settings/privacy/DaoActivityPrivacyCard';
-import YourPrivacyCard from '@/components/dao/settings/privacy/YourPrivacyCard';
 import DataPrivacyCard from '@/components/dao/settings/privacy/DataPrivacyCard';
 
 export default function DaoSettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTabType>('privacy');
+  const [activeTab, setActiveTab] = useState<SettingsTabType>('account');
 
   return (
-    <div className="space-y-6 sm:space-y-7 animate-fadeIn font-jakarta pb-12">
+    <div className="space-y-5 sm:space-y-6 animate-fadeIn font-sans pb-12 max-w-5xl mx-auto w-full">
       {/* 1. Hero Banner */}
       <SettingsHero />
 
@@ -44,59 +42,30 @@ export default function DaoSettingsPage() {
       {/* 3. Tab Content */}
       {/* ================= TAB 1: ACCOUNT ================= */}
       {activeTab === 'account' && (
-        <div className="animate-fadeIn">
-          {/* Desktop Layout (lg:block) */}
-          <div className="hidden lg:block space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Account Information Card (7 cols on xl) */}
-              <div className="xl:col-span-7">
-                <AccountInformationCard />
-              </div>
-
-              {/* Right Column: Member Identity Card (5 cols on xl) */}
-              <div className="xl:col-span-5">
-                <AccountIdentityCard />
-              </div>
-            </div>
-
-            {/* Bottom Row: Full-width Danger Zone */}
-            <SettingsDangerZone />
-          </div>
-
-          {/* Mobile Layout (lg:hidden) */}
-          <div className="lg:hidden space-y-4">
-            <AccountIdentityCard />
-            <AccountInformationCard />
-            <SettingsDangerZone />
-          </div>
+        <div className="animate-fadeIn space-y-5 max-w-4xl mx-auto">
+          <AccountInformationCard />
+          <SettingsDangerZone />
         </div>
       )}
 
       {/* ================= TAB 2: SECURITY ================= */}
       {activeTab === 'security' && (
-        <div className="animate-fadeIn">
-          {/* Desktop Layout (lg:block) */}
-          <div className="hidden lg:block">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              {/* Left Column: 4 stacked cards (7 cols on xl) */}
-              <div className="xl:col-span-7 space-y-6">
-                <WalletSecurityCard />
-                <ActiveSessionsCard />
-                <TwoFactorCard />
-                <SecurityActivityCard />
-              </div>
-
-              {/* Right Column: Member Card + Security Matters Card (5 cols on xl) */}
-              <div className="xl:col-span-5 space-y-6">
-                <AccountIdentityCard className="h-auto py-8" />
-                <SecurityMattersCard />
-              </div>
+        <div className="animate-fadeIn max-w-4xl mx-auto">
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid grid-cols-12 gap-5 items-start">
+            <div className="col-span-7 space-y-5">
+              <WalletSecurityCard />
+              <ActiveSessionsCard />
+              <TwoFactorCard />
+              <SecurityActivityCard />
+            </div>
+            <div className="col-span-5 space-y-5">
+              <SecurityMattersCard />
             </div>
           </div>
 
-          {/* Mobile Layout (lg:hidden) */}
+          {/* Mobile Layout */}
           <div className="lg:hidden space-y-4">
-            <AccountIdentityCard />
             <WalletSecurityCard />
             <ActiveSessionsCard />
             <TwoFactorCard />
@@ -108,26 +77,19 @@ export default function DaoSettingsPage() {
 
       {/* ================= TAB 3: NOTIFICATIONS ================= */}
       {activeTab === 'notifications' && (
-        <div className="animate-fadeIn">
-          {/* Desktop Layout (lg:block) */}
-          <div className="hidden lg:block">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Notification Settings Card (7 cols on xl) */}
-              <div className="xl:col-span-7">
-                <NotificationSettingsCard />
-              </div>
-
-              {/* Right Column: Member Card + Stay Informed Card (5 cols on xl) */}
-              <div className="xl:col-span-5 space-y-6">
-                <AccountIdentityCard className="h-auto py-8" />
-                <StayInformedCard />
-              </div>
+        <div className="animate-fadeIn max-w-4xl mx-auto">
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid grid-cols-12 gap-5 items-start">
+            <div className="col-span-7">
+              <NotificationSettingsCard />
+            </div>
+            <div className="col-span-5">
+              <StayInformedCard />
             </div>
           </div>
 
-          {/* Mobile Layout (lg:hidden) */}
+          {/* Mobile Layout */}
           <div className="lg:hidden space-y-4">
-            <AccountIdentityCard />
             <NotificationSettingsCard />
             <StayInformedCard />
           </div>
@@ -136,64 +98,36 @@ export default function DaoSettingsPage() {
 
       {/* ================= TAB 4: WALLET ================= */}
       {activeTab === 'wallet' && (
-        <div className="animate-fadeIn">
-          {/* Desktop Layout (lg:block) */}
-          <div className="hidden lg:block space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Connected Wallet + Wallet Information (7 cols on xl) */}
-              <div className="xl:col-span-7 space-y-6">
-                <ConnectedWalletCard />
-                <WalletInformationCard />
-              </div>
-
-              {/* Right Column: Member Card + Wallet Access Card (5 cols on xl) */}
-              <div className="xl:col-span-5 space-y-6">
-                <AccountIdentityCard className="h-auto py-8" />
-                <WalletAccessCard />
-              </div>
+        <div className="animate-fadeIn max-w-4xl mx-auto space-y-5">
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid grid-cols-12 gap-5 items-start">
+            <div className="col-span-7 space-y-5">
+              <ConnectedWalletCard />
+              <WalletInformationCard />
             </div>
-
-            {/* Bottom Row: Full-width Wallet Management Card */}
-            <WalletManagementCard />
+            <div className="col-span-5 space-y-5">
+              <WalletAccessCard />
+            </div>
           </div>
 
-          {/* Mobile Layout (lg:hidden) */}
+          {/* Mobile Layout */}
           <div className="lg:hidden space-y-4">
-            <AccountIdentityCard />
             <ConnectedWalletCard />
             <WalletInformationCard />
             <WalletAccessCard />
           </div>
+
+          {/* Full-width Wallet Management Card */}
+          <WalletManagementCard />
         </div>
       )}
 
       {/* ================= TAB 5: PRIVACY ================= */}
       {activeTab === 'privacy' && (
-        <div className="animate-fadeIn">
-          {/* Desktop Layout (lg:block) */}
-          <div className="hidden lg:block">
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Profile Visibility + DAO Activity (7 cols on xl) */}
-              <div className="xl:col-span-7 space-y-6">
-                <ProfileVisibilityCard />
-                <DaoActivityPrivacyCard />
-              </div>
-
-              {/* Right Column: Member Card + Your Privacy Card (5 cols on xl) */}
-              <div className="xl:col-span-5 space-y-6">
-                <AccountIdentityCard className="h-auto py-8" />
-                <YourPrivacyCard />
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Layout (lg:hidden) */}
-          <div className="lg:hidden space-y-4">
-            <AccountIdentityCard />
-            <ProfileVisibilityCard />
-            <DaoActivityPrivacyCard />
-            <DataPrivacyCard />
-          </div>
+        <div className="animate-fadeIn max-w-4xl mx-auto space-y-5">
+          <ProfileVisibilityCard />
+          <DaoActivityPrivacyCard />
+          <DataPrivacyCard />
         </div>
       )}
     </div>

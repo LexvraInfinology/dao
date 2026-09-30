@@ -13,7 +13,6 @@ import {
   User,
   Settings,
   ArrowRight,
-  Hexagon,
   Shield,
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
@@ -81,50 +80,9 @@ export const DaoSidebar: React.FC = () => {
         </nav>
       </div>
 
-      <div className="space-y-3 pt-2">
-        {/* Round circle / badge for WhatsApp — strictly for verified DAO seat members */}
+      {/* Bottom section with WhatsApp circle badge for verified members */}
+      <div className="pt-2">
         <DaoWhatsAppCircle variant="badge" />
-
-        {/* Bottom Promo Card from Figma (215x187) */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-b from-[#2B71F8] to-[#1447E6] p-4 text-white shadow-[0_10px_25px_rgba(37,99,235,0.22)] min-h-[175px] flex flex-col justify-between">
-        {/* Authentic Background Crystal Container Asset */}
-        <div className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none">
-          <img
-            src="/dao/Container.png"
-            alt="Crystal facet artwork"
-            className="w-full h-full object-cover object-center"
-          />
-        </div>
-
-        <div className="relative z-10 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-xs">
-              <Hexagon className="w-4 h-4 text-white" />
-            </div>
-            <div className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[10px] font-bold text-white uppercase tracking-wider">
-              Genesis Seat
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
-              Council Entry
-            </div>
-            <div className="text-2xl font-black font-sora text-white tracking-tight">
-              $300 TROB
-            </div>
-          </div>
-
-          <h4 className="text-[12px] font-semibold font-jakarta leading-snug text-blue-100">
-            A Stronger Tomorrow, Built Together.
-          </h4>
-
-          <div className="pt-2 border-t border-white/20 text-[10px] space-y-0.5 text-blue-100 font-jakarta">
-            <div className="font-bold text-white tracking-wide">EQUORA_FI</div>
-            <div className="text-blue-200/90 text-[9px]">Genesis DAO • dao.equora.fi</div>
-          </div>
-        </div>
-      </div>
       </div>
       </div>
     </aside>

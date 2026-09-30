@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import {
   X,
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  ShieldCheck,
-  Download,
   ExternalLink,
-  Wallet,
   Smartphone,
   LogOut,
   Copy,
   Check,
   ArrowRight,
+  ShieldCheck,
+  Download,
   Zap,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
@@ -23,6 +23,7 @@ import { AndroidIcon } from '@/components/ui/AndroidIcon';
 import {
   TROBSAFE_CHROME_STORE_URL,
   TROBSAFE_APK_URL,
+  triggerApkDownload,
   wakeUpExtension,
 } from '@/utils/walletConnect';
 
@@ -35,20 +36,20 @@ export interface WalletModalProps {
 type ModalStep = 'detect' | 'connect' | 'signing' | 'success' | 'connected_account' | 'error';
 
 /**
- * WalletSidebar (formerly WalletModal)
- * Renders as a sleek, non-intrusive right-hand slide-out sidebar drawer.
+ * Professional WalletSidebar
+ * Sleek, modern slide-out drawer matching Trobium & Equora design systems.
  */
 export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect }) => {
   const wallet = useWallet();
   const auth   = useAuthContext();
-  const [step, setStep]       = useState<ModalStep>('detect');
-  const [localErr, setLocalErr] = useState<string | null>(null);
+  const [step, setStep]         = useState<ModalStep>('detect');
+  const [localErr, setLocalErr]   = useState<string | null>(null);
 
   const [customAddress, setCustomAddress] = useState('');
   const [showDirectInput, setShowDirectInput] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // ── Sync step with wallet + auth state ──────────────────────────────────
+  // Sync step with wallet state
   useEffect(() => {
     if (!isOpen) return;
 
@@ -62,12 +63,11 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
       setStep('error');
       setLocalErr(wallet.error);
     } else {
-      // disconnected or ready
       setStep(wallet.isInstalled ? 'connect' : 'detect');
     }
   }, [isOpen, wallet.isConnected, wallet.status, wallet.isInstalled, wallet.error]);
 
-  // Auto-close on new connect success after short delay
+  // Auto-close on connect success
   useEffect(() => {
     if (step === 'success') {
       const addrStr = wallet.hexAddress || wallet.base58Address || wallet.address?.hex || wallet.address?.base58 || '';
@@ -95,9 +95,7 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
       await navigator.clipboard.writeText(activeAddr);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   };
 
   const handleDisconnect = () => {
@@ -109,9 +107,7 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
       localStorage.removeItem('equora_jwt');
       localStorage.removeItem('equora_dao_preview');
       localStorage.removeItem('equora_dev_mode');
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     setStep(wallet.isInstalled ? 'connect' : 'detect');
     onClose();
   };
@@ -141,270 +137,284 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
     onConnect?.(addrStr);
   };
 
-  const handleRetry = () => {
-    setLocalErr(null);
-    handleConnect();
+  const handleDownloadApkClick = () => {
+    triggerApkDownload();
   };
 
   return (
     <div className={`fixed inset-0 z-50 overflow-hidden pointer-events-none ${isOpen ? '' : 'invisible'}`}>
-      {/* Backdrop */}
+      {/* Background Dim Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/45 backdrop-blur-[2px] transition-opacity duration-300 pointer-events-auto ${
+        className={`fixed inset-0 bg-slate-900/35 backdrop-blur-[2px] transition-opacity duration-300 pointer-events-auto ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
       />
 
-      {/* Slide-out Wallet Sidebar Drawer */}
+      {/* Slide-out Sidebar Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-full w-[380px] max-w-[92vw] bg-[#0A1124] border-l border-[#1E3A5F] shadow-[-12px_0_40px_rgba(0,0,0,0.65)] flex flex-col justify-between p-5 sm:p-6 z-50 transform transition-transform duration-300 ease-out pointer-events-auto overflow-y-auto select-none ${
+        className={`fixed top-0 right-0 h-full w-[410px] max-w-[94vw] bg-white text-slate-800 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.25)] flex flex-col justify-between p-6 z-50 transform transition-transform duration-300 ease-out pointer-events-auto overflow-y-auto select-none border-l border-slate-200 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Top Header */}
-        <div>
-          <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#0E62E4] flex items-center justify-center shadow-[0_2px_12px_rgba(14,98,228,0.4)]">
-                <ShieldCheck className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0E62E4] to-[#3B82F6] p-0.5 shadow-sm flex items-center justify-center shrink-0">
+                <img
+                  src="/trobsafe-logo.png"
+                  alt="TrobSafe Wallet"
+                  className="w-full h-full rounded-[14px] object-cover bg-white"
+                  onError={(e) => {
+                    // Fallback to shield icon if image fails to render
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white font-sans tracking-tight">TrobSafe Wallet</h3>
-                <p className="text-[11px] text-[#60A5FA] font-medium">Trobium L1 · Genesis DAO</p>
+                <h3 className="text-base font-bold text-slate-900 font-sans tracking-tight leading-tight">
+                  TrobSafe Wallet
+                </h3>
+                <p className="text-[11px] font-semibold text-[#0E62E4] tracking-wide">
+                  Trobium L1 · Official Genesis Wallet
+                </p>
               </div>
             </div>
+
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-              aria-label="Close Sidebar"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* ── Status: Connected ────────────────────────────────────── */}
+          {/* ── View: Connected Account ──────────────────────────────────── */}
           {step === 'connected_account' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-emerald-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 border border-emerald-200/80 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                      Connected Wallet
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
+                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                      Connected to Trobium
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-mono">Trobium L1</span>
+                  <span className="text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-2">
+                <div className="p-3 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-xs">
                   <div className="min-w-0">
-                    <div className="text-[10px] text-slate-400">Active Address</div>
-                    <div className="text-xs font-mono font-bold text-white truncate max-w-[210px]">
+                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Address</div>
+                    <div className="text-xs font-mono font-bold text-slate-900 truncate max-w-[240px]" title={activeAddr}>
                       {activeAddr}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors shrink-0"
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors shrink-0 cursor-pointer"
                     title="Copy address"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   </button>
-                </div>
-
-                <div className="text-[11px] text-slate-400">
-                  Connected via TrobSafe extension & verified on Equora Genesis DAO.
                 </div>
               </div>
 
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
                     window.location.href = '/dao';
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] transition-all shadow-[0_4px_14px_rgba(14,98,228,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_14px_rgba(14,98,228,0.25)] flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>Enter DAO Dashboard</span>
+                  <span>Enter Genesis DAO</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
                 <button
                   type="button"
                   onClick={handleDisconnect}
-                  className="w-full py-2 px-4 rounded-xl font-medium text-xs text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-950/70 border border-rose-800/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out & Disconnect</span>
+                  <span>Disconnect Wallet</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Status: Waiting / Connecting ─────────────────────────── */}
+          {/* ── View: Connecting in Progress ────────────────────────────── */}
           {step === 'connect' && (
-            <div className="py-8 flex flex-col items-center gap-4 text-center">
+            <div className="py-12 flex flex-col items-center gap-4 text-center">
               <Loader2 className="w-10 h-10 text-[#0E62E4] animate-spin" />
               <div>
-                <p className="text-sm font-bold text-white">Opening TrobSafe Extension…</p>
-                <p className="text-xs text-slate-400 mt-1 max-w-[260px] leading-relaxed">
-                  Please approve the connection prompt in your TrobSafe extension popup or sidebar window.
+                <p className="text-sm font-bold text-slate-900">Connecting TrobSafe Extension…</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-[260px] leading-relaxed">
+                  Please approve the authorization prompt in your TrobSafe extension window.
                 </p>
               </div>
             </div>
           )}
 
-          {/* ── Status: Error / Notice / Lock Notice ───────────────────── */}
+          {/* ── View: Notice / Unlock prompt ────────────────────────────── */}
           {step === 'error' && (
             <div className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-amber-300">TrobSafe Wallet Notice</p>
-                  <p className="text-xs text-amber-200/80 mt-1 leading-relaxed">
-                    {localErr || 'Please unlock your TrobSafe extension from the browser toolbar, then click Connect.'}
-                  </p>
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 leading-relaxed">
+                  <div className="font-bold text-amber-950 mb-0.5">Authorization Notice</div>
+                  {localErr || 'Please unlock your TrobSafe extension from the browser toolbar, then click Connect.'}
                 </div>
               </div>
 
-              {/* Retry button */}
               <button
                 type="button"
-                onClick={handleRetry}
-                className="w-full py-3 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_16px_rgba(14,98,228,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                onClick={handleConnect}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_14px_rgba(14,98,228,0.25)] flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Zap className="w-4 h-4 fill-white" />
-                <span>Wake Up / Re-Connect</span>
+                <span>Retry Connection</span>
               </button>
 
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-slate-300 space-y-1">
-                <div className="font-semibold text-slate-200">💡 Quick Guide:</div>
-                <div>1. Click the 🧩 Extensions icon in your browser toolbar.</div>
-                <div>2. Pin and unlock <b>TrobSafe Wallet</b> with your passcode.</div>
-                <div>3. Click <b>Wake Up / Re-Connect</b> above.</div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1.5">
+                <div className="font-bold text-slate-800">Quick Guide:</div>
+                <div>1. Click the 🧩 Extensions icon in your browser toolbar (top right).</div>
+                <div>2. Open <b>TrobSafe Wallet</b> and enter your passcode.</div>
+                <div>3. Click <b>Retry Connection</b> above.</div>
               </div>
             </div>
           )}
 
-          {/* ── Status: Detect / Ready to Connect ────────────────────── */}
+          {/* ── View: Professional Connection Options ───────────────────── */}
           {step === 'detect' && (
             <div className="space-y-4">
-              {wallet.isInstalled ? (
-                /* Extension is installed and ready */
-                <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              {/* Option 1: Browser Extension (Recommended for PC/Laptop) */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-[#0E62E4]/40 transition-colors shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
                     <div>
-                      <div className="text-xs font-bold text-emerald-300">TrobSafe Extension Ready</div>
-                      <div className="text-[10px] text-slate-400">Detected in your browser</div>
+                      <div className="text-xs font-bold text-slate-900">Browser Extension</div>
+                      <div className="text-[11px] text-slate-500">Chrome, Edge & Brave</div>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleConnect}
-                    className="w-full py-3 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_16px_rgba(14,98,228,0.35)] flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-white" />
-                    <span>Connect TrobSafe Extension</span>
-                  </button>
+                  {wallet.isInstalled ? (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Ready
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-slate-400">Desktop</span>
+                  )}
                 </div>
-              ) : (
-                /* Extension probe */
-                <div className="space-y-3">
-                  <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-[#1E3A5F] space-y-2">
-                    <p className="text-xs font-bold text-white">TrobSafe Extension</p>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
-                      Connect your installed TrobSafe extension to access Council voting, seat claim, and payouts.
-                    </p>
 
-                    <button
-                      type="button"
-                      onClick={handleConnect}
-                      className="w-full py-2.5 rounded-xl font-bold text-xs text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_2px_10px_rgba(14,98,228,0.3)] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Zap className="w-3.5 h-3.5 fill-white" />
-                      <span>⚡ Open / Wake Up Extension</span>
-                    </button>
-                  </div>
-
-                  {/* Install Links */}
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <a
-                      href={TROBSAFE_CHROME_STORE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <ExternalLink className="w-3 h-3 text-[#60A5FA]" />
-                      <span>Chrome Store</span>
-                    </a>
-                    <a
-                      href={TROBSAFE_APK_URL}
-                      download="trobsafe.apk"
-                      className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <AndroidIcon className="w-3.5 h-3.5 fill-slate-300" />
-                      <span>Get APK</span>
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Direct Address Input Toggle ──────────────────────────── */}
-          {step !== 'connected_account' && (
-            <div className="mt-4 pt-3 border-t border-white/10">
-              {!showDirectInput ? (
                 <button
                   type="button"
-                  onClick={() => setShowDirectInput(true)}
-                  className="w-full py-1 text-[11px] text-slate-400 hover:text-white transition-colors text-center cursor-pointer"
+                  onClick={handleConnect}
+                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_2px_10px_rgba(14,98,228,0.2)] flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  Enter Trobium address manually ↓
+                  <Zap className="w-3.5 h-3.5 fill-white" />
+                  <span>Connect Extension</span>
                 </button>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Enter Trobium (T...) or 0x address"
-                    value={customAddress}
-                    onChange={(e) => setCustomAddress(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-[#1E3A5F] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0E62E4] font-mono"
-                  />
+
+                <div className="text-center pt-0.5">
+                  <a
+                    href={TROBSAFE_CHROME_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#0E62E4] hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Install or view in Chrome Web Store</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Option 2: Mobile App (.APK) */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-colors shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Android Application</div>
+                      <div className="text-[11px] text-slate-500">Official .APK Package</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-400">Mobile</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadApkClick}
+                  className="w-full py-2 px-4 rounded-xl font-bold text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Android .APK</span>
+                </button>
+              </div>
+
+              {/* Option 3: Manual address entry */}
+              <div className="pt-2">
+                {!showDirectInput ? (
                   <button
                     type="button"
-                    onClick={() => handleConnectCustom()}
-                    disabled={!customAddress.trim()}
-                    className="w-full py-2 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"
+                    onClick={() => setShowDirectInput(true)}
+                    className="w-full text-center text-xs font-semibold text-slate-500 hover:text-[#0E62E4] transition-colors cursor-pointer py-1"
                   >
-                    Connect with Address
+                    Enter Trobium address manually ↓
                   </button>
-                </div>
-              )}
+                ) : (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-700">Manual Address</div>
+                    <input
+                      type="text"
+                      placeholder="Enter Trobium (TX...) or 0x address"
+                      value={customAddress}
+                      onChange={(e) => setCustomAddress(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0E62E4] font-mono shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleConnectCustom()}
+                      disabled={!customAddress.trim()}
+                      className="w-full py-2 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Connect with Address
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Bottom Dev Mode bypass */}
-        <div className="pt-4 border-t border-white/10">
+        {/* Bottom Dev Mode / Preview */}
+        <div className="pt-4 border-t border-slate-100">
           <button
             type="button"
             onClick={() => {
               try {
                 sessionStorage.setItem('equora_dao_preview', 'true');
                 localStorage.setItem('equora_dev_mode', 'true');
-              } catch { /* ignore */ }
+              } catch {}
               onClose();
               window.location.href = '/dao?dev=1';
             }}
-            className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
-            <span>⚡ Enter DAO Dashboard (Dev Mode)</span>
+            <span>Continue to DAO in Preview Mode →</span>
           </button>
         </div>
       </aside>

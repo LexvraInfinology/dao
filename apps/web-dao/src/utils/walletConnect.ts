@@ -91,14 +91,9 @@ export function wakeUpExtension(): void {
 /**
  * Primary Smart Connect Wallet flow:
  *
- * 1. PC / Laptop:
- *    - Always broadcasts extension wakeup signals and attempts direct in-page connection.
- *    - Opens the connection modal if extension requires user approval or unlock.
- *    - Does NOT hijack the tab to Chrome Web Store when the user already has the extension.
- *
- * 2. Mobile:
- *    - If inside TrobSafe in-app dApp browser: Connects immediately.
- *    - Otherwise: Triggers download of the .apk file and opens modal with setup info.
+ * Broadcasts extension wakeup signals and attempts direct in-page connection.
+ * If user needs to approve, unlock, or choose an option, opens the professional Wallet Sidebar.
+ * NEVER forces an automatic file download.
  */
 export async function triggerSmartConnectWallet({
   wallet,
@@ -115,33 +110,7 @@ export async function triggerSmartConnectWallet({
 }): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  const isMobile = isMobileDevice();
-
-  // 1. MOBILE FLOW:
-  if (isMobile) {
-    if (wallet.isInstalled) {
-      try {
-        wakeUpExtension();
-        const addr = await wallet.connect();
-        if (addr) {
-          const addrStr = addr.base58 || addr.hex || '';
-          if (addrStr && onConnected) onConnected(addrStr);
-          return;
-        }
-      } catch {
-        openModal();
-        return;
-      }
-    }
-
-    // Regular mobile browser: Automatically redirect/download the .apk file
-    triggerApkDownload();
-    openModal();
-    return;
-  }
-
-  // 2. PC / LAPTOP (DESKTOP) FLOW:
-  // Always wake up extension and try connecting directly
+  // Broadcast extension wakeup signals
   wakeUpExtension();
 
   try {
@@ -152,12 +121,12 @@ export async function triggerSmartConnectWallet({
       return;
     }
   } catch {
-    // User cancelled prompt or extension is locked -> open modal to help user
+    // If extension is locked or user prompt needed -> open sidebar
     openModal();
     return;
   }
 
-  // If wallet.connect() returned null (e.g. extension injects slowly or needs unlock):
-  // Open the modal so the user can wake it up or enter address
+  // Open sidebar for clear options (Extension, APK, manual)
   openModal();
 }
+

@@ -177,10 +177,15 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 <button
                   type="button"
                   onClick={handleConnectClick}
-                  className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(14,98,228,0.35)] transition-all cursor-pointer"
+                  className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(14,98,228,0.25)] transition-all cursor-pointer"
                 >
-                  <ShieldCheck className="w-4 h-4 text-white" />
-                  <span>⚡ Open / Wake Up Extension</span>
+                  <img
+                    src="/trobsafe-logo.png"
+                    alt="TrobSafe"
+                    className="w-4 h-4 rounded object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <span>Connect TrobSafe Extension</span>
                 </button>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <a

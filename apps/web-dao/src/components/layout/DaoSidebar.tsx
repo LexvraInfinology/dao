@@ -245,9 +245,14 @@ export const DaoSidebar: React.FC = () => {
                 /* Disconnected State: Direct TrobSafe Wake-Up & Connect Button */
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-lg bg-[#0E62E4] text-white flex items-center justify-center shadow-xs">
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md overflow-hidden shrink-0 shadow-xs">
+                        <img
+                          src="/trobsafe-logo.png"
+                          alt="TrobSafe"
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
                       </div>
                       <span className="text-[11px] font-bold text-[#17334F]">TrobSafe Wallet</span>
                     </div>

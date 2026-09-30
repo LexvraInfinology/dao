@@ -207,6 +207,11 @@ export function useTrobWallet(): TrobWalletState {
     const tryDetect = (): boolean => {
       const trob = getTrob();
       const currentStored = readStoredAddress();
+      const w = typeof window !== 'undefined' ? (window as any) : null;
+      const hasBridge = Boolean(
+        w?.__trobsafeBridge ||
+        (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
+      );
 
       if (currentStored && (currentStored.base58 || currentStored.hex)) {
         if (isTrobActive(trob)) {
@@ -229,6 +234,12 @@ export function useTrobWallet(): TrobWalletState {
           return true;
         }
       }
+
+      if (hasBridge) {
+        setStatus('disconnected');
+        return true;
+      }
+
       return false;
     };
 
@@ -242,8 +253,14 @@ export function useTrobWallet(): TrobWalletState {
         clearInterval(fastPoll);
       } else if (pollCount >= 20) {
         clearInterval(fastPoll);
+        const w = typeof window !== 'undefined' ? (window as any) : null;
+        const hasBridge = Boolean(
+          w?.__trobsafeBridge ||
+          (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
+        );
         setStatus((prev) => {
           if (prev === 'connected') return prev;
+          if (hasBridge) return 'disconnected';
           return prev === 'detecting' ? 'not_installed' : prev;
         });
       }
@@ -261,6 +278,31 @@ export function useTrobWallet(): TrobWalletState {
       clearInterval(slowPoll);
       tryDetect();
     };
+
+    // Extension bridge inpage message listeners (direct TrobSafe content script broadcast)
+    const handleInpageMessage = (event: MessageEvent) => {
+      if (typeof window === 'undefined' || event.source !== window) return;
+      const data = event.data;
+      if (!data || !data.__trobsafe) return;
+
+      if (data.type === 'TROBSAFE_SET_ADDRESS' || data.type === 'TROBSAFE_ADDRESS_CHANGED') {
+        const b58 = String(data.base58 ?? '').trim();
+        const hx = String(data.hex ?? '').trim();
+        if (b58 || hx) {
+          applyAddress({ base58: b58, hex: hx });
+        }
+      }
+
+      if (data.type === 'TROBSAFE_EVENT') {
+        const detail = data.detail || {};
+        const b58 = String(detail.base58 || detail.wallet_address || detail.address || '').trim();
+        const hx = String(detail.hex ?? '').trim();
+        if (b58 || hx) {
+          applyAddress({ base58: b58, hex: hx });
+        }
+      }
+    };
+    window.addEventListener('message', handleInpageMessage);
 
     // EIP-6963 standard provider discovery
     const handleEip6963 = (event: any) => {
@@ -286,6 +328,7 @@ export function useTrobWallet(): TrobWalletState {
     return () => {
       clearInterval(fastPoll);
       clearInterval(slowPoll);
+      window.removeEventListener('message', handleInpageMessage);
       window.removeEventListener('eip6963:announceProvider', handleEip6963);
       window.removeEventListener('trobReady', onTrobReady);
       window.removeEventListener('trobLinkReady', onTrobReady);
@@ -340,7 +383,13 @@ export function useTrobWallet(): TrobWalletState {
       }
     }
 
-    if (!trob) {
+    const w = typeof window !== 'undefined' ? (window as any) : null;
+    const hasBridge = Boolean(
+      w?.__trobsafeBridge ||
+      (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
+    );
+
+    if (!trob && !hasBridge) {
       const stored = readStoredAddress();
       if (stored && (stored.base58 || stored.hex)) {
         applyAddress(stored);
@@ -358,39 +407,56 @@ export function useTrobWallet(): TrobWalletState {
       let resolvedBase58 = '';
       let resolvedHex = '';
 
-      // Method 1: trob_requestAccounts
-      if (typeof trob.request === 'function') {
+      // Check defaultAddress on trob object first (if already unlocked and set)
+      if (trob?.defaultAddress?.base58 || trob?.defaultAddress?.hex) {
+        resolvedBase58 = trob.defaultAddress.base58 || '';
+        resolvedHex = (trob.defaultAddress.hex || '').toLowerCase();
+      }
+
+      // Method 1: trob.getDetails() - official TrobSafe API
+      if (!resolvedBase58 && !resolvedHex && typeof trob?.getDetails === 'function') {
+        try {
+          const details: any = await trob.getDetails();
+          if (details) {
+            const addrObj = details.address || details;
+            resolvedBase58 = addrObj.base58 || (typeof addrObj === 'string' && !addrObj.startsWith('0x') ? addrObj : '') || '';
+            resolvedHex = (addrObj.hex || (typeof addrObj === 'string' && addrObj.startsWith('0x') ? addrObj : '') || '').toLowerCase();
+          }
+        } catch (e: any) {
+          const m = (e?.message || String(e)).toLowerCase();
+          if (m.includes('locked')) {
+            throw new Error('Your TrobSafe Wallet is locked. Please click the TrobSafe icon in your browser toolbar to unlock it.');
+          }
+        }
+      }
+
+      // Method 2: trob.request({ method: 'trob_requestAccounts' })
+      if (!resolvedBase58 && !resolvedHex && typeof trob?.request === 'function') {
         try {
           const reqRes: any = await trob.request({ method: 'trob_requestAccounts' });
           if (reqRes) {
-            if (typeof reqRes === 'string') {
-              if (reqRes.startsWith('0x')) resolvedHex = reqRes.toLowerCase();
-              else resolvedBase58 = reqRes;
-            } else if (Array.isArray(reqRes) && reqRes[0]) {
-              if (reqRes[0].startsWith('0x')) resolvedHex = reqRes[0].toLowerCase();
-              else resolvedBase58 = reqRes[0];
-            } else if (typeof reqRes === 'object') {
-              resolvedBase58 = reqRes.base58 || reqRes.address || '';
-              resolvedHex = (reqRes.hex || '').toLowerCase();
+            const data = reqRes.data || reqRes;
+            if (typeof data === 'string') {
+              if (data.startsWith('0x')) resolvedHex = data.toLowerCase();
+              else resolvedBase58 = data;
+            } else if (Array.isArray(data) && data[0]) {
+              if (data[0].startsWith('0x')) resolvedHex = data[0].toLowerCase();
+              else resolvedBase58 = data[0];
+            } else if (typeof data === 'object') {
+              resolvedBase58 = data.base58 || data.address || '';
+              resolvedHex = (data.hex || '').toLowerCase();
             }
           }
-        } catch {}
-      }
-
-      // Method 2: eth_requestAccounts
-      if (!resolvedBase58 && !resolvedHex && typeof trob.request === 'function') {
-        try {
-          const ethRes: any = await trob.request({ method: 'eth_requestAccounts' });
-          if (Array.isArray(ethRes) && ethRes[0]) {
-            resolvedHex = ethRes[0].toLowerCase();
-          } else if (typeof ethRes === 'string') {
-            resolvedHex = ethRes.toLowerCase();
+        } catch (e: any) {
+          const m = (e?.message || String(e)).toLowerCase();
+          if (m.includes('locked')) {
+            throw new Error('Your TrobSafe Wallet is locked. Please click the TrobSafe icon in your browser toolbar to unlock it.');
           }
-        } catch {}
+        }
       }
 
       // Method 3: trob.enable() (TronWeb/TronLink/TrobWeb standard)
-      if (!resolvedBase58 && !resolvedHex && typeof trob.enable === 'function') {
+      if (!resolvedBase58 && !resolvedHex && typeof trob?.enable === 'function') {
         try {
           const enableRes: any = await trob.enable();
           if (enableRes) {
@@ -405,34 +471,16 @@ export function useTrobWallet(): TrobWalletState {
         } catch {}
       }
 
-      // Method 4: trob.getDetails()
-      if (!resolvedBase58 && !resolvedHex && typeof trob.getDetails === 'function') {
-        try {
-          const details: any = await trob.getDetails();
-          if (details) {
-            resolvedBase58 = details.address?.base58 || details.base58 || '';
-            resolvedHex = (details.address?.hex || details.hex || '').toLowerCase();
-          }
-        } catch {}
-      }
-
-      // Method 5: defaultAddress on trob object
-      if (!resolvedBase58 && !resolvedHex && trob.defaultAddress) {
-        resolvedBase58 = trob.defaultAddress.base58 || '';
-        resolvedHex = (trob.defaultAddress.hex || '').toLowerCase();
-      }
-
-      // Method 6: Check window.tronWeb or window.trobWeb or window.trobSafe
+      // Method 4: Check window.tronWeb or window.trobWeb or window.trobSafe
       if (!resolvedBase58 && !resolvedHex && typeof window !== 'undefined') {
-        const w = window as any;
-        const tw = w.tronWeb || w.trobWeb || w.trobSafe || w.trobsafe;
+        const tw = w?.tronWeb || w?.trobWeb || w?.trobSafe || w?.trobsafe;
         if (tw?.defaultAddress) {
           resolvedBase58 = tw.defaultAddress.base58 || '';
           resolvedHex = (tw.defaultAddress.hex || '').toLowerCase();
         }
       }
 
-      // Method 7: Fallback to stored address
+      // Method 5: Fallback to stored address
       if (!resolvedBase58 && !resolvedHex) {
         const stored = readStoredAddress();
         if (stored && (stored.base58 || stored.hex)) {
@@ -442,7 +490,7 @@ export function useTrobWallet(): TrobWalletState {
       }
 
       if (!resolvedBase58 && !resolvedHex) {
-        throw new Error('Please unlock your TrobSafe extension and select an account.');
+        throw new Error('Please click the TrobSafe extension icon in your browser toolbar to unlock or approve connection.');
       }
 
       const addr: TrobAddress = {
@@ -455,7 +503,7 @@ export function useTrobWallet(): TrobWalletState {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to connect TrobSafe wallet.';
       setError(msg);
-      setStatus('error');
+      setStatus(hasBridge || Boolean(trob) ? 'disconnected' : 'error');
       return null;
     }
   }, [applyAddress]);
@@ -517,8 +565,13 @@ export function useTrobWallet(): TrobWalletState {
     [status]
   );
 
+  const wObj = typeof window !== 'undefined' ? (window as any) : null;
+  const hasBridgeInstalled = Boolean(
+    wObj?.__trobsafeBridge ||
+    (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
+  );
   const activeTrob = getTrob();
-  const isReallyInstalled = Boolean(activeTrob && isTrobActive(activeTrob));
+  const isReallyInstalled = Boolean((activeTrob && isTrobActive(activeTrob)) || hasBridgeInstalled);
 
   return {
     status,

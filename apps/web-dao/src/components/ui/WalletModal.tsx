@@ -268,35 +268,54 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
         {/* ── Step: not installed / detect fallback ────────────────────── */}
         {step === 'detect' && wallet.status !== 'detecting' && (
           <div className="space-y-3.5">
-            <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-[#1E3A5F] text-center space-y-2.5">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-[#0F1F40] to-[#0B1830] border border-[#1E3A5F] text-center space-y-3">
               <div className="w-11 h-11 rounded-xl bg-[#0E62E4]/20 border border-[#0E62E4]/40 flex items-center justify-center mx-auto text-[#60A5FA]">
-                <Download className="w-5 h-5" />
+                <ShieldCheck className="w-5 h-5 text-[#60A5FA]" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white font-sans">TrobSafe Wallet Required</p>
+                <p className="text-sm font-bold text-white font-sans">Connect TrobSafe Wallet</p>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  TrobSafe extension or Android APK is required to sign transactions and verify Genesis Council membership.
+                  Connect your installed TrobSafe extension to access EQUORA Genesis DAO and verify Council membership.
                 </p>
               </div>
 
-              <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <a
-                  href={TROBSAFE_CHROME_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2.5 px-3 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(14,98,228,0.35)] cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-white" />
-                  <span>Chrome Web Store</span>
-                </a>
-                <a
-                  href={TROBSAFE_APK_URL}
-                  download="trobsafe.apk"
-                  className="py-2.5 px-3 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <AndroidIcon className="w-4 h-4 fill-white" />
-                  <span>Download APK</span>
-                </a>
+              {/* Primary action: Open / Wake Up Extension */}
+              <button
+                type="button"
+                onClick={handleConnect}
+                className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_16px_rgba(14,98,228,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-white" />
+                <span>⚡ Open / Wake Up Extension</span>
+              </button>
+
+              <div className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-[11px] text-slate-300 text-left space-y-1">
+                <div className="font-semibold text-slate-200">💡 Already have TrobSafe installed?</div>
+                <div>1. Click <b>Open / Wake Up Extension</b> above to trigger authorization.</div>
+                <div>2. Or click the 🧩 <b>Extensions icon</b> in your browser toolbar and pin/open <b>TrobSafe Wallet</b>.</div>
+              </div>
+
+              <div className="pt-2 border-t border-white/10">
+                <div className="text-[11px] text-slate-400 mb-2">Need to install or update TrobSafe?</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <a
+                    href={TROBSAFE_CHROME_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Chrome Web Store</span>
+                  </a>
+                  <a
+                    href={TROBSAFE_APK_URL}
+                    download="trobsafe.apk"
+                    className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                  >
+                    <AndroidIcon className="w-4 h-4 fill-current" />
+                    <span>Download APK</span>
+                  </a>
+                </div>
               </div>
 
               {/* Dev Mode direct bypass */}

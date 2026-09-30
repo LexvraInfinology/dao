@@ -174,28 +174,38 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 The EQUORA Genesis DAO requires the TrobSafe wallet to sign transactions and verify Council membership. Available for desktop browsers and Android.
               </p>
               <div className="space-y-2.5">
-                <a
-                  href="/downloads/trobsafe.apk"
-                  download="trobsafe.apk"
-                  className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all"
+                <button
+                  type="button"
+                  onClick={handleConnectClick}
+                  className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(14,98,228,0.35)] transition-all cursor-pointer"
                 >
-                  <Smartphone className="w-4 h-4" />
-                  Download Android APK
-                </a>
-                <a
-                  href={TROBSAFE_CHROME_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#155EEF]" />
-                  Install Chrome Extension (Web Store)
-                </a>
+                  <ShieldCheck className="w-4 h-4 text-white" />
+                  <span>⚡ Open / Wake Up Extension</span>
+                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <a
+                    href={TROBSAFE_CHROME_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-[#0E62E4]" />
+                    <span>Chrome Web Store</span>
+                  </a>
+                  <a
+                    href="/downloads/trobsafe.apk"
+                    download="trobsafe.apk"
+                    className="py-2.5 px-3 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-[#0E62E4]" />
+                    <span>Android APK</span>
+                  </a>
+                </div>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
-                  <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                  <Link href="/dao" className="text-[#0E62E4] hover:underline flex items-center gap-1">
                     ← Back to DAO
                   </Link>
-                  <Link href="/dao/seats" className="text-[#155EEF] hover:underline flex items-center gap-1">
+                  <Link href="/dao/seats" className="text-[#0E62E4] hover:underline flex items-center gap-1">
                     Council Seats Grid →
                   </Link>
                 </div>

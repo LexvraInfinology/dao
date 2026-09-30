@@ -54,12 +54,35 @@ export function triggerApkDownload(): void {
 export function wakeUpExtension(): void {
   if (typeof window === 'undefined') return;
   try {
+    // Standard window postMessage targets
     window.postMessage({ target: 'trobsafe-inpage', action: 'connect' }, '*');
     window.postMessage({ type: 'TROBSAFE_CONNECT' }, '*');
     window.postMessage({ type: 'TROBSAFE_REQUEST_ACCOUNTS' }, '*');
+    window.postMessage({ target: 'trobsafe-contentscript', type: 'OPEN_SIDEBAR' }, '*');
+    window.postMessage({ target: 'trobsafe-contentscript', type: 'OPEN_POPUP' }, '*');
+    window.postMessage({ target: 'trobsafe', action: 'open' }, '*');
+
+    // Custom events
     window.dispatchEvent(new CustomEvent('trob_requestAccounts'));
     window.dispatchEvent(new CustomEvent('trobSafe_connect'));
     window.dispatchEvent(new CustomEvent('trobReady'));
+    window.dispatchEvent(new CustomEvent('trobLinkReady'));
+    window.dispatchEvent(new CustomEvent('trobsafe_ready'));
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    // Optional Chromium extension runtime ping if available
+    const w = window as any;
+    if (typeof w.chrome?.runtime?.sendMessage === 'function') {
+      try {
+        w.chrome.runtime.sendMessage(
+          'hmijkpcbnkmkijljblhojfndfapidkkk',
+          { type: 'TROBSAFE_PING' },
+          () => {}
+        );
+      } catch {
+        /* runtime messaging restricted or unavailable */
+      }
+    }
   } catch {
     // Ignore message errors
   }
@@ -69,13 +92,13 @@ export function wakeUpExtension(): void {
  * Primary Smart Connect Wallet flow:
  *
  * 1. PC / Laptop:
- *    - If extension is installed: Automatically wakes up and opens the TrobSafe extension.
- *    - If extension is NOT installed (new user): Automatically opens the Chrome Web Store extension page
- *      in a new tab AND opens the modal for quick connection once added.
+ *    - Always broadcasts extension wakeup signals and attempts direct in-page connection.
+ *    - Opens the connection modal if extension requires user approval or unlock.
+ *    - Does NOT hijack the tab to Chrome Web Store when the user already has the extension.
  *
  * 2. Mobile:
  *    - If inside TrobSafe in-app dApp browser: Connects immediately.
- *    - Otherwise: Automatically triggers download/redirect to the .apk file and opens modal with setup info.
+ *    - Otherwise: Triggers download of the .apk file and opens modal with setup info.
  */
 export async function triggerSmartConnectWallet({
   wallet,
@@ -96,7 +119,6 @@ export async function triggerSmartConnectWallet({
 
   // 1. MOBILE FLOW:
   if (isMobile) {
-    // If inside TrobSafe's in-app dApp browser where wallet is already injected
     if (wallet.isInstalled) {
       try {
         wakeUpExtension();
@@ -119,26 +141,23 @@ export async function triggerSmartConnectWallet({
   }
 
   // 2. PC / LAPTOP (DESKTOP) FLOW:
-  if (wallet.isInstalled) {
-    // Existing user or installed extension:
-    // Automatically wake up and prompt the extension
-    wakeUpExtension();
-    try {
-      const addr = await wallet.connect();
-      if (addr) {
-        const addrStr = addr.base58 || addr.hex || '';
-        if (addrStr && onConnected) onConnected(addrStr);
-        return;
-      }
-    } catch {
-      // User cancelled, locked, or error -> show modal
-      openModal();
+  // Always wake up extension and try connecting directly
+  wakeUpExtension();
+
+  try {
+    const addr = await wallet.connect();
+    if (addr) {
+      const addrStr = addr.base58 || addr.hex || '';
+      if (addrStr && onConnected) onConnected(addrStr);
       return;
     }
-  } else {
-    // New user on PC/Laptop without extension:
-    // Automatically open the Chrome Web Store extension page in a new tab
-    window.open(TROBSAFE_CHROME_STORE_URL, '_blank', 'noopener,noreferrer');
+  } catch {
+    // User cancelled prompt or extension is locked -> open modal to help user
     openModal();
+    return;
   }
+
+  // If wallet.connect() returned null (e.g. extension injects slowly or needs unlock):
+  // Open the modal so the user can wake it up or enter address
+  openModal();
 }

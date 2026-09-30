@@ -108,21 +108,60 @@ export function useTrobWallet(): TrobWalletState {
   const getTrob = (): TrobWalletAPI | any | null => {
     if (typeof window === 'undefined') return null;
     const w = window as any;
-    const t = w.trob || w.trobWeb || w.trobLink || w.trobSafe || w.tronWeb || w.trobkit || null;
-    return t;
+
+    // 1. Direct window properties (case variations and aliases)
+    const direct =
+      w.trob ||
+      w.trobSafe ||
+      w.trobsafe ||
+      w.TrobSafe ||
+      w.trobWeb ||
+      w.trobLink ||
+      w.troblink ||
+      w.trobkit ||
+      w.trobium ||
+      w.trobiumWeb ||
+      w.tronWeb ||
+      w.tronLink ||
+      w.trobSafeWallet ||
+      w.trobProvider ||
+      null;
+
+    if (direct) return direct;
+
+    // 2. Check window.ethereum or multi-provider arrays
+    if (w.ethereum) {
+      if (w.ethereum.isTrobSafe || w.ethereum.isTrob || w.ethereum.isTrobium) {
+        return w.ethereum;
+      }
+      if (Array.isArray(w.ethereum.providers)) {
+        const found = w.ethereum.providers.find(
+          (p: any) => p.isTrobSafe || p.isTrob || p.isTrobium
+        );
+        if (found) return found;
+      }
+    }
+
+    // 3. EIP-6963 announced provider cached in memory
+    if (w.__eip6963TrobProvider) {
+      return w.__eip6963TrobProvider;
+    }
+
+    // 4. Fallback to window.ethereum if it has a request method
+    if (w.ethereum && typeof w.ethereum.request === 'function') {
+      return w.ethereum;
+    }
+
+    return null;
   };
 
   const isTrobActive = (t: any): boolean => {
     if (!t) return false;
-    return Boolean(
-      t.ready ||
-      t.installed ||
-      t.isTrobSafe ||
-      typeof t.getDetails === 'function' ||
-      typeof t.request === 'function' ||
-      t.defaultAddress?.base58 ||
-      t.defaultAddress?.hex
-    );
+    // Any object or function injected as provider indicates extension is present!
+    if (typeof t === 'object' || typeof t === 'function') {
+      return true;
+    }
+    return false;
   };
 
   const applyAddress = useCallback((addr: TrobAddress) => {
@@ -222,14 +261,37 @@ export function useTrobWallet(): TrobWalletState {
       clearInterval(slowPoll);
       tryDetect();
     };
+
+    // EIP-6963 standard provider discovery
+    const handleEip6963 = (event: any) => {
+      const detail = event?.detail;
+      if (detail?.provider) {
+        const name = (detail.info?.name || '').toLowerCase();
+        const rdns = (detail.info?.rdns || '').toLowerCase();
+        if (name.includes('trob') || rdns.includes('trob') || !(window as any).__eip6963TrobProvider) {
+          (window as any).__eip6963TrobProvider = detail.provider;
+          onTrobReady();
+        }
+      }
+    };
+    window.addEventListener('eip6963:announceProvider', handleEip6963);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
     window.addEventListener('trobReady', onTrobReady);
     window.addEventListener('trobLinkReady', onTrobReady);
+    window.addEventListener('trobSafe_ready', onTrobReady);
+    window.addEventListener('trobsafe_ready', onTrobReady);
+    window.addEventListener('ethereum#initialized', onTrobReady);
 
     return () => {
       clearInterval(fastPoll);
       clearInterval(slowPoll);
+      window.removeEventListener('eip6963:announceProvider', handleEip6963);
       window.removeEventListener('trobReady', onTrobReady);
       window.removeEventListener('trobLinkReady', onTrobReady);
+      window.removeEventListener('trobSafe_ready', onTrobReady);
+      window.removeEventListener('trobsafe_ready', onTrobReady);
+      window.removeEventListener('ethereum#initialized', onTrobReady);
     };
   }, [applyAddress]);
 
@@ -257,7 +319,27 @@ export function useTrobWallet(): TrobWalletState {
 
   // ── connect ───────────────────────────────────────────────────────────────
   const connect = useCallback(async (): Promise<TrobAddress | null> => {
-    const trob = getTrob();
+    // 1. Dispatch wakeup signals
+    try {
+      window.postMessage({ target: 'trobsafe-inpage', action: 'connect' }, '*');
+      window.postMessage({ type: 'TROBSAFE_CONNECT' }, '*');
+      window.postMessage({ type: 'TROBSAFE_REQUEST_ACCOUNTS' }, '*');
+      window.dispatchEvent(new CustomEvent('trob_requestAccounts'));
+      window.dispatchEvent(new CustomEvent('trobSafe_connect'));
+      window.dispatchEvent(new Event('eip6963:requestProvider'));
+    } catch {}
+
+    let trob = getTrob();
+
+    // If extension not immediately found, poll for up to 1500ms
+    if (!trob) {
+      for (let i = 0; i < 15; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        trob = getTrob();
+        if (trob) break;
+      }
+    }
+
     if (!trob) {
       const stored = readStoredAddress();
       if (stored && (stored.base58 || stored.hex)) {
@@ -265,7 +347,7 @@ export function useTrobWallet(): TrobWalletState {
         return stored;
       }
       setStatus('not_installed');
-      setError('TrobSafe wallet extension is not installed.');
+      setError('TrobSafe extension not detected. Please ensure your TrobSafe extension is enabled in your browser extensions.');
       return null;
     }
 
@@ -273,20 +355,10 @@ export function useTrobWallet(): TrobWalletState {
     setError(null);
 
     try {
-      // Dispatch wakeup signal to extension content script
-      try {
-        window.postMessage({ target: 'trobsafe-inpage', action: 'connect' }, '*');
-        window.postMessage({ type: 'TROBSAFE_CONNECT' }, '*');
-        window.dispatchEvent(new CustomEvent('trob_requestAccounts'));
-        window.dispatchEvent(new CustomEvent('trobSafe_connect'));
-      } catch {
-        /* ignore */
-      }
-
       let resolvedBase58 = '';
       let resolvedHex = '';
 
-      // 1. Try trob_requestAccounts via trob.request
+      // Method 1: trob_requestAccounts
       if (typeof trob.request === 'function') {
         try {
           const reqRes: any = await trob.request({ method: 'trob_requestAccounts' });
@@ -294,17 +366,18 @@ export function useTrobWallet(): TrobWalletState {
             if (typeof reqRes === 'string') {
               if (reqRes.startsWith('0x')) resolvedHex = reqRes.toLowerCase();
               else resolvedBase58 = reqRes;
+            } else if (Array.isArray(reqRes) && reqRes[0]) {
+              if (reqRes[0].startsWith('0x')) resolvedHex = reqRes[0].toLowerCase();
+              else resolvedBase58 = reqRes[0];
             } else if (typeof reqRes === 'object') {
               resolvedBase58 = reqRes.base58 || reqRes.address || '';
               resolvedHex = (reqRes.hex || '').toLowerCase();
             }
           }
-        } catch {
-          // fall through
-        }
+        } catch {}
       }
 
-      // 2. If not yet resolved, try eth_requestAccounts
+      // Method 2: eth_requestAccounts
       if (!resolvedBase58 && !resolvedHex && typeof trob.request === 'function') {
         try {
           const ethRes: any = await trob.request({ method: 'eth_requestAccounts' });
@@ -313,12 +386,26 @@ export function useTrobWallet(): TrobWalletState {
           } else if (typeof ethRes === 'string') {
             resolvedHex = ethRes.toLowerCase();
           }
-        } catch {
-          // fall through
-        }
+        } catch {}
       }
 
-      // 3. Try trob.getDetails()
+      // Method 3: trob.enable() (TronWeb/TronLink/TrobWeb standard)
+      if (!resolvedBase58 && !resolvedHex && typeof trob.enable === 'function') {
+        try {
+          const enableRes: any = await trob.enable();
+          if (enableRes) {
+            if (Array.isArray(enableRes) && enableRes[0]) {
+              if (enableRes[0].startsWith('0x')) resolvedHex = enableRes[0].toLowerCase();
+              else resolvedBase58 = enableRes[0];
+            } else if (typeof enableRes === 'object') {
+              resolvedBase58 = enableRes.base58 || '';
+              resolvedHex = (enableRes.hex || '').toLowerCase();
+            }
+          }
+        } catch {}
+      }
+
+      // Method 4: trob.getDetails()
       if (!resolvedBase58 && !resolvedHex && typeof trob.getDetails === 'function') {
         try {
           const details: any = await trob.getDetails();
@@ -326,18 +413,26 @@ export function useTrobWallet(): TrobWalletState {
             resolvedBase58 = details.address?.base58 || details.base58 || '';
             resolvedHex = (details.address?.hex || details.hex || '').toLowerCase();
           }
-        } catch {
-          // fall through
-        }
+        } catch {}
       }
 
-      // 4. Fallback to defaultAddress on trob object
+      // Method 5: defaultAddress on trob object
       if (!resolvedBase58 && !resolvedHex && trob.defaultAddress) {
         resolvedBase58 = trob.defaultAddress.base58 || '';
         resolvedHex = (trob.defaultAddress.hex || '').toLowerCase();
       }
 
-      // 5. Fallback to stored address
+      // Method 6: Check window.tronWeb or window.trobWeb or window.trobSafe
+      if (!resolvedBase58 && !resolvedHex && typeof window !== 'undefined') {
+        const w = window as any;
+        const tw = w.tronWeb || w.trobWeb || w.trobSafe || w.trobsafe;
+        if (tw?.defaultAddress) {
+          resolvedBase58 = tw.defaultAddress.base58 || '';
+          resolvedHex = (tw.defaultAddress.hex || '').toLowerCase();
+        }
+      }
+
+      // Method 7: Fallback to stored address
       if (!resolvedBase58 && !resolvedHex) {
         const stored = readStoredAddress();
         if (stored && (stored.base58 || stored.hex)) {
@@ -347,7 +442,7 @@ export function useTrobWallet(): TrobWalletState {
       }
 
       if (!resolvedBase58 && !resolvedHex) {
-        throw new Error('Please unlock your TrobSafe wallet and select an account.');
+        throw new Error('Please unlock your TrobSafe extension and select an account.');
       }
 
       const addr: TrobAddress = {

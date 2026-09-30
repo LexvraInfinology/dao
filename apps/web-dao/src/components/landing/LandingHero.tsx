@@ -23,8 +23,9 @@ export const LandingHero: React.FC = () => {
           loop
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           poster="/landing/hero-bg.png"
+          onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
           className="w-full h-full object-cover object-[80%_center] xl:object-right max-w-full"
         >
           <source
@@ -87,8 +88,9 @@ export const LandingHero: React.FC = () => {
                   loop
                   muted
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                   poster="/landing/hero-bg.png"
+                  onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                   className="w-full h-full object-cover"
                 >
                   <source

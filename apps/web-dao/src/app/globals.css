@@ -150,3 +150,64 @@ body {
   pointer-events: none;
   opacity: 0.4;
 }
+
+/* Trobium Global Design Utility Classes */
+.btn-primary {
+  color: #fff;
+  letter-spacing: 0.05em;
+  background-color: #3C78B1;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s, transform 0.15s;
+  display: inline-flex;
+  box-shadow: 0 4px 14px rgba(60, 120, 177, 0.25);
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #5FA2D1;
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  color: #3C78B1;
+  letter-spacing: 0.05em;
+  background-color: #fff;
+  border: 1px solid rgba(60, 120, 177, 0.35);
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background-color: rgba(60, 120, 177, 0.08);
+  border-color: #3C78B1;
+}
+
+.chip {
+  color: #3C78B1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background-color: rgba(60, 120, 177, 0.08);
+  border: 1px solid rgba(60, 120, 177, 0.2);
+  border-radius: 8px;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  display: inline-flex;
+}
+

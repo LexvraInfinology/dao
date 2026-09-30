@@ -2,22 +2,47 @@
 
 /**
  * DaoDashboardStats — live stat cards for the DAO Dashboard page.
- * Displays Genesis Queue vacancy, Phase 1 countdown, and the user's personal seat capital data.
+ * Responsive, tightly packed layout styled with the Trobium design system.
  */
 
 import React, { useEffect, useState } from 'react';
-import { Users, Clock, ShieldCheck, Wallet } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Wallet, Shield } from 'lucide-react';
 import { useDaoStats, useTrobPrice, useDaoMember } from '@/hooks/useApi';
 import { useAuthContext } from '@/context/AuthContext';
 import { useWallet } from '@/context/WalletContext';
 
-// Simple countdown hook that ticks every second
-function useCountdown(targetSeconds: number) {
-  const [remaining, setRemaining] = useState(targetSeconds);
+// Persistent countdown timer matching 21 days founding window
+function useCountdown() {
+  const INITIAL_SECONDS = 21 * 86400 + 14 * 3600 + 22 * 60 + 10;
+  const [remaining, setRemaining] = useState(INITIAL_SECONDS);
+
   useEffect(() => {
-    const id = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
-    return () => clearInterval(id);
-  }, []);
+    const STORAGE_KEY = 'equora_matrix_target_timestamp';
+    let target = 0;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        target = parseInt(stored, 10);
+      }
+    } catch {}
+
+    if (!target || isNaN(target) || target <= Date.now()) {
+      target = Date.now() + INITIAL_SECONDS * 1000;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(target));
+      } catch {}
+    }
+
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((target - Date.now()) / 1000));
+      setRemaining(diff);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [INITIAL_SECONDS]);
+
   const d = Math.floor(remaining / 86400);
   const h = Math.floor((remaining % 86400) / 3600);
   const m = Math.floor((remaining % 3600) / 60);
@@ -33,12 +58,7 @@ export function DaoDashboardStats() {
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData } = useDaoMember(activeAddress);
 
-  // Phase 1 ends in ~18 days from now
-  const PHASE1_DURATION_S = parseInt(
-    process.env.NEXT_PUBLIC_PHASE1_SECONDS ?? String(18 * 86400 + 14 * 3600 + 22 * 60 + 10),
-    10
-  );
-  const cd = useCountdown(PHASE1_DURATION_S);
+  const cd = useCountdown();
 
   const seatsFilled = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? Math.max(0, 100 - seatsFilled);
@@ -54,57 +74,71 @@ export function DaoDashboardStats() {
   const myNetCost = myPosition ? (300 - 300 / myPosition).toFixed(2) : null;
 
   return (
-    <div className="flex md:grid md:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 snap-x snap-mandatory scroll-smooth no-scrollbar">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
 
       {/* ── Card 1: Seats Vacant & Queue Status ────────────────────── */}
-      <div className="min-w-[280px] xs:min-w-[300px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.07)] transition-all flex flex-col justify-between space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#0B1528] text-white flex items-center justify-center shadow-xs">
-              <Users className="w-4 h-4 text-sky-400" />
-            </div>
-            <span className="text-xs font-bold text-slate-600 font-jakarta">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#3C78B1]/10 text-[#3C78B1]">
+              <Users className="w-4 h-4" />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F]">
               Genesis Council
             </span>
           </div>
-          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${seatsFilled >= 100 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-[#155EEF] border-blue-200/80'}`}>
-            {seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant'}
+          <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+            seatsFilled >= 100
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-[#3C78B1]/10 text-[#3C78B1] border-[#3C78B1]/20'
+          }`}>
+            {seatsFilled >= 100 ? 'Queue Filled' : 'Queue Active'}
           </span>
         </div>
 
         <div>
-          <div className="text-2xl sm:text-3xl font-black font-jakarta text-[#0B132B] tracking-tight">
-            {seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant'}
+          <div className="text-xl sm:text-2xl font-bold text-[#17334F] tabular-nums tracking-tight">
+            {seatsFilled >= 100 ? '100 / 100 Filled' : `${seatsRemaining} Seats Open`}
           </div>
-          <p className="text-xs text-slate-500 font-jakarta mt-1">
-            Fixed 100 sovereign seat governance supply
-          </p>
+          <div className="flex items-center justify-between text-[11px] text-[#4F6D87] mt-1 font-medium">
+            <span>{seatsFilled} / 100 Members Claimed</span>
+            <span>{filledPct}% Filled</span>
+          </div>
+          {/* Subtle Progress Bar */}
+          <div className="w-full h-1.5 bg-[#F3F8FD] rounded-full overflow-hidden mt-2 border border-[#3C78B1]/10">
+            <div
+              className="h-full bg-gradient-to-r from-[#3C78B1] to-[#5FA2D1] rounded-full transition-all duration-500"
+              style={{ width: `${Math.max(5, filledPct)}%` }}
+            />
+          </div>
         </div>
 
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-jakarta">
-          <span className="text-slate-500">Autonomous FIFO Queue</span>
-          <span className="text-emerald-700 font-bold flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Active
+        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+          <span>Autonomous FIFO Queue</span>
+          <span className="text-[#1F8A5B] font-semibold flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1F8A5B] animate-pulse" />
+            Live &bull; Instant P2P
           </span>
         </div>
       </div>
 
       {/* ── Card 2: Countdown Timer ──────────────────────────────────── */}
-      <div className="min-w-[280px] xs:min-w-[300px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.07)] transition-all flex flex-col justify-between space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#3C78B1]/10 text-[#3C78B1]">
               <Clock className="w-4 h-4" />
-            </div>
-            <span className="text-xs font-bold text-slate-600 font-jakarta">Genesis Phase 1 Window</span>
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F]">
+              Genesis Window
+            </span>
           </div>
-          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full">
-            Active
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#3C78B1] bg-[#3C78B1]/10 border border-[#3C78B1]/20 px-2 py-0.5 rounded-md">
+            21-Day Phase
           </span>
         </div>
 
-        <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center justify-between px-1">
           {[
             { val: cd.d, label: 'DAYS' },
             { val: cd.h, label: 'HOURS' },
@@ -112,118 +146,116 @@ export function DaoDashboardStats() {
             { val: cd.s, label: 'SECS' },
           ].map((seg, i, arr) => (
             <React.Fragment key={seg.label}>
-              <div className="text-center">
-                <div className="text-2xl lg:text-3xl font-black font-jakarta text-[#0B132B] tabular-nums">
+              <div className="text-center flex-1">
+                <div className="text-xl sm:text-2xl font-bold text-[#17334F] tabular-nums">
                   {String(seg.val).padStart(2, '0')}
                 </div>
-                <div className="text-[9px] lg:text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-1">
+                <div className="text-[9px] font-semibold text-[#5E7B94] tracking-wider uppercase mt-0.5">
                   {seg.label}
                 </div>
               </div>
               {i < arr.length - 1 && (
-                <div className="text-base lg:text-lg font-bold text-slate-300 -mt-3">:</div>
+                <div className="text-sm font-bold text-[#A9D1F1] -mt-3.5 px-0.5 select-none">:</div>
               )}
             </React.Fragment>
           ))}
         </div>
 
-        <div className="text-xs text-slate-500 font-jakarta border-t border-slate-100 pt-2 flex items-center justify-between">
-          <span>Target Distribution</span>
-          <span className="font-bold text-[#0B132B]">Autonomous P2P</span>
+        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+          <span>Retail Matrix Launch</span>
+          <span className="font-semibold text-[#3C78B1]">Day 22 &bull; equorafi.com</span>
         </div>
       </div>
 
       {/* ── Card 3: User's Council Position & Personal Data ───────────── */}
-      <div className="min-w-[300px] xs:min-w-[320px] md:min-w-0 flex-1 snap-start p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.07)] transition-all flex flex-col justify-between space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs ${
-              isMember
-                ? 'bg-emerald-600 text-white'
-                : 'bg-slate-100 text-slate-600 border border-slate-200'
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#3C78B1]/18 shadow-[0_4px_16px_rgba(60,120,177,0.06)] flex flex-col justify-between space-y-3.5 transition-all sm:col-span-2 lg:col-span-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${
+              isMember ? 'bg-[#1F8A5B]/10 text-[#1F8A5B]' : 'bg-[#3C78B1]/10 text-[#3C78B1]'
             }`}>
               {isMember ? <ShieldCheck className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
-            </div>
-            <span className="text-xs font-bold text-slate-600 font-jakarta">
-              {isMember ? 'Your Council Position' : 'Your Membership Status'}
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F]">
+              {isMember ? 'Council Position' : 'Membership Status'}
             </span>
           </div>
 
-          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+          <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
             isMember
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-slate-100 text-slate-600 border-slate-200'
+              ? 'bg-[#1F8A5B]/10 text-[#1F8A5B] border-[#1F8A5B]/25'
+              : 'bg-[#3C78B1]/10 text-[#3C78B1] border-[#3C78B1]/20'
           }`}>
-            {isMember ? `Seat #${myPosition}` : 'Unclaimed'}
+            {isMember ? `Seat #${myPosition}` : 'Open Entry'}
           </span>
         </div>
 
         {isMember ? (
-          /* Real Data for Council Member */
-          <div className="grid grid-cols-3 gap-2 pt-1 text-left">
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-[#0B132B] truncate">
+          /* Member Live Economics */
+          <div className="grid grid-cols-3 gap-2 pt-0.5 text-left">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 $300.00
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Initial Deposit
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Deposit
               </div>
             </div>
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-emerald-600 truncate">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#1F8A5B] truncate tabular-nums">
                 +${myCashback}
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Instant Cashback
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Cashback
               </div>
             </div>
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-[#0B132B] truncate">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 ${myNetCost}
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Net Deployed
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Net Cost
               </div>
             </div>
           </div>
         ) : (
           /* Clean Non-Member Overview */
-          <div className="grid grid-cols-3 gap-2 pt-1 text-left">
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-[#0B132B]">
-                $300.00
+          <div className="grid grid-cols-3 gap-2 pt-0.5 text-left">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
+                $300
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Seat Entry
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Entry Fee
               </div>
             </div>
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-emerald-600">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#1F8A5B] truncate tabular-nums">
                 300 / N
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Instant Cashback
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Cashback
               </div>
             </div>
-            <div>
-              <div className="text-sm sm:text-base font-black font-jakarta text-[#0B132B]">
+            <div className="p-2 rounded-xl bg-[#F3F8FD] border border-[#3C78B1]/12">
+              <div className="text-xs sm:text-sm font-bold text-[#17334F] truncate tabular-nums">
                 1.0%
               </div>
-              <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                Voting Power
+              <div className="text-[9px] text-[#5E7B94] font-medium mt-0.5 uppercase tracking-wide">
+                Vote Power
               </div>
             </div>
           </div>
         )}
 
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-jakarta">
-          <span className="text-slate-500">
+        <div className="pt-2 border-t border-[#3C78B1]/10 flex items-center justify-between text-[10px] text-[#4F6D87]">
+          <span>
             {isMember
-              ? (myNftId ? `Soulbound NFT #${myNftId}` : 'Active Council Member')
-              : 'Council Status'}
+              ? (myNftId ? `Soulbound SBT #${myNftId}` : 'Active Council Member')
+              : 'Permanent Soulbound Seat'}
           </span>
-          <span className="text-[#155EEF] font-bold">
-            {isMember ? '25% APY + Matrix' : (seatsFilled >= 100 ? 'All Slots Filled' : 'DAO positions are vacant')}
+          <span className="font-semibold text-[#3C78B1]">
+            {isMember ? '35% Matrix Share' : 'Zero Referrals Required'}
           </span>
         </div>
       </div>

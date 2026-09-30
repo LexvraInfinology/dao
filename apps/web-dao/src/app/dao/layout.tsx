@@ -10,14 +10,14 @@ export default function DaoLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#F6F9FF] flex text-[#071A4A] font-jakarta overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#F7FBFF] flex text-[#14304A] font-sans antialiased overflow-x-hidden relative">
       {/* Persistent sidebar — desktop only */}
       <DaoSidebar />
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <DaoHeader />
-        <main className="flex-1 p-3 xs:p-4 sm:p-6 lg:p-8 max-w-[1440px] w-full mx-auto overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 max-w-[1400px] w-full mx-auto overflow-x-hidden">
           {children}
         </main>
       </div>

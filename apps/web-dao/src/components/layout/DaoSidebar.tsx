@@ -45,10 +45,10 @@ export const DaoSidebar: React.FC = () => {
               <EquoraLogo className="w-9 h-9 drop-shadow-[0_2px_8px_rgba(21,94,239,0.3)] transition-transform group-hover:scale-105 duration-200" />
             </div>
             <div>
-              <div className="text-sm font-black font-inter tracking-tight text-[#071A4A] leading-tight">
-                EQUORA<span className="text-[#155EEF]">.FI</span>
+              <div className="text-sm font-black font-inter tracking-tight text-[#17334F] leading-tight">
+                EQUORA<span className="text-[#3C78B1]">.FI</span>
               </div>
-              <div className="text-[10px] font-semibold font-inter text-[#155EEF] tracking-wider">
+              <div className="text-[10px] font-semibold font-inter text-[#3C78B1] tracking-wider">
                 GENESIS DAO
               </div>
             </div>
@@ -65,13 +65,13 @@ export const DaoSidebar: React.FC = () => {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-jakarta transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-sans transition-all duration-200 ${
                   isActive
-                    ? 'bg-[#EEF5FF] text-[#071A4A] font-bold shadow-xs'
-                    : 'text-[#60739A] font-medium hover:text-[#071A4A] hover:bg-slate-100/70'
+                    ? 'bg-[#3C78B1]/10 text-[#17334F] font-bold border border-[#3C78B1]/20 shadow-xs'
+                    : 'text-[#4F6D87] font-medium hover:text-[#17334F] hover:bg-[#F3F8FD]'
                 }`}
               >
-                <span className={isActive ? 'text-[#155EEF]' : 'text-[#94A3B8]'}>
+                <span className={isActive ? 'text-[#3C78B1]' : 'text-[#5E7B94]'}>
                   {NAV_ICONS[item.label] || <Shield className="w-4 h-4" />}
                 </span>
                 <span>{item.label}</span>

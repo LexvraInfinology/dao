@@ -47,74 +47,74 @@ export default function MatrixCountdownCard() {
   }, []);
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-white rounded-2xl sm:rounded-3xl border border-[#E2ECF9] shadow-[0_4px_25px_rgba(21,94,239,0.04)] overflow-hidden font-jakarta">
+    <div className="w-full max-w-xl mx-auto bg-white rounded-xl sm:rounded-2xl border border-[#E2EEF9] shadow-[0_4px_20px_rgba(60,120,177,0.06)] overflow-hidden font-sans">
       {/* Top Blue Accent Highlight Bar */}
-      <div className="h-1.5 w-full bg-[#155EEF]" />
+      <div className="h-1 w-full bg-[#3C78B1]" />
 
       {/* Timer Units Container */}
-      <div className="px-5 sm:px-8 py-6 sm:py-8 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
         {/* Unit 1: DAYS */}
         <div className="flex-1 text-center">
-          <div className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#071A4A] tracking-tight leading-none font-jakarta">
+          <div className="text-2xl sm:text-3xl lg:text-[38px] font-bold text-[#14304A] tracking-tight leading-none">
             {String(timeLeft.days).padStart(2, '0')}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] font-jakarta mt-2.5">
+          <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#4F6D87] mt-1.5">
             DAYS
           </div>
         </div>
 
         {/* Colon Separator */}
-        <div className="text-base sm:text-xl font-bold text-[#CBD5E1] -mt-5 px-1 select-none">
+        <div className="text-sm sm:text-lg font-bold text-[#CBD5E1] -mt-3 px-1 select-none">
           :
         </div>
 
         {/* Unit 2: HOURS */}
         <div className="flex-1 text-center">
-          <div className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#071A4A] tracking-tight leading-none font-jakarta">
+          <div className="text-2xl sm:text-3xl lg:text-[38px] font-bold text-[#14304A] tracking-tight leading-none">
             {String(timeLeft.hours).padStart(2, '0')}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] font-jakarta mt-2.5">
+          <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#4F6D87] mt-1.5">
             HOURS
           </div>
         </div>
 
         {/* Colon Separator */}
-        <div className="text-base sm:text-xl font-bold text-[#CBD5E1] -mt-5 px-1 select-none">
+        <div className="text-sm sm:text-lg font-bold text-[#CBD5E1] -mt-3 px-1 select-none">
           :
         </div>
 
         {/* Unit 3: MINS */}
         <div className="flex-1 text-center">
-          <div className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#071A4A] tracking-tight leading-none font-jakarta">
+          <div className="text-2xl sm:text-3xl lg:text-[38px] font-bold text-[#14304A] tracking-tight leading-none">
             {String(timeLeft.minutes).padStart(2, '0')}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] font-jakarta mt-2.5">
+          <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#4F6D87] mt-1.5">
             MINS
           </div>
         </div>
 
         {/* Colon Separator */}
-        <div className="text-base sm:text-xl font-bold text-[#CBD5E1] -mt-5 px-1 select-none">
+        <div className="text-sm sm:text-lg font-bold text-[#CBD5E1] -mt-3 px-1 select-none">
           :
         </div>
 
         {/* Unit 4: SECS */}
         <div className="flex-1 text-center">
-          <div className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#071A4A] tracking-tight leading-none font-jakarta">
+          <div className="text-2xl sm:text-3xl lg:text-[38px] font-bold text-[#14304A] tracking-tight leading-none">
             {String(timeLeft.seconds).padStart(2, '0')}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] font-jakarta mt-2.5">
+          <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#4F6D87] mt-1.5">
             SECS
           </div>
         </div>
       </div>
 
       {/* Separate Domain Link & Bridge Callout */}
-      <div className="bg-[#F8FAFC] border-t border-[#E2ECF9] px-5 sm:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 text-[#475569]">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+      <div className="bg-[#F7FBFF] border-t border-[#E2EEF9] px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2 text-[#4F6D87]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>
-            Dedicated Matrix Domain: <strong className="text-[#071A4A] font-bold font-mono">equorafi.com</strong>
+            Dedicated Matrix Domain: <strong className="text-[#14304A] font-semibold font-mono">equorafi.com</strong>
           </span>
         </div>
 
@@ -122,7 +122,7 @@ export default function MatrixCountdownCard() {
           href={process.env.NEXT_PUBLIC_MATRIX_URL || 'https://equorafi.com'}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#155EEF] hover:bg-[#124bbf] text-white font-bold text-xs shadow-xs transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-semibold text-xs shadow-xs transition-colors"
         >
           <span>Matrix Domain</span>
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

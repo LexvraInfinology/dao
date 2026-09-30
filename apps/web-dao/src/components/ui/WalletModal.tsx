@@ -19,16 +19,19 @@ import {
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { AndroidIcon } from '@/components/ui/AndroidIcon';
+import {
+  TROBSAFE_CHROME_STORE_URL,
+  TROBSAFE_APK_URL,
+  isMobileDevice,
+  wakeUpExtension,
+  triggerApkDownload,
+} from '@/utils/walletConnect';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConnect?: (address: string) => void;
 }
-
-// ─── TrobSafe extension download link ─────────────────────────────────────────
-const TROBSAFE_DOWNLOAD_URL = 'https://trobium.com/download/';
-const TROBSAFE_APK_URL      = '/downloads/trobsafe.apk';
 
 type ModalStep = 'detect' | 'connect' | 'signing' | 'success' | 'connected_account' | 'error';
 
@@ -62,6 +65,17 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
       setStep(wallet.isInstalled ? 'connect' : 'detect');
     }
   }, [isOpen, wallet.isConnected, wallet.status, wallet.isInstalled, wallet.error]);
+
+  // ── Auto wake up extension on desktop or auto download APK on mobile ─────
+  useEffect(() => {
+    if (!isOpen || wallet.isConnected) return;
+    if (wallet.isInstalled) {
+      wakeUpExtension();
+      handleConnect();
+    } else if (isMobileDevice()) {
+      triggerApkDownload();
+    }
+  }, [isOpen, wallet.isInstalled, wallet.isConnected]);
 
   // Auto-close on new connect success after short delay
   useEffect(() => {
@@ -267,21 +281,21 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
 
               <div className="pt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <a
-                  href="/downloads/trobsafe.apk"
+                  href={TROBSAFE_CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-3 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(60,120,177,0.3)] cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-white" />
+                  <span>Chrome Web Store</span>
+                </a>
+                <a
+                  href={TROBSAFE_APK_URL}
                   download="trobsafe.apk"
-                  className="py-2 px-2 rounded-xl bg-[#3C78B1] hover:bg-[#5FA2D1] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(60,120,177,0.3)] cursor-pointer"
+                  className="py-2.5 px-3 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <AndroidIcon className="w-4 h-4 fill-white" />
                   <span>Download APK</span>
-                </a>
-                <a
-                  href="https://trobium.com/download/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2 px-2 rounded-xl bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#7CB3E1]" />
-                  <span>Get Extension</span>
                 </a>
               </div>
 
@@ -409,20 +423,29 @@ export const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onCon
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={handleRetry}
                 className="py-2.5 rounded-xl font-semibold text-xs text-white bg-[#3C78B1] hover:bg-[#5FA2D1] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
               >
-                <span>Retry Extension</span>
+                <span>Wake Up / Retry</span>
               </button>
               <a
-                href="/downloads/trobsafe.apk"
+                href={TROBSAFE_CHROME_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 rounded-xl font-semibold text-xs text-sky-200 bg-[#1E293B] hover:bg-[#2A3B54] border border-[#334155] flex items-center justify-center gap-1.5 transition-all text-center"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Chrome Store</span>
+              </a>
+              <a
+                href={TROBSAFE_APK_URL}
                 download="trobsafe.apk"
-                className="py-2.5 rounded-xl font-semibold text-xs text-sky-300 bg-sky-950/60 hover:bg-sky-900/80 border border-sky-700/50 flex items-center justify-center gap-1.5 transition-all"
+                className="py-2.5 rounded-xl font-semibold text-xs text-sky-300 bg-sky-950/60 hover:bg-sky-900/80 border border-sky-700/50 flex items-center justify-center gap-1.5 transition-all text-center"
               >
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>Get Android APK</span>
+                <span>Get APK</span>
               </a>
             </div>
           </div>

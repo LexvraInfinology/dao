@@ -6,7 +6,7 @@ import type { TrobWalletAPI, TrobAddress } from '@/types/trobsafe.d';
 // ─── Extension detection ──────────────────────────────────────────────────────
 
 const TROBSAFE_EXTENSION_ID = 'trobsafe';
-const TROBSAFE_INSTALL_URL   = '/trobsafe-install'; // handled by our own page
+const TROBSAFE_INSTALL_URL   = 'https://chromewebstore.google.com/detail/trobsafe-wallet/hmijkpcbnkmkijljblhojfndfapidkkk';
 
 /**
  * How long to wait (ms) for the extension to inject window.trob
@@ -273,6 +273,16 @@ export function useTrobWallet(): TrobWalletState {
     setError(null);
 
     try {
+      // Dispatch wakeup signal to extension content script
+      try {
+        window.postMessage({ target: 'trobsafe-inpage', action: 'connect' }, '*');
+        window.postMessage({ type: 'TROBSAFE_CONNECT' }, '*');
+        window.dispatchEvent(new CustomEvent('trob_requestAccounts'));
+        window.dispatchEvent(new CustomEvent('trobSafe_connect'));
+      } catch {
+        /* ignore */
+      }
+
       let resolvedBase58 = '';
       let resolvedHex = '';
 

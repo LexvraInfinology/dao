@@ -8,33 +8,28 @@ import { AndroidIcon } from '@/components/ui/AndroidIcon';
 const CHROME_STEPS = [
   {
     num: '01',
-    title: 'Download the extension',
-    desc: 'Click "Download Browser Extension" below to get the browser extension package (.zip).',
+    title: 'Open Chrome Web Store',
+    desc: 'Click "Install Chrome Extension" to open the official TrobSafe Wallet on the Chrome Web Store.',
   },
   {
     num: '02',
-    title: 'Unzip the package',
-    desc: 'Extract the downloaded ZIP file to a permanent folder on your computer — do not delete it.',
+    title: 'Add to Chrome',
+    desc: 'Click the blue "Add to Chrome" button and confirm the prompt to install the extension instantly.',
   },
   {
     num: '03',
-    title: 'Open Chrome Extensions',
-    desc: 'In Google Chrome navigate to chrome://extensions and enable Developer Mode (toggle in top-right).',
+    title: 'Pin to Toolbar',
+    desc: 'Click the puzzle piece icon in Chrome and pin TrobSafe for convenient one-click access.',
   },
   {
     num: '04',
-    title: 'Load Unpacked',
-    desc: 'Click "Load unpacked" and select the extracted folder. TrobSafe will appear in your extension bar.',
+    title: 'Create or Import Wallet',
+    desc: 'Open TrobSafe, create a new wallet or import your existing seed phrase securely.',
   },
   {
     num: '05',
-    title: 'Create or import wallet',
-    desc: 'Open TrobSafe from the extension bar, create a new wallet or import an existing seed phrase.',
-  },
-  {
-    num: '06',
-    title: 'Return to the DAO',
-    desc: 'Come back to EQUORA DAO, click "Connect Wallet", and connect your TrobSafe wallet.',
+    title: 'Connect to EQUORA DAO',
+    desc: 'Come back to EQUORA DAO and click "Connect Wallet" — TrobSafe will automatically wake up and connect!',
   },
 ];
 
@@ -190,11 +185,13 @@ export default function TrobSafeInstallPage() {
               <span>Download APK · v1.0.22</span>
             </a>
             <a
-              href="/api/trobsafe/download"
+              href="https://chromewebstore.google.com/detail/trobsafe-wallet/hmijkpcbnkmkijljblhojfndfapidkkk"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm text-[#155EEF] bg-white hover:bg-blue-50/80 border border-[#BFDBFE] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Chrome className="w-4 h-4" />
-              <span>Download Extension (.ZIP)</span>
+              <span>Install from Chrome Web Store</span>
             </a>
           </div>
 

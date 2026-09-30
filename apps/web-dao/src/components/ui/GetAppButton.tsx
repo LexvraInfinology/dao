@@ -210,10 +210,12 @@ export const GetAppButton: React.FC<GetAppButtonProps> = ({
             </a>
 
             {/* Chrome / Desktop Extension */}
-            <Link
-              href="/trobsafe/install"
+            <a
+              href="https://chromewebstore.google.com/detail/trobsafe-wallet/hmijkpcbnkmkijljblhojfndfapidkkk"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setOpen(false)}
-              className="flex items-center justify-between p-2.5 rounded-xl hover:bg-blue-50/70 border border-transparent hover:border-blue-100 transition-all group"
+              className="flex items-center justify-between p-2.5 rounded-xl hover:bg-blue-50/70 border border-transparent hover:border-blue-100 transition-all group cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center p-1.5 shrink-0">
@@ -221,13 +223,13 @@ export const GetAppButton: React.FC<GetAppButtonProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-bold text-[#071A4A] group-hover:text-blue-600">
-                    Browser Extension (Chrome / Edge)
+                    Chrome Web Store
                   </div>
-                  <div className="text-[11px] text-[#64748B]">Desktop Web3 extension guide & ZIP</div>
+                  <div className="text-[11px] text-[#64748B]">Official browser extension</div>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-blue-600">Guide →</span>
-            </Link>
+              <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+            </a>
           </div>
 
           {/* Footer note */}

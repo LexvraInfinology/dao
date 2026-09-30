@@ -19,6 +19,7 @@ import { WalletModal } from '@/components/ui/WalletModal';
 import { DevModeButton } from '@/components/ui/DevModeButton';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle } from '@/components/dao/DaoWhatsAppCircle';
+import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 
 function shortenAddress(addr: string | null, chars = 4): string {
   if (!addr) return '';
@@ -104,23 +105,18 @@ export const LandingNavbar: React.FC = () => {
     (auth.user?.daoPosition && auth.user.daoPosition > 0)
   );
 
-  const handleConnectClick = async () => {
+  const handleConnectClick = () => {
     if (wallet.isConnected) {
       window.location.href = '/dao';
       return;
     }
-    if (wallet.isInstalled) {
-      try {
-        const addr = await wallet.connect();
-        if (addr) {
-          window.location.href = '/dao';
-          return;
-        }
-      } catch {
-        // Fallback to modal
-      }
-    }
-    setWalletModalOpen(true);
+    triggerSmartConnectWallet({
+      wallet,
+      openModal: () => setWalletModalOpen(true),
+      onConnected: () => {
+        window.location.href = '/dao';
+      },
+    });
   };
 
   const handleCopyAddress = async () => {

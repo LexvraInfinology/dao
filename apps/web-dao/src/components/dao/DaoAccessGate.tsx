@@ -8,6 +8,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { WalletModal } from '@/components/ui/WalletModal';
+import { triggerSmartConnectWallet, TROBSAFE_CHROME_STORE_URL, TROBSAFE_APK_URL } from '@/utils/walletConnect';
 
 // ─── Contract addresses from env ─────────────────────────────────────────────
 const DAO_CONTRACT_ADDRESS  = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
@@ -42,16 +43,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [detectTimeout, setDetectTimeout]     = useState(false);
 
-  const handleConnectClick = async () => {
-    if (wallet.isInstalled) {
-      try {
-        const addr = await wallet.connect();
-        if (addr) return;
-      } catch {
-        // Fallback to modal
-      }
-    }
-    setWalletModalOpen(true);
+  const handleConnectClick = () => {
+    triggerSmartConnectWallet({
+      wallet,
+      openModal: () => setWalletModalOpen(true),
+    });
   };
 
   // Quick fallback timeout for detection probe (800ms max)
@@ -187,11 +183,13 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   Download Android APK
                 </a>
                 <a
-                  href="/trobsafe/install"
-                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all"
+                  href={TROBSAFE_CHROME_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5 text-[#155EEF]" />
-                  Install Browser Extension
+                  <ExternalLink className="w-3.5 h-3.5 text-[#155EEF]" />
+                  Install Chrome Extension (Web Store)
                 </a>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
                   <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">

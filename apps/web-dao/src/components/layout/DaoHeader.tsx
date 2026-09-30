@@ -32,6 +32,7 @@ import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle, WHATSAPP_DAO_GROUP_URL } from '@/components/dao/DaoWhatsAppCircle';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,16 +70,11 @@ export const DaoHeader: React.FC = () => {
     setIsDevMode(dev);
   }, []);
 
-  const handleConnectClick = async () => {
-    if (wallet.isInstalled) {
-      try {
-        const addr = await wallet.connect();
-        if (addr) return;
-      } catch {
-        // If rejected or cancelled, open modal
-      }
-    }
-    setWalletModalOpen(true);
+  const handleConnectClick = () => {
+    triggerSmartConnectWallet({
+      wallet,
+      openModal: () => setWalletModalOpen(true),
+    });
   };
 
 

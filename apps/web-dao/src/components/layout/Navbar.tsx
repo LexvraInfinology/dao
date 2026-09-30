@@ -8,6 +8,7 @@ import { WalletModal } from '@/components/ui/WalletModal';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
 import { DevModeButton } from '@/components/ui/DevModeButton';
+import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 
 export const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -21,24 +22,18 @@ export const Navbar: React.FC = () => {
     ? `${wallet.hexAddress.slice(0, 6)}…${wallet.hexAddress.slice(-4)}`
     : null;
 
-  const handleConnectClick = async () => {
+  const handleConnectClick = () => {
     if (wallet.isConnected) {
       window.location.href = '/dao';
       return;
     }
-    // If TrobSafe extension or app is detected, trigger connection without delay!
-    if (wallet.isInstalled) {
-      try {
-        const addr = await wallet.connect();
-        if (addr) {
-          window.location.href = '/dao';
-          return;
-        }
-      } catch {
-        // Fallback to modal
-      }
-    }
-    setWalletModalOpen(true);
+    triggerSmartConnectWallet({
+      wallet,
+      openModal: () => setWalletModalOpen(true),
+      onConnected: () => {
+        window.location.href = '/dao';
+      },
+    });
   };
 
   useEffect(() => {

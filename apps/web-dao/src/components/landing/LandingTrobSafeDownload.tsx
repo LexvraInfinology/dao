@@ -96,22 +96,24 @@ export const LandingTrobSafeDownload: React.FC = () => {
               </a>
 
               {/* Extension */}
-              <Link
-                href="/trobsafe/install"
+              <a
+                href="https://chromewebstore.google.com/detail/trobsafe-wallet/hmijkpcbnkmkijljblhojfndfapidkkk"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#EFF6FF]/60 hover:bg-[#EFF6FF] border border-[#BFDBFE] shadow-xs hover:shadow-md transition-all group cursor-pointer"
               >
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#155EEF] text-white p-2 shadow-xs">
-                  <Download className="w-5 h-5" />
+                  <ExternalLink className="w-5 h-5" />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.08em] text-[#155EEF]">
                     Web Browser
                   </span>
                   <span className="block text-xs sm:text-sm font-semibold text-[#071A4A]">
-                    Chrome Extension
+                    Chrome Web Store
                   </span>
                 </span>
-              </Link>
+              </a>
             </div>
 
             {/* Big Primary APK Download Button */}

@@ -2,16 +2,21 @@
 
 import React from 'react';
 import { ArrowLeftRight, Trash2, ChevronRight } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function WalletManagementCard() {
+  const wallet = useWallet();
+  const auth   = useAuthContext();
+
   const handleSwitch = () => {
-    alert('Switch wallet modal requested.');
+    wallet.disconnect();
+    auth.signOut();
   };
 
   const handleDisconnect = () => {
-    if (confirm('Disconnect your current wallet from this DAO portal?')) {
-      alert('Wallet disconnected.');
-    }
+    auth.signOut();
+    wallet.disconnect();
   };
 
   return (

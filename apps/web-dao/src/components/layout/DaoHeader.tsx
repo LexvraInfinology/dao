@@ -86,6 +86,10 @@ export const DaoHeader: React.FC = () => {
   // Read stored address immediately on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (localStorage.getItem('equora_wallet_explicit_disconnect') === 'true') {
+      setStoredAddr(null);
+      return;
+    }
     try {
       const stored = localStorage.getItem('trobsafe_address');
       if (stored) {
@@ -109,20 +113,19 @@ export const DaoHeader: React.FC = () => {
     } catch {}
   }, [wallet.isConnected, auth.isAuthenticated]);
 
+  const isConnected = mounted && Boolean(
+    wallet.isConnected ||
+    auth.isAuthenticated
+  );
+
   // Display address: prefer base58 (Trobium native), fallback to hex, auth user, or stored address
-  const displayAddress = mounted ? (
+  const displayAddress = isConnected ? (
     wallet.base58Address ||
     wallet.hexAddress ||
     auth.user?.address ||
     storedAddr ||
     ''
   ) : '';
-
-  const isConnected = mounted && Boolean(
-    wallet.isConnected ||
-    auth.isAuthenticated ||
-    (displayAddress && displayAddress.length > 6)
-  );
 
   const shortDisplay   = shortenAddress(displayAddress);
   const { data: memberData } = useDaoMember(displayAddress);
@@ -151,10 +154,12 @@ export const DaoHeader: React.FC = () => {
     wallet.disconnect();
     setStoredAddr(null);
     try {
+      localStorage.setItem('equora_wallet_explicit_disconnect', 'true');
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
       localStorage.removeItem('equora_dao_preview');
+      localStorage.removeItem('equora_dev_mode');
     } catch { /* */ }
   };
 

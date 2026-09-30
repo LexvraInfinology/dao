@@ -92,19 +92,18 @@ export const DaoSidebar: React.FC = () => {
     } catch {}
   }, [wallet.isConnected, auth.isAuthenticated]);
 
-  const displayAddress = mounted ? (
+  const isConnected = mounted && Boolean(
+    wallet.isConnected ||
+    auth.isAuthenticated
+  );
+
+  const displayAddress = isConnected ? (
     wallet.base58Address ||
     wallet.hexAddress ||
     auth.user?.address ||
     storedAddr ||
     ''
   ) : '';
-
-  const isConnected = mounted && Boolean(
-    wallet.isConnected ||
-    auth.isAuthenticated ||
-    (displayAddress && displayAddress.length > 6)
-  );
 
   const shortDisplay = shortenAddress(displayAddress);
   const { data: memberData } = useDaoMember(displayAddress);
@@ -132,6 +131,7 @@ export const DaoSidebar: React.FC = () => {
     wallet.disconnect();
     setStoredAddr(null);
     try {
+      localStorage.setItem('equora_wallet_explicit_disconnect', 'true');
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');

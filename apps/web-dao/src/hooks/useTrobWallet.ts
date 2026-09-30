@@ -52,11 +52,22 @@ export interface TrobWalletState {
   callContract: (payload: Parameters<TrobWalletAPI['triggersmartcontract']>[0]) => Promise<{ txid: string; result: boolean }>;
 }
 
-// ─── Storage key ─────────────────────────────────────────────────────────────
+// ─── Storage keys ─────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'trobsafe_address';
+export const DISCONNECTED_KEY = 'equora_wallet_explicit_disconnect';
+
+export function isWalletExplicitlyDisconnected(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(DISCONNECTED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 export function readStoredAddress(): TrobAddress | null {
   if (typeof window === 'undefined') return null;
+  if (isWalletExplicitlyDisconnected()) return null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -166,14 +177,13 @@ export function useTrobWallet(): TrobWalletState {
   };
 
   const applyAddress = useCallback((addr: TrobAddress) => {
+    if (!addr || (!addr.base58 && !addr.hex)) return;
     const normalized: TrobAddress = {
       base58: addr.base58 ?? '',
       hex: addr.hex ? addr.hex.toLowerCase() : '',
     };
-    setAddress(normalized);
-    setStatus('connected');
-    setError(null);
     try {
+      localStorage.removeItem(DISCONNECTED_KEY);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       if (normalized.hex) {
         localStorage.setItem('equora_auth_address', normalized.hex);
@@ -181,29 +191,28 @@ export function useTrobWallet(): TrobWalletState {
         localStorage.setItem('equora_auth_address', normalized.base58);
       }
     } catch { /* storage blocked */ }
+    setAddress(normalized);
+    setStatus('connected');
+    setError(null);
   }, []);
 
   const clearAddress = useCallback(() => {
-    setAddress(null);
-    setStatus('disconnected');
-    setError(null);
     try {
+      localStorage.setItem(DISCONNECTED_KEY, 'true');
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
       localStorage.removeItem('equora_dao_preview');
+      localStorage.removeItem('equora_dev_mode');
     } catch { /* */ }
+    setAddress(null);
+    setStatus('disconnected');
+    setError(null);
   }, []);
 
   // ── Detect extension + restore session ──────────────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    // Immediately restore stored session if present
-    const stored = readStoredAddress();
-    if (stored && (stored.base58 || stored.hex)) {
-      applyAddress(stored);
-    }
 
     const checkInstalled = (): boolean => {
       const trob = getTrob();
@@ -221,8 +230,24 @@ export function useTrobWallet(): TrobWalletState {
 
     checkInstalled();
 
+    // Immediately restore stored session ONLY if user has NOT explicitly signed out
+    if (!isWalletExplicitlyDisconnected()) {
+      const stored = readStoredAddress();
+      if (stored && (stored.base58 || stored.hex)) {
+        applyAddress(stored);
+      }
+    } else {
+      setStatus('disconnected');
+    }
+
     const tryDetect = (): boolean => {
       checkInstalled();
+      const isDisc = isWalletExplicitlyDisconnected();
+      if (isDisc) {
+        setStatus('disconnected');
+        return true;
+      }
+
       const trob = getTrob();
       const currentStored = readStoredAddress();
       const w = typeof window !== 'undefined' ? (window as any) : null;
@@ -231,6 +256,7 @@ export function useTrobWallet(): TrobWalletState {
         (typeof document !== 'undefined' && document.documentElement?.hasAttribute('data-trobsafe-inpage'))
       );
 
+      // Only restore session if user had previously connected and saved a session
       if (currentStored && (currentStored.base58 || currentStored.hex)) {
         if (isTrobActive(trob)) {
           const liveAddr = trob?.defaultAddress;
@@ -243,17 +269,9 @@ export function useTrobWallet(): TrobWalletState {
         return true;
       }
 
-      if (isTrobActive(trob)) {
-        if (trob?.defaultAddress?.base58 || trob?.defaultAddress?.hex) {
-          applyAddress(trob.defaultAddress);
-          return true;
-        } else {
-          setStatus('disconnected');
-          return true;
-        }
-      }
-
-      if (hasBridge) {
+      // Extension is present, but user is NOT connected yet.
+      // Status is 'disconnected'. DO NOT auto-connect without user clicking connect!
+      if (isTrobActive(trob) || hasBridge) {
         setStatus('disconnected');
         return true;
       }
@@ -278,7 +296,7 @@ export function useTrobWallet(): TrobWalletState {
         );
         setStatus((prev) => {
           if (prev === 'connected') return prev;
-          if (hasBridge) return 'disconnected';
+          if (hasBridge || isWalletExplicitlyDisconnected()) return 'disconnected';
           return prev === 'detecting' ? 'not_installed' : prev;
         });
       }
@@ -304,6 +322,10 @@ export function useTrobWallet(): TrobWalletState {
       if (!data || !data.__trobsafe) return;
 
       setIsInstalled(true);
+
+      // If user explicitly signed out or has not connected, do NOT auto-connect from background announcements!
+      if (isWalletExplicitlyDisconnected()) return;
+      if (!readStoredAddress()) return;
 
       if (data.type === 'TROBSAFE_SET_ADDRESS' || data.type === 'TROBSAFE_ADDRESS_CHANGED') {
         const b58 = String(data.base58 ?? '').trim();
@@ -364,6 +386,9 @@ export function useTrobWallet(): TrobWalletState {
     if (!trob || typeof trob.on !== 'function') return;
 
     const handleAddressChange = (data: unknown) => {
+      // If user explicitly signed out or is not connected, do not auto-connect
+      if (isWalletExplicitlyDisconnected() || status !== 'connected') return;
+
       const { base58, hex } = (data || {}) as TrobAddress;
       if (!base58 && !hex) {
         clearAddress();
@@ -378,10 +403,14 @@ export function useTrobWallet(): TrobWalletState {
         trob.off('addressChanged', handleAddressChange);
       }
     };
-  }, [applyAddress, clearAddress]);
+  }, [applyAddress, clearAddress, status]);
 
   // ── connect ───────────────────────────────────────────────────────────────
   const connect = useCallback(async (): Promise<TrobAddress | null> => {
+    // 0. Explicit connection intent: clear the explicit disconnect flag
+    try {
+      localStorage.removeItem(DISCONNECTED_KEY);
+    } catch {}
     // 1. Dispatch wakeup signals
     try {
       window.postMessage({ target: 'trobsafe-inpage', action: 'connect' }, '*');

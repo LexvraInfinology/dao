@@ -107,6 +107,7 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
     wallet.disconnect();
     auth.signOut();
     try {
+      localStorage.setItem('equora_wallet_explicit_disconnect', 'true');
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');

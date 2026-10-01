@@ -47,6 +47,7 @@ export default function MemberLoungePage() {
               capProgressPct={capProgressPct}
               pushedUsd={pushedUsd}
               earningsCapUsd={earningsCapUsd}
+              trobPriceUsd={lounge?.trobPriceUsd ?? lounge?.bttPriceUsd}
             />
           </div>
         </div>
@@ -60,6 +61,7 @@ export default function MemberLoungePage() {
           capProgressPct={capProgressPct}
           pushedUsd={pushedUsd}
           earningsCapUsd={earningsCapUsd}
+          trobPriceUsd={lounge?.trobPriceUsd ?? lounge?.bttPriceUsd}
         />
         <ClaimableDividendsCard
           initialAmount={claimableDividends}

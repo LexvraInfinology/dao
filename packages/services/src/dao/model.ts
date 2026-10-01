@@ -15,16 +15,22 @@ export interface DaoStatsDTO {
   entryFeeUsd: number;
   earningsCapUsd: number;
   entryFeeBtt: number;
+  entryFeeTrob: number;
   earningsCapBtt: number;
+  earningsCapTrob: number;
   totalCollectedBTT: number;
+  totalCollectedTROB: number;
   totalCollectedUSDEstimate: number;
   totalDistributedBTT: number;
+  totalDistributedTROB: number;
   totalDistributedUSDEstimate: number;
   totalPoolReceivedBTT: number;
+  totalPoolReceivedTROB: number;
   totalPoolReceivedUSDEstimate: number;
   isClosed: boolean;
   distributionMode: string;
   bttPriceUsd: number;
+  trobPriceUsd: number;
   priceSource: string;
   priceUpdatedAt: Date;
 }
@@ -35,8 +41,10 @@ export interface DaoMemberDTO {
   userId: number | null;
   nftTokenId: number;
   entryAmountBtt: number;
+  entryAmountTrob: number;
   entryAmountUsdEstimate: number;
   pushedAmountBtt: number;
+  pushedAmountTrob: number;
   pushedAmountUsdEstimate: number;
   status: string;
   joinedAt: Date;
@@ -51,6 +59,7 @@ export interface DaoEventDTO {
   incomingPosition: number | null;
   recipientCount: number | null;
   amountBtt: number;
+  amountTrob: number;
   amountUsdEstimate: number;
   priceSource: string;
   reason: string | null;
@@ -90,6 +99,7 @@ export interface FallbackClaimDTO {
   id: string;
   round: number;
   amountBtt: number;
+  amountTrob?: number;
   claimed: boolean;
   txHash: string | null;
   claimedAt: Date | null;
@@ -105,16 +115,23 @@ export interface MemberDetailsDTO {
   nftTokenId: number | null;
   joinedAt?: Date;
   entryAmountBtt?: number;
+  entryAmountTrob?: number;
   entryAmountUsdEstimate?: number;
   pushedAmountBtt: number;
+  pushedAmountTrob: number;
   pushedAmountUsdEstimate: number;
   earningsCapUsd?: number;
   earningsCapBtt?: number;
+  earningsCapTrob?: number;
+  remainingCapUsd?: number;
+  remainingCapTrob?: number;
   capProgressPct?: number;
   isCapped?: boolean;
   priceSource?: string;
   status?: string;
   txHash?: string;
+  trobPriceUsd?: number;
+  bttPriceUsd?: number;
   fallbackClaims?: FallbackClaimDTO[];
 }
 

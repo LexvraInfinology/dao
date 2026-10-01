@@ -820,24 +820,32 @@ export function createApp(): Express {
 
       const isTakeover = memberMap.has(assignedPosition) && (memberMap.get(assignedPosition)!.status === "blank" || memberMap.get(assignedPosition)!.status === "defaulted");
 
-      // 5. Calculate Dynamic 300 / N Cashback & Dividend Distribution
-      const ENTRY_FEE = 300;
+      // 5. Calculate Dynamic 300 / N Cashback & Dividend Distribution ($300 USD Peg)
+      const priceData = await priceService.getBttUsdPrice();
+      const currentPrice = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+      const SEAT_ENTRY_USD = 300;
+      const entryFeeTrob = Math.round((SEAT_ENTRY_USD / currentPrice) * 100) / 100;
       const memberTxHash = finalTxHash;
       const now = new Date();
 
       // Active members receiving rewards
       let activeRecipients: typeof existingMembers = [];
-      let cashbackPerMember = 0;
+      let cashbackPerMemberTrob = 0;
+      let cashbackPerMemberUsd = 0;
 
       if (isTakeover) {
         // In EquoraDAO.sol: _distributeRetopup distributes ENTRY_FEE to all OTHER active members
         activeRecipients = existingMembers.filter((m) => m.position !== assignedPosition && m.status === "active");
-        cashbackPerMember = activeRecipients.length > 0 ? Number((ENTRY_FEE / activeRecipients.length).toFixed(4)) : 0;
+        if (activeRecipients.length > 0) {
+          cashbackPerMemberTrob = Number((entryFeeTrob / activeRecipients.length).toFixed(4));
+          cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeRecipients.length).toFixed(2));
+        }
       } else {
         // In EquoraDAO.sol: _distributeEntryFee distributes ENTRY_FEE to all active members from 1 to assignedPosition (including new joiner)
         activeRecipients = existingMembers.filter((m) => m.position < assignedPosition && m.status === "active");
         const activeCount = activeRecipients.length + 1; // plus the new joiner
-        cashbackPerMember = Number((ENTRY_FEE / activeCount).toFixed(4));
+        cashbackPerMemberTrob = Number((entryFeeTrob / activeCount).toFixed(4));
+        cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeCount).toFixed(2));
       }
 
       // Check if another member held this position (takeover)
@@ -846,7 +854,8 @@ export function createApp(): Express {
         await prisma.daoMember.delete({ where: { id: priorOccupant.id } });
       }
 
-      const instantCashbackForNewMember = isTakeover ? 0 : cashbackPerMember;
+      const instantCashbackForNewMemberTrob = isTakeover ? 0 : cashbackPerMemberTrob;
+      const instantCashbackForNewMemberUsd = isTakeover ? 0 : cashbackPerMemberUsd;
 
       // 6. Execute atomic database transaction
       const [newMember] = await prisma.$transaction([
@@ -856,8 +865,10 @@ export function createApp(): Express {
             address: user.address,
             position: assignedPosition,
             nftTokenId: assignedPosition,
-            entryAmountBtt: ENTRY_FEE,
-            pushedAmountBtt: instantCashbackForNewMember, // Instant Cashback!
+            entryAmountBtt: entryFeeTrob,
+            entryAmountUsdAtJoin: SEAT_ENTRY_USD,
+            priceSource: priceData.priceSource || "trobchain-api",
+            pushedAmountBtt: instantCashbackForNewMemberTrob, // Instant Cashback in TROB!
             status: "active",
             joinedAt: now,
             txHash: memberTxHash,
@@ -872,21 +883,23 @@ export function createApp(): Express {
                 where: { id: { in: activeRecipients.map((r) => r.id) } },
                 data: {
                   pushedAmountBtt: {
-                    increment: cashbackPerMember,
+                    increment: cashbackPerMemberTrob,
                   },
                 },
               }),
             ]
           : []),
 
-        // C. Event: Joined
+        // C. Event: Joined ($300 USD worth of TROB)
         prisma.daoEvent.create({
           data: {
             eventType: "joined",
             userAddress: user.address,
             incomingPosition: assignedPosition,
             recipientCount: isTakeover ? activeRecipients.length : assignedPosition,
-            amountBtt: ENTRY_FEE,
+            amountBtt: entryFeeTrob,
+            amountUsdEst: SEAT_ENTRY_USD,
+            priceSource: priceData.priceSource || "trobchain-api",
             reason: isTakeover
               ? `Council Seat #${assignedPosition} Vacancy Taken Over`
               : `Council Seat #${assignedPosition} Activated`,
@@ -897,14 +910,16 @@ export function createApp(): Express {
         }),
 
         // D. Event: Instant cashback for new member (if fresh join)
-        ...(instantCashbackForNewMember > 0
+        ...(instantCashbackForNewMemberTrob > 0
           ? [
               prisma.daoEvent.create({
                 data: {
                   eventType: "pushed",
                   userAddress: user.address,
                   incomingPosition: assignedPosition,
-                  amountBtt: instantCashbackForNewMember,
+                  amountBtt: instantCashbackForNewMemberTrob,
+                  amountUsdEst: instantCashbackForNewMemberUsd,
+                  priceSource: priceData.priceSource || "trobchain-api",
                   reason: `Instant Cashback (Seat #${assignedPosition})`,
                   txHash: `${memberTxHash}-cashback`,
                   blockNumber: verifiedBlockNumber,
@@ -922,12 +937,12 @@ export function createApp(): Express {
             capacity: 100,
             isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
             closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
-            totalDistributedBtt: ENTRY_FEE,
+            totalDistributedBtt: entryFeeTrob,
             distributionMode: "push_with_pull_fallback",
           },
           update: {
             totalDistributedBtt: {
-              increment: ENTRY_FEE,
+              increment: entryFeeTrob,
             },
             isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
             closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
@@ -1249,7 +1264,26 @@ export function createApp(): Express {
       const txItems: TxItem[] = [];
 
       for (const e of daoEvents) {
-        const amt = Number(e.amountBtt);
+        let amt = Number(e.amountBtt);
+        let usdVal = Number((e as any).amountUsdEst);
+
+        // Auto-correct any legacy/mock rows where 300 was stored as raw token count
+        if (amt <= 300 && priceData.priceUsd > 0) {
+          if (e.eventType === "joined") {
+            amt = Math.round((300 / priceData.priceUsd) * 100) / 100;
+            usdVal = 300;
+          } else if (e.eventType === "pushed") {
+            const pos = e.incomingPosition || 1;
+            const targetUsd = 300 / pos;
+            amt = Math.round((targetUsd / priceData.priceUsd) * 100) / 100;
+            usdVal = targetUsd;
+          }
+        }
+
+        if (!usdVal || usdVal <= 0) {
+          usdVal = amt * priceData.priceUsd;
+        }
+
         txItems.push({
           id: e.id,
           type: e.eventType,
@@ -1265,7 +1299,8 @@ export function createApp(): Express {
               ? "Queue Closed"
               : e.eventType),
           amountBtt: amt,
-          amountUsd: Number((e as any).amountUsdEst) > 0 ? Number((e as any).amountUsdEst) : amt * priceData.priceUsd,
+          amountTrob: amt,
+          amountUsd: Number(usdVal.toFixed(2)),
           isPositive: e.eventType === "pushed" || e.eventType === "fallback_claimed",
           from: e.eventType === "joined" ? (e.userAddress ?? "Member") : "EquoraDAO Protocol",
           to: e.eventType === "joined" ? (process.env.NEXT_PUBLIC_DAO_ADDRESS || "EquoraDAO Protocol") : (e.userAddress ?? "Member"),

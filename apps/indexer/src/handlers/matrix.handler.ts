@@ -278,7 +278,7 @@ export async function handleDaoPoolFunded(event: {
     }),
   ]);
 
-  console.log(`[DAO Pool] Funded +${amountDecimal} BTT`);
+  console.log(`[DAO Pool] Funded +${amountDecimal} TROB`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -310,7 +310,7 @@ export async function handleDaoRewardClaimed(event: {
     },
   });
 
-  console.log(`[DAO Pool] Claimed ${amountDecimal} BTT by ${member}`);
+  console.log(`[DAO Pool] Claimed ${amountDecimal} TROB by ${member}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -333,7 +333,7 @@ export async function handleRankPoolFunded(event: {
     },
   });
 
-  console.log(`[Rank Pool] Funded +${amountDecimal} BTT`);
+  console.log(`[Rank Pool] Funded +${amountDecimal} TROB`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

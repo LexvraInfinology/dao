@@ -97,11 +97,16 @@ export interface DaoStatsData {
   entryFeeUsd?: number;
   earningsCapUsd?: number;
   entryFeeBtt: number;
+  entryFeeTrob?: number;
   earningsCapBtt: number;
+  earningsCapTrob?: number;
   totalCollectedBTT: number;
+  totalCollectedTROB?: number;
   totalDistributedBTT: number;
+  totalDistributedTROB?: number;
   isClosed: boolean;
   bttPriceUsd: number;
+  trobPriceUsd?: number;
   priceSource: string;
   priceUpdatedAt: string;
   dividendYieldApy?: string;
@@ -114,6 +119,7 @@ export interface DaoEventData {
   userAddress: string | null;
   incomingPosition: number | null;
   amountBtt: number;
+  amountTrob?: number;
   amountUsdEstimate: number;
   reason?: string | null;
   txHash: string;
@@ -204,6 +210,7 @@ export interface LoungeData {
     rankPools: { label: string; unlockedPools: string[] };
   };
   bttPriceUsd: number;
+  trobPriceUsd?: number;
   priceSource: string;
 }
 
@@ -212,6 +219,7 @@ export interface TransactionItem {
   type: string;
   typeLabel: string;
   amountBtt: number;
+  amountTrob?: number;
   amountUsd: number;
   isPositive: boolean | null;
   from: string;
@@ -228,6 +236,7 @@ export interface TransactionsData {
   limit: number;
   pages: number;
   bttPriceUsd: number;
+  trobPriceUsd?: number;
   priceSource: string;
 }
 

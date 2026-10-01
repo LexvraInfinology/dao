@@ -71,7 +71,7 @@ export default function SecurityActivityCard() {
     ? recentTxs.map((tx) => ({
         id: tx.id,
         title: tx.typeLabel,
-        subtitle: `${Number(tx.amountBtt).toFixed(2)} BTT`,
+        subtitle: `${Number((tx as any).amountTrob ?? tx.amountBtt).toFixed(2)} TROB`,
         time: fmtDate(tx.timestamp),
         shortTime: fmtShort(tx.timestamp),
         badgeText: tx.status,

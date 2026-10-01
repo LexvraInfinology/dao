@@ -30,14 +30,18 @@ export async function GET(
     totalReceivedBtt: 0,
     totalReceivedUsd: 0,
     earningsCapBtt,
+    earningsCapTrob: earningsCapBtt,
     earningsCapUsd,
     pushedBtt: 0,
+    pushedTrob: 0,
     pushedUsd: 0,
     capProgressPct: 0,
     remainingCapBtt: earningsCapBtt,
+    remainingCapTrob: earningsCapBtt,
     remainingCapUsd: earningsCapUsd,
     isCapped: false,
     bttPriceUsd,
+    trobPriceUsd: bttPriceUsd,
   };
 
   return NextResponse.json({

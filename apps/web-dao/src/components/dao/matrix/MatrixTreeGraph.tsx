@@ -9,7 +9,6 @@ import {
   SlidersHorizontal,
   Info
 } from 'lucide-react';
-import { useWallet } from '@/context/WalletContext';
 
 // Positions in the 14-node matrix that generate 100% direct payouts to the owner ($30 USD in TROB each)
 const DIRECT_INCOME_POSITIONS = new Set([3, 6, 8, 9, 11, 12]);
@@ -24,18 +23,11 @@ export interface NodeDetail {
 }
 
 export default function MatrixTreeGraph() {
-  const wallet = useWallet();
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [highlightIncome, setHighlightIncome] = useState<boolean>(true);
 
-  // User state — strictly real wallet credentials
-  const activeAddress = wallet.base58Address || wallet.hexAddress || '';
-  const shortAddress = activeAddress
-    ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
-    : 'Your Wallet';
-
   // 14-position node progression for Slot 01 ($30 USD in TROB)
-  // Retail Matrix officially activates on Day 22.
+  // Static illustrative architectural example showing how downlines and payouts work.
   const nodes: Record<number, NodeDetail> = Array.from({ length: 14 }, (_, i) => i + 1).reduce(
     (acc, pos) => {
       acc[pos] = {
@@ -62,11 +54,16 @@ export default function MatrixTreeGraph() {
       {/* ─── CARD HEADER ─── */}
       <div className="p-5 sm:p-7 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F1F5F9]">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#071A4A] tracking-tight uppercase">
-            YOUR MATRIX
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black text-[#071A4A] tracking-tight uppercase">
+              MATRIX ARCHITECTURE
+            </h2>
+            <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0E62E4] border border-[#0E62E4]/20 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+              Static Example
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-[#64748B] font-medium mt-0.5">
-            14-Node Progression • Slot 01 ($30 USD in TROB) • Launches Day 22
+            14-Node Progression Model • Illustrative Example of How Spillover & $30 Returns Work
           </p>
         </div>
 
@@ -137,33 +134,33 @@ export default function MatrixTreeGraph() {
             <path d="M 682.5 260 L 682.5 282" fill="none" stroke="#BFDBFE" strokeWidth="2" strokeLinecap="round" />
             <path d="M 787.5 260 L 787.5 282" fill="none" stroke="#BFDBFE" strokeWidth="2" strokeLinecap="round" />
 
-            {/* ================= LEVEL 0: YOU (Apex) ================= */}
+            {/* ================= LEVEL 0: APEX OWNER (Static Model) ================= */}
             <g
               className="cursor-pointer"
               onClick={() => setSelectedPosition(null)}
             >
               <rect
-                x="345"
+                x="330"
                 y="12"
-                width="150"
+                width="180"
                 height="42"
                 rx="10"
                 fill="#0052FF"
                 className="filter drop-shadow-[0_4px_10px_rgba(0,82,255,0.28)]"
               />
-              <circle cx="368" cy="33" r="4.5" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
-              <path d="M 360 43 C 360 38.5 363.5 37 368 37 C 372.5 37 376 38.5 376 43" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="355" cy="33" r="4.5" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
+              <path d="M 347 43 C 347 38.5 350.5 37 355 37 C 359.5 37 363 38.5 363 43" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" />
               <text
-                x="422"
+                x="428"
                 y="37"
                 fill="#FFFFFF"
-                fontSize="12"
+                fontSize="11"
                 fontWeight="800"
                 letterSpacing="0.04em"
                 textAnchor="middle"
                 fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
               >
-                {shortAddress}
+                YOU (APEX OWNER)
               </text>
             </g>
 
@@ -512,7 +509,7 @@ export default function MatrixTreeGraph() {
                 </span>
               </div>
               <p className="text-xs text-[#64748B] mt-1 leading-relaxed max-w-2xl">
-                In this 14-position single-leg progression, exactly 6 positions generate 100% direct payouts ($30 USD in TROB each) to your connected wallet. The remaining positions power cycle advancement and protocol dividend reserves.
+                In this 14-position single-leg progression model, exactly 6 positions generate 100% direct payouts ($30 USD in TROB each) to the apex owner&apos;s wallet. The remaining positions power cycle advancement and protocol dividend reserves.
               </p>
             </div>
           </div>
@@ -552,7 +549,7 @@ export default function MatrixTreeGraph() {
                   </span>
                   {DIRECT_INCOME_POSITIONS.has(activeNode.position) ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      100% Direct Payout to You ($30 USD)
+                      100% Direct Payout to Apex Owner ($30 USD)
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">

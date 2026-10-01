@@ -37,7 +37,7 @@ import { triggerSmartConnectWallet, TROBSAFE_CHROME_STORE_URL } from '@/utils/wa
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 // ─── Constants & Addresses ───────────────────────────────────────────────────
-const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPxnxXxNXUSNx5MxcgYi5N8zzBCMuWmHro';
 const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
@@ -354,7 +354,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
         DAO_CONTRACT_ADDRESS.length > 10
           ? DAO_CONTRACT_ADDRESS
-          : 'TBTFF31sZWYHJTibAiyFVJB968ZdaE4grU';
+          : 'TPxnxXxNXUSNx5MxcgYi5N8zzBCMuWmHro';
 
       const seatEntryTrob = priceData.seatEntryTrob;
       const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);

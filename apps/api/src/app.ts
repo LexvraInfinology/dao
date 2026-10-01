@@ -998,7 +998,9 @@ export function createApp(): Express {
               eventType: "pushed",
               userAddress: prev.address,
               incomingPosition: assignedPosition,
-              amountBtt: cashbackPerMember,
+              amountBtt: cashbackPerMemberTrob,
+              amountUsdEst: cashbackPerMemberUsd,
+              priceSource: priceData.priceSource || "trobchain-api",
               reason: `Dividend push from Seat #${assignedPosition}`,
               txHash: `${memberTxHash}-pushed-${prev.position}`,
               blockNumber: verifiedBlockNumber,
@@ -1016,9 +1018,14 @@ export function createApp(): Express {
           isMember: true,
           position: newMember.position,
           address: user.address,
-          entryAmountBtt: ENTRY_FEE,
-          instantCashbackBtt: instantCashbackForNewMember,
-          totalPushedBtt: instantCashbackForNewMember,
+          entryAmountBtt: entryFeeTrob,
+          entryAmountTrob: entryFeeTrob,
+          entryAmountUsd: SEAT_ENTRY_USD,
+          instantCashbackBtt: instantCashbackForNewMemberTrob,
+          instantCashbackTrob: instantCashbackForNewMemberTrob,
+          instantCashbackUsd: instantCashbackForNewMemberUsd,
+          totalPushedBtt: instantCashbackForNewMemberTrob,
+          totalPushedTrob: instantCashbackForNewMemberTrob,
           previousMembersRewarded: activeRecipients.length,
           txHash: newMember.txHash,
           onchainVerified,
@@ -1292,6 +1299,7 @@ export function createApp(): Express {
         type: string;
         typeLabel: string;
         amountBtt: number;
+        amountTrob?: number;
         amountUsd: number;
         isPositive: boolean | null;
         from: string;

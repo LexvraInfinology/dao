@@ -12,6 +12,8 @@ export interface DaoStatsDTO {
   cappedMembers: number;
   capacity: number;
   remainingPositions: number;
+  entryFeeUsd: number;
+  earningsCapUsd: number;
   entryFeeBtt: number;
   earningsCapBtt: number;
   totalCollectedBTT: number;
@@ -106,6 +108,7 @@ export interface MemberDetailsDTO {
   entryAmountUsdEstimate?: number;
   pushedAmountBtt: number;
   pushedAmountUsdEstimate: number;
+  earningsCapUsd?: number;
   earningsCapBtt?: number;
   capProgressPct?: number;
   isCapped?: boolean;

@@ -15,9 +15,11 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
 
   const isMember = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
   const capProgressPct  = isMember ? (profile?.capProgressPct  ?? 0) : 0;
-  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt  ?? 1500) : 0;
-  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt  ?? 300) : 0;
-  const remainingCapUsd = isMember ? Math.max(0, (earningsCapBtt - (profile?.pushedAmountBtt ?? 0)) * bttPrice) : 0;
+  const effectivePrice  = bttPrice > 0 ? bttPrice : 0.056;
+  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt ?? Math.round(1500 / effectivePrice)) : 0;
+  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt ?? Math.round(300 / effectivePrice)) : 0;
+  const pushedUsd       = isMember ? (profile?.pushedAmountUsdEstimate ?? ((profile?.pushedAmountBtt ?? 0) * effectivePrice)) : 0;
+  const remainingCapUsd = isMember ? Math.max(0, 1500 - pushedUsd) : 0;
 
   const status   = isMember ? (profile?.status ?? 'active') : 'unclaimed';
   const isActive = isMember && status === 'active';
@@ -72,8 +74,8 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
               <div className="h-full bg-[#155EEF] rounded-full transition-all" style={{ width: `${Math.min(100, capProgressPct)}%` }} />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-1 text-[9px] xl:text-[10px] text-[#64748B] font-jakarta">
-              <span>Cap: {earningsCapBtt} TROB (5×{entryAmountBtt})</span>
-              <span>${remainingCapUsd.toFixed(2)} remaining</span>
+              <span>Cap: {earningsCapBtt.toLocaleString()} TROB ($1,500 max)</span>
+              <span>${remainingCapUsd.toFixed(2)} USD remaining</span>
             </div>
           </div>
         </div>

@@ -184,7 +184,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Claim Seat #{seat.seatNumber} ($300 TROB)</span>
+            <span>Claim Seat #{seat.seatNumber} ($300 Entry)</span>
           </button>
         ) : isMintable && !onMintSeat ? (
           <div className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs text-center font-medium">

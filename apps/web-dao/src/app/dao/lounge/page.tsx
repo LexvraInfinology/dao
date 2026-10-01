@@ -21,7 +21,7 @@ export default function MemberLoungePage() {
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
   const capProgressPct     = lounge?.capProgressPct        ?? 0;
   const pushedUsd          = lounge?.pushedUsd             ?? 0;
-  const earningsCapUsd     = lounge?.earningsCapUsd        ?? 0;
+  const earningsCapUsd     = lounge?.earningsCapUsd || 1500;
 
   return (
     <DaoAccessGate>
@@ -40,7 +40,8 @@ export default function MemberLoungePage() {
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
               pushedAmountUsd={pushedUsd}
-              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.055))}
+              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
+              priceUsd={lounge?.bttPriceUsd || 0.056}
               walletAddress={activeAddress ?? undefined}
             />
             <EarningsCapCard
@@ -65,7 +66,8 @@ export default function MemberLoungePage() {
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
           pushedAmountUsd={pushedUsd}
-          pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.055))}
+          pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
+          priceUsd={lounge?.bttPriceUsd || 0.056}
           walletAddress={activeAddress ?? undefined}
         />
         <IncomeChannelsCard loungeData={lounge} />

@@ -10,7 +10,7 @@ export const CURRENT_USER: Partial<MemberProfile> = {};
 export const DAO_COUNCIL_STATS = {
   totalSeats: 100,
   capacity: 100,
-  seatPrice: '$300 TROB',
+  seatPrice: '$300 USD',
   phase: 'PHASE 1',
 };
 

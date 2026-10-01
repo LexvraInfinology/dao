@@ -417,6 +417,7 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
             onClick={() => {
               try {
                 sessionStorage.setItem('equora_dao_preview', 'true');
+                sessionStorage.setItem('equora_dao_preview_mode', 'true');
                 localStorage.setItem('equora_dev_mode', 'true');
               } catch {}
               onClose();

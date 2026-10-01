@@ -288,7 +288,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     });
 
     it("should enforce 5X earnings cap (1,500 TROB) and report progress correctly", async () => {
-      expect(await dao.EARNINGS_CAP()).to.equal(ethers.parseEther("1500"));
+      expect(await dao.earningsCap()).to.equal(ethers.parseEther("1500"));
 
       await registerUser(users[0], 10000);
       await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);

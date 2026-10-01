@@ -313,10 +313,10 @@ export default function DaoDashboardPage() {
                     DEPOSIT
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-white">
-                    300 TROB
+                    $300 USD
                   </div>
                   <div className="text-[9px] text-white/75 font-medium leading-tight">
-                    Fixed Protocol Entry
+                    Fixed Entry (in TROB)
                   </div>
                 </div>
 
@@ -354,10 +354,10 @@ export default function DaoDashboardPage() {
                     MAX INFLOW
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-[#17334F]">
-                    1,500 TROB
+                    $1,500 USD
                   </div>
                   <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
-                    500% Baseline Cap (5X)
+                    500% Cap ($1,500 in TROB)
                   </div>
                 </div>
               </div>

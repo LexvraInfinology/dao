@@ -17,6 +17,8 @@ export interface DaoStats {
   cappedMembers: number;
   capacity: number;
   remainingPositions: number;
+  entryFeeUsd?: number;
+  earningsCapUsd?: number;
   entryFeeBtt: number;
   earningsCapBtt: number;
   totalCollectedBTT: number;
@@ -36,6 +38,8 @@ export interface TrobPrice {
   isStale: boolean;
   seatEntryUsd: number;
   seatEntryTrob: number;
+  earningsCapUsd?: number;
+  earningsCapTrob?: number;
 }
 
 export interface DaoMember {
@@ -52,6 +56,7 @@ export interface DaoMember {
   isMember: boolean;
   pushedAmountBtt: number | string;
   pushedAmountUsdEstimate: number;
+  earningsCapUsd?: number;
   earningsCapBtt: number;
   capProgressPct: number;
 }

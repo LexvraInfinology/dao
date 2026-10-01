@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TrobWalletAPI, TrobAddress } from '@/types/trobsafe.d';
+import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
 
 // ─── Extension detection ──────────────────────────────────────────────────────
 
@@ -586,24 +587,42 @@ export function useTrobWallet(): TrobWalletState {
 
   // ── callContract ──────────────────────────────────────────────────────────
   const callContract = useCallback(
-    async (payload: Parameters<TrobWalletAPI['triggersmartcontract']>[0]) => {
+    async (rawPayload: Parameters<TrobWalletAPI['triggersmartcontract']>[0]) => {
       const trob = getTrob();
       if (!trob) throw new Error('TrobSafe wallet is not installed.');
       if (status !== 'connected') throw new Error('Wallet not connected.');
+
+      const p = (Array.isArray(rawPayload) ? rawPayload[0] : rawPayload) as any;
+
+      // Sanitize address: TrobSafe requires Base58 (or 41-hex), strictly NOT 0x...
+      let sanitizedContract = p.contract_address;
+      if (sanitizedContract && sanitizedContract.startsWith('0x')) {
+        sanitizedContract = toTrobBase58(sanitizedContract) || toTronHex(sanitizedContract);
+      }
+
+      // Call value in SUN (for native TROB payments like joinDAO)
+      let sanitizedCallValue = p.call_value || 0;
+
+      const payload = {
+        ...p,
+        contract_address: sanitizedContract,
+        call_value: sanitizedCallValue,
+        fee_limit: p.fee_limit || 100_000_000,
+      };
+
       if (typeof trob.triggersmartcontract === 'function') {
         return trob.triggersmartcontract(payload);
       }
       if (typeof trob.transactionBuilder?.triggerSmartContract === 'function') {
-        const p = (Array.isArray(payload) ? payload[0] : payload) as any;
         const tx = await trob.transactionBuilder.triggerSmartContract(
-          p.contract_address,
-          p.function_selector,
+          payload.contract_address,
+          payload.function_selector,
           {
-            feeLimit: p.fee_limit || 100_000_000,
-            callValue: p.call_value || 0,
+            feeLimit: payload.fee_limit,
+            callValue: payload.call_value,
           },
           [],
-          p.owner_address
+          payload.owner_address
         );
         const signedTx = await trob.trx.sign(tx.transaction);
         const broadcast = await trob.trx.sendRawTransaction(signedTx);

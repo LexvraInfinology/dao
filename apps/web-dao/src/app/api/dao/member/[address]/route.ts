@@ -19,6 +19,12 @@ export async function GET(
     return NextResponse.json(backendRes);
   }
 
+  const bttPriceUsd = 0.056;
+  const entryAmountUsd = 300;
+  const earningsCapUsd = 1500;
+  const entryAmountBtt = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
+  const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
+
   // Fallback for non-member / default lookup
   const fallbackMember = {
     isMember: false,
@@ -28,11 +34,12 @@ export async function GET(
     joinedAt: undefined,
     pushedAmountBtt: 0,
     pushedAmountUsdEstimate: 0,
-    earningsCapBtt: 1500,
+    earningsCapBtt,
+    earningsCapUsd,
     capProgressPct: 0,
     isCapped: false,
-    entryAmountBtt: 300,
-    entryAmountUsdEstimate: 16.5,
+    entryAmountBtt,
+    entryAmountUsdEstimate: entryAmountUsd,
     directReferralsCount: 0,
     isQualified: false,
     userId: null,

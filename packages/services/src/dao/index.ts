@@ -210,8 +210,18 @@ export class DaoService {
       ]);
 
     const isCompleted = instance ? instance.isClosed : memberCount >= 100;
-    const totalCollectedBTT = memberCount * 300;
-    const totalDistributedBTT = instance
+    const priceUsd = priceData?.priceUsd || 0;
+
+    // USD-pegged economics: $300 entry fee, $1,500 cap (5x)
+    const SEAT_ENTRY_USD = servicesConfig.price.seatEntryUsd; // $300
+    const EARNINGS_CAP_USD = SEAT_ENTRY_USD * 5;             // $1,500
+
+    // TROB equivalents at current market price
+    const entryFeeTrob    = priceUsd > 0 ? SEAT_ENTRY_USD / priceUsd : 0;
+    const earningsCapTrob = priceUsd > 0 ? EARNINGS_CAP_USD / priceUsd : 0;
+
+    const totalCollectedTrob    = memberCount * entryFeeTrob;
+    const totalDistributedTROB  = instance
       ? Number(instance.totalDistributedBtt)
       : (await prisma.daoMember.findMany({ select: { pushedAmountBtt: true } })).reduce(
           (acc: number, m: { pushedAmountBtt: any }) => acc + Number(m.pushedAmountBtt),
@@ -219,8 +229,8 @@ export class DaoService {
         );
 
     const totalPoolReceivedBTT = Number(vaultSplits?._sum?.daoAmount || 0);
-    const totalDistributedUSDEstimate = totalDistributedBTT * (priceData?.priceUsd || 0);
-    const totalCollectedUSDEstimate = totalCollectedBTT * (priceData?.priceUsd || 0);
+    const totalDistributedUSDEstimate = totalDistributedTROB * priceUsd;
+    const totalCollectedUSDEstimate   = totalCollectedTrob * priceUsd;
 
     return {
       memberCount,
@@ -229,17 +239,21 @@ export class DaoService {
       cappedMembers: cappedCount,
       capacity: 100,
       remainingPositions: Math.max(0, 100 - activeCount),
-      entryFeeBtt: 300,
-      earningsCapBtt: 1500,
-      totalCollectedBTT,
+      // USD-pegged values (always $300 / $1500)
+      entryFeeUsd: SEAT_ENTRY_USD,
+      earningsCapUsd: EARNINGS_CAP_USD,
+      // TROB equivalents at current price
+      entryFeeBtt: entryFeeTrob,
+      earningsCapBtt: earningsCapTrob,
+      totalCollectedBTT: totalCollectedTrob,
       totalCollectedUSDEstimate,
-      totalDistributedBTT,
+      totalDistributedBTT: totalDistributedTROB,
       totalDistributedUSDEstimate,
       totalPoolReceivedBTT,
-      totalPoolReceivedUSDEstimate: totalPoolReceivedBTT * priceData.priceUsd,
+      totalPoolReceivedUSDEstimate: totalPoolReceivedBTT * priceUsd,
       isClosed: isCompleted,
       distributionMode: "push_with_pull_fallback",
-      bttPriceUsd: priceData.priceUsd,
+      bttPriceUsd: priceUsd,
       priceSource: priceData.priceSource,
       priceUpdatedAt: priceData.updatedAt,
     };
@@ -327,9 +341,17 @@ export class DaoService {
       };
     }
 
-    const pushedBtt = Number(member.pushedAmountBtt);
-    const earningsCapBtt = 1500;
-    const capProgressPct = Math.min(100, (pushedBtt / earningsCapBtt) * 100);
+    const pushedBtt         = Number(member.pushedAmountBtt);
+    const priceUsd          = priceData.priceUsd || 0;
+    const SEAT_ENTRY_USD    = servicesConfig.price.seatEntryUsd; // $300
+    const EARNINGS_CAP_USD  = SEAT_ENTRY_USD * 5;               // $1,500
+
+    // Compute cap in TROB using live price
+    const earningsCapTrob = priceUsd > 0 ? EARNINGS_CAP_USD / priceUsd : 0;
+
+    // Cap progress based on USD value (not raw TROB count)
+    const pushedUsd       = pushedBtt * priceUsd;
+    const capProgressPct  = EARNINGS_CAP_USD > 0 ? Math.min(100, (pushedUsd / EARNINGS_CAP_USD) * 100) : 0;
 
     return {
       isMember: true,
@@ -340,12 +362,14 @@ export class DaoService {
       nftTokenId: member.nftTokenId || member.position,
       joinedAt: member.joinedAt,
       entryAmountBtt: Number(member.entryAmountBtt),
-      entryAmountUsdEstimate: Number(member.entryAmountBtt) * priceData.priceUsd,
+      entryAmountUsdEstimate: SEAT_ENTRY_USD, // Always $300 USD regardless of TROB price
       pushedAmountBtt: pushedBtt,
-      pushedAmountUsdEstimate: pushedBtt * priceData.priceUsd,
-      earningsCapBtt,
+      pushedAmountUsdEstimate: pushedUsd,
+      // USD-pegged cap values
+      earningsCapUsd: EARNINGS_CAP_USD,
+      earningsCapBtt: earningsCapTrob,
       capProgressPct,
-      isCapped: pushedBtt >= earningsCapBtt,
+      isCapped: pushedUsd >= EARNINGS_CAP_USD,
       priceSource: priceData.priceSource,
       status: member.status,
       txHash: member.txHash,

@@ -104,7 +104,7 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
             Instant Deposit Splitting
           </div>
           <p className="text-xs text-[#60739A] font-jakarta leading-relaxed">
-            Every 300 TROB deposit is divided equally among members 1 to N and pushed directly to their wallets in the deposit transaction block.
+            Every $300 USD entry deposit is divided equally among members 1 to N and pushed directly to their wallets in the deposit transaction block.
           </p>
           <div className="text-[11px] font-semibold text-[#10B981] font-jakarta pt-1">
             ✓ Recipient Gas Fee: $0.00 (Zero Gas)

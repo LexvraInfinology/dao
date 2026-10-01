@@ -85,7 +85,7 @@ export function buildLiveCouncilSeats(
         seatNumber,
         status: isDefaulted ? 'defaulted' : isMine ? 'mine' : 'claimed',
         ownerAddress: isDefaulted ? 'Defaulted Vacancy (Open for Takeover)' : isMine ? `${shortAddr} (You)` : shortAddr,
-        lifetimeEarnings: `$${earningsUsd.toFixed(2)} TROB`,
+        lifetimeEarnings: `$${earningsUsd.toFixed(2)} USD`,
         capProgress: capPct,
         votingPower: '1.0%',
         statusText: isDefaulted
@@ -95,7 +95,7 @@ export function buildLiveCouncilSeats(
           : liveMember.status ?? 'Active Member',
         statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Active Member',
         soulboundId,
-        entryAmount: '$300 TROB',
+        entryAmount: '$300 USD',
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
               month: 'short',
@@ -111,13 +111,13 @@ export function buildLiveCouncilSeats(
         seatNumber,
         status: 'next',
         ownerAddress: 'Available for Claim',
-        lifetimeEarnings: '$0.00 TROB',
+        lifetimeEarnings: '$0.00 USD',
         capProgress: 0,
         votingPower: '1.0%',
         statusText: 'Next in Queue • Ready for Instant Mint',
         statusBadge: 'Next Available',
         soulboundId,
-        entryAmount: '$300 TROB',
+        entryAmount: '$300 USD',
       };
     }
 
@@ -126,7 +126,7 @@ export function buildLiveCouncilSeats(
       seatNumber,
       status: 'locked',
       ownerAddress: 'Locked',
-      lifetimeEarnings: '$0.00 TROB',
+      lifetimeEarnings: '$0.00 USD',
       capProgress: 0,
       votingPower: '1.0%',
       statusText: `Locked • Unlocks after Seat #${seatNumber - 1} claimed`,

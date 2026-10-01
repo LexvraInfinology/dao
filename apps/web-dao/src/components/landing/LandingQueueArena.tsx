@@ -15,8 +15,8 @@ export const LandingQueueArena: React.FC = () => {
   const cards = [
     {
       icon: <Coins className="w-5 h-5 text-[#155EEF]" />,
-      title: '$300 TROB Entry',
-      description: 'Fixed entry price for all 100 Genesis seats.',
+      title: '$300 Entry',
+      description: 'Fixed entry price for all 100 Genesis seats, payable in TROB equivalent.',
     },
     {
       icon: <Calculator className="w-5 h-5 text-[#155EEF]" />,
@@ -31,7 +31,7 @@ export const LandingQueueArena: React.FC = () => {
     {
       icon: <TrendingUp className="w-5 h-5 text-[#155EEF]" />,
       title: '500% Baseline ROI',
-      description: 'Council members receive ongoing dividend pool distributions up to 1,500 TROB.',
+      description: 'Council members receive ongoing dividend pool distributions up to $1,500 worth of TROB.',
     },
   ];
 
@@ -83,7 +83,7 @@ export const LandingQueueArena: React.FC = () => {
 
             <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#12B76A]" />
-              <span className="text-sm font-semibold text-[#0B132B]">300 TROB Entry = 300 / N Equal Split</span>
+              <span className="text-sm font-semibold text-[#0B132B]">$300 Entry = 300 / N Equal Split</span>
               <span className="text-xs text-[#027A48] font-medium">Smart Contract Verified</span>
             </div>
           </div>

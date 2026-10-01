@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink, Smartphone } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertTriangle, ArrowRight, Download, Wallet, CheckCircle2, ExternalLink, Smartphone, Eye } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
@@ -42,12 +42,43 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [payError, setPayError]               = useState<string | null>(null);
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [detectTimeout, setDetectTimeout]     = useState(false);
+  const [previewMode, setPreviewMode]         = useState(false);
+
+  // Check preview mode on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isPreview =
+      sessionStorage.getItem('equora_dao_preview') === 'true' ||
+      sessionStorage.getItem('equora_dao_preview_mode') === 'true' ||
+      localStorage.getItem('equora_dev_mode') === 'true' ||
+      window.location.search.includes('dev=');
+    if (isPreview) {
+      setPreviewMode(true);
+    }
+  }, []);
 
   const handleConnectClick = () => {
     triggerSmartConnectWallet({
       wallet,
       openModal: () => setWalletModalOpen(true),
     });
+  };
+
+  const handleEnablePreview = () => {
+    setPreviewMode(true);
+    try {
+      sessionStorage.setItem('equora_dao_preview', 'true');
+      sessionStorage.setItem('equora_dao_preview_mode', 'true');
+    } catch {}
+  };
+
+  const handleExitPreview = () => {
+    setPreviewMode(false);
+    try {
+      sessionStorage.removeItem('equora_dao_preview');
+      sessionStorage.removeItem('equora_dao_preview_mode');
+      localStorage.removeItem('equora_dev_mode');
+    } catch {}
   };
 
   // Quick fallback timeout for detection probe (800ms max)
@@ -61,11 +92,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
     useDaoMember(activeAddress);
 
-  // Fetch live TROB price for the 300 TROB entry calculation
+  // Fetch live TROB price for the $300 USD entry calculation
   const { data: priceData } = useTrobPrice(30_000);
 
   // ── Derive gate state (strict on-chain verification) ────────────────────────
   const gateState: GateState = (() => {
+    if (previewMode) return 'access_granted';
     if (wallet.status === 'detecting' && !detectTimeout) return 'detecting_wallet';
     if (wallet.status === 'not_installed' || (wallet.status === 'detecting' && detectTimeout && !wallet.isInstalled)) {
       return 'not_installed';
@@ -152,7 +184,40 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   };
 
   // ── Access granted — render children ──────────────────────────────────────
-  if (gateState === 'access_granted') return <>{children}</>;
+  if (gateState === 'access_granted') {
+    return (
+      <>
+        {previewMode && (
+          <div className="mb-4 p-3 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE] flex flex-wrap items-center justify-between gap-2 text-xs text-[#1E40AF] shadow-xs">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-[#0E62E4] shrink-0" />
+              <span>
+                <strong className="text-[#0E62E4]">Preview Mode (Read-Only)</strong> — You are viewing the Member Lounge without connecting a wallet.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleConnectClick}
+                className="px-2.5 py-1 rounded-lg bg-[#0E62E4] text-white font-semibold text-[11px] hover:bg-[#0B52C4] transition-colors cursor-pointer"
+              >
+                Connect Wallet
+              </button>
+              <button
+                type="button"
+                onClick={handleExitPreview}
+                className="text-[11px] text-[#4F6D87] hover:text-[#17334F] font-medium underline cursor-pointer"
+              >
+                Exit Preview
+              </button>
+            </div>
+          </div>
+        )}
+        {children}
+        <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+      </>
+    );
+  }
 
   // ── Gate screens ──────────────────────────────────────────────────────────
   return (
@@ -164,6 +229,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           {gateState === 'detecting_wallet' && (
             <GateCard icon={<Loader2 className="w-8 h-8 text-[#155EEF] animate-spin" />} title="Detecting TrobSafe…">
               <p className="text-sm text-[#64748B] text-center">Looking for your wallet extension.</p>
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={handleEnablePreview}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-[#0E62E4] hover:text-[#0B52C4] border border-[#0E62E4]/25 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Dashboard Without Wallet</span>
+                </button>
+              </div>
             </GateCard>
           )}
 
@@ -206,6 +281,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     <span>Android APK</span>
                   </a>
                 </div>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleEnablePreview}
+                    className="w-full py-2.5 px-3 rounded-xl bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#0E62E4] hover:text-[#0B52C4] border border-[#0E62E4]/25 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview Dashboard Without Wallet</span>
+                  </button>
+                </div>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
                   <Link href="/dao" className="text-[#0E62E4] hover:underline flex items-center gap-1">
                     ← Back to DAO
@@ -231,6 +316,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 >
                   <ShieldCheck className="w-4 h-4" />
                   Connect TrobSafe Wallet
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEnablePreview}
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#0E62E4] hover:text-[#0B52C4] border border-[#0E62E4]/25 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Dashboard Without Wallet</span>
                 </button>
                 <div className="pt-2 flex items-center justify-between text-xs text-[#64748B]">
                   <Link href="/dao" className="text-[#155EEF] hover:underline flex items-center gap-1">
@@ -325,6 +418,17 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 </span>
                 {payTxHash !== 'pending' && <ArrowRight className="w-4 h-4" />}
               </button>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleEnablePreview}
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#0E62E4] hover:text-[#0B52C4] border border-[#0E62E4]/25 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Dashboard Without Wallet</span>
+                </button>
+              </div>
 
               <p className="mt-3 text-center text-[11px] text-[#94A3B8]">
                 Transaction broadcast via TrobSafe · Gas fees may apply

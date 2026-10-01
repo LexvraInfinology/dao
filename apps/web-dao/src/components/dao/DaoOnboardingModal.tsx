@@ -68,6 +68,7 @@ export const DaoOnboardingModal: React.FC = () => {
     if (typeof window === 'undefined') return;
     const isDev =
       sessionStorage.getItem('equora_dao_preview') === 'true' ||
+      sessionStorage.getItem('equora_dao_preview_mode') === 'true' ||
       localStorage.getItem('equora_dev_mode') === 'true' ||
       window.location.search.includes('dev=');
     if (isDev) {
@@ -90,8 +91,8 @@ export const DaoOnboardingModal: React.FC = () => {
     return null;
   }
 
-  // If user is already verified on-chain and registered as member, grant access
-  if (memberData?.isMember && completed) {
+  // If user is already verified on-chain and registered as member, grant full access
+  if (memberData?.isMember) {
     return null;
   }
 
@@ -281,7 +282,7 @@ export const DaoOnboardingModal: React.FC = () => {
 
         {/* Steps List */}
         <div className="relative z-10 space-y-3.5">
-          {/* ── Step 1: Deposit $300 TROB ── */}
+          {/* ── Step 1: Deposit $300 USD (in TROB) ── */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border transition-all ${
               hasDeposited || memberData?.isMember
@@ -308,7 +309,7 @@ export const DaoOnboardingModal: React.FC = () => {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold font-jakarta text-[#071A4A]">
-                      Step 1: Deposit $300 TROB
+                      Step 1: Deposit $300 USD (in TROB)
                     </span>
                     {(hasDeposited || memberData?.isMember) && (
                       <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
@@ -317,7 +318,7 @@ export const DaoOnboardingModal: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs text-[#64748B] font-jakarta leading-relaxed">
-                    Fixed $300 TROB council seat contribution with instant 300/N cashback rule.
+                    Fixed $300 USD council seat contribution with instant 300/N cashback rule.
                   </p>
                   {priceData && (
                     <div className="text-[11px] font-semibold text-[#155EEF] pt-0.5">
@@ -353,7 +354,7 @@ export const DaoOnboardingModal: React.FC = () => {
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        <span>Deposit $300 TROB (TrobSafe)</span>
+                        <span>Deposit $300 USD in TROB (TrobSafe)</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

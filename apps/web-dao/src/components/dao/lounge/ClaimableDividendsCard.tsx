@@ -8,6 +8,7 @@ interface ClaimableDividendsCardProps {
   initialAmount?: number;     // Unclaimed fallback if any (normally 0)
   pushedAmountUsd?: number;   // Total USD pushed directly to wallet
   pushedAmountTrob?: number;  // Total TROB pushed directly to wallet
+  priceUsd?: number;          // Live TROB/USD market price
   walletAddress?: string;
 }
 
@@ -15,6 +16,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   initialAmount = 0,
   pushedAmountUsd = 0,
   pushedAmountTrob = 0,
+  priceUsd,
   walletAddress,
 }) => {
   const wallet = useWallet();
@@ -69,10 +71,11 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   };
 
   const displayPushedUsd = pushedAmountUsd > 0 ? pushedAmountUsd : 0;
+  const effectivePrice = priceUsd && priceUsd > 0 ? priceUsd : 0.056;
   const displayPushedTrob = pushedAmountTrob > 0
     ? pushedAmountTrob.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : displayPushedUsd > 0
-    ? (displayPushedUsd / 0.055).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? (displayPushedUsd / effectivePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '0.00';
 
   return (

@@ -70,6 +70,7 @@ export const DaoHeader: React.FC = () => {
     if (typeof window === 'undefined') return;
     const dev =
       sessionStorage.getItem('equora_dao_preview') === 'true' ||
+      sessionStorage.getItem('equora_dao_preview_mode') === 'true' ||
       localStorage.getItem('equora_dev_mode') === 'true' ||
       window.location.search.includes('dev=');
     setIsDevMode(dev);

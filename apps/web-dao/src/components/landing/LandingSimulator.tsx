@@ -805,7 +805,7 @@ export const LandingSimulator: React.FC = () => {
                   </svg>
                 </div>
                 <h4>Deposit contribution</h4>
-                <div className="amt">$300<small>Trob</small></div>
+                <div className="amt">$300<small>USD</small></div>
                 <p>Uniform protocol entry contribution across all Genesis seats.</p>
               </div>
 
@@ -817,7 +817,7 @@ export const LandingSimulator: React.FC = () => {
                   </svg>
                 </div>
                 <h4>Max inflow (cap)</h4>
-                <div className="amt">$<span id="cap" ref={capRef}>1,500</span><small>Trob</small></div>
+                <div className="amt">$<span id="cap" ref={capRef}>1,500</span><small>USD</small></div>
                 <div className="x5" id="x5" ref={x5Ref}>
                   <i></i><i></i><i></i><i></i><i></i>
                 </div>
@@ -834,7 +834,7 @@ export const LandingSimulator: React.FC = () => {
             </div>
 
             <Link href="/dao" className="cta">
-              Join Genesis Council ($300 TROB)
+              Join Genesis Council ($300 Entry)
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>

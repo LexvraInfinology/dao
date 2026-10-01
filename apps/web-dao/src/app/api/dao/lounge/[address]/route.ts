@@ -15,6 +15,10 @@ export async function GET(
     return NextResponse.json(backendRes);
   }
 
+  const bttPriceUsd = 0.056;
+  const earningsCapUsd = 1500;
+  const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
+
   const fallbackLounge = {
     isMember: false,
     address,
@@ -25,15 +29,15 @@ export async function GET(
     claimableDividendsUsd: 0,
     totalReceivedBtt: 0,
     totalReceivedUsd: 0,
-    earningsCapBtt: 1500,
-    earningsCapUsd: 82.5,
+    earningsCapBtt,
+    earningsCapUsd,
     pushedBtt: 0,
     pushedUsd: 0,
     capProgressPct: 0,
-    remainingCapBtt: 1500,
-    remainingCapUsd: 82.5,
+    remainingCapBtt: earningsCapBtt,
+    remainingCapUsd: earningsCapUsd,
     isCapped: false,
-    bttPriceUsd: 0.055,
+    bttPriceUsd,
   };
 
   return NextResponse.json({

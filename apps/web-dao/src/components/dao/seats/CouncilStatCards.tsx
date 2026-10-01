@@ -69,12 +69,12 @@ export const CouncilStatCards: React.FC = () => {
               <Clock className="w-4 h-4" />
             </div>
             <div className="text-right">
-              <div className="text-base sm:text-lg font-bold font-sans text-[#14304A] truncate">{entryTrob} TROB</div>
-              <div className="text-[10px] sm:text-xs font-medium text-[#4F6D87]">Entry Amount</div>
+              <div className="text-base sm:text-lg font-bold font-sans text-[#14304A] truncate">$300 USD</div>
+              <div className="text-[10px] sm:text-xs font-medium text-[#4F6D87]">Seat Entry Cost</div>
             </div>
           </div>
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between text-[10px]">
-            <span className="text-[#4F6D87]">Fixed $300</span>
+            <span className="text-[#4F6D87]">≈ {entryTrob} TROB</span>
             <span className="text-[#0E62E4] font-medium">300/N Return</span>
           </div>
         </div>

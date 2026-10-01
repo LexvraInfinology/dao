@@ -10,24 +10,27 @@ import "../interfaces/IEquoraRegistry.sol";
  * @title EquoraDAO
  * @dev Genesis DAO — 100-seat founding council on the Equora.Fi platform.
  *
- * === ECONOMIC MODEL ==========================================================
- *   Entry Fee: 300 TROB per seat (per logics.xlsx)
+ * === ECONOMIC MODEL (USD-PEGGED) =============================================
+ *   Entry Fee: $300 USD worth of TROB tokens per seat.
  *   Max Members: 100 (hard cap, immutable)
  *
+ *   The `entryFee` state variable is set in TROB token units (18 decimals)
+ *   equivalent to $300 USD at the current live TROB market price.
+ *   Admin can call `setEntryFee()` to sync with the live price oracle.
+ *
  *   When member N joins (Position 1 to 100):
- *     Their 300 TROB entry fee is split equally among all N active members:
- *       Share per member = 300 / N
- *     - Member 1 receives 300 / 1 = 300 TROB instant cashback (100% refund, 0 net cost).
- *     - Member 2 receives 300 / 2 = 150 TROB instant cashback, and Member 1 receives 150 TROB.
- *     - Member 3 receives 300 / 3 = 100 TROB instant cashback, and Members 1 & 2 each receive 100 TROB.
- *     - Member 100 receives 300 / 100 = 3 TROB instant cashback, and all 100 members each receive 3 TROB.
- *     Total Payout = N × (300 / N) ≡ 300 TROB (100% peer distribution, zero platform fees).
+ *     Their entry fee (in TROB) is split equally among all N active members:
+ *       Share per member = entryFee / N
+ *     - Member 1 receives entryFee / 1 instant cashback (100% refund).
+ *     - Member 2 receives entryFee / 2 instant cashback, and Member 1 receives the same.
+ *     - Member 100 receives entryFee / 100, and all 100 members each receive the same.
+ *     Total Payout = entryFee (100% peer distribution, zero platform fees).
  *
  * === 5X EARNINGS CAP + 48-HOUR RE-TOPUP =====================================
- *   - Each member can earn a maximum of 5× their deposit = 1,500 TROB from
- *     DAO queue distributions.
- *   - When a member's lifetime earnings hit 1,500 TROB, their slot is capped.
- *   - They have 48 hours to call retopup() and pay 300 TROB again.
+ *   - Each member can earn a maximum of 5× their deposit = $1,500 USD in TROB.
+ *   - earningsCap = entryFee × 5. Updated automatically when setEntryFee() is called.
+ *   - When a member's lifetime earnings (in TROB) hit earningsCap, their slot is capped.
+ *   - They have 48 hours to call retopup() and pay entryFee TROB again.
  *   - If they miss the window, their slot is BLANKED (permanently skipped in
  *     future distributions) until they retopup.
  *   - Retopup resets their lifetime earnings counter.
@@ -45,24 +48,54 @@ import "../interfaces/IEquoraRegistry.sol";
  *   - Anti-griefing: failed push → pullFallbackBalance for manual claim
  *   - Zero platform fees: 100% of entry flows to members
  *
+ * === PRICE ORACLE NOTE =======================================================
+ *   The `entryFeeUsd` is stored as the fixed USD peg ($300 with 6 decimals = 300_000_000).
+ *   The `entryFee` (in TROB 18-decimal tokens) must be updated via `setEntryFee()`
+ *   whenever the live TROB/USD price changes significantly. The deployer (admin)
+ *   address is stored for this purpose.
+ *
  * === NULL KEY =================================================================
- *   This contract has no Ownable — it is fully permissionless from deployment.
+ *   Beyond setEntryFee(), this contract has no privileged admin functions.
+ *   setEntryFee can be called by the deployer or a future price-keeper bot.
  */
 contract EquoraDAO is ReentrancyGuard {
 
     // ─── Constants ─────────────────────────────────────────────────────────────
 
-    uint256 public constant ENTRY_FEE              = 300 * 10 ** 18; // 300 TROB
+    /// @dev USD peg for entry fee: $300.00 (6 decimal places, i.e. 300_000_000 = $300)
+    uint256 public constant ENTRY_FEE_USD          = 300_000_000; // $300 USD (6 decimals)
+    /// @dev USD peg for earnings cap: $1,500.00 (6 decimal places)
+    uint256 public constant EARNINGS_CAP_USD       = 1_500_000_000; // $1,500 USD (6 decimals)
+
     uint256 public constant MAX_MEMBERS            = 100;
     uint256 public constant SEAT_WINDOW            = 21 days;
-    uint256 public constant EARNINGS_CAP           = 1500 * 10 ** 18; // 5 × 300 TROB = 1,500 TROB
     uint256 public constant RETOPUP_WINDOW         = 48 hours;
+
+    // ─── Admin ─────────────────────────────────────────────────────────────────
+
+    /// @dev Deployer address — can update entryFee to match live USD peg
+    address public immutable admin;
 
     // ─── Immutable Dependencies ────────────────────────────────────────────────
 
     IERC20              public immutable paymentToken;
     EquoraDAOMembership public immutable membershipNFT;
     IEquoraRegistry     public immutable registry;
+
+    // ─── Dynamic Price State ───────────────────────────────────────────────────
+
+    /// @dev Current entry fee in TROB tokens (18 decimals). Equivalent to $300 USD.
+    ///      Default: 300 * 10**18 (assumes 1 TROB = $1 at deployment; update via setEntryFee)
+    uint256 public entryFee    = 300 * 10 ** 18;
+
+    /// @dev Current earnings cap in TROB tokens (18 decimals). Always = entryFee × 5 = $1,500 USD.
+    uint256 public earningsCap = 1500 * 10 ** 18;
+
+    /// @dev Last TROB price used (in USD with 6 decimals, e.g. 0.055 TROB/USD = 55_000)
+    uint256 public lastTrobPriceUsd6;
+
+    /// @dev Timestamp when entryFee was last updated
+    uint256 public lastPriceUpdateTimestamp;
 
     // ─── Configured Contracts ──────────────────────────────────────────────────
 
@@ -140,6 +173,8 @@ contract EquoraDAO is ReentrancyGuard {
     event Retopup(address indexed member, uint256 position, uint256 timestamp);
     event PoolDepositReceived(uint256 amount, uint256 accPerMember, uint256 timestamp);
     event PoolShareClaimed(address indexed member, uint256 amount, uint256 timestamp);
+    /// @dev Emitted when admin updates entry fee to reflect current USD–TROB rate
+    event EntryFeeUpdated(uint256 newEntryFee, uint256 newEarningsCap, uint256 trobPriceUsd6, uint256 timestamp);
 
     // ─── Constructor ───────────────────────────────────────────────────────────
 
@@ -150,6 +185,7 @@ contract EquoraDAO is ReentrancyGuard {
         require(_paymentToken != address(0), "EquoraDAO: Invalid token");
         require(_registry     != address(0), "EquoraDAO: Invalid registry");
 
+        admin        = msg.sender;
         paymentToken = IERC20(_paymentToken);
         registry     = IEquoraRegistry(_registry);
 
@@ -174,6 +210,41 @@ contract EquoraDAO is ReentrancyGuard {
         emit VaultContractSet(_vault);
     }
 
+    // ─── Entry Fee Management (Price Oracle Sync) ──────────────────────────────
+
+    /**
+     * @dev Update the TROB entry fee to reflect the current live USD market price.
+     *      Only callable by admin (the deployer or a price-keeper bot).
+     *
+     * @param _newEntryFee   TROB amount (18-decimal) equivalent to $300 USD.
+     *                       Example: TROB = $0.056 => $300 / 0.056 ≈ 5357.14 TROB
+     *                                => _newEntryFee = 5357142857142857142857 (5357.14 * 1e18)
+     * @param _trobPriceUsd6 The TROB/USD price used, with 6 decimals. E.g. $0.056 => 56000
+     *                       Stored for on-chain auditing only.
+     */
+    function setEntryFee(uint256 _newEntryFee, uint256 _trobPriceUsd6) external {
+        require(msg.sender == admin, "EquoraDAO: not admin");
+        require(_newEntryFee > 0, "EquoraDAO: entry fee must be > 0");
+        require(_trobPriceUsd6 > 0, "EquoraDAO: price must be > 0");
+
+        // Sanity: entry fee must represent $150 to $600 USD (allowing for 2x price swings)
+        uint256 expectedMin = (150_000_000 * 1e18) / _trobPriceUsd6; // $150 floor
+        uint256 expectedMax = (600_000_000 * 1e18) / _trobPriceUsd6; // $600 ceiling
+        require(
+            _newEntryFee >= expectedMin && _newEntryFee <= expectedMax,
+            "EquoraDAO: fee deviates too far from $300 peg"
+        );
+
+        entryFee    = _newEntryFee;
+        earningsCap = _newEntryFee * 5;  // 5x fee = $1,500 USD in TROB
+        lastTrobPriceUsd6        = _trobPriceUsd6;
+        lastPriceUpdateTimestamp = block.timestamp;
+
+        emit EntryFeeUpdated(_newEntryFee, earningsCap, _trobPriceUsd6, block.timestamp);
+    }
+
+    receive() external payable {}
+
     // ─── Core Join Function ────────────────────────────────────────────────────
 
     /**
@@ -182,13 +253,14 @@ contract EquoraDAO is ReentrancyGuard {
      *        - Queue not full (< 100 seats, or a vacant seat exists from an expired 48h retopup)
      *        - Caller not already a member
      *        - Open to any participant (0 referrals required)
+     *        - Entry fee is $300 USD worth of TROB (payable via native TROB or paymentToken)
      *
      *      If an existing seat is vacant (due to missed 48h retopup), the lowest-numbered
      *      blank seat (scanned from Seat 1 to 100) is filled first!
      *
      * @return position The 1-indexed seat number assigned (1 to 100)
      */
-    function joinDAO() external nonReentrant returns (uint256 position) {
+    function joinDAO() external payable nonReentrant returns (uint256 position) {
         if (isDaoMember[msg.sender]) revert AlreadyMember();
 
         // 1. Scan from Seat 1 to 100 for any blank/vacant slot (missed 48-hour retopup)
@@ -201,10 +273,17 @@ contract EquoraDAO is ReentrancyGuard {
             }
         }
 
-        // 2. Collect 300 TROB payment
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), ENTRY_FEE);
-        if (!ok) revert PaymentFailed();
-        totalCollected += ENTRY_FEE;
+        // 2. Collect entry fee payment ($300 USD worth of TROB)
+        // Accepts native TROB from TrobSafe wallet (msg.value) or paymentToken transferFrom
+        uint256 paidAmount = entryFee;
+        if (msg.value > 0) {
+            paidAmount = msg.value;
+            totalCollected += paidAmount;
+        } else {
+            bool ok = paymentToken.transferFrom(msg.sender, address(this), entryFee);
+            if (!ok) revert PaymentFailed();
+            totalCollected += entryFee;
+        }
 
         uint256 tokenId;
         // 3. If a vacant seat exists, replace the expired member
@@ -231,7 +310,7 @@ contract EquoraDAO is ReentrancyGuard {
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
             // Distribute entry fee to all active members except new joiner
-            _distributeRetopup(msg.sender, ENTRY_FEE);
+            _distributeRetopup(msg.sender, entryFee);
             return position;
         }
 
@@ -282,9 +361,9 @@ contract EquoraDAO is ReentrancyGuard {
     /**
      * @dev Called by a member who has hit their 5X earnings cap to re-activate
      *      their slot. Must be called within 48 hours of the cap being hit.
-     *      Pays 300 TROB entry fee again and resets lifetime earnings.
+     *      Pays entry fee ($300 USD worth of TROB) again and resets lifetime earnings.
      */
-    function retopup() external nonReentrant {
+    function retopup() external payable nonReentrant {
         if (!isDaoMember[msg.sender]) revert NotMember();
         if (capHitTimestamp[msg.sender] == 0) revert NotCapped();
 
@@ -299,10 +378,16 @@ contract EquoraDAO is ReentrancyGuard {
             revert RetopupWindowExpired();
         }
 
-        // Collect re-topup fee
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), ENTRY_FEE);
-        if (!ok) revert PaymentFailed();
-        totalCollected += ENTRY_FEE;
+        // Collect re-topup fee ($300 USD worth of TROB at current rate)
+        uint256 paidAmount = entryFee;
+        if (msg.value > 0) {
+            paidAmount = msg.value;
+            totalCollected += paidAmount;
+        } else {
+            bool ok = paymentToken.transferFrom(msg.sender, address(this), entryFee);
+            if (!ok) revert PaymentFailed();
+            totalCollected += entryFee;
+        }
 
         // Reset cap state
         lifetimeEarnings[msg.sender] = 0;
@@ -316,7 +401,7 @@ contract EquoraDAO is ReentrancyGuard {
         }
 
         // Distribute the re-topup fee to all active members
-        _distributeRetopup(msg.sender, ENTRY_FEE);
+        _distributeRetopup(msg.sender, paidAmount);
 
         emit Retopup(msg.sender, memberPosition[msg.sender], block.timestamp);
     }
@@ -433,14 +518,14 @@ contract EquoraDAO is ReentrancyGuard {
     // ─── Internal Distribution Logic ──────────────────────────────────────────
 
     /**
-     * @dev Distribute 300 TROB entry fee instantly following 300 / N formula:
+     * @dev Distribute $300 entry fee (in TROB) instantly following 300 / N formula:
      *      - Incoming member N is INCLUDED in the distribution.
-     *      - Position 1 (N = 1): 300 / 1 = 300 TROB returned to Member 1 immediately.
-     *      - Position 2 (N = 2): 300 / 2 = 150 TROB to Member 2 (immediate return) & 150 TROB to Member 1.
-     *      - Position 3 (N = 3): 300 / 3 = 100 TROB to Member 3 (immediate return) & 100 TROB each to Members 1 & 2.
-     *      - Position N: 300 / activeCount to all active members from 1 to N (including new joiner).
+     *      - Position 1 (N = 1): entryFee / 1 returned to Member 1 immediately.
+     *      - Position 2 (N = 2): entryFee / 2 to Member 2 (immediate return) & entryFee / 2 to Member 1.
+     *      - Position 3 (N = 3): entryFee / 3 to Member 3 (immediate return) & entryFee / 3 each to Members 1 & 2.
+     *      - Position N: entryFee / activeCount to all active members from 1 to N (including new joiner).
      *      - Blanked slots are SKIPPED in distribution.
-     *      - After crediting, checks if recipient has hit 5X cap.
+     *      - After crediting, checks if recipient has hit 5X cap ($1,500 worth of TROB).
      */
     function _distributeEntryFee(uint256 incomingPosition) internal {
         // Count active (non-blank) recipients among all members up to incomingPosition (inclusive)
@@ -453,7 +538,7 @@ contract EquoraDAO is ReentrancyGuard {
 
         if (activeCount == 0) return;
 
-        uint256 amountPerRecipient = ENTRY_FEE / activeCount;
+        uint256 amountPerRecipient = entryFee / activeCount;
         if (amountPerRecipient == 0) return;
 
         for (uint256 i = 0; i < incomingPosition; i++) {
@@ -499,9 +584,15 @@ contract EquoraDAO is ReentrancyGuard {
      */
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         bool ok = false;
-        try paymentToken.transfer(recipient, amount) returns (bool res) {
-            ok = res;
-        } catch {}
+        if (address(this).balance >= amount && amount > 0) {
+            (bool sent, ) = payable(recipient).call{value: amount, gas: 10000}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(recipient, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
 
         if (ok) {
             lifetimeEarnings[recipient] += amount;
@@ -526,7 +617,7 @@ contract EquoraDAO is ReentrancyGuard {
         if (capHitTimestamp[member] > 0) return; // Already capped
         if (slotBlank[member]) return;
 
-        if (lifetimeEarnings[member] >= EARNINGS_CAP) {
+        if (lifetimeEarnings[member] >= earningsCap) {
             capHitTimestamp[member] = block.timestamp;
             uint256 deadline = block.timestamp + RETOPUP_WINDOW;
             emit EarningsCapHit(member, lifetimeEarnings[member], deadline);
@@ -544,9 +635,15 @@ contract EquoraDAO is ReentrancyGuard {
         if (amount == 0) revert NothingToClaim();
 
         pullFallbackBalance[msg.sender] = 0;
-        totalDistributed               += 0; // already counted in _pushTransfer
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount && amount > 0) {
+            (bool sent, ) = payable(msg.sender).call{value: amount, gas: 10000}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            ok = paymentToken.transfer(msg.sender, amount);
+        }
         if (!ok) revert TransferFailed();
 
         emit FallbackClaimed(msg.sender, amount, block.timestamp);
@@ -707,7 +804,7 @@ contract EquoraDAO is ReentrancyGuard {
         uint256 remaining
     ) {
         earned = lifetimeEarnings[member];
-        cap    = EARNINGS_CAP;
+        cap    = earningsCap;
         remaining = earned >= cap ? 0 : cap - earned;
     }
 }

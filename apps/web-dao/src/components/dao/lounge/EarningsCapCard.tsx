@@ -63,7 +63,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
               / ${earningsCapUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="text-xs font-medium font-jakarta text-[#60739A]">TROB Earned</div>
+          <div className="text-xs font-medium font-jakarta text-[#60739A]">Earned (USD Value in TROB)</div>
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold ${zoneColor}`}>
             {zone}
           </span>
@@ -74,15 +74,15 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
         <div className={`space-y-4 pt-1 ${variant === 'auto' ? 'hidden lg:block' : ''}`}>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#60739A] font-medium font-jakarta">Earnings remaining until cap:</span>
-              <span className="font-bold font-jakarta text-[#071A4A]">${remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</span>
+              <span className="text-[#60739A] font-medium font-jakarta">Earnings remaining until 5X cap:</span>
+              <span className="font-bold font-jakarta text-[#071A4A]">${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="w-full h-2 rounded-full bg-[#F1F5F9] overflow-hidden">
               <div className="h-full rounded-full bg-[#00D492] transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
             </div>
           </div>
           <div className="rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] p-3.5 text-xs text-[#60739A] leading-relaxed font-jakarta">
-            When you reach ${earningsCapUsd.toLocaleString()} (5X), a $300 TROB re-top-up is required within 48 hours to reset your cap and continue earning.
+            When you reach ${earningsCapUsd.toLocaleString()} (5X of $300 entry fee worth of TROB), a $300 re-top-up is required within 48 hours to reset your cap and continue earning.
           </div>
         </div>
       )}
@@ -94,9 +94,9 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-1 text-xs pt-0.5">
             <div className="text-[#60739A] font-medium font-jakarta">
-              Remaining: <span className="font-bold text-[#071A4A]">${remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</span>
+              Remaining: <span className="font-bold text-[#071A4A]">${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <div className="text-[11px] text-[#94A3B8] font-jakarta">Re-top: $300 TROB</div>
+            <div className="text-[11px] text-[#94A3B8] font-jakarta">Re-top: $300</div>
           </div>
         </div>
       )}
@@ -106,17 +106,17 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
               <h3 className="text-base font-bold text-[#071A4A] font-jakarta flex items-center gap-2">
-                <Info className="w-4 h-4 text-[#155EEF]" />5X Earnings Cap Policy
+                <Info className="w-4 h-4 text-[#155EEF]" />5X Earnings Cap Policy ($1,500 Worth of TROB)
               </h3>
               <button onClick={() => setModalOpen(false)} className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold">✕</button>
             </div>
             <div className="space-y-3 text-xs text-[#4F6184] font-jakarta leading-relaxed">
-              <p>Each Council Seat earns up to <strong>5X its initial seat cost</strong> ($300 TROB × 5 = <strong>${earningsCapUsd.toLocaleString()} max cap</strong>).</p>
+              <p>Each Council Seat earns up to <strong>5X its initial entry cost in TROB</strong> ($300 entry fee × 5 = <strong>${earningsCapUsd.toLocaleString()} max cap</strong> worth of TROB).</p>
               <div className="p-3 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE]/60 space-y-1">
                 <div className="font-bold text-[#155EEF]">Current Status: {zone} ({Math.round(pct)}%)</div>
-                <div>You have accumulated ${pushedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} with ${remaining.toLocaleString(undefined, { maximumFractionDigits: 2 })} remaining.</div>
+                <div>You have accumulated ${pushedUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} with ${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining.</div>
               </div>
-              <p>Once the cap is reached, a <strong>$300 TROB re-top-up</strong> resets the 5X cycle.</p>
+              <p>Once the $1,500 cap is reached, a <strong>$300 re-top-up in TROB</strong> resets the 5X cycle.</p>
             </div>
             <button onClick={() => setModalOpen(false)} className="w-full py-2.5 rounded-xl bg-[#155EEF] text-white font-bold text-xs hover:bg-[#0052E6] transition-all">
               Understood

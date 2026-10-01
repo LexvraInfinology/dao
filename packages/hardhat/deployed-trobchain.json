@@ -1,0 +1,31 @@
+{
+  "network": "trobchain-testnet",
+  "deployer": "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr",
+  "deployedAt": "2026-09-30T11:46:35.580Z",
+  "contracts": {
+    "EquoraToken": {
+      "name": "EquoraToken",
+      "addressBase58": "TBeK724evPPgx5gASBuLPvJVpwzQiq3w8S",
+      "addressHex": "41125d714facc00d824dfcd50cc48872353f54c791",
+      "txHash": "0x7cd61fe7328eeb73680d66138a7c56977d7c954b24d0186d9626f1f8e8fc7048"
+    },
+    "EquoraRegistry": {
+      "name": "EquoraRegistry",
+      "addressBase58": "TMjsweQf3Nch5edNNRHv1Y6oB3AvDZQdox",
+      "addressHex": "41811c313f952ed77609b71094a7966994c3889cb9",
+      "txHash": "0x794cb4702419ea4626b56d948906074c611b14e149e1e172e785d3f34a845bd9"
+    },
+    "EquoraDAO": {
+      "name": "EquoraDAO",
+      "addressBase58": "TLrAb4JDCwoPRd5sd3rvvqRnup99i1e5qn",
+      "addressHex": "41775474f9cda2509e1887f029f5e9ee6ac15e1f23",
+      "txHash": "0xa171da039c9e99f1bed15ade6e43dd8c98a5013404b410a51a2ef47c6294ebc4"
+    },
+    "EquoraVault": {
+      "name": "EquoraVault",
+      "addressBase58": "TPdrgna9oJLohys2hjtK4s9YLpMXSbcRL4",
+      "addressHex": "4195e8e6494358c1e861d52fd2bee2a5ff0001cfbb",
+      "txHash": "0xde07ea63792c717dbbc3a1e0ade30ed8d10119588a6f459fa9ac4fceaea185c7"
+    }
+  }
+}

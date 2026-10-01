@@ -14,7 +14,7 @@ export const LandingFaq: React.FC = () => {
     },
     {
       q: 'How does the 300 / N cashback formula work?',
-      a: 'When you deposit 300 TROB to claim Seat #N, the smart contract splits the entire 300 TROB equally among all N active members (including you). You receive 300 / N TROB instant cashback directly to your wallet in the same transaction block, and every prior member (Seat 1 to N-1) simultaneously receives 300 / N TROB pushed directly to their wallets. For example: Member 1 gets 300 / 1 = 300 TROB (100% instant cashback); Member 2 gets 300 / 2 = 150 TROB (and Member 1 gets 150 TROB); Member 100 gets 300 / 100 = 3 TROB (and all 100 members each receive 3 TROB).',
+      a: 'When you deposit $300 USD (in TROB) to claim Seat #N, the smart contract splits the entire $300 entry equally among all N active members (including you). You receive 300 / N instant cashback directly to your wallet in the same transaction block, and every prior member (Seat 1 to N-1) simultaneously receives 300 / N pushed directly to their wallets. For example: Member 1 gets 300 / 1 = $300 (100% instant cashback); Member 2 gets 300 / 2 = $150 (and Member 1 gets $150); Member 100 gets 300 / 100 = $3 (and all 100 members each receive $3).',
     },
     {
       q: 'When is Retail Matrix launching?',

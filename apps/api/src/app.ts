@@ -96,6 +96,8 @@ export function createApp(): Express {
           isStale: price.isStale,
           seatEntryUsd: seatEntryUsd,
           seatEntryTrob: Math.ceil(trobAmountForSeat * 1000) / 1000,
+          earningsCapUsd: 1500,
+          earningsCapTrob: Math.ceil((1500 / price.priceUsd) * 1000) / 1000,
         },
       });
     } catch (err) {
@@ -170,6 +172,10 @@ export function createApp(): Express {
       res.json({ success: true, data: stats });
     } catch (err) {
       console.warn("[API] DB offline or unreachable, serving fallback DAO stats:", err);
+      // Fallback price (used only when DB is down)
+      const fallbackTrobPriceUsd = 0.0553;
+      const SEAT_ENTRY_USD       = 300;   // Always $300 USD
+      const EARNINGS_CAP_USD     = 1500;  // Always $1,500 USD (5x)
       res.json({
         success: true,
         data: {
@@ -177,12 +183,16 @@ export function createApp(): Express {
           activeMembers: 0,
           capacity: 100,
           remainingPositions: 100,
-          entryFeeBtt: 300,
-          earningsCapBtt: 1500,
+          // USD-pegged values
+          entryFeeUsd: SEAT_ENTRY_USD,
+          earningsCapUsd: EARNINGS_CAP_USD,
+          // TROB equivalents at fallback price
+          entryFeeBtt: SEAT_ENTRY_USD / fallbackTrobPriceUsd,
+          earningsCapBtt: EARNINGS_CAP_USD / fallbackTrobPriceUsd,
           totalCollectedBTT: 0,
           totalDistributedBTT: 0,
           isClosed: false,
-          bttPriceUsd: 0.0553,
+          bttPriceUsd: fallbackTrobPriceUsd,
           priceSource: "trobchain",
           priceUpdatedAt: new Date().toISOString(),
           dividendYieldApy: "0%",
@@ -790,13 +800,17 @@ export function createApp(): Express {
         0
       );
 
-      const earningsCapBtt = 1500; // 5 × 300 TROB = 1,500 TROB (per EquoraDAO.sol)
-      const earningsCapUsd = earningsCapBtt * priceData.priceUsd;
+      // USD-pegged economics: $300 entry fee, $1,500 cap (5x of $300)
+      const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
+      const earningsCapUsd = 1500; // $1,500 USD max cap
+      const earningsCapBtt = Math.round((earningsCapUsd / priceUsd) * 100) / 100; // $1,500 worth of TROB
       const pushedBtt = memberDetails.pushedAmountBtt;
-      const pushedUsd = pushedBtt * priceData.priceUsd;
+      const pushedUsd = memberDetails.pushedAmountUsdEstimate > 0
+        ? memberDetails.pushedAmountUsdEstimate
+        : pushedBtt * priceUsd;
+      const remainingCapUsd = Math.max(0, earningsCapUsd - pushedUsd);
       const remainingCapBtt = Math.max(0, earningsCapBtt - pushedBtt);
-      const remainingCapUsd = remainingCapBtt * priceData.priceUsd;
-      const capProgressPct = Math.min(100, (pushedBtt / earningsCapBtt) * 100);
+      const capProgressPct = Math.min(100, (pushedUsd / earningsCapUsd) * 100);
 
       // Rank pool cards for income channels
       const poolCards = await prisma.poolCard.findMany({

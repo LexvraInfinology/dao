@@ -26,11 +26,15 @@ export async function GET(req: NextRequest) {
     const { rows } = await queryNeon<any>(
       `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt"
        FROM "DaoMember"
+       WHERE LOWER(status) = 'active'
        ORDER BY position ASC
-       LIMIT ${limitNum} OFFSET ${offset}`
+       LIMIT $1 OFFSET $2`,
+      [limitNum, offset]
     );
 
-    const countRes = await queryNeon<{ count: string }>('SELECT count(*) as count FROM "DaoMember"');
+    const countRes = await queryNeon<{ count: string }>(
+      `SELECT count(*) as count FROM "DaoMember" WHERE LOWER(status) = 'active'`
+    );
     const total = parseInt(countRes.rows[0]?.count || '0', 10);
 
     return NextResponse.json({

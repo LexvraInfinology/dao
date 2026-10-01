@@ -29,7 +29,8 @@ export async function GET(
   // 2. Direct Serverless Neon Lookup (Vercel native)
   try {
     const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" WHERE address = '${address}' LIMIT 1`
+      `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+      [address.trim()]
     );
     if (rows.length > 0) {
       const m = rows[0];
@@ -67,12 +68,12 @@ export async function GET(
     console.warn('[member route] Neon lookup error:', dbErr);
   }
 
-  // Fallback for non-member / default lookup
-  const fallbackMember = {
+  // Non-member response
+  const nonMember = {
     isMember: false,
     position: null,
     nftTokenId: null,
-    status: 'ACTIVE',
+    status: 'unclaimed',
     joinedAt: undefined,
     pushedAmountBtt: 0,
     pushedAmountTrob: 0,
@@ -92,6 +93,6 @@ export async function GET(
 
   return NextResponse.json({
     success: true,
-    data: fallbackMember,
+    data: nonMember,
   });
 }

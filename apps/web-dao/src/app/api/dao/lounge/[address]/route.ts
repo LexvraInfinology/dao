@@ -23,7 +23,8 @@ export async function GET(
   // 2. Direct Serverless Neon Lookup (Vercel native)
   try {
     const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" WHERE address = '${address}' LIMIT 1`
+      `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+      [address.trim()]
     );
     if (rows.length > 0) {
       const m = rows[0];
@@ -40,9 +41,9 @@ export async function GET(
         success: true,
         data: {
           isMember: true,
-          address,
+          address: m.address,
           position: m.position,
-          nftTokenId: m.nftTokenId,
+          nftTokenId: m.nftTokenId || m.position,
           status: m.status || 'ACTIVE',
           claimableDividendsBtt: 0,
           claimableDividendsUsd: 0,
@@ -61,6 +62,24 @@ export async function GET(
           isCapped,
           bttPriceUsd,
           trobPriceUsd: bttPriceUsd,
+          soulboundPass: {
+            seatNumber: m.position,
+            memberId: `#${String(m.position).padStart(4, '0')}`,
+            tier: 'Genesis Council',
+            joinedAt: m.joinedAt,
+            nftTokenId: m.nftTokenId || m.position,
+          },
+          incomeChannels: {
+            daoSeats: {
+              earnedUsd: pushedUsd,
+              earnedBtt: pushedBtt,
+            },
+            matrixSlots: {
+              highestSlot: 0,
+              earnedUsd: 0,
+              earnedBtt: 0,
+            },
+          },
         },
       });
     }
@@ -68,12 +87,12 @@ export async function GET(
     console.warn('[lounge route] Neon fallback error:', dbErr);
   }
 
-  const fallbackLounge = {
+  const nonMemberLounge = {
     isMember: false,
     address,
     position: undefined,
     nftTokenId: undefined,
-    status: 'ACTIVE',
+    status: 'unclaimed',
     claimableDividendsBtt: 0,
     claimableDividendsUsd: 0,
     totalReceivedBtt: 0,
@@ -91,10 +110,15 @@ export async function GET(
     isCapped: false,
     bttPriceUsd,
     trobPriceUsd: bttPriceUsd,
+    soulboundPass: null,
+    incomeChannels: {
+      daoSeats: { earnedUsd: 0, earnedBtt: 0 },
+      matrixSlots: { highestSlot: 0, earnedUsd: 0, earnedBtt: 0 },
+    },
   };
 
   return NextResponse.json({
     success: true,
-    data: fallbackLounge,
+    data: nonMemberLounge,
   });
 }

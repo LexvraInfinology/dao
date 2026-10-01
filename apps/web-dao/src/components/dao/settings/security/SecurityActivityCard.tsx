@@ -38,33 +38,7 @@ export default function SecurityActivityCard() {
     return <Monitor className={cls} />;
   };
 
-  // Fallback events when not authenticated or no txs yet
-  const fallbackEvents = [
-    {
-      id: 'session',
-      title: auth.isAuthenticated ? 'Session Active' : 'No Active Session',
-      subtitle: auth.isAuthenticated ? 'JWT Authenticated' : 'Connect wallet to sign in',
-      time: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-      shortTime: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      badgeText: auth.isAuthenticated ? 'Active' : 'Inactive',
-      badgeType: auth.isAuthenticated ? 'success' : 'info',
-      iconMd: <Monitor className="w-5 h-5 text-[#155EEF]" />,
-      iconSm: <Monitor className="w-4 h-4 text-[#155EEF]" />,
-    },
-    {
-      id: 'wallet',
-      title: 'Wallet Security',
-      subtitle: 'Secured by SIWE (EIP-4361)',
-      time: '',
-      shortTime: '',
-      badgeText: 'SIWE',
-      badgeType: 'info',
-      iconMd: <Shield className="w-5 h-5 text-[#155EEF]" />,
-      iconSm: <Shield className="w-4 h-4 text-[#155EEF]" />,
-    },
-  ];
-
-  // Build display events: real txs when available, fallback otherwise
+  // Build display events: real txs when available, live authenticated session if active, otherwise empty
   const displayEvents = loading
     ? []
     : recentTxs.length > 0
@@ -79,7 +53,21 @@ export default function SecurityActivityCard() {
         iconMd: getIcon(tx.type, 'md'),
         iconSm: getIcon(tx.type, 'sm'),
       }))
-    : fallbackEvents;
+    : auth.isAuthenticated
+    ? [
+        {
+          id: 'session-live',
+          title: 'Active Wallet Session',
+          subtitle: `Connected as ${activeAddress ? `${activeAddress.slice(0, 8)}…${activeAddress.slice(-6)}` : 'SIWE Authenticated'}`,
+          time: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+          shortTime: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          badgeText: 'Active',
+          badgeType: 'success',
+          iconMd: <Shield className="w-5 h-5 text-[#155EEF]" />,
+          iconSm: <Shield className="w-4 h-4 text-[#155EEF]" />,
+        },
+      ]
+    : [];
 
   const BadgeDesktop = ({ type, text }: { type: string; text: string }) =>
     type === 'success' ? (

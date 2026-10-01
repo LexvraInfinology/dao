@@ -10,7 +10,9 @@ export const LandingQueueArena: React.FC = () => {
   const { data: stats } = useDaoStats(30_000);
   const seatsClaimed = stats?.memberCount ?? 0;
   const isFull = seatsClaimed >= 100;
-  const seatStatus = isFull ? 'All Slots Filled' : 'DAO positions are vacant';
+  const seatStatus = isFull
+    ? 'All 100 Seats Filled'
+    : `${seatsClaimed}/100 Seats Claimed (${Math.max(0, 100 - seatsClaimed)} Available)`;
 
   const cards = [
     {

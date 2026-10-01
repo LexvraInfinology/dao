@@ -158,7 +158,7 @@ export async function checkServerlessEligibility(address: string) {
   // If already in DaoMember table in Neon DB, bypass verification
   try {
     const memberRes = await queryNeon(
-      `SELECT "memberAddress", "isActive" FROM "DaoMember" WHERE LOWER("memberAddress") = LOWER($1)`,
+      `SELECT "address", "status" FROM "DaoMember" WHERE LOWER("address") = LOWER($1)`,
       [canonical]
     );
     if (memberRes.rows.length > 0) {

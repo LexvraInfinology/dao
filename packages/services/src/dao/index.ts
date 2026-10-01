@@ -468,3 +468,4 @@ export class DaoService {
 
 export const daoService = new DaoService();
 export * from "./model";
+export * from "./resourceCalculator";

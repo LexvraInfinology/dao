@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ShieldCheck,
   Loader2,
@@ -14,28 +13,66 @@ import {
   ExternalLink,
   Smartphone,
   LogOut,
-  RefreshCw,
+  Zap,
+  Radio,
+  Vote,
+  Sparkles,
+  Info,
+  Check,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { WalletModal } from '@/components/ui/WalletModal';
+import { TermsModal } from '@/components/dao/TermsModal';
 import { triggerSmartConnectWallet, TROBSAFE_CHROME_STORE_URL } from '@/utils/walletConnect';
 
-// ─── Contract addresses from env ─────────────────────────────────────────────
-const DAO_CONTRACT_ADDRESS  = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+// ─── Constants & Addresses ───────────────────────────────────────────────────
+const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
+export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Eligibility Types (matches PDF) ──────────────────────────────────────────
 
-type GateState =
-  | 'detecting_wallet'   // waiting for extension probe
-  | 'not_installed'      // TrobSafe not found
-  | 'wallet_required'    // installed but not connected
-  | 'checking_member'    // API call in flight
-  | 'payment_required'   // connected but not a member
-  | 'paying'             // tx in flight
-  | 'pay_success'        // tx confirmed
-  | 'access_granted';    // member — render children
+interface EligibilityData {
+  address: string;
+  canonicalAddress: string;
+  condition1: {
+    passed: boolean;
+    creationTimestamp: number | null;
+    creationDate: string | null;
+    minRequiredDate: string;
+    reason?: string;
+  };
+  condition2: {
+    passed: boolean;
+    energy: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    bandwidth: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    srVote: {
+      voted: boolean;
+      officialSrAddress: string;
+      passed: boolean;
+    };
+    missingRequirements: string[];
+  };
+  whatsapp: {
+    joined: boolean;
+    verifiedAt: string | null;
+  };
+  eligibleToDeposit: boolean;
+  status: string;
+  formula?: any;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -44,21 +81,32 @@ interface DaoAccessGateProps {
 }
 
 export function DaoAccessGate({ children }: DaoAccessGateProps) {
-  const router = useRouter();
   const wallet = useWallet();
   const auth   = useAuthContext();
 
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen]   = useState(false);
+  const [termsAccepted, setTermsAccepted]     = useState(false);
+
+  const [eligibility, setEligibility]         = useState<EligibilityData | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [eligibilityError, setEligibilityError]     = useState<string | null>(null);
+
+  // WhatsApp cross-check state (Telegram bot style)
+  const [waJoining, setWaJoining]             = useState(false);
+  const [waVerifying, setWaVerifying]         = useState(false);
+  const [waError, setWaError]                 = useState<string | null>(null);
+
+  // Resource staking & SR voting helper state
+  const [isStakingHelper, setIsStakingHelper] = useState(false);
+
+  // Payment states
   const [payError, setPayError]               = useState<string | null>(null);
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [detectTimeout, setDetectTimeout]     = useState(false);
 
-  const handleConnectClick = () => {
-    triggerSmartConnectWallet({
-      wallet,
-      openModal: () => setWalletModalOpen(true),
-    });
-  };
+  // Wallet address resolution
+  const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || '';
 
   // Quick fallback timeout for detection probe (800ms max)
   useEffect(() => {
@@ -66,43 +114,123 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch membership status only when we have an address
-  const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || '';
+  // Fetch DAO membership details (position > 0)
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
     useDaoMember(activeAddress);
 
-  // Fetch live TROB price for the $300 USD entry calculation (polls every 30s)
+  // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
 
-  // Strictly verify active membership (must have confirmed seat in DAO)
+  // Strict verified membership
   const isVerifiedMember = Boolean(
     (memberData?.isMember && (memberData.position ?? 0) > 0) ||
     ((auth.user?.daoPosition ?? 0) > 0)
   );
 
-  // ── Derive gate state (strict payment & membership verification) ────────────
-  const gateState: GateState = (() => {
-    if (wallet.status === 'detecting' && !detectTimeout) return 'detecting_wallet';
-    if (wallet.status === 'not_installed' || (wallet.status === 'detecting' && detectTimeout && !wallet.isInstalled)) {
-      return 'not_installed';
+  // ── Fetch protocol eligibility conditions from API ──────────────────────────
+  const fetchEligibility = useCallback(async () => {
+    if (!activeAddress) return;
+    setEligibilityLoading(true);
+    try {
+      const res = await fetch(`/api/dao/eligibility/${encodeURIComponent(activeAddress)}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setEligibility(json.data);
+      } else {
+        setEligibilityError(json.error || 'Failed to check protocol eligibility');
+      }
+    } catch (err: unknown) {
+      setEligibilityError((err as Error).message);
+    } finally {
+      setEligibilityLoading(false);
     }
-    if (!wallet.isConnected && !activeAddress) return 'wallet_required';
-    if (memberLoading && !memberData)          return 'checking_member';
-    if (isVerifiedMember)                      return 'access_granted';
-    return 'payment_required';
-  })();
+  }, [activeAddress]);
 
-  // If payment succeeded, re-check membership
   useEffect(() => {
-    if (payTxHash && payTxHash !== 'pending') {
-      refetchMember();
+    if (activeAddress && wallet.isConnected) {
+      fetchEligibility();
     }
-  }, [payTxHash, refetchMember]);
+  }, [activeAddress, wallet.isConnected, fetchEligibility]);
 
-  // ── Seat claim handler: $300 worth of TROB at real-time price ──────────────
+  // ── WhatsApp Cross-Check Verification (Telegram-Style Bot Check) ───────────
+  const handleJoinWhatsApp = () => {
+    setWaJoining(true);
+    window.open(OFFICIAL_WHATSAPP_URL, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleVerifyWhatsApp = async () => {
+    if (!activeAddress) {
+      setWaError('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    setWaVerifying(true);
+    setWaError(null);
+    try {
+      const res = await fetch('/api/dao/verify-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: activeAddress }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to verify WhatsApp group membership.');
+      }
+      await fetchEligibility();
+    } catch (err: unknown) {
+      setWaError((err as Error).message);
+    } finally {
+      setWaVerifying(false);
+    }
+  };
+
+  // ── 1-Click Resource Staking & SR Voting Assistant ─────────────────────────
+  const handleStakeAndVote = async () => {
+    if (!activeAddress) return;
+    setIsStakingHelper(true);
+    setPayError(null);
+    try {
+      const res = await fetch('/api/dao/stake-resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: activeAddress,
+          energyStakeTrob: eligibility?.formula?.dao?.energyStakeTrob ?? 1070,
+          bandwidthStakeTrob: eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237,
+          srVoted: true,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to verify resource staking.');
+      }
+      await fetchEligibility();
+    } catch (err: unknown) {
+      setPayError((err as Error).message);
+    } finally {
+      setIsStakingHelper(false);
+    }
+  };
+
+  // ── Seat Payment Handler: $300 worth of TROB at live rate ──────────────────
   const handleClaimSeat = async () => {
     if (!wallet.isConnected) {
       setPayError('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    if (!termsAccepted) {
+      setPayError('You must accept the Terms & Conditions before registering.');
+      return;
+    }
+    if (!eligibility?.condition1.passed) {
+      setPayError(eligibility?.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
+      return;
+    }
+    if (!eligibility?.condition2.passed) {
+      setPayError(`Condition 2 Required: ${eligibility?.condition2.missingRequirements.join('; ')}`);
+      return;
+    }
+    if (!eligibility?.whatsapp.joined) {
+      setPayError('You must join and verify the official WhatsApp channel before registering.');
       return;
     }
     if (!priceData || priceData.priceUsd <= 0) {
@@ -122,7 +250,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     try {
       let txId: string | null = null;
 
-      // 1. On-chain contract call via TrobSafe if valid contract is deployed
+      // 1. Trigger smart contract on TrobChain if deployed
       if (
         DAO_CONTRACT_ADDRESS &&
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
@@ -148,12 +276,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         }
       }
 
-      // 2. Register and verify membership on the backend API
+      // 2. Register membership in database via backend API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: activeAddr, txHash: txId }),
+        body: JSON.stringify({
+          address: activeAddr,
+          txHash: txId,
+          termsAccepted: true,
+        }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -180,304 +312,397 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     } catch { /* ignore */ }
   };
 
-  // ── Access granted: verified paying member ─────────────────────────────────
-  if (gateState === 'access_granted') {
+  // ── Access Granted: Render DAO Dashboard Layout ────────────────────────────
+  if (isVerifiedMember) {
     return <>{children}</>;
   }
 
-  // ── Gate screens: strictly blocks dashboard access ──────────────────────────
+  // Calculate blockers
+  const isEligibleToPay = Boolean(
+    wallet.isConnected &&
+    termsAccepted &&
+    eligibility?.condition1.passed &&
+    eligibility?.condition2.passed &&
+    eligibility?.whatsapp.joined &&
+    priceData &&
+    priceData.seatEntryTrob > 0
+  );
+
   return (
     <>
-      <div className="min-h-screen bg-[#F6F9FF] flex flex-col items-center justify-center p-4 sm:p-6 relative select-none">
-        {/* Ambient Top Logo Bar */}
-        <div className="mb-6 flex items-center gap-2.5">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl bg-[#071A4A] p-1.5 flex items-center justify-center shadow-md">
-              <img
-                src="/icons/equora-symbol.svg"
-                alt="EQUORA"
-                className="w-full h-full object-contain"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tight text-[#071A4A] leading-tight">
-                EQUORA <span className="text-[#155EEF]">DAO</span>
-              </span>
-              <span className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider">
-                Genesis Council Gate
-              </span>
-            </div>
-          </Link>
-        </div>
+      <div className="min-h-screen bg-[#060D1E] text-slate-100 flex flex-col items-center justify-center p-3 sm:p-6 relative select-none font-sans overflow-x-hidden">
+        {/* Soft Ambient Background Glows */}
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="w-full max-w-md">
+        {/* ── Main Mobile-Style Registration Card (matches screenshot) ────── */}
+        <div className="w-full max-w-[440px] bg-gradient-to-b from-[#0D1A35] via-[#091326] to-[#060D1E] rounded-[28px] border border-slate-700/60 shadow-[0_20px_60px_rgba(0,0,0,0.7)] p-5 sm:p-7 space-y-5 relative backdrop-blur-2xl">
 
-          {/* ── Detecting wallet ──────────────────────────────────────────── */}
-          {gateState === 'detecting_wallet' && (
-            <GateCard icon={<Loader2 className="w-8 h-8 text-[#155EEF] animate-spin" />} title="Detecting TrobSafe…">
-              <p className="text-sm text-[#64748B] text-center">Looking for your TrobSafe wallet extension.</p>
-            </GateCard>
-          )}
-
-          {/* ── Not installed ─────────────────────────────────────────────── */}
-          {gateState === 'not_installed' && (
-            <GateCard icon={<Download className="w-8 h-8 text-[#155EEF]" />} title="TrobSafe Wallet Required">
-              <p className="text-sm text-[#64748B] text-center leading-relaxed mb-6">
-                Access to the EQUORA Genesis DAO requires the TrobSafe wallet to sign transactions and verify Council membership.
-              </p>
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={handleConnectClick}
-                  className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(14,98,228,0.25)] transition-all cursor-pointer"
-                >
+          {/* Top Brand Header: Emblem + EQUORA DAO */}
+          <div className="text-center space-y-2 pt-1">
+            <div className="flex justify-center">
+              <div className="relative group">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#155EEF] via-[#0D3B99] to-[#0A1733] border border-blue-400/30 p-2.5 flex items-center justify-center shadow-[0_8px_24px_rgba(21,94,239,0.35)]">
                   <img
-                    src="/trobsafe-logo.png"
-                    alt="TrobSafe"
-                    className="w-4 h-4 rounded object-cover"
+                    src="/icons/equora-symbol.svg"
+                    alt="EQUORA"
+                    className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
-                  <span>Connect TrobSafe Extension</span>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center text-[9px] font-black text-slate-950 shadow-sm">
+                    👑
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h1 className="text-2xl font-black tracking-wider uppercase font-sora text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400">
+              EQUORA DAO
+            </h1>
+
+            <p className="text-xs text-slate-400 leading-relaxed max-w-[340px] mx-auto">
+              {!wallet.isConnected
+                ? 'Connect your TrobSafe wallet to verify protocol conditions and claim your Genesis Council seat.'
+                : 'Wallet connected. Fulfill protocol requirements and submit real-time $300 TROB entry payment.'}
+            </p>
+          </div>
+
+          {/* ── 1. YOUR WALLET (Screenshot input style) ────────────────────── */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-300">
+                Your Wallet
+              </label>
+              {wallet.isConnected && (
+                <button
+                  type="button"
+                  onClick={handleDisconnect}
+                  className="text-[10px] font-bold text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span>Switch</span>
                 </button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              )}
+            </div>
+
+            {wallet.isConnected && activeAddress ? (
+              <div className="relative">
+                <div className="w-full py-3 px-3.5 rounded-xl bg-[#040814] border border-slate-700/80 text-xs font-mono font-medium text-slate-200 flex items-center justify-between shadow-inner">
+                  <span className="truncate pr-2">{activeAddress}</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 pl-1">
+                  Connected from TrobSafe. Address cannot be typed manually.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => triggerSmartConnectWallet({ wallet, openModal: () => setWalletModalOpen(true) })}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#155EEF] hover:bg-[#004EEB] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(21,94,239,0.35)] transition-all cursor-pointer"
+                >
+                  <Wallet className="w-4 h-4" />
+                  <span>Connect TrobSafe Wallet</span>
+                </button>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
                   <a
                     href={TROBSAFE_CHROME_STORE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="py-2.5 px-3 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="hover:text-blue-400 underline flex items-center gap-1"
                   >
-                    <ExternalLink className="w-3.5 h-3.5 text-[#0E62E4]" />
-                    <span>Chrome Web Store</span>
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Get Chrome Extension</span>
                   </a>
                   <a
                     href="/downloads/trobsafe.apk"
                     download="trobsafe.apk"
-                    className="py-2.5 px-3 rounded-xl font-semibold text-xs text-[#071A4A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="hover:text-blue-400 underline flex items-center gap-1"
                   >
-                    <Smartphone className="w-3.5 h-3.5 text-[#0E62E4]" />
-                    <span>Android APK</span>
+                    <Smartphone className="w-3 h-3" />
+                    <span>Download APK</span>
                   </a>
                 </div>
-
-                <div className="pt-3 text-center">
-                  <Link href="/" className="text-xs font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline inline-flex items-center gap-1">
-                    ← Back to EQUORA.FI
-                  </Link>
-                </div>
               </div>
-            </GateCard>
-          )}
+            )}
+          </div>
 
-          {/* ── Wallet required ───────────────────────────────────────────── */}
-          {gateState === 'wallet_required' && (
-            <GateCard icon={<Wallet className="w-8 h-8 text-[#155EEF]" />} title="Connect Your Wallet">
-              <p className="text-sm text-[#64748B] text-center leading-relaxed mb-6">
-                Connect your TrobSafe wallet to verify your Genesis Council seat and enter the DAO dashboard.
-              </p>
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={handleConnectClick}
-                  className="w-full py-3.5 rounded-xl font-semibold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] flex items-center justify-center gap-2 shadow-[0_6px_16px_rgba(21,94,239,0.3)] transition-all cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Connect TrobSafe Wallet</span>
-                </button>
-
-                <div className="pt-3 text-center">
-                  <Link href="/" className="text-xs font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline inline-flex items-center gap-1">
-                    ← Back to EQUORA.FI
-                  </Link>
-                </div>
+          {/* ── 2. Real-Time Entry Price Box ($300 Peg) ────────────────────── */}
+          <div className="p-3.5 rounded-2xl bg-[#09152B] border border-blue-500/30 space-y-1.5 shadow-sm">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-slate-300">Council Seat Entry Fee</span>
+              <span className="font-mono text-blue-400">
+                {priceData ? `@ $${priceData.priceUsd.toFixed(4)} / TROB` : 'Fetching live rate…'}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black font-sora text-white tracking-tight">
+                  {priceData
+                    ? priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                    : '…'}
+                </span>
+                <span className="text-xs font-bold text-blue-400">TROB</span>
               </div>
-            </GateCard>
-          )}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                Fixed $300.00 USD
+              </span>
+            </div>
+          </div>
 
-          {/* ── Checking membership ───────────────────────────────────────── */}
-          {gateState === 'checking_member' && (
-            <GateCard icon={<Loader2 className="w-8 h-8 text-[#155EEF] animate-spin" />} title="Verifying Membership">
-              <p className="text-sm text-[#64748B] text-center">Checking Genesis Council seat status on-chain…</p>
-            </GateCard>
-          )}
+          {/* ── 3. Protocol Deposit Requirements Checklist (PDF Page 4) ─────── */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-extrabold uppercase tracking-wider text-slate-300 text-[11px]">
+                Protocol Deposit Requirements
+              </span>
+              {eligibilityLoading && <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />}
+            </div>
 
-          {/* ── Payment required ($300 USD worth of TROB) ─────────────────── */}
-          {gateState === 'payment_required' && !payTxHash && (
-            <GateCard
-              icon={<ShieldCheck className="w-8 h-8 text-[#155EEF]" />}
-              title="Claim Your Council Seat"
-            >
-              <p className="text-sm text-[#64748B] text-center leading-relaxed mb-5">
-                Access to the Genesis DAO dashboard requires an active Council Seat.
-                Claim yours with a one-time entry payment of <strong className="text-[#071A4A]">$300 worth of TROB</strong>.
-              </p>
-
-              {/* Price card showing real-time fetched TROB */}
-              <div className="mb-5 p-4 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-semibold text-[#344054]">Live Entry Amount</span>
-                  </div>
-                  <span className="text-xs font-mono font-medium text-[#155EEF]">
-                    {priceData
-                      ? `@ $${priceData.priceUsd.toFixed(4)} / TROB`
-                      : 'Fetching live rate…'}
+            <div className="p-3.5 rounded-2xl bg-[#060E1D] border border-slate-800 space-y-2.5 text-xs">
+              {/* Energy Requirement */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="text-slate-300">
+                    Energy Stake ({eligibility?.formula?.dao?.energyStakeTrob ?? 1070} TROB)
                   </span>
                 </div>
-
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-[#071A4A] font-sora tracking-tight">
-                    {priceData
-                      ? priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                      : '…'}
+                {eligibility?.condition2.energy.passed ? (
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Staked
                   </span>
-                  <span className="text-base font-bold text-[#155EEF]">TROB</span>
-                </div>
-                <div className="text-xs font-medium text-[#475467] mt-1 flex items-center justify-between">
-                  <span>≈ $300.00 USD · Pegged Genesis Council Entry</span>
-                  {priceLoading && <RefreshCw className="w-3 h-3 text-[#155EEF] animate-spin" />}
-                </div>
-
-                {priceData?.isStale && (
-                  <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span>Price cached; updating with latest market feed…</span>
-                  </div>
+                ) : (
+                  <span className="text-[11px] font-semibold text-amber-400">
+                    {eligibility?.condition2.energy.stakedTrob ?? 0} / {eligibility?.formula?.dao?.energyStakeTrob ?? 1070}
+                  </span>
                 )}
               </div>
 
-              {/* Verified Council Benefits */}
-              <div className="mb-5 space-y-2">
-                {[
-                  '1 of 100 sovereign Genesis Council seats',
-                  '25% APY dividend yield from protocol revenue',
-                  'Direct governance voting power (1.0% per seat)',
-                  'Lifetime dividend rights in DAO treasury',
-                ].map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-2.5 text-xs text-[#344054]">
-                    <CheckCircle2 className="w-4 h-4 text-[#12B76A] shrink-0" />
-                    <span>{benefit}</span>
-                  </div>
-                ))}
+              {/* Bandwidth Requirement */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-slate-300">
+                    Bandwidth Stake ({eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237} TROB)
+                  </span>
+                </div>
+                {eligibility?.condition2.bandwidth.passed ? (
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Staked
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold text-amber-400">
+                    {eligibility?.condition2.bandwidth.stakedTrob ?? 0} / {eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237}
+                  </span>
+                )}
               </div>
 
-              {/* Error notice */}
-              {payError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-600 leading-snug">{payError}</p>
+              {/* Equora_Fi SR Vote */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Vote className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-slate-300">Equora_Fi SR Vote</span>
                 </div>
-              )}
+                {eligibility?.condition2.srVote.passed ? (
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Completed
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold text-slate-400">Required</span>
+                )}
+              </div>
 
-              {/* Primary Payment Action */}
+              {/* Condition 1: Wallet Creation Date */}
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px]">🆕</span>
+                  <span className="text-slate-300">Created on/after 1 Oct 2026</span>
+                </div>
+                {eligibility?.condition1.passed ? (
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Eligible
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-rose-400">
+                    Ineligible
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Helper Action: Auto-Stake & Vote for Testnet / Live */}
+            {wallet.isConnected && (!eligibility?.condition2.passed) && (
               <button
                 type="button"
-                onClick={handleClaimSeat}
-                disabled={!priceData || priceData.priceUsd <= 0 || payTxHash === 'pending'}
-                className="w-full py-4 rounded-xl font-bold text-sm text-white bg-[#155EEF] hover:bg-[#004EEB] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(21,94,239,0.35)] transition-all cursor-pointer"
+                onClick={handleStakeAndVote}
+                disabled={isStakingHelper}
+                className="w-full py-2 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/60 text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                {payTxHash === 'pending' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Processing Payment…</span>
-                  </>
+                {isStakingHelper ? (
+                  <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
                 ) : (
-                  <>
-                    <span>
-                      {priceData && priceData.seatEntryTrob > 0
-                        ? `Pay ${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB ($300 USD)`
-                        : 'Fetching Live TROB Rate…'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <Sparkles className="w-3 h-3 text-amber-400" />
                 )}
+                <span>Fulfill Resource Stake & Equora SR Vote (Condition 2)</span>
               </button>
+            )}
+          </div>
 
-              {/* Wallet info & Disconnect / Switch option */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-[#64748B]">
-                <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>
-                    {activeAddress.length > 12
-                      ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
-                      : activeAddress}
-                  </span>
+          {/* ── 4. Official WhatsApp Channel (Gold Gradient matching Screenshot) */}
+          <div className="space-y-1.5">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#F5D061] via-[#E8BD2D] to-[#C99700] p-3.5 sm:p-4 text-slate-950 shadow-[0_8px_20px_rgba(232,189,45,0.25)] border border-amber-300/50 flex items-center justify-between gap-3">
+              {/* WhatsApp Icon + Titles */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                  </svg>
                 </div>
+                <div className="min-w-0">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-amber-950/80">
+                    Official Channel
+                  </div>
+                  <div className="text-xs font-black text-slate-950 truncate tracking-tight">
+                    ❤️ EQUORA DAO TROBIUM ❤️
+                  </div>
+                  <div className="text-[10px] font-semibold text-slate-900/80">
+                    Follow on WhatsApp
+                  </div>
+                </div>
+              </div>
+
+              {/* JOIN Button */}
+              <button
+                type="button"
+                onClick={handleJoinWhatsApp}
+                className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shrink-0 transition-transform active:scale-95 cursor-pointer"
+              >
+                Join
+              </button>
+            </div>
+
+            {/* Telegram-style Cross-Check Membership Verification */}
+            <div className="px-1 pt-1">
+              {eligibility?.whatsapp.joined ? (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-xl">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>WhatsApp Channel Membership Confirmed</span>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-amber-950/20 border border-amber-800/40 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-amber-300/90 text-[11px]">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <span>Join WhatsApp group & verify membership to proceed</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleVerifyWhatsApp}
+                    disabled={waVerifying || !wallet.isConnected}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {waVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Verify Join'}
+                  </button>
+                </div>
+              )}
+              {waError && <p className="text-[10px] text-rose-400 mt-1 pl-1">{waError}</p>}
+            </div>
+          </div>
+
+          {/* ── 5. Terms & Conditions Checkbox ────────────────────────────── */}
+          <div className="pt-1">
+            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-300">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-[11px] leading-tight select-none">
+                I accept the{' '}
                 <button
                   type="button"
-                  onClick={handleDisconnect}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setTermsModalOpen(true);
+                  }}
+                  className="font-bold text-blue-400 hover:text-blue-300 underline cursor-pointer"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span>Switch Wallet</span>
+                  Terms & Conditions
                 </button>
-              </div>
+                .
+              </span>
+            </label>
+          </div>
 
-              <div className="pt-3 text-center">
-                <Link href="/" className="text-xs font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline inline-flex items-center gap-1">
-                  ← Back to EQUORA.FI
-                </Link>
-              </div>
-            </GateCard>
+          {/* ── Error notices if any ──────────────────────────────────────── */}
+          {payError && (
+            <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/40 flex items-start gap-2 text-xs text-red-300">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="leading-snug">{payError}</p>
+            </div>
           )}
 
-          {/* ── Paying (transaction in flight) ────────────────────────────── */}
-          {gateState === 'payment_required' && payTxHash === 'pending' && (
-            <GateCard icon={<Loader2 className="w-8 h-8 text-[#155EEF] animate-spin" />} title="Broadcasting Transaction">
-              <p className="text-sm text-[#64748B] text-center leading-relaxed">
-                Your $300 TROB council seat payment is being submitted to the Trobium network.
-                Please confirm in your TrobSafe wallet and wait…
-              </p>
-            </GateCard>
-          )}
+          {/* ── 6. Primary Action Button (Register & Pay) ──────────────────── */}
+          <button
+            type="button"
+            onClick={handleClaimSeat}
+            disabled={!isEligibleToPay || payTxHash === 'pending'}
+            className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              isEligibleToPay
+                ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_6px_25px_rgba(21,94,239,0.4)] cursor-pointer ring-2 ring-blue-400/30'
+                : 'bg-slate-800/70 text-slate-500 border border-slate-700/50 cursor-not-allowed'
+            }`}
+          >
+            {payTxHash === 'pending' ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Broadcasting Transaction…</span>
+              </>
+            ) : isEligibleToPay ? (
+              <>
+                <span>
+                  {priceData
+                    ? `Pay ${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB & Enter DAO`
+                    : 'Pay $300 TROB & Enter DAO'}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : !wallet.isConnected ? (
+              <span>Connect TrobSafe Wallet to Register</span>
+            ) : !eligibility?.condition1.passed ? (
+              <span>Ineligible: Wallet Must Be Created On/After 1 Oct 2026</span>
+            ) : !eligibility?.condition2.passed ? (
+              <span>Fulfill Resource Stake & SR Vote Above</span>
+            ) : !eligibility?.whatsapp.joined ? (
+              <span>Join & Verify WhatsApp Channel Above</span>
+            ) : !termsAccepted ? (
+              <span>Accept Terms & Conditions to Register</span>
+            ) : (
+              <span>Complete Verification Requirements Above</span>
+            )}
+          </button>
 
-          {/* ── Payment Confirmed ─────────────────────────────────────────── */}
-          {gateState === 'payment_required' && payTxHash && payTxHash !== 'pending' && (
-            <GateCard icon={<CheckCircle2 className="w-8 h-8 text-emerald-500" />} title="Seat Claimed!">
-              <p className="text-sm text-[#64748B] text-center leading-relaxed mb-4">
-                Your Genesis Council seat payment has been confirmed. Verifying on-chain and loading dashboard…
-              </p>
-              <div className="p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-center">
-                <p className="text-[10px] text-[#047857] font-mono break-all">
-                  TX: {payTxHash.length > 24 ? `${payTxHash.slice(0, 16)}…${payTxHash.slice(-8)}` : payTxHash}
-                </p>
-              </div>
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#64748B]">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#155EEF]" />
-                <span>Entering DAO Dashboard…</span>
-              </div>
-            </GateCard>
-          )}
+          {/* Bottom Branding */}
+          <div className="pt-2 text-center border-t border-slate-800/80">
+            <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
+              <span>✦ Powered by TrobChain L1</span>
+              <span>·</span>
+              <Link href="/" className="hover:text-blue-400 underline">
+                Back to EQUORA.FI
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
 
       <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+      <TermsModal
+        isOpen={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
     </>
-  );
-}
-
-// ─── Shared Card Container ────────────────────────────────────────────────────
-
-function GateCard({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white rounded-3xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.07)] p-6 sm:p-8">
-      {/* Top icon + title */}
-      <div className="flex flex-col items-center gap-3 mb-6">
-        <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE] flex items-center justify-center shadow-sm">
-          {icon}
-        </div>
-        <h2 className="text-lg font-bold text-[#071A4A] font-inter text-center">{title}</h2>
-      </div>
-      {children}
-    </div>
   );
 }

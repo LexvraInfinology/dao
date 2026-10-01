@@ -132,6 +132,9 @@ export interface MemberDetailsDTO {
   txHash?: string;
   trobPriceUsd?: number;
   bttPriceUsd?: number;
+  capHitAt?: Date | null;
+  retopupDeadline?: Date | null;
+  retopupTimeRemainingSeconds?: number | null;
   fallbackClaims?: FallbackClaimDTO[];
 }
 

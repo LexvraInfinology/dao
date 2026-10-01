@@ -388,9 +388,28 @@ export class DaoService {
 
     // Cap progress based on USD value (5x limit hits only when $1,500 is earned)
     const pushedUsd       = Number((pushedTrob * priceUsd).toFixed(2));
+    const isCapped        = pushedUsd >= EARNINGS_CAP_USD || member.status === "capped";
     const remainingCapUsd = Math.max(0, Number((EARNINGS_CAP_USD - pushedUsd).toFixed(2)));
     const remainingCapTrob= priceUsd > 0 ? Math.round((remainingCapUsd / priceUsd) * 100) / 100 : 0;
     const capProgressPct  = EARNINGS_CAP_USD > 0 ? Math.min(100, (pushedUsd / EARNINGS_CAP_USD) * 100) : 0;
+
+    let capHitAt: Date | null = null;
+    let retopupDeadline: Date | null = null;
+    let retopupTimeRemainingSeconds: number | null = null;
+
+    if (isCapped) {
+      const capEvent = await prisma.daoEvent.findFirst({
+        where: {
+          eventType: "cap_hit",
+          userAddress: { in: variants },
+        },
+        orderBy: { timestamp: "desc" },
+      });
+
+      capHitAt = capEvent?.timestamp || member.updatedAt || new Date();
+      retopupDeadline = new Date(capHitAt.getTime() + 48 * 3600 * 1000);
+      retopupTimeRemainingSeconds = Math.max(0, Math.floor((retopupDeadline.getTime() - Date.now()) / 1000));
+    }
 
     return {
       isMember: true,
@@ -413,7 +432,10 @@ export class DaoService {
       remainingCapUsd,
       remainingCapTrob,
       capProgressPct,
-      isCapped: pushedUsd >= EARNINGS_CAP_USD,
+      isCapped,
+      capHitAt,
+      retopupDeadline,
+      retopupTimeRemainingSeconds,
       priceSource: priceData.priceSource,
       trobPriceUsd: priceUsd,
       bttPriceUsd: priceUsd,

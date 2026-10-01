@@ -135,11 +135,15 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[#4F6D87]">5X Cap Progress</span>
-            <span className="font-bold text-[#14304A]">{seat.capProgress}%</span>
+            <span className={`font-bold text-xs sm:text-sm ${seat.capProgress >= 100 ? 'text-rose-600' : 'text-[#14304A]'}`}>
+              {seat.capProgress}% {seat.capProgress >= 100 && '(48h Window Open)'}
+            </span>
           </div>
           <div className="w-full bg-[#E2EEF9] rounded-full h-1.5 overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              className={`h-full rounded-full transition-all duration-500 ${
+                seat.capProgress >= 100 ? 'bg-rose-500' : 'bg-emerald-500'
+              }`}
               style={{ width: `${Math.min(100, seat.capProgress)}%` }}
             />
           </div>

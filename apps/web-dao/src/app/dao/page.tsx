@@ -15,6 +15,7 @@ import {
   Loader2,
   Wallet,
   Zap,
+  Clock,
 } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
 import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
@@ -95,27 +96,50 @@ export default function DaoDashboardPage() {
             ) : isMember ? (
               /* Member CTA */
               <div className="space-y-2.5 pt-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#1F8A5B]" />
-                  <span>You Own Council Seat #{myPosition}</span>
-                  {myNftId && <span className="text-[#1F8A5B] font-normal text-[11px]">• SBT #{myNftId}</span>}
-                </div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <Link
-                    href="/dao/lounge"
-                    className="btn-primary px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
-                  >
-                    <Wallet className="w-3.5 h-3.5" />
-                    <span>Open Member Lounge</span>
-                  </Link>
-                  <Link
-                    href="/dao/seats"
-                    className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
-                  >
-                    <span>Explore Council Grid</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
+                {memberData?.isCapped ? (
+                  <div className="rounded-xl bg-amber-50 border border-amber-300 p-3.5 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                      <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                      <span>5X Cap Reached — 48H Re-topup Window Open (Seat #{myPosition})</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-snug">
+                      Your seat has earned 5X ($1,500 USD). Re-topup $300 USD within 48 hours to preserve your active council seat.
+                    </p>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <Link
+                        href="/dao/lounge"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs"
+                      >
+                        <span>Open 48h Timer & Re-topup</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#1F8A5B]" />
+                      <span>You Own Council Seat #{myPosition}</span>
+                      {myNftId && <span className="text-[#1F8A5B] font-normal text-[11px]">• SBT #{myNftId}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Link
+                        href="/dao/lounge"
+                        className="btn-primary px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <Wallet className="w-3.5 h-3.5" />
+                        <span>Open Member Lounge</span>
+                      </Link>
+                      <Link
+                        href="/dao/seats"
+                        className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <span>Explore Council Grid</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               /* Non-member Overview CTA */

@@ -152,6 +152,9 @@ export interface MemberDetailsData {
   entryAmountBtt?: number;
   capProgressPct?: number;
   isCapped?: boolean;
+  capHitAt?: string | null;
+  retopupDeadline?: string | null;
+  retopupTimeRemainingSeconds?: number | null;
   directReferralsCount: number;
   isQualified: boolean;
   userId: number | null;
@@ -204,6 +207,9 @@ export interface LoungeData {
   remainingCapBtt: number;
   remainingCapUsd: number;
   isCapped: boolean;
+  capHitAt?: string | null;
+  retopupDeadline?: string | null;
+  retopupTimeRemainingSeconds?: number | null;
   incomeChannels?: {
     daoSeats: { label: string; earnedBtt: number; earnedUsd: number };
     matrixSlots: { label: string; earnedBtt: number; earnedUsd: number; highestSlot: number };

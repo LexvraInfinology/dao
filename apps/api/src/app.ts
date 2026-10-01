@@ -600,6 +600,71 @@ export function createApp(): Express {
     }
   });
 
+  /** Helper to broadcast standalone native TransferContract payout on TrobChain testnet */
+  async function broadcastNativePayout(recipientAddress: string, amountTrob: number): Promise<string | null> {
+    try {
+      const privKey = process.env.DEPLOYER_PRIVATE_KEY || "11555126483d8f687eb1c721788730c65b3e986b302d68fe04eece7dc9382eca";
+      const FULLNODE_URL = "https://fullnode-one-testnet.trobchain.com";
+      const deployerHex = "41f3e68b5fb76382683baf1e8512c4c0ab39490717";
+
+      const variants = getAddressVariants(recipientAddress);
+      let recipientHex = "";
+      if (Array.isArray(variants)) {
+        recipientHex = variants.find((v: string) => /^41[0-9a-fA-F]{40}$/.test(v)) || "";
+      } else if (typeof recipientAddress === "string" && recipientAddress.startsWith("41")) {
+        recipientHex = recipientAddress;
+      }
+      if (!recipientHex) {
+        console.error("[Payout Relayer] Could not resolve recipient hex for:", recipientAddress);
+        return null;
+      }
+
+      const amountSun = Math.round(amountTrob * 1_000_000);
+      if (amountSun <= 0) return null;
+
+      const payload = {
+        to_address: recipientHex,
+        owner_address: deployerHex,
+        amount: amountSun,
+      };
+
+      const res = await fetch(`${FULLNODE_URL}/wallet/createtransaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const tx = (await res.json()) as any;
+      if (!tx || !tx.txID) {
+        console.error("[Payout Relayer] createtransaction failed:", tx);
+        return null;
+      }
+
+      const { ethers } = await import("ethers");
+      const cleanKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
+      const signingKey = new ethers.SigningKey(cleanKey);
+      const sig = signingKey.sign(`0x${tx.txID}`);
+      const vHex = sig.v.toString(16).padStart(2, "0");
+      const signatureHex = sig.r.slice(2) + sig.s.slice(2) + vHex;
+
+      const bRes = await fetch(`${FULLNODE_URL}/wallet/broadcasttransaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          txID: tx.txID,
+          raw_data: tx.raw_data,
+          raw_data_hex: tx.raw_data_hex,
+          signature: [signatureHex],
+        }),
+      });
+      const bData = (await bRes.json()) as any;
+      console.log(`[Payout Relayer] Standalone TransferContract payout broadcasted (${amountTrob} TROB -> ${recipientAddress}):`, bData);
+      return tx.txID as string;
+    } catch (err) {
+      console.error("[Payout Relayer] Failed to broadcast native payout:", (err as Error).message);
+      return null;
+    }
+  }
+
   /** POST /api/dao/claim — claim or activate council seat membership with blockchain verification & 300/N distribution */
   app.post("/api/dao/claim", async (req, res, next) => {
     try {
@@ -1017,6 +1082,22 @@ export function createApp(): Express {
         }
       }
 
+      // 7. Automated Protocol Relayer: Broadcast standalone TransferContract payouts
+      // This produces explicit on-chain "Receive +amount TROB" transactions in TrobSafe / TronLink wallet history!
+      if (instantCashbackForNewMemberTrob > 0) {
+        broadcastNativePayout(user.address, instantCashbackForNewMemberTrob).catch((e) => {
+          console.error("[DAO Claim] Instant cashback relayer error:", e);
+        });
+      }
+
+      for (const prev of activeRecipients) {
+        if (cashbackPerMemberTrob > 0) {
+          broadcastNativePayout(prev.address, cashbackPerMemberTrob).catch((e) => {
+            console.error(`[DAO Claim] Dividend relayer error for ${prev.address}:`, e);
+          });
+        }
+      }
+
       res.json({
         success: true,
         data: {
@@ -1041,6 +1122,85 @@ export function createApp(): Express {
     }
   });
 
+  /**
+   * POST /api/dao/retopup
+   * Process a 48h re-topup for a capped council member ($300 USD worth of TROB).
+   * Resets the member's 5X cap and lifetime earnings counter, sets status back to 'active'.
+   */
+  app.post("/api/dao/retopup", async (req, res, next) => {
+    try {
+      const { address, txHash } = req.body;
+      if (!address) {
+        res.status(400).json({ success: false, error: "Address is required" });
+        return;
+      }
+
+      const rawAddress = String(address).trim();
+      const addressVariants = getAddressVariants(rawAddress);
+
+      const member = await prisma.daoMember.findFirst({
+        where: {
+          OR: [
+            ...addressVariants.map((v) => ({ address: v })),
+            ...addressVariants.map((v) => ({ user: { address: v } })),
+          ],
+        },
+      });
+
+      if (!member) {
+        res.status(404).json({ success: false, error: "Member not found" });
+        return;
+      }
+
+      const priceData = await priceService.getBttUsdPrice();
+      const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.0533;
+      const retopupFeeTrob = Math.round((300 / priceUsd) * 100) / 100;
+      const now = new Date();
+
+      // Reset member cap state in DB
+      await prisma.$transaction([
+        prisma.daoMember.update({
+          where: { id: member.id },
+          data: {
+            status: "active",
+            pushedAmountBtt: 0, // Reset lifetime earnings counter on retopup
+            entryAmountBtt: {
+              increment: retopupFeeTrob,
+            },
+            updatedAt: now,
+          },
+        }),
+        prisma.daoEvent.create({
+          data: {
+            eventType: "retopup",
+            userAddress: member.address,
+            incomingPosition: member.position,
+            amountBtt: retopupFeeTrob,
+            amountUsdEst: 300,
+            priceSource: priceData.priceSource || "trobchain-api",
+            reason: `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupFeeTrob} TROB)`,
+            txHash: String(txHash || `retopup-${Date.now()}`),
+            blockNumber: BigInt(1),
+            timestamp: now,
+          },
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          position: member.position,
+          address: member.address,
+          status: "active",
+          pushedAmountBtt: 0,
+          retopupFeeTrob,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ── DAO PROFILE ───────────────────────────────────────────────────────────
 
   /**
@@ -1049,15 +1209,16 @@ export function createApp(): Express {
    */
   app.get("/api/dao/profile/:address", async (req, res, next) => {
     try {
-      const address = req.params.address.toLowerCase();
+      const rawAddress = req.params.address.trim();
+      const addressVariants = getAddressVariants(rawAddress);
       const [memberDetails, priceData] = await Promise.all([
-        daoService.getMemberByAddress(address),
+        daoService.getMemberByAddress(rawAddress),
         priceService.getBttUsdPrice(),
       ]);
 
       // Fetch extended profile data from DB
-      const user = await prisma.user.findUnique({
-        where: { address },
+      const user = await prisma.user.findFirst({
+        where: { address: { in: addressVariants } },
         include: {
           daoMembership: true,
           matrixSlots: {
@@ -1082,14 +1243,14 @@ export function createApp(): Express {
       ) ?? 0;
 
       const poolCards = await prisma.poolCard.findMany({
-        where: { userAddress: address },
+        where: { userAddress: { in: addressVariants } },
         orderBy: { tier: "asc" },
       });
 
       res.json({
         success: true,
         data: {
-          address,
+          address: rawAddress,
           ...memberDetails,
           userId: user?.userId ?? null,
           sponsorAddress: user?.sponsorAddress ?? null,
@@ -1136,9 +1297,10 @@ export function createApp(): Express {
    */
   app.get("/api/dao/lounge/:address", async (req, res, next) => {
     try {
-      const address = req.params.address.toLowerCase();
+      const rawAddress = req.params.address.trim();
+      const addressVariants = getAddressVariants(rawAddress);
       const [memberDetails, priceData] = await Promise.all([
-        daoService.getMemberByAddress(address),
+        daoService.getMemberByAddress(rawAddress),
         priceService.getBttUsdPrice(),
       ]);
 
@@ -1152,7 +1314,7 @@ export function createApp(): Express {
 
       // Unclaimed dividends from fallback claims
       const unclaimedFallback = await prisma.pullFallbackClaim.findMany({
-        where: { member: { address } },
+        where: { member: { address: { in: addressVariants } } },
         include: { member: true },
       });
 
@@ -1162,7 +1324,7 @@ export function createApp(): Express {
       );
 
       // USD-pegged economics: $300 entry fee, $1,500 cap (5x of $300)
-      const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
+      const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.0533;
       const earningsCapUsd = 1500; // $1,500 USD max cap
       const earningsCapBtt = Math.round((earningsCapUsd / priceUsd) * 100) / 100; // $1,500 worth of TROB
       const pushedBtt = memberDetails.pushedAmountBtt;
@@ -1172,15 +1334,16 @@ export function createApp(): Express {
       const remainingCapUsd = Math.max(0, earningsCapUsd - pushedUsd);
       const remainingCapBtt = Math.max(0, earningsCapBtt - pushedBtt);
       const capProgressPct = Math.min(100, (pushedUsd / earningsCapUsd) * 100);
+      const isCapped = Boolean(memberDetails.isCapped || pushedUsd >= earningsCapUsd || memberDetails.status === "capped");
 
       // Rank pool cards for income channels
       const poolCards = await prisma.poolCard.findMany({
-        where: { userAddress: address },
+        where: { userAddress: { in: addressVariants } },
         orderBy: { tier: "asc" },
       });
 
       const matrixSlots = await prisma.matrixSlot.findMany({
-        where: { userAddress: address },
+        where: { userAddress: { in: addressVariants } },
         orderBy: { slotNumber: "asc" },
       });
 
@@ -1193,7 +1356,7 @@ export function createApp(): Express {
         success: true,
         data: {
           isMember: true,
-          address,
+          address: rawAddress,
           position: memberDetails.position,
           nftTokenId: memberDetails.nftTokenId,
           status: memberDetails.status,
@@ -1218,7 +1381,10 @@ export function createApp(): Express {
           capProgressPct,
           remainingCapBtt,
           remainingCapUsd,
-          isCapped: pushedUsd >= earningsCapUsd,
+          isCapped,
+          capHitAt: memberDetails.capHitAt ?? null,
+          retopupDeadline: memberDetails.retopupDeadline ?? null,
+          retopupTimeRemainingSeconds: memberDetails.retopupTimeRemainingSeconds ?? null,
           // Income channels
           incomeChannels: {
             daoSeats: {
@@ -1238,6 +1404,7 @@ export function createApp(): Express {
             },
           },
           bttPriceUsd: priceData.priceUsd,
+          trobPriceUsd: priceData.priceUsd,
           priceSource: priceData.priceSource,
           totalPoolShares: daoPoolState?.totalShares ?? 100,
         },

@@ -1,5 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "RPC_URL",
+    "NEXT_PUBLIC_*",
+    "TROB_PRICE_API_URL",
+    "DATABASE_URL",
+    "WHATSAPP_COMMUNITY_PASSCODE",
+    "ENABLE_EXPERIMENTAL_COREPACK"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

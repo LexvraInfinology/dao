@@ -26,7 +26,8 @@
     "clean": "turbo run clean",
     "postinstall": "node scripts/patch-qr.js"
   },
-  "devDependencies": {
+  "dependencies": {
     "turbo": "^2.11.2"
-  }
+  },
+  "devDependencies": {}
 }

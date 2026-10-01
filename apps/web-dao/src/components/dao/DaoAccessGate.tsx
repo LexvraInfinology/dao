@@ -212,6 +212,25 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     setIsStakingHelper(true);
     setPayError(null);
     try {
+      // 1. Attempt Freeze V2 via injected wallet if supported
+      if (typeof window !== 'undefined') {
+        const w = window as any;
+        const tw = w?.trobWeb || w?.tronWeb || w?.trobSafe;
+        if (tw?.transactionBuilder?.freezeBalanceV2) {
+          try {
+            const energySun = Math.round((eligibility?.formula?.dao?.energyStakeTrob ?? 1070) * 1e6);
+            const tx = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', activeAddress);
+            if (tx && tw.trx?.sign) {
+              const signed = await tw.trx.sign(tx);
+              await tw.trx.sendRawTransaction(signed);
+            }
+          } catch (freezeErr) {
+            console.warn('[DaoAccessGate] FreezeV2 broadcast attempt note:', freezeErr);
+          }
+        }
+      }
+
+      // 2. Synchronize with protocol verification service
       const res = await fetch('/api/dao/stake-resources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -581,19 +600,24 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
             {/* Helper Action: Auto-Stake & Vote for Testnet / Live */}
             {wallet.isConnected && (!eligibility?.condition2.passed) && (
-              <button
-                type="button"
-                onClick={handleStakeAndVote}
-                disabled={isStakingHelper}
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-600/50 text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-              >
-                {isStakingHelper ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                ) : (
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                )}
-                <span>Synchronize Resource Allocation & SR Vote</span>
-              </button>
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={handleStakeAndVote}
+                  disabled={isStakingHelper}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600/80 to-indigo-600/80 hover:from-blue-600 hover:to-indigo-600 border border-blue-400/30 text-white text-[11px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.98]"
+                >
+                  {isStakingHelper ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  )}
+                  <span>Synchronize Stake (1,070 Energy) & SR Vote</span>
+                </button>
+                <p className="text-[10px] text-slate-400 text-center">
+                  Bypasses extension Stake 1.0 limitation via automated Freeze V2 verification.
+                </p>
+              </div>
             )}
           </div>
 

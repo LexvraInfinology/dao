@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "installCommand": "pnpm install --filter equora-app...",
   "buildCommand": "pnpm run build:dao",
   "outputDirectory": "apps/web-dao/.next"
 }

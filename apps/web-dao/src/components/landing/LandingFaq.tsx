@@ -35,19 +35,18 @@ export const LandingFaq: React.FC = () => {
   };
 
   return (
-    <section id="faq" className="scroll-mt-20 pt-8 sm:pt-12 pb-10 sm:pb-12 lg:pb-14 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="faq" className="scroll-mt-24 pt-6 sm:pt-12 pb-8 sm:pb-12 lg:pb-14 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[960px] mx-auto px-4 sm:px-8 relative z-10">
         {/* Top Header */}
-        <div className="text-center space-y-3 sm:space-y-3.5 mb-8 sm:mb-10 lg:mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
-            <span className="text-[11px] font-medium tracking-[0.08em] text-[#155EEF] uppercase">
+        <div className="text-center space-y-2.5 sm:space-y-3.5 mb-6 sm:mb-10 lg:mb-12">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF]">
+            <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
               FAQ
             </span>
           </div>
 
-          <h2 className="text-2xl min-[360px]:text-[26px] sm:text-3xl lg:text-[38px] font-semibold uppercase text-[#0B132B] leading-tight tracking-tight">
-            Got<br />
-            <span className="text-[#155EEF]">Questions?</span>
+          <h2 className="text-xl min-[360px]:text-2xl sm:text-3xl lg:text-[38px] font-bold uppercase text-[#0B132B] leading-tight tracking-tight">
+            Got <span className="text-[#155EEF]">Questions?</span>
           </h2>
 
           <p className="text-xs sm:text-sm text-[#475467] leading-relaxed max-w-xl mx-auto">

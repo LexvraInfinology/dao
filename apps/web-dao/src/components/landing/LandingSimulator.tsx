@@ -155,7 +155,7 @@ export const LandingSimulator: React.FC = () => {
   };
 
   return (
-    <section id="simulator" className="scroll-mt-20 py-10 sm:py-14 lg:py-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80 flex justify-center px-4 sm:px-6">
+    <section id="simulator" className="scroll-mt-28 py-8 sm:py-14 lg:py-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80 flex justify-center px-3 sm:px-6">
       <style dangerouslySetInnerHTML={{ __html: `
         #simulator {
           --ink: #0a1128;
@@ -362,24 +362,37 @@ export const LandingSimulator: React.FC = () => {
           color: var(--ink);
         }
         #simulator .chips {
-          display: flex;
-          gap: 8px;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 20px;
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 6px;
+          margin-top: 18px;
         }
         #simulator .chips button {
           font: inherit;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
-          letter-spacing: .04em;
+          letter-spacing: .02em;
           border: 0;
           background: var(--tile);
           color: var(--mute);
-          padding: 10px 16px;
-          border-radius: 14px;
+          padding: 8px 2px;
+          border-radius: 12px;
           cursor: pointer;
           transition: .15s;
+          text-align: center;
+          white-space: nowrap;
+        }
+        @media(min-width: 640px) {
+          #simulator .chips {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+          }
+          #simulator .chips button {
+            padding: 10px 16px;
+            font-size: 12px;
+            border-radius: 14px;
+          }
         }
         #simulator .chips button:hover,
         #simulator .chips button.active {
@@ -556,19 +569,89 @@ export const LandingSimulator: React.FC = () => {
         }
         @media (max-width: 560px) {
           #simulator .card {
-            padding: 26px 18px;
-            border-radius: 24px;
+            padding: 20px 14px;
+            border-radius: 20px;
+          }
+          #simulator .top {
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+            font-size: 10px;
+          }
+          #simulator h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+          }
+          #simulator .sub {
+            font-size: 11px;
+            margin-bottom: 14px;
+          }
+          #simulator .hero {
+            margin-bottom: 6px;
           }
           #simulator .seat strong,
           #simulator .ret strong {
-            font-size: 38px;
+            font-size: 26px;
           }
           #simulator .chart {
-            height: 130px;
-            gap: 2px;
+            height: 90px;
+            gap: 1.5px;
+          }
+          #simulator .axis {
+            font-size: 9px;
+            margin: 6px 0 8px;
+          }
+          #simulator input[type=range] {
+            margin: 0 0 14px;
+          }
+          #simulator .split {
+            height: 38px;
+            border-radius: 12px;
           }
           #simulator .split div {
+            font-size: 10px;
+          }
+          #simulator .legend {
+            font-size: 9px;
+            margin-top: 8px;
+          }
+          #simulator .math {
+            margin-top: 12px;
+            padding: 10px 12px;
             font-size: 11px;
+            border-radius: 12px;
+          }
+          #simulator .info {
+            margin-top: 18px;
+            gap: 10px;
+          }
+          #simulator .ic {
+            padding: 14px;
+            border-radius: 16px;
+          }
+          #simulator .ico {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+          }
+          #simulator .amt {
+            font-size: 24px;
+          }
+          #simulator .amt small {
+            font-size: 13px;
+          }
+          #simulator .ic p {
+            font-size: 11px;
+            margin-top: 6px;
+          }
+          #simulator .note {
+            margin-top: 16px;
+            font-size: 11px;
+          }
+          #simulator .cta {
+            padding: 12px 24px;
+            font-size: 13px;
+            margin-top: 14px;
           }
         }
 

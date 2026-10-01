@@ -131,6 +131,7 @@ contract EquoraDAO is ReentrancyGuard {
 
     // Deposit eligibility attestation (Condition 1 + Condition 2 + Community Verification)
     mapping(address => bool)    public isEligibilityAttested;
+    bool                        public eligibilityEnforced;
 
     bool    public daoCompleted;
     bool    public daoExpired;
@@ -189,6 +190,8 @@ contract EquoraDAO is ReentrancyGuard {
     event EntryFeeUpdated(uint256 newEntryFee, uint256 newEarningsCap, uint256 trobPriceUsd6, uint256 timestamp);
     /// @dev Emitted when wallet deposit eligibility is attested
     event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
+    /// @dev Emitted when eligibility enforcement is toggled
+    event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
 
     // ─── Constructor ───────────────────────────────────────────────────────────
 
@@ -271,6 +274,15 @@ contract EquoraDAO is ReentrancyGuard {
         emit EligibilityAttested(account, eligible, block.timestamp);
     }
 
+    /**
+     * @dev Toggle on-chain enforcement of eligibility condition attestation prior to joinDAO.
+     */
+    function setEligibilityEnforced(bool _enforced) external {
+        require(msg.sender == admin, "EquoraDAO: not admin");
+        eligibilityEnforced = _enforced;
+        emit EligibilityEnforcementUpdated(_enforced, block.timestamp);
+    }
+
     receive() external payable {}
 
     // ─── Core Join Function ────────────────────────────────────────────────────
@@ -290,6 +302,7 @@ contract EquoraDAO is ReentrancyGuard {
      */
     function joinDAO() external payable nonReentrant returns (uint256 position) {
         if (isDaoMember[msg.sender]) revert AlreadyMember();
+        if (eligibilityEnforced && !isEligibilityAttested[msg.sender]) revert NotQualified();
 
         // 1. Scan from Seat 1 to 100 for any blank/vacant slot (missed 48-hour retopup)
         uint256 vacantIndex = type(uint256).max;

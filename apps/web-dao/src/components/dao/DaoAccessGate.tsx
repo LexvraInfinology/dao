@@ -135,11 +135,20 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
 
-  // Strict verified membership
+  // Strict verified membership: MUST have connected wallet AND verified active seat (position > 0)
   const isVerifiedMember = Boolean(
-    (memberData?.isMember && (memberData.position ?? 0) > 0) ||
-    ((auth.user?.daoPosition ?? 0) > 0)
+    wallet.isConnected &&
+    activeAddress &&
+    memberData?.isMember &&
+    (memberData.position ?? 0) > 0
   );
+
+  // If user is disconnected, redirect to landing page
+  useEffect(() => {
+    if (detectTimeout && !wallet.isConnected && !wallet.isConnecting) {
+      window.location.href = '/';
+    }
+  }, [detectTimeout, wallet.isConnected, wallet.isConnecting]);
 
   // ── Fetch protocol eligibility conditions from API ──────────────────────────
   const fetchEligibility = useCallback(async () => {
@@ -323,7 +332,9 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
+      sessionStorage.clear();
     } catch { /* ignore */ }
+    window.location.href = '/';
   };
 
   // ── Access Granted: Render DAO Dashboard Layout ────────────────────────────

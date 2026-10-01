@@ -29,7 +29,7 @@ export const LandingTrobChain: React.FC = () => {
   ];
 
   return (
-    <section id="trobchain" className="pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="trobchain" className="scroll-mt-20 pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Top Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-10 sm:mb-12">
@@ -55,9 +55,11 @@ export const LandingTrobChain: React.FC = () => {
           <div className="lg:col-span-5 flex justify-center">
             <div className="relative w-full max-w-[420px] aspect-square rounded-3xl overflow-hidden flex items-center justify-center">
               <Image
-                src="/landing/trobchain-cube.png"
+                src="/landing/trobchain-cube.webp"
                 alt="TrobChain Blockchain Architecture"
                 fill
+                sizes="(max-width: 768px) 320px, 420px"
+                loading="lazy"
                 className="object-contain"
               />
             </div>

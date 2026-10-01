@@ -155,7 +155,7 @@ export const LandingSimulator: React.FC = () => {
   };
 
   return (
-    <section id="simulator" className="py-10 sm:py-14 lg:py-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80 flex justify-center px-4 sm:px-6">
+    <section id="simulator" className="scroll-mt-20 py-10 sm:py-14 lg:py-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80 flex justify-center px-4 sm:px-6">
       <style dangerouslySetInnerHTML={{ __html: `
         #simulator {
           --ink: #0a1128;

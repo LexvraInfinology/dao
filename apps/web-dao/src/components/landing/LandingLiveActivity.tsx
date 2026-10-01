@@ -128,10 +128,16 @@ export const LandingLiveActivity: React.FC = () => {
   }, [rawEvents]);
 
   return (
-    <section id="activity" className="relative pt-10 sm:pt-14 lg:pt-16 pb-10 sm:pb-14 lg:pb-16 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
+    <section id="activity" className="scroll-mt-20 relative pt-10 sm:pt-14 lg:pt-16 pb-10 sm:pb-14 lg:pb-16 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
-        <Image src="/landing/activity-boy.png" alt="Genesis Live Activity" fill priority
-          className="object-cover object-[80%_0%] sm:object-[78%_center] lg:object-center" />
+        <Image
+          src="/landing/activity-boy.webp"
+          alt="Genesis Live Activity"
+          fill
+          sizes="100vw"
+          loading="lazy"
+          className="object-cover object-[80%_0%] sm:object-[78%_center] lg:object-center"
+        />
         <div className="absolute inset-x-0 top-0 h-20 sm:h-28 bg-gradient-to-b from-white via-white/80 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-24 sm:h-32 bg-gradient-to-t from-white via-white/60 to-transparent" />
       </div>

@@ -11,7 +11,7 @@ export const LandingMovement: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="about" className="scroll-mt-20 pt-8 sm:pt-12 lg:pt-14 pb-10 sm:pb-14 lg:pb-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Text & Stats Column */}
@@ -63,9 +63,11 @@ export const LandingMovement: React.FC = () => {
               {/* Main Image Frame */}
               <div className="relative aspect-[568/480] w-full rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.12)] border border-slate-100">
                 <Image
-                  src="/landing/movement-hands.png"
+                  src="/landing/movement-hands.webp"
                   alt="EQUORA Genesis Community Movement"
                   fill
+                  sizes="(max-width: 768px) 100vw, 540px"
+                  loading="lazy"
                   className="object-cover"
                 />
 

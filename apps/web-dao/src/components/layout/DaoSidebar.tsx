@@ -255,8 +255,10 @@ export const DaoSidebar: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-md overflow-hidden shrink-0 shadow-xs">
                         <img
-                          src="/trobsafe-logo.png"
+                          src="/trobsafe-logo.webp"
                           alt="TrobSafe"
+                          width={20}
+                          height={20}
                           className="w-full h-full object-cover"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />

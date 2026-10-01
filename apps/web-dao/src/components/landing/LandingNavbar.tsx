@@ -152,12 +152,11 @@ export const LandingNavbar: React.FC = () => {
   };
 
   const navLinks = [
-    { label: 'How It Works', href: '#queue' },
-    { label: 'Levels',       href: '#simulator' },
-    { label: 'Pools',        href: '#simulator' },
-    { label: 'Network',      href: '#trobchain' },
-    { label: 'Rewards',      href: '#activity' },
-    { label: 'About',        href: '#about' },
+    { label: 'About',      href: '#about' },
+    { label: 'Queue',      href: '#queue' },
+    { label: 'Calculator', href: '#simulator' },
+    { label: 'Network',    href: '#trobchain' },
+    { label: 'FAQ',        href: '#faq' },
   ];
 
   return (
@@ -188,7 +187,7 @@ export const LandingNavbar: React.FC = () => {
               {navLinks.map((item) => (
                 <a
                   key={item.label}
-                  href={item.href}
+                  href={pathname === '/' ? item.href : `/${item.href}`}
                   className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded-lg text-[13px] xl:text-sm font-medium text-[#475467] hover:text-[#0F172A] hover:bg-slate-100/80 transition-all duration-150 whitespace-nowrap shrink-0"
                 >
                   {item.label}
@@ -336,7 +335,7 @@ export const LandingNavbar: React.FC = () => {
                 {navLinks.map((item) => (
                   <a
                     key={item.label}
-                    href={item.href}
+                    href={pathname === '/' ? item.href : `/${item.href}`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-semibold text-[#344054] hover:text-[#155EEF] hover:bg-[#EEF5FF] transition-all group"
                   >

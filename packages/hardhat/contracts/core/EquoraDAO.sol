@@ -406,10 +406,9 @@ contract EquoraDAO is ReentrancyGuard {
      */
     function retopup() external payable nonReentrant {
         if (!isDaoMember[msg.sender]) revert NotMember();
-        if (capHitTimestamp[msg.sender] == 0) revert NotCapped();
 
-        // 48-hour window check
-        if (block.timestamp > capHitTimestamp[msg.sender] + RETOPUP_WINDOW) {
+        // 48-hour window check (if cap timestamp was set, enforce deadline)
+        if (capHitTimestamp[msg.sender] > 0 && block.timestamp > capHitTimestamp[msg.sender] + RETOPUP_WINDOW) {
             // Window expired — slot should already be blank (or we blank it now)
             if (!slotBlank[msg.sender]) {
                 _updateMemberPoolReward(msg.sender);

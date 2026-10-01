@@ -171,8 +171,10 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0E62E4] to-[#3B82F6] p-0.5 shadow-sm flex items-center justify-center shrink-0">
                 <img
-                  src="/trobsafe-logo.png"
+                  src="/trobsafe-logo.webp"
                   alt="TrobSafe Wallet"
+                  width={40}
+                  height={40}
                   className="w-full h-full rounded-[14px] object-cover bg-white"
                   onError={(e) => {
                     // Fallback to shield icon if image fails to render

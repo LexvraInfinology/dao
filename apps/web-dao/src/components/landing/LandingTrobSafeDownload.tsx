@@ -141,8 +141,11 @@ export const LandingTrobSafeDownload: React.FC = () => {
             <div className="relative flex flex-col items-center text-center space-y-3">
               <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center drop-shadow-md">
                 <img
-                  src="/trobsafe/trobsafe-logo.png"
+                  src="/trobsafe/trobsafe-logo.webp"
                   alt="TrobSAFE"
+                  width={96}
+                  height={96}
+                  loading="lazy"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     // Fallback to svg

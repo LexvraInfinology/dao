@@ -35,7 +35,7 @@ export const LandingFaq: React.FC = () => {
   };
 
   return (
-    <section id="faq" className="pt-8 sm:pt-12 pb-10 sm:pb-12 lg:pb-14 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
+    <section id="faq" className="scroll-mt-20 pt-8 sm:pt-12 pb-10 sm:pb-12 lg:pb-14 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80">
       <div className="max-w-[960px] mx-auto px-4 sm:px-8 relative z-10">
         {/* Top Header */}
         <div className="text-center space-y-3 sm:space-y-3.5 mb-8 sm:mb-10 lg:mb-12">

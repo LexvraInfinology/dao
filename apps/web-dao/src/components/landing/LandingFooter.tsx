@@ -48,9 +48,11 @@ export const LandingFooter: React.FC = () => {
       {/* Background Cosmic Mountain Artwork */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image
-          src="/landing/footer-cosmic.png"
+          src="/landing/footer-cosmic.webp"
           alt="Cosmic Mountain Landscape"
           fill
+          sizes="100vw"
+          loading="lazy"
           className="object-cover object-bottom"
         />
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white via-white/70 to-transparent" />

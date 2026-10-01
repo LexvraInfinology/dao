@@ -36,13 +36,15 @@ export const LandingQueueArena: React.FC = () => {
   ];
 
   return (
-    <section id="queue" className="relative pt-8 sm:pt-12 lg:pt-14 pb-12 sm:pb-16 lg:pb-20 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#F0F6FD] to-[#F8FAFC] border-b border-slate-200/80">
+    <section id="queue" className="scroll-mt-20 relative pt-8 sm:pt-12 lg:pt-14 pb-12 sm:pb-16 lg:pb-20 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#F0F6FD] to-[#F8FAFC] border-b border-slate-200/80">
       {/* Background Arena Image */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-90 select-none">
         <Image
-          src="/landing/queue-arena.png"
+          src="/landing/queue-arena.webp"
           alt="Genesis Queue Amphitheater"
           fill
+          sizes="100vw"
+          loading="lazy"
           className="object-cover object-bottom"
         />
         {/* Soft top gradient to blend text readability */}

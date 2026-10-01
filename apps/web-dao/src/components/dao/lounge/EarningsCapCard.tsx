@@ -115,21 +115,15 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           txId = result;
         }
       } catch (callErr: any) {
-        console.warn('Wallet callContract note, attempting trobWeb fallback:', callErr);
+        console.warn('Wallet callContract note, attempting fallback:', callErr);
         const trob = (window as any).trobWeb || (window as any).tronWeb;
-        if (trob && trob.transactionBuilder) {
-          const tx = await trob.transactionBuilder.triggerSmartContract(
-            contractAddress,
-            'retopup()',
-            { feeLimit: 100_000_000, callValue: callValueSun },
-            [],
-            activeAddr
-          );
-          const signedTx = await trob.trx.sign(tx.transaction);
-          const broadcast = await trob.trx.sendRawTransaction(signedTx);
-          txId = broadcast.txid || broadcast.transaction?.txID || null;
-        } else {
-          throw callErr;
+        if (trob && typeof trob.trx?.sendTransaction === 'function') {
+          try {
+            const transferRes = await trob.trx.sendTransaction(contractAddress, callValueSun);
+            txId = transferRes.txid || transferRes.transaction?.txID || null;
+          } catch (tErr) {
+            console.warn('Native transfer fallback note:', tErr);
+          }
         }
       }
 

@@ -1,0 +1,119 @@
+const fs = require('fs');
+
+const rawText = `TX2QJNsULA8q2ixKcde4pKKN68AxDnkcZs
+TDoJixPdm3W3cnCg4orV34vQ3cCKd1XG57
+TUNUoWmi8WR7E4ro1EDZu64XKop5H7eCTw
+TFrVse7KHCkJ2TZsBtgKQzeUVW1bRLeSDq
+TE59Tb6JMxThkqRcde2Yw7KuBeXZNG97Yb
+TTPyuakPBmnkwgJB2rwTTqQcRpweuvvEUV
+TQzibYjywjEW8RCbj6HGCxwyo78RLNcqcX
+TKdfCosnZh4us5r2FUoVEJcpscKDevBtRW
+TB1UEQDzdh2Gczg6uoC68YQQtYZYAeTVnN
+TNuorMYpoj1Qhe8a26KZoKNktgVx5MinVU
+TJUQqEG2vYHpEuMv8KSWbEvWwCCA8d2S4N
+TF8Kwc4KPzu7tfPm3C7BqectPzew6Fj53Q
+TAUzcFFSqeHQVhzbSn4RRzMWHboJt3kpac
+TV1kRczoj2VUNgn59KCFBiamRUNhjANJTe
+TRpQCFuWPccxHJUCEWwJz1SbN6qk6nPPCX
+TGXzoWsDpeXktpQ6cSEkmPcwWmwzftTE2P
+TCHuirVJ5exRQvQ4H5f2QWWxwkbYHxhspM
+TRVQSsfs1FCjWovKVRcb2hf6Pxnnugzts9
+TVd8CyvV1iyjdFPVkbtG6Y9uU3NZn24vjq
+TXveGXFAhjFxQZPRF1vgCGhggSiPzk4JPv
+TGfJoazCZUCx6oHLxzXbeyYjPfBL5ffNnF
+TChV7N9uZyy1dhHAemEhoEm5vVPLiL56Vi
+TBqGuF3NbovKcTt2cRts7ES6CDYnZmyN6u
+TVWzExeokPYQ4KcxnTJLpQy7svJ7xRY9Ub
+TB7c5ckL2XURGrDxiyfME3hsRBtpjKtVtG
+THN8GDmwADoopY4CdaJmvjdTb1Td97v4Sv
+TAQMeY36LsuxGQiwbvx18zFg6U3KeDWmPf
+TJcXuVtfn7PZ27KrBg3PKBHfdoHTrvhkDj
+TUsYFkPvV3ke4Bbyye2SJABfCBrP1xA9Va
+TD4cg88mmZ9UVjNWPDJye3wfia2gTfsRZY
+TXaGck9mcLxkkWYw1H2Cd5wuq2YaTq7zz1
+TK4iF12sS4mACawiWSBBSY7zf3LMQn8rLj
+TVr3FruBpjg7xnghaSPFC5fPWbDWv9j2vm
+TRzr9EQdCV91erxQPRzhYVahgFN8StMEpM
+TExB4XoHTKjoxhHhaJ1PfN7xMBqpjBD3wx
+TYhugCZP3FooZ7zXhR2pLZz1XaaG6o1ssX
+TKT9kgSNrN5Zx9HfTeDPfcXxGDgkBno5XW
+TAw5TiMEtJm4piRaUjKfi8CprfNfDj3rgk
+TFDaDG2rBes3B2F1qK6bSgay29AhncT9Kv
+TS9E5QsLVGKMUPN3BMsXM978Y9tv25snda
+TGHxW2Dk7aWLEc9cXhHY6kyLKNDCye4z4S
+TNZaRdFwKrNzfmDR2g4ZBgBXG57WvxsHGb
+TAJhFwQYW12nVUpzvAH79ka8GZU1vCZGPz
+TPPd1ezM3z1iPewgPR71GqBDdoJv4d5RiW
+TW5Utq91jj7M9NUDExpDi72AmssTEctpia
+TA96VamMLeN3q4odN4pxetDyPkGkM645ya
+TBGY7HGbYLRoEJ9JsTTPeh3xuwwFNXq6qy
+TSTYoR9yxjoFUthcGGR6gBNtsY9Tvtk9nQ
+TEKfsUPB9mh85fkAMMPx3YzYajNga2TNRy
+TTQbXb91UbpzCcpLLqPEEN8QbKy4WstcVd
+TYBE1YWAEMUJGMe38YZokPGpvwRNEV6ynr
+TTd44JL7ftswPH2GqN9gkZz39gU1nMX3fR
+TWkebbLwhxS96SD7n7G4piE851ifwA138D
+T9yscPhkoxkJZpagSvkgizfsxeNV84Dnr3
+TWqqB6LnJ9BNuHAPHqaSmUfdFxG14FKmNR
+THUvKw4eqSHK8sVk9fMG1FPjTDXqPxb3bN
+TBKRTvV139VX4Zc7WvhSB79P5nfCzXqyfp
+TRBP1w8A5pEjXeutRQ7RMhjzADQS5AMYrY
+TR9f8XVxuQ3TFLgHi8SxfeEUC61eoRrdDX
+TNGyhcgRNnELTYjV98FdNGVSi7tCViHKNu
+TNKPGcuEh3rCfpYExTbufUwzAYxP3fD6QX
+TExD9jfjsB8mjnei5XyTKAXy8YCdxhunxX
+TMrwosvPCvfCDV8vNGrfuycV7rE9oWhmez
+TBUcs9mzL48xrmWKpsexpTn18pxLqU1Abv
+TAQEM6nKLTUys1mRHpP9dzMNGuNrejk73R
+TWax3bgieAEQCickjjKyNexUrX36sPUp1P
+TA2jSwLhfj2fXSMHDDgxgfgxqYSyaNv139
+TQncZ452nKTGWPwcESSBdRjshnv1GbH1cE
+TEpEE2zSNwW31h9k4fRBZVkrJxTxK29BUT
+TWy7o6gGHBJXJNhemYJt9K9vg38CPvt24h
+TSMJAzf3mapT5g6yoKvdzgqj9793GBqJTo
+TYTQ2aetFtLSKVHeEAafBbhSmqd7vsre5h
+TKUExMsTBjGg9uKuzhDtVSzG5V1P5NmtZ9
+TWtUCGELvp3n5PNFHKm7E86GY3syZfBw91
+TLAJSodQG49JhcS12ZEDhY87rNPefX7KpV
+TB2kuJYK4LotAFubJirssrgRBdSJVtrh4s
+TJT4R5wrEXdHX7EuB77sMrgqt17ahES8uV
+TFkayrFMfrqzhkbihjssj6vvYtPCeQG5Yx
+TXfNpHRQsSy1Vb5anWjq8iopmcQnkGDckT
+TEogd9LaG2wKfyMb29YGR1xkhFRuXjhs7p
+TPzM7NwipK1MG3NvG7tPgqJEXfwPvXtMCX
+TTySwcG8kfNx5HNnTa4okyFKfRjrjvxJyk
+TE9vrg9GYA82s2ff878mNgZZYhYHyJoWdC
+TEuprNzupfkHnvFXYA8mSn5VDjZYdajsQJ
+TRWvyiB6EcGaEjoyAMXzWPvs97aQBowiHx
+TDpQgWh5GFXjY5dsniQNyaSKMXQPBTQNXm
+TLNkCPk4XiDif9ykP2GZpyUKTMHtyj5C3v
+TFQAs2BCt7ByxrNKQngRhNJ8KuBhro544V
+TYe7PSsMMkCTnfRUXZwTssvnA7nvqWBqtz
+TXEHiLauv8xwXLqfWSmQLJgmFii2rVXyzg
+TYQqYPdCK7G1qT5E4UhZjdrzkUkUihSmCt
+TAmpC9NK1SKrPXxSugyJ1Mw9HNjwYe4VxP
+TPmwJ1EZ1DMCyW7vhWiU7nwx4oEnprabrp
+TYsohXZnZohyMjY8ktkdpomsVaQR8ZZtWS
+TNeo8Fpt5XUm4vz5R3FpbDufQVWr6V3dMC
+TM5qyde8zKQbMZZZr9QfKLCKQ1seXKcYvZ
+TL4gYZGzC3WCU7E5rXiiaeDB2i25Djkzbr
+TWD9rGi8cyt1vTcwQpiFqFn72aBwL8Nb1L
+TYbxqXCUn9dPENG2ujAqpekh7fQjKMuRWC`;
+
+const addrs = rawText.split('\n').map(s => s.trim()).filter(s => s.startsWith('T') && s.length >= 33);
+console.log('Count of valid addresses in text:', addrs.length);
+
+const results = JSON.parse(fs.readFileSync('./scripts/funding_results.json', 'utf8'));
+const fundedAddrs = results.transactions.map(t => t.address);
+console.log('Count of funded addresses:', fundedAddrs.length);
+
+const missing = addrs.filter(a => !fundedAddrs.includes(a));
+console.log('Missing from funded:', missing);
+
+const counts = {};
+addrs.forEach(a => counts[a] = (counts[a] || 0) + 1);
+const duplicates = Object.keys(counts).filter(a => counts[a] > 1);
+console.log('Duplicates in list:', duplicates);
+
+console.log('Is sender TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf in the list?:', addrs.includes('TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf'));
+

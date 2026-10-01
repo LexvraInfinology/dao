@@ -99,9 +99,7 @@ export function buildLiveCouncilSeats(
           : liveMember.status ?? 'Active Member',
         statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Active Member',
         soulboundId,
-        entryAmount: bttPriceUsd > 0
-          ? `$300 USD (≈ ${Math.round(300 / bttPriceUsd).toLocaleString()} TROB)`
-          : '$300 USD',
+        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
               month: 'short',
@@ -123,9 +121,7 @@ export function buildLiveCouncilSeats(
         statusText: 'Next in Queue • Ready for Instant Mint',
         statusBadge: 'Next Available',
         soulboundId,
-        entryAmount: bttPriceUsd > 0
-          ? `$300 USD (≈ ${Math.round(300 / bttPriceUsd).toLocaleString()} TROB)`
-          : '$300 USD',
+        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
       };
     }
 

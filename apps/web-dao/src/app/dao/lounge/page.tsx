@@ -18,9 +18,9 @@ export default function MemberLoungePage() {
 
   // Pass live values down as props where components accept them
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
-  const capProgressPct     = lounge?.capProgressPct        ?? 0;
   const pushedUsd          = lounge?.pushedUsd             ?? 0;
-  const earningsCapUsd     = lounge?.earningsCapUsd || 1500;
+  const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
+  const capProgressPct     = earningsCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / earningsCapUsd) * 100)) : 0;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">

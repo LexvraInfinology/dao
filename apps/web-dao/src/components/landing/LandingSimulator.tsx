@@ -1,168 +1,84 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 export const LandingSimulator: React.FC = () => {
+  const [seat, setSeat] = useState<number>(100);
+  const autoRef = useRef(true);
   const secRef = useRef<HTMLElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
-  const rangeRef = useRef<HTMLInputElement>(null);
-  const nRef = useRef<HTMLSpanElement>(null);
-  const n2Ref = useRef<HTMLElement>(null);
-  const vRef = useRef<HTMLElement>(null);
-  const mRef = useRef<HTMLDivElement>(null);
-  const peRef = useRef<HTMLDivElement>(null);
-  const pyRef = useRef<HTMLDivElement>(null);
-  const chipsRef = useRef<HTMLDivElement>(null);
+  const isDraggingChartRef = useRef(false);
   const x5Ref = useRef<HTMLDivElement>(null);
   const capRef = useRef<HTMLSpanElement>(null);
 
+  // Calculations
+  const back = 300 / seat;
+  const rest = 300 - back;
+
+  const f = (val: number) => {
+    return '$' + (Number.isInteger(val) ? val : val.toFixed(2));
+  };
+
+  // Sweep animation on intersect
   useEffect(() => {
-    const chart = chartRef.current;
-    const r = rangeRef.current;
-    const n = nRef.current;
-    const n2 = n2Ref.current;
-    const v = vRef.current;
-    const m = mRef.current;
-    const pe = peRef.current;
-    const py = pyRef.current;
-    const sec = secRef.current;
-    const x = x5Ref.current;
-    const cap = capRef.current;
-    const chips = chipsRef.current;
-
-    if (!chart || !r || !n || !n2 || !v || !m || !pe || !py || !sec || !x || !cap) return;
-
-    let N = 100;
-    let auto = true;
-    const bars: HTMLDivElement[] = [];
-
-    function f(val: number) {
-      return '$' + (Number.isInteger(val) ? val : val.toFixed(2));
-    }
-
-    // Populate chart with 100 bars matching the HTML specification
-    chart.innerHTML = '';
-    for (let i = 1; i <= 100; i++) {
-      const b = document.createElement('div');
-      b.className = 'b';
-      b.style.height = (300 / i / 3) + '%';
-      chart.appendChild(b);
-      bars.push(b);
-    }
-
-    function set(k: number) {
-      N = Math.max(1, Math.min(100, Math.round(k)));
-      const back = 300 / N;
-      const rest = 300 - back;
-      if (n) n.textContent = String(N);
-      if (n2) n2.textContent = String(N);
-      if (v) v.textContent = f(back);
-      if (r) r.value = String(N);
-      for (let i = 0; i < 100; i++) {
-        if (bars[i]) {
-          bars[i].className = 'b' + (i + 1 < N ? ' e' : (i + 1 === N ? ' s' : ''));
-        }
-      }
-      if (py) {
-        py.style.width = (100 / N) + '%';
-        py.textContent = N <= 30 ? f(back) : '';
-      }
-      if (pe) {
-        pe.style.width = (100 - 100 / N) + '%';
-        pe.textContent = rest > 0 ? f(rest) : '';
-      }
-      if (m) {
-        m.innerHTML = rest > 0
-          ? '$300 ÷ <b>' + N + '</b> = <b>' + f(back) + '</b> back to you · ' + f(rest) + ' to earlier seats'
-          : '$300 ÷ <b>1</b> = <b>$300</b> back to you';
-      }
-    }
-
-    function fromX(e: PointerEvent | MouseEvent) {
-      if (!chart) return;
-      const rc = chart.getBoundingClientRect();
-      if (rc.width > 0) {
-        set(((e.clientX - rc.left) / rc.width) * 100 + .5);
-      }
-    }
-
-    let down = false;
-    const onPointerDown = (e: PointerEvent) => {
-      auto = false;
-      down = true;
-      fromX(e);
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (down) fromX(e);
-    };
-    const onPointerUp = () => {
-      down = false;
-    };
-
-    chart.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-
-    const onRangeInput = () => {
-      auto = false;
-      set(+r.value);
-    };
-    r.addEventListener('input', onRangeInput);
-
-    // Populate chips
-    if (chips && chips.children.length === 0) {
-      [1, 2, 10, 50, 100].forEach((k) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = 'Seat ' + k;
-        btn.onclick = () => {
-          auto = false;
-          set(k);
-        };
-        chips.appendChild(btn);
-      });
-    }
-
-    set(100);
-
-    // Sweep animation
     let sweepRafId: number | null = null;
-    function sweep() {
+    let io: IntersectionObserver | null = null;
+
+    const sweep = () => {
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) {
-        set(10);
+        setSeat(10);
         return;
       }
       let t0: number | null = null;
       const D = 4200;
-      function step(ts: number) {
-        if (!auto) return;
+      let lastVal = 100;
+      const step = (ts: number) => {
+        if (!autoRef.current) return;
         if (t0 === null) t0 = ts;
         const t = Math.min(1, (ts - t0) / D);
-        const e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        set(Math.pow(100, 1 - e));
+        const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const nextVal = Math.max(1, Math.min(100, Math.round(Math.pow(100, 1 - e))));
+        if (nextVal !== lastVal) {
+          lastVal = nextVal;
+          setSeat(nextVal);
+        }
         if (t < 1) {
           sweepRafId = requestAnimationFrame(step);
         }
-      }
+      };
       sweepRafId = requestAnimationFrame(step);
+    };
+
+    if (secRef.current) {
+      try {
+        io = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              io?.disconnect();
+              sweep();
+            }
+          },
+          { threshold: 0.4 }
+        );
+        io.observe(secRef.current);
+      } catch {
+        sweep();
+      }
     }
 
-    let io: IntersectionObserver | null = null;
-    try {
-      io = new IntersectionObserver((en) => {
-        if (en[0].isIntersecting) {
-          io?.disconnect();
-          sweep();
-        }
-      }, { threshold: .4 });
-      io.observe(sec);
-    } catch {
-      sweep();
-    }
+    return () => {
+      if (sweepRafId) cancelAnimationFrame(sweepRafId);
+      io?.disconnect();
+    };
+  }, []);
 
-    // Cap rolling counter and x5 animation
+  // Cap rolling counter and x5 animation
+  useEffect(() => {
     let capRafId: number | null = null;
+    const x = x5Ref.current;
+    const cap = capRef.current;
+
     function go() {
       if (!x || !cap) return;
       x.classList.add('on');
@@ -182,29 +98,61 @@ export const LandingSimulator: React.FC = () => {
     }
 
     let o: IntersectionObserver | null = null;
-    try {
-      o = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) {
-          o?.disconnect();
-          go();
-        }
-      }, { threshold: .6 });
-      o.observe(x);
-    } catch {
-      go();
+    if (x) {
+      try {
+        o = new IntersectionObserver(
+          (e) => {
+            if (e[0].isIntersecting) {
+              o?.disconnect();
+              go();
+            }
+          },
+          { threshold: 0.6 }
+        );
+        o.observe(x);
+      } catch {
+        go();
+      }
     }
 
     return () => {
-      chart.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      r.removeEventListener('input', onRangeInput);
-      if (sweepRafId) cancelAnimationFrame(sweepRafId);
       if (capRafId) cancelAnimationFrame(capRafId);
-      io?.disconnect();
       o?.disconnect();
     };
   }, []);
+
+  const handlePointerUpdate = (clientX: number) => {
+    if (!chartRef.current) return;
+    const rc = chartRef.current.getBoundingClientRect();
+    if (rc.width > 0) {
+      const raw = ((clientX - rc.left) / rc.width) * 100 + 0.5;
+      const nextSeat = Math.max(1, Math.min(100, Math.round(raw)));
+      autoRef.current = false;
+      setSeat(nextSeat);
+    }
+  };
+
+  const onChartPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    autoRef.current = false;
+    isDraggingChartRef.current = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    handlePointerUpdate(e.clientX);
+  };
+
+  const onChartPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingChartRef.current) {
+      handlePointerUpdate(e.clientX);
+    }
+  };
+
+  const onChartPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingChartRef.current = false;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <section id="simulator" className="py-10 sm:py-14 lg:py-16 bg-[#FFFFFF] relative overflow-hidden border-b border-slate-200/80 flex justify-center px-4 sm:px-6">
@@ -339,6 +287,7 @@ export const LandingSimulator: React.FC = () => {
         #simulator .b.s {
           background: var(--blue);
           box-shadow: 0 0 20px var(--glow);
+          min-height: 8px;
         }
         #simulator .axis {
           display: flex;
@@ -432,7 +381,8 @@ export const LandingSimulator: React.FC = () => {
           cursor: pointer;
           transition: .15s;
         }
-        #simulator .chips button:hover {
+        #simulator .chips button:hover,
+        #simulator .chips button.active {
           background: var(--ink);
           color: #fff;
         }
@@ -763,39 +713,113 @@ export const LandingSimulator: React.FC = () => {
 
       <section className="card" id="sec" ref={secRef}>
         <div className="layout-split">
-          {/* Section 1: Interactive Seat Benefit Simulator (Screenshot 1) */}
+          {/* Section 1: Interactive Seat Benefit Simulator */}
           <div className="sec-simulator">
             <div className="top">
               <span><i></i>Seat benefit example</span>
-              <span className="r"><i></i>Your seat: #<b id="n2" ref={n2Ref}>100</b></span>
+              <span className="r"><i></i>Your seat: #<b id="n2">{seat}</b></span>
             </div>
 
             <h2>Earlier seat. <em>Bigger return.</em></h2>
             <p className="sub">Every seat is <b>$300</b>. Your seat number decides how much comes back to you.</p>
 
             <div className="hero">
-              <div className="seat">Your seat<strong>#<span id="n" ref={nRef}>1</span></strong></div>
-              <div className="ret">Back to you<strong id="v" ref={vRef}>$300</strong></div>
+              <div className="seat">Your seat<strong>#<span id="n">{seat}</span></strong></div>
+              <div className="ret">Back to you<strong id="v">{f(back)}</strong></div>
             </div>
 
-            <div className="chart" id="chart" ref={chartRef} aria-hidden="true" />
+            <div
+              className="chart"
+              id="chart"
+              ref={chartRef}
+              aria-hidden="true"
+              onPointerDown={onChartPointerDown}
+              onPointerMove={onChartPointerMove}
+              onPointerUp={onChartPointerUp}
+              onPointerCancel={onChartPointerUp}
+            >
+              {Array.from({ length: 100 }, (_, i) => {
+                const seatNum = i + 1;
+                const isSelected = seatNum === seat;
+                const isEarlier = seatNum < seat;
+                const barClass = `b${isEarlier ? ' e' : ''}${isSelected ? ' s' : ''}`;
+                const barHeight = `${300 / seatNum / 3}%`;
+                return (
+                  <div
+                    key={seatNum}
+                    className={barClass}
+                    style={{ height: barHeight }}
+                  />
+                );
+              })}
+            </div>
             <div className="axis"><span>Seat 1</span><span>Seat 100</span></div>
-            <input type="range" id="r" ref={rangeRef} min="1" max="100" defaultValue="100" aria-label="Choose seat number" />
+            <input
+              type="range"
+              id="r"
+              min="1"
+              max="100"
+              value={seat}
+              onChange={(e) => {
+                autoRef.current = false;
+                setSeat(Number(e.target.value));
+              }}
+              aria-label="Choose seat number"
+            />
 
             <div className="split">
-              <div id="pe" ref={peRef} />
-              <div id="py" ref={pyRef} />
+              <div
+                id="pe"
+                style={{
+                  width: `${100 - 100 / seat}%`,
+                }}
+              >
+                {rest > 0 ? f(rest) : ''}
+              </div>
+              <div
+                id="py"
+                style={{
+                  width: `${100 / seat}%`,
+                }}
+              >
+                {seat <= 30 ? f(back) : ''}
+              </div>
             </div>
             <div className="legend">
               <span><i style={{ background: 'var(--green)' }} />To earlier seats</span>
               <span><i style={{ background: 'var(--blue)' }} />Back to you</span>
             </div>
 
-            <div className="math" id="m" ref={mRef} />
-            <div className="chips" id="chips" ref={chipsRef} />
+            <div className="math" id="m">
+              {rest > 0 ? (
+                <>
+                  $300 ÷ <b>{seat}</b> = <b>{f(back)}</b> back to you · {f(rest)} to earlier seats
+                </>
+              ) : (
+                <>
+                  $300 ÷ <b>1</b> = <b>$300</b> back to you
+                </>
+              )}
+            </div>
+
+            <div className="chips" id="chips">
+              {[1, 2, 10, 50, 100].map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={seat === k ? 'active' : ''}
+                  onClick={() => {
+                    autoRef.current = false;
+                    setSeat(k);
+                  }}
+                >
+                  Seat {k}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Section 2: Deposit Contribution, Max Inflow Cap & CTA (Screenshot 2) */}
+          {/* Section 2: Deposit Contribution, Max Inflow Cap & CTA */}
           <div className="sec-inflow">
             <div className="info">
               <div className="ic">

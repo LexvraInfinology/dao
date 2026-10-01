@@ -275,12 +275,21 @@ export function useLounge(address: string | null) {
   );
 }
 
-export function useTransactions(address: string | null, page = 1, limit = 20) {
-  return useApi<TransactionsData>(
-    address
-      ? `/api/dao/transactions?address=${address}&page=${page}&limit=${limit}`
-      : `/api/dao/transactions?page=${page}&limit=${limit}`
-  );
+export function useTransactions(
+  address: string | null = null,
+  page = 1,
+  limit = 20,
+  type?: string,
+  search?: string
+) {
+  const params = new URLSearchParams();
+  if (address) params.set('address', address);
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  if (type && type !== 'all') params.set('type', type);
+  if (search && search.trim()) params.set('search', search.trim());
+
+  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`);
 }
 
 export function useDaoProposals(limit = 20) {

@@ -104,10 +104,10 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
     );
   }
 
-  // 3. Floating action circle (responsive on all screen sizes)
+  // 3. Floating action circle (responsive on all screen sizes, elevated to prevent overlap with pagination & navigation)
   return (
     <div
-      className={`fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 select-none flex items-center gap-3 ${className}`}
+      className={`fixed bottom-24 right-5 sm:bottom-28 sm:right-6 z-40 select-none flex items-center gap-3 pointer-events-none ${className}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -127,7 +127,7 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Equora_Fi DAO Council WhatsApp Group"
-        className="relative group w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center shadow-[0_6px_25px_rgba(37,211,102,0.45)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.65)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-white/80"
+        className="pointer-events-auto relative group w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center shadow-[0_6px_25px_rgba(37,211,102,0.45)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.65)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-white/80"
       >
         {/* Soft Ambient Pulse Ring */}
         <span className="absolute inset-0 rounded-full bg-[#25D366] opacity-30 animate-ping pointer-events-none" />

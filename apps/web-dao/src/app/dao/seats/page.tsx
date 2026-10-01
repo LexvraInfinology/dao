@@ -17,6 +17,9 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { Check, Loader2 } from 'lucide-react';
 
+import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
+import { DEPLOYED_CONTRACTS } from '@/utils/trobAddress';
+
 interface ApiMembersPayload {
   members: RawMemberData[];
   total: number;
@@ -38,6 +41,7 @@ export default function CouncilSeatsPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [minting, setMinting]           = useState(false);
   const [mintErr, setMintErr]           = useState<string | null>(null);
+  const [paymentModalSeat, setPaymentModalSeat] = useState<CouncilSeatDetail | null>(null);
 
   // Dynamically build the 100 seats array from live data
   const seats: CouncilSeatDetail[] = useMemo(() => {
@@ -70,48 +74,61 @@ export default function CouncilSeatsPage() {
     });
   }, [seats, defaultSeat]);
 
-  // ── Mint / claim seat ─────────────────────────────────────────────────────
-  const handleMintSeat = async (seatNumber: number) => {
-    if (!wallet.isConnected || !price) {
-      setMintErr('Please connect your TrobSafe wallet first.');
-      return;
-    }
+  // ── Initiate seat claim modal ─────────────────────────────────────────────
+  const handleOpenClaimModal = (seatNumber: number) => {
     if (memberData?.isMember) {
       setMintErr(`You already own Council Seat #${memberData.position}. Limit 1 seat per wallet.`);
       return;
+    }
+    const targetSeat = seats.find((s) => s.seatNumber === seatNumber) ?? selectedSeat;
+    setPaymentModalSeat(targetSeat);
+  };
+
+  // ── On-chain payment & sync handler ───────────────────────────────────────
+  const handleConfirmPayment = async (seatNumber: number): Promise<{ success: boolean; txHash?: string | null; error?: string }> => {
+    if (!wallet.isConnected) {
+      return { success: false, error: 'Please connect your TrobSafe wallet first.' };
+    }
+    if (memberData?.isMember) {
+      return { success: false, error: `You already own Council Seat #${memberData.position}. Limit 1 seat per wallet.` };
     }
 
     setMintErr(null);
     setMinting(true);
 
-    const callValueSun = Math.ceil(price.seatEntryTrob * 1_000_000);
-    const daoAddress   = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
-    const activeAddr   = wallet.base58Address ?? wallet.hexAddress ?? '';
+    const seatEntryTrob = price?.seatEntryTrob ?? Math.round((300 / (price?.priceUsd || 0.056)) * 100) / 100;
+    const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
+    const configuredDao = process.env.NEXT_PUBLIC_DAO_ADDRESS;
+    const daoAddress =
+      configuredDao &&
+      configuredDao !== '0x4b6aB5F819A515382B0dEB6935D793817bB4af28' &&
+      configuredDao !== '0x0000000000000000000000000000000000000000'
+        ? configuredDao
+        : DEPLOYED_CONTRACTS.EquoraDAO.base58;
+    const activeAddr = wallet.base58Address ?? wallet.hexAddress ?? '';
 
     try {
       let txId: string | null = null;
 
-      // 1. On-chain call if contract configured
-      if (
-        daoAddress &&
-        daoAddress !== '0x0000000000000000000000000000000000000000' &&
-        daoAddress.length > 10
-      ) {
-        try {
-          const result = await wallet.callContract({
-            contract_address:  daoAddress,
-            function_selector: 'joinDAO()',
-            parameter:         '',
-            call_value:        callValueSun,
-            fee_limit:         100_000_000,
-            owner_address:     activeAddr,
-          });
+      // 1. On-chain call via TrobSafe
+      try {
+        const result = await wallet.callContract({
+          contract_address: daoAddress,
+          function_selector: 'joinDAO()',
+          parameter: '',
+          call_value: callValueSun,
+          fee_limit: 100_000_000,
+          owner_address: activeAddr,
+        });
 
-          if (result?.result && result.txid) {
-            txId = result.txid;
-          }
-        } catch (onChainErr: unknown) {
-          console.warn('[CouncilSeatsPage] On-chain broadcast note:', onChainErr);
+        if (result?.result && result.txid) {
+          txId = result.txid;
+        }
+      } catch (onChainErr: unknown) {
+        console.warn('[CouncilSeatsPage] On-chain broadcast notice:', onChainErr);
+        const msg = onChainErr instanceof Error ? onChainErr.message : String(onChainErr);
+        if (msg.includes('rejected') || msg.includes('cancelled') || msg.includes('denied') || msg.includes('User rejected')) {
+          throw new Error('Transaction was cancelled or rejected in TrobSafe.');
         }
       }
 
@@ -120,7 +137,12 @@ export default function CouncilSeatsPage() {
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: activeAddr, txHash: txId }),
+        body: JSON.stringify({
+          address: activeAddr,
+          txHash: txId,
+          position: seatNumber,
+          termsAccepted: true,
+        }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -132,8 +154,12 @@ export default function CouncilSeatsPage() {
       setNotification(`🎉 Council Seat #${assignedPosition} claimed! Instant cashback of +$${cashbackReceived} USD sent directly to your connected wallet on-chain (Zero Gas Fees). ${txId ? `(Tx: ${txId.slice(0, 10)}…)` : ''}`);
       await Promise.all([refetchMembers(), refetchMember()]);
       setTimeout(() => setNotification(null), 8000);
+
+      return { success: true, txHash: txId };
     } catch (err: unknown) {
-      setMintErr(err instanceof Error ? err.message : 'Claim failed.');
+      const msg = err instanceof Error ? err.message : 'Claim failed.';
+      setMintErr(msg);
+      return { success: false, error: msg };
     } finally {
       setMinting(false);
     }
@@ -187,7 +213,8 @@ export default function CouncilSeatsPage() {
 
           <SeatInspector
             seat={selectedSeat}
-            onMintSeat={minting || memberData?.isMember ? undefined : handleMintSeat}
+            priceData={price}
+            onMintSeat={minting || memberData?.isMember ? undefined : handleOpenClaimModal}
           />
           <CouncilAboutCard />
 
@@ -196,6 +223,16 @@ export default function CouncilSeatsPage() {
           </div>
         </div>
       </div>
+
+      {paymentModalSeat && (
+        <SeatPaymentModal
+          isOpen={Boolean(paymentModalSeat)}
+          onClose={() => setPaymentModalSeat(null)}
+          seat={paymentModalSeat}
+          priceData={price}
+          onConfirmPayment={handleConfirmPayment}
+        />
+      )}
     </div>
   );
 }

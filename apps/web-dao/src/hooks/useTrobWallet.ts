@@ -184,7 +184,10 @@ export function useTrobWallet(): TrobWalletState {
       hex: addr.hex ? addr.hex.toLowerCase() : '',
     };
     try {
-      localStorage.removeItem(DISCONNECTED_KEY);
+      // NOTE: Do NOT clear DISCONNECTED_KEY here.
+      // Only explicit user-initiated connect() / connectWithAddress() should clear it.
+      // This prevents background extension events from silently re-enabling
+      // session restoration after the user has explicitly signed out.
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       if (normalized.hex) {
         localStorage.setItem('equora_auth_address', normalized.hex);
@@ -592,18 +595,33 @@ export function useTrobWallet(): TrobWalletState {
 
       const p = (Array.isArray(rawPayload) ? rawPayload[0] : rawPayload) as any;
 
-      // Sanitize address: TrobSafe requires Base58 (or 41-hex), strictly NOT 0x...
-      let sanitizedContract = p.contract_address;
-      if (sanitizedContract && sanitizedContract.startsWith('0x')) {
-        sanitizedContract = toTrobBase58(sanitizedContract) || toTronHex(sanitizedContract);
+      // Sanitize address: TrobSafe RPC (/wallet/triggersmartcontract) requires 41-hex
+      let sanitizedContract = p.contract_address || '';
+      // Map local Hardhat placeholder to real deployed EquoraDAO on Trobchain
+      if (
+        !sanitizedContract ||
+        sanitizedContract === '0x4b6aB5F819A515382B0dEB6935D793817bB4af28' ||
+        sanitizedContract.toLowerCase() === '0x4b6ab5f819a515382b0deb6935d793817bb4af28' ||
+        sanitizedContract === '0x0000000000000000000000000000000000000000'
+      ) {
+        sanitizedContract = '41775474f9cda2509e1887f029f5e9ee6ac15e1f23'; // EquoraDAO on Trobchain
+      } else {
+        sanitizedContract = toTronHex(sanitizedContract);
       }
 
-      // Call value in SUN (for native TROB payments like joinDAO)
-      let sanitizedCallValue = p.call_value || 0;
+      // Owner address must also be 41-hex for Trobchain fullnode triggersmartcontract
+      let sanitizedOwner = p.owner_address ? toTronHex(p.owner_address) : '';
+      if (!sanitizedOwner && (address?.base58 || address?.hex)) {
+        sanitizedOwner = toTronHex(address.base58 || address.hex);
+      }
+
+      // Call value in SUN (integer)
+      const sanitizedCallValue = Math.round(Number(p.call_value) || 0);
 
       const payload = {
         ...p,
         contract_address: sanitizedContract,
+        owner_address: sanitizedOwner,
         call_value: sanitizedCallValue,
         fee_limit: p.fee_limit || 100_000_000,
       };
@@ -628,7 +646,7 @@ export function useTrobWallet(): TrobWalletState {
       }
       throw new Error('Contract trigger not supported by current wallet provider.');
     },
-    [status]
+    [status, address]
   );
 
   return {

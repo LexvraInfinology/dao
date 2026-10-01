@@ -28,7 +28,7 @@ export const IncomeChannelsCard: React.FC<IncomeChannelsCardProps> = ({ loungeDa
             <div className="space-y-0.5 min-w-0">
               <div className="text-xs sm:text-sm font-bold font-jakarta text-[#071A4A] truncate">1. 300 / N Distributions</div>
               <div className="text-xs font-bold font-jakarta text-[#155EEF]">
-                ${daoEarnedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+                ${daoEarnedUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
               </div>
             </div>
           </div>
@@ -49,7 +49,7 @@ export const IncomeChannelsCard: React.FC<IncomeChannelsCardProps> = ({ loungeDa
                 2. Retail Matrix Royalties
               </div>
               {hasMatrix
-                ? <div className="text-xs font-bold font-jakarta text-[#155EEF]">${matrixEarnedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB • Slot {highestSlot}</div>
+                ? <div className="text-xs font-bold font-jakarta text-[#155EEF]">${matrixEarnedUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD • Slot {highestSlot}</div>
                 : <div className="text-xs font-medium font-jakarta text-[#94A3B8]">Coming on Day 22</div>
               }
             </div>

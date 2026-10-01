@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight } from 'lucide-react';
+import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp } from 'lucide-react';
 import { CouncilSeatDetail } from '@/data/councilSeatsData';
+import { TrobPriceData } from '@/hooks/useApi';
 
 interface SeatInspectorProps {
   seat: CouncilSeatDetail;
+  priceData?: TrobPriceData | null;
   onClose?: () => void;
   onMintSeat?: (seatNumber: number) => void;
 }
 
 export const SeatInspector: React.FC<SeatInspectorProps> = ({
   seat,
+  priceData,
   onClose,
   onMintSeat,
 }) => {
@@ -24,6 +27,11 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   };
 
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
+
+  const entryFeeUsd = 300;
+  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
+  const seatEntryTrob = priceData?.seatEntryTrob ?? Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
 
   return (
     <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
@@ -167,6 +175,36 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         </div>
       </div>
 
+      {/* Connected Pricing Card */}
+      {isMintable && (
+        <div className="p-3 rounded-xl bg-[#F7FBFF] border border-[#E2EEF9] space-y-2 text-xs">
+          <div className="flex items-center justify-between text-[#14304A] font-bold">
+            <span className="flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-500" />
+              <span>Seat Entry Pricing</span>
+            </span>
+            <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
+              $300.00 USD
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-[#4F6D87]">
+            <span>Live TROB Equivalent</span>
+            <span className="font-mono font-bold text-[#14304A]">
+              ≈ {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200/60">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-emerald-600" />
+              <span>Instant Cashback (+300/n)</span>
+            </span>
+            <span className="font-mono font-bold">+${instantCashbackUsd} USD</span>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="pt-2 space-y-2">
         {seat.status === 'mine' ? (
@@ -181,10 +219,11 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           <button
             type="button"
             onClick={() => onMintSeat(seat.seatNumber)}
-            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-[0_4px_14px_rgba(14,98,228,0.25)] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Claim Seat #{seat.seatNumber} ($300 Entry)</span>
+            <span>Proceed to Claim Seat #{seat.seatNumber} ($300 USD)</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
         ) : isMintable && !onMintSeat ? (
           <div className="w-full py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs text-center font-medium">

@@ -6,14 +6,16 @@ import type { TransactionItem } from '@/hooks/useApi';
 
 interface TransactionsMobileMetricsProps {
   transactions?: TransactionItem[];
+  totalTransactions?: number;
   bttPriceUsd?: number;
 }
 
 export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps> = ({
   transactions = [],
+  totalTransactions,
   bttPriceUsd = 0,
 }) => {
-  const total = transactions.length;
+  const total = totalTransactions ?? transactions.length;
 
   const inflows  = transactions.filter((t) => t.isPositive === true)
     .reduce((s, t) => s + t.amountUsd, 0);
@@ -39,8 +41,8 @@ export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps>
           </div>
           <div className="space-y-0.5 min-w-0">
             <div className="text-[10px] font-bold uppercase tracking-wider text-[#60739A]">TOTAL TRANSACTIONS</div>
-            <div className="text-2xl sm:text-3xl font-black font-jakarta text-[#071A4A] tracking-tight">{total}</div>
-            <div className="text-[11px] text-[#60739A] font-medium truncate">This page</div>
+            <div className="text-2xl sm:text-3xl font-black font-jakarta text-[#071A4A] tracking-tight">{total.toLocaleString()}</div>
+            <div className="text-[11px] text-[#60739A] font-medium truncate">{totalTransactions !== undefined ? 'All On-Chain Records' : 'This page'}</div>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEF5FF] border border-[#BFDBFE]/60 text-xs font-semibold text-[#155EEF] shrink-0">

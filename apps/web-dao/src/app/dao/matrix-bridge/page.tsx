@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Crown, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Crown, ArrowRight } from 'lucide-react';
 import MatrixCountdownCard from '@/components/dao/matrix/MatrixCountdownCard';
 import MatrixFeatureCards from '@/components/dao/matrix/MatrixFeatureCards';
 import MatrixTreeGraph from '@/components/dao/matrix/MatrixTreeGraph';
@@ -9,8 +9,7 @@ import { ProtocolPoolsCard } from '@/components/dao/matrix/ProtocolPoolsCard';
 import { MatrixRegisterModal } from '@/components/dao/matrix/MatrixRegisterModal';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
-import { useDaoMember, useApi } from '@/hooks/useApi';
-import { playNotificationChime } from '@/utils/soundEffects';
+import { useDaoMember } from '@/hooks/useApi';
 
 export default function MatrixBridgePage() {
   const wallet = useWallet();
@@ -19,30 +18,8 @@ export default function MatrixBridgePage() {
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [isRootClaim, setIsRootClaim] = useState(false);
-  const [passedWaterfall, setPassedWaterfall] = useState(false);
 
   const userSeat = memberData?.position ?? auth.user?.daoPosition ?? null;
-  const isPrioritySeat = userSeat && userSeat >= 1 && userSeat <= 10;
-  const isSubsequentOrLastMember = userSeat && userSeat > 10;
-
-  const handlePassOffer = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      await fetch(`${apiUrl}/api/dao/matrix`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'pass_root_offer',
-          address: wallet.address || auth.user?.address,
-          seatPosition: userSeat,
-        }),
-      });
-      setPassedWaterfall(true);
-      playNotificationChime();
-    } catch {
-      setPassedWaterfall(true);
-    }
-  };
 
   return (
     <div className="space-y-5 sm:space-y-6 lg:space-y-8 animate-fadeIn font-sans py-2 sm:py-6 lg:py-8 max-w-5xl mx-auto w-full px-1">
@@ -67,87 +44,45 @@ export default function MatrixBridgePage() {
         </p>
       </div>
 
-      {/* ── Priority Waterfall Offer Banner (For DAO Members 1 to 10) ── */}
-      {isPrioritySeat && !passedWaterfall && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-emerald-500/10 border-2 border-amber-400/60 shadow-md font-sans space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <Crown className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider">
-                    Priority Waterfall #1
-                  </span>
-                  <span className="text-xs font-bold text-amber-900">
-                    Council Seat #{userSeat} Exclusive Privilege
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-bold text-[#14304A]">
-                  You have the first right of refusal to become the Root Matrix Apex Owner!
-                </h3>
-                <p className="text-xs text-[#4F6D87] leading-relaxed max-w-2xl">
-                  As an initial founding council member, you can claim the top apex node of the global retail matrix for <strong>$30 USD in TROB</strong>. If you pass, this privilege immediately waterfalls to Seat #{userSeat + 1}.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center pt-2 sm:pt-0">
-              <button
-                onClick={() => {
-                  setIsRootClaim(true);
-                  setRegisterModalOpen(true);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-              >
-                <span>Accept & Claim ($30)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={handlePassOffer}
-                className="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition-colors"
-              >
-                Pass to Next Seat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Opportunity Display for Last Member / Subsequent Members ── */}
-      {isSubsequentOrLastMember && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 shadow-xs font-sans flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      {/* ── Apex Opportunity Showcase: Granted to Last Member with Least Cashback (Frontend Presentation) ── */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#EFF6FF] to-emerald-500/10 border-2 border-amber-300/70 shadow-sm font-sans space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#0E62E4] text-white flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="w-4 h-4" />
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+              <Crown className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-xs font-bold text-[#14304A] flex items-center gap-1.5">
-                <span>Genesis Council Member Privilege (Seat #{userSeat})</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
-                  Spillover Ready
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider">
+                  Algorithmic Balance
+                </span>
+                <span className="text-xs font-bold text-amber-900">
+                  Last DAO Member Apex Root Allocation
                 </span>
               </div>
-              <p className="text-xs text-[#4F6D87] mt-0.5 leading-relaxed max-w-2xl">
-                You have the opportunity to participate in Matrix leadership and downline spillover placements. Your personal 14-node progression unlocks on Day 22!
+              <h3 className="text-sm sm:text-base font-bold text-[#14304A]">
+                The Member with the Lowest Queue Cashback is Designated the Matrix Apex Owner!
+              </h3>
+              <p className="text-xs text-[#4F6D87] leading-relaxed max-w-2xl">
+                Because early council seats receive higher immediate cashbacks (300/N), the Genesis protocol algorithmically designates the <strong>final DAO member</strong> (who received the lowest queue cashback) with prime opportunity to become the top <strong>Apex Root Leader</strong> of the entire Retail Matrix!
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              setIsRootClaim(false);
-              setRegisterModalOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1 shrink-0 self-start sm:self-auto"
-          >
-            <span>Pre-Register Slot 1</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center pt-2 sm:pt-0">
+            <button
+              onClick={() => {
+                setIsRootClaim(true);
+                setRegisterModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+            >
+              <span>Inspect Apex Eligibility</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Live Countdown Card (with dynamic state transition to open matrix) */}
       <MatrixCountdownCard

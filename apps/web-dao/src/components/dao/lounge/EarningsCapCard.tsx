@@ -313,8 +313,13 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalOpen(false);
+          }}
+        >
+          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 cursor-default">
             <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
               <h3 className="text-base font-bold text-[#071A4A] font-jakarta flex items-center gap-2">
                 <Info className="w-4 h-4 text-[#155EEF]" />5X Earnings Cap Policy (${effectiveCapUsd.toLocaleString()} Worth of TROB)

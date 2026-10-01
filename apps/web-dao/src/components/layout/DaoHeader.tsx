@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -62,10 +62,55 @@ export const DaoHeader: React.FC = () => {
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
 
+  const walletDropRef = useRef<HTMLDivElement>(null);
+  const walletBtnRef  = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Close wallet dropdown when clicking anywhere outside or pressing Escape
+  useEffect(() => {
+    if (!walletDropOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent | PointerEvent) => {
+      const target = e.target as Node;
+      if (
+        walletDropRef.current &&
+        !walletDropRef.current.contains(target) &&
+        walletBtnRef.current &&
+        !walletBtnRef.current.contains(target)
+      ) {
+        setWalletDropOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setWalletDropOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [walletDropOpen]);
+
+  // Lock body scroll and handle Escape for mobile navigation drawer
+  useEffect(() => {
+    if (mobileNavOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileNavOpen]);
 
   const handleConnectClick = () => {
     triggerSmartConnectWallet({
@@ -160,16 +205,16 @@ export const DaoHeader: React.FC = () => {
 
         {/* Left: Mobile brand + Desktop search */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Link href="/dao" className="lg:hidden flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 shrink-0 flex items-center justify-center">
-              <EquoraLogo className="w-8 h-8 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)]" />
+          <Link href="/dao" className="lg:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center">
+              <EquoraLogo className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)]" />
             </div>
-            <div>
-              <div className="text-[11px] font-black font-inter tracking-tight text-[#17334F] leading-tight">
+            <div className="flex flex-col justify-center leading-none">
+              <div className="text-[12px] min-[360px]:text-[13px] sm:text-[14px] font-black font-inter tracking-tight text-[#17334F] leading-tight">
                 EQUORA<span className="text-[#0E62E4]">.FI</span>
               </div>
-              <div className="text-[8px] font-bold font-inter text-[#0E62E4] tracking-wider leading-none">
-                GENESIS DAO
+              <div className="text-[7.5px] sm:text-[8px] font-extrabold font-inter text-[#0E62E4] tracking-[0.2em] uppercase mt-0.5 leading-none select-none">
+                DAO
               </div>
             </div>
           </Link>
@@ -207,20 +252,23 @@ export const DaoHeader: React.FC = () => {
           </button>
 
 
-          {/* Round circle for WhatsApp (only for real DAO seat members) */}
-          <DaoWhatsAppCircle variant="header" />
+          {/* Round circle for WhatsApp (only for real DAO seat members, hide on tiny screens to avoid header crowding) */}
+          <div className="hidden sm:flex shrink-0">
+            <DaoWhatsAppCircle variant="header" />
+          </div>
 
           {/* ── Wallet pill / connect button ───────────────────────────── */}
           {isConnected ? (
             <div className="relative">
               <button
+                ref={walletBtnRef}
                 onClick={() => setWalletDropOpen((v) => !v)}
-                className="flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[11px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
+                className="flex items-center gap-1.5 sm:gap-2 px-2 min-[360px]:px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[10.5px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
                 aria-label="Wallet menu"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
                 <span className="hidden sm:inline font-mono tracking-tight text-slate-100">{shortDisplay}</span>
-                <span className="sm:hidden font-mono text-[11px]">
+                <span className="sm:hidden font-mono text-[10.5px]">
                   {displayAddress ? displayAddress.slice(0, 5) + '…' : 'Wallet'}
                 </span>
                 {(memberData?.position || auth.user?.daoPosition) && (
@@ -235,10 +283,13 @@ export const DaoHeader: React.FC = () => {
               {walletDropOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-40 bg-black/25 sm:bg-transparent backdrop-blur-[1px] sm:backdrop-blur-none cursor-pointer"
                     onClick={() => setWalletDropOpen(false)}
                   />
-                  <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 sm:w-80 bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-2.5 animate-fadeIn">
+                  <div
+                    ref={walletDropRef}
+                    className="fixed sm:absolute left-2.5 right-2.5 sm:left-auto sm:right-0 top-14 sm:top-[calc(100%+8px)] z-50 w-auto sm:w-80 max-w-[calc(100vw-20px)] sm:max-w-none bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-2.5 animate-fadeIn"
+                  >
                     {/* Header info card */}
                     <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#0B1528] to-[#111C33] border border-[#1E293B] text-white mb-2 shadow-sm">
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -426,8 +477,13 @@ export const DaoHeader: React.FC = () => {
 
       {/* Mobile Drawer */}
       {mobileNavOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-end">
-          <div className="w-72 sm:w-80 bg-white h-full p-5 flex flex-col justify-between border-l border-[#E2ECF9] shadow-2xl">
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-end animate-in fade-in duration-200 cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMobileNavOpen(false);
+          }}
+        >
+          <div className="w-72 sm:w-80 bg-white h-full p-5 flex flex-col justify-between border-l border-[#E2ECF9] shadow-2xl cursor-default animate-in slide-in-from-right duration-200 overflow-y-auto pointer-events-auto">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#E2EEF9]">
                 <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#0E62E4] font-sans">

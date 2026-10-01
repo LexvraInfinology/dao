@@ -14,11 +14,25 @@ export const TermsModal: React.FC<TermsModalProps> = ({
   onClose,
   onAccept,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-xl bg-white text-[#17334F] rounded-2xl sm:rounded-3xl border border-[#E2ECF9] shadow-[0_25px_60px_rgba(15,23,42,0.18)] overflow-hidden flex flex-col max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn cursor-pointer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-xl bg-white text-[#17334F] rounded-2xl sm:rounded-3xl border border-[#E2ECF9] shadow-[0_25px_60px_rgba(15,23,42,0.18)] overflow-hidden flex flex-col max-h-[90vh] cursor-default">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-[#E2ECF9] flex items-center justify-between bg-gradient-to-r from-[#EFF6FF] via-[#F8FAFD] to-white">
           <div className="flex items-center gap-2.5 sm:gap-3">

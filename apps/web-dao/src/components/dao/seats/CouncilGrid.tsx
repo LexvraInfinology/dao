@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Lock, Check } from 'lucide-react';
 import { CouncilSeatDetail, SeatStatus } from '@/data/councilSeatsData';
 
@@ -17,6 +17,20 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
 }) => {
   const [filter, setFilter] = useState<'all' | 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked'>('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!filterDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent | PointerEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [filterDropdownOpen]);
 
   const mySeat = seats.find((s) => s.status === 'mine');
   const nextSeat = seats.find((s) => s.status === 'next');
@@ -59,7 +73,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
         </div>
 
         {/* Filter Dropdown */}
-        <div className="relative self-end sm:self-auto">
+        <div ref={filterDropdownRef} className="relative self-end sm:self-auto">
           <button
             type="button"
             onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}

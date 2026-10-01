@@ -2,11 +2,143 @@
 
 // SPDX-License-Identifier: MIT
 
+// File @openzeppelin/contracts/utils/Context.sol@v5.0.2
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        return 0;
+    }
+}
+
+
+// File @openzeppelin/contracts/access/Ownable.sol@v5.0.2
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
+
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * The initial owner is set to the address provided by the deployer. This can
+ * later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract Ownable is Context {
+    address private _owner;
+
+    /**
+     * @dev The caller account is not authorized to perform an operation.
+     */
+    error OwnableUnauthorizedAccount(address account);
+
+    /**
+     * @dev The owner is not a valid owner account. (eg. `address(0)`)
+     */
+    error OwnableInvalidOwner(address owner);
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
+     */
+    constructor(address initialOwner) {
+        if (initialOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(initialOwner);
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
+    function _checkOwner() internal view virtual {
+        if (owner() != _msgSender()) {
+            revert OwnableUnauthorizedAccount(_msgSender());
+        }
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+
 // File @openzeppelin/contracts/interfaces/draft-IERC6093.sol@v5.0.2
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (interfaces/draft-IERC6093.sol)
-pragma solidity ^0.8.20;
 
 /**
  * @dev Standard ERC20 Errors
@@ -387,37 +519,6 @@ interface IERC721Receiver {
         uint256 tokenId,
         bytes calldata data
     ) external returns (bytes4);
-}
-
-
-// File @openzeppelin/contracts/utils/Context.sol@v5.0.2
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
-
-
-/**
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-
-    function _contextSuffixLength() internal view virtual returns (uint256) {
-        return 0;
-    }
 }
 
 
@@ -1492,1168 +1593,408 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
 }
 
 
-// File @openzeppelin/contracts/token/ERC20/IERC20.sol@v5.0.2
+// File @openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol@v5.0.2
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/IERC20.sol)
+// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/IERC721Enumerable.sol)
 
 
 /**
- * @dev Interface of the ERC20 standard as defined in the EIP.
+ * @title ERC-721 Non-Fungible Token Standard, optional enumeration extension
+ * @dev See https://eips.ethereum.org/EIPS/eip-721
  */
-interface IERC20 {
+interface IERC721Enumerable is IERC721 {
     /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
-    /**
-     * @dev Returns the value of tokens in existence.
+     * @dev Returns the total amount of tokens stored by the contract.
      */
     function totalSupply() external view returns (uint256);
 
     /**
-     * @dev Returns the value of tokens owned by `account`.
+     * @dev Returns a token ID owned by `owner` at a given `index` of its token list.
+     * Use along with {balanceOf} to enumerate all of ``owner``'s tokens.
      */
-    function balanceOf(address account) external view returns (uint256);
+    function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
 
     /**
-     * @dev Moves a `value` amount of tokens from the caller's account to `to`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
+     * @dev Returns a token ID at a given `index` of all the tokens stored by the contract.
+     * Use along with {totalSupply} to enumerate all tokens.
      */
-    function transfer(address to, uint256 value) external returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    /**
-     * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
-     * caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 value) external returns (bool);
-
-    /**
-     * @dev Moves a `value` amount of tokens from `from` to `to` using the
-     * allowance mechanism. `value` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
+    function tokenByIndex(uint256 index) external view returns (uint256);
 }
 
 
-// File @openzeppelin/contracts/utils/ReentrancyGuard.sol@v5.0.2
+// File @openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol@v5.0.2
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
+// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/ERC721Enumerable.sol)
+
+
 
 
 /**
- * @dev Contract module that helps prevent reentrant calls to a function.
+ * @dev This implements an optional extension of {ERC721} defined in the EIP that adds enumerability
+ * of all the token ids in the contract as well as all token ids owned by each account.
  *
- * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
- * available, which can be applied to functions to make sure there are no nested
- * (reentrant) calls to them.
- *
- * Note that because there is a single `nonReentrant` guard, functions marked as
- * `nonReentrant` may not call one another. This can be worked around by making
- * those functions `private`, and then adding `external` `nonReentrant` entry
- * points to them.
- *
- * TIP: If you would like to learn more about reentrancy and alternative ways
- * to protect against it, check out our blog post
- * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ * CAUTION: `ERC721` extensions that implement custom `balanceOf` logic, such as `ERC721Consecutive`,
+ * interfere with enumerability and should not be used together with `ERC721Enumerable`.
  */
-abstract contract ReentrancyGuard {
-    // Booleans are more expensive than uint256 or any type that takes up a full
-    // word because each write operation emits an extra SLOAD to first read the
-    // slot's contents, replace the bits taken up by the boolean, and then write
-    // back. This is the compiler's defense against contract upgrades and
-    // pointer aliasing, and it cannot be disabled.
+abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
+    mapping(address owner => mapping(uint256 index => uint256)) private _ownedTokens;
+    mapping(uint256 tokenId => uint256) private _ownedTokensIndex;
 
-    // The values being non-zero value makes deployment a bit more expensive,
-    // but in exchange the refund on every call to nonReentrant will be lower in
-    // amount. Since refunds are capped to a percentage of the total
-    // transaction's gas, it is best to keep them low in cases like this one, to
-    // increase the likelihood of the full refund coming into effect.
-    uint256 private constant NOT_ENTERED = 1;
-    uint256 private constant ENTERED = 2;
-
-    uint256 private _status;
+    uint256[] private _allTokens;
+    mapping(uint256 tokenId => uint256) private _allTokensIndex;
 
     /**
-     * @dev Unauthorized reentrant call.
+     * @dev An `owner`'s token query was out of bounds for `index`.
+     *
+     * NOTE: The owner being `address(0)` indicates a global out of bounds index.
      */
-    error ReentrancyGuardReentrantCall();
+    error ERC721OutOfBoundsIndex(address owner, uint256 index);
 
-    constructor() {
-        _status = NOT_ENTERED;
+    /**
+     * @dev Batch mint is not allowed.
+     */
+    error ERC721EnumerableForbiddenBatchMint();
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC721) returns (bool) {
+        return interfaceId == type(IERC721Enumerable).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
+     * @dev See {IERC721Enumerable-tokenOfOwnerByIndex}.
      */
-    modifier nonReentrant() {
-        _nonReentrantBefore();
-        _;
-        _nonReentrantAfter();
+    function tokenOfOwnerByIndex(address owner, uint256 index) public view virtual returns (uint256) {
+        if (index >= balanceOf(owner)) {
+            revert ERC721OutOfBoundsIndex(owner, index);
+        }
+        return _ownedTokens[owner][index];
     }
 
-    function _nonReentrantBefore() private {
-        // On the first call to nonReentrant, _status will be NOT_ENTERED
-        if (_status == ENTERED) {
-            revert ReentrancyGuardReentrantCall();
+    /**
+     * @dev See {IERC721Enumerable-totalSupply}.
+     */
+    function totalSupply() public view virtual returns (uint256) {
+        return _allTokens.length;
+    }
+
+    /**
+     * @dev See {IERC721Enumerable-tokenByIndex}.
+     */
+    function tokenByIndex(uint256 index) public view virtual returns (uint256) {
+        if (index >= totalSupply()) {
+            revert ERC721OutOfBoundsIndex(address(0), index);
+        }
+        return _allTokens[index];
+    }
+
+    /**
+     * @dev See {ERC721-_update}.
+     */
+    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+        address previousOwner = super._update(to, tokenId, auth);
+
+        if (previousOwner == address(0)) {
+            _addTokenToAllTokensEnumeration(tokenId);
+        } else if (previousOwner != to) {
+            _removeTokenFromOwnerEnumeration(previousOwner, tokenId);
+        }
+        if (to == address(0)) {
+            _removeTokenFromAllTokensEnumeration(tokenId);
+        } else if (previousOwner != to) {
+            _addTokenToOwnerEnumeration(to, tokenId);
         }
 
-        // Any calls to nonReentrant after this point will fail
-        _status = ENTERED;
-    }
-
-    function _nonReentrantAfter() private {
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = NOT_ENTERED;
+        return previousOwner;
     }
 
     /**
-     * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
-     * `nonReentrant` function in the call stack.
+     * @dev Private function to add a token to this extension's ownership-tracking data structures.
+     * @param to address representing the new owner of the given token ID
+     * @param tokenId uint256 ID of the token to be added to the tokens list of the given address
      */
-    function _reentrancyGuardEntered() internal view returns (bool) {
-        return _status == ENTERED;
+    function _addTokenToOwnerEnumeration(address to, uint256 tokenId) private {
+        uint256 length = balanceOf(to) - 1;
+        _ownedTokens[to][length] = tokenId;
+        _ownedTokensIndex[tokenId] = length;
+    }
+
+    /**
+     * @dev Private function to add a token to this extension's token tracking data structures.
+     * @param tokenId uint256 ID of the token to be added to the tokens list
+     */
+    function _addTokenToAllTokensEnumeration(uint256 tokenId) private {
+        _allTokensIndex[tokenId] = _allTokens.length;
+        _allTokens.push(tokenId);
+    }
+
+    /**
+     * @dev Private function to remove a token from this extension's ownership-tracking data structures. Note that
+     * while the token is not assigned a new owner, the `_ownedTokensIndex` mapping is _not_ updated: this allows for
+     * gas optimizations e.g. when performing a transfer operation (avoiding double writes).
+     * This has O(1) time complexity, but alters the order of the _ownedTokens array.
+     * @param from address representing the previous owner of the given token ID
+     * @param tokenId uint256 ID of the token to be removed from the tokens list of the given address
+     */
+    function _removeTokenFromOwnerEnumeration(address from, uint256 tokenId) private {
+        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        uint256 lastTokenIndex = balanceOf(from);
+        uint256 tokenIndex = _ownedTokensIndex[tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = _ownedTokens[from][lastTokenIndex];
+
+            _ownedTokens[from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            _ownedTokensIndex[lastTokenId] = tokenIndex; // Update the moved token's index
+        }
+
+        // This also deletes the contents at the last position of the array
+        delete _ownedTokensIndex[tokenId];
+        delete _ownedTokens[from][lastTokenIndex];
+    }
+
+    /**
+     * @dev Private function to remove a token from this extension's token tracking data structures.
+     * This has O(1) time complexity, but alters the order of the _allTokens array.
+     * @param tokenId uint256 ID of the token to be removed from the tokens list
+     */
+    function _removeTokenFromAllTokensEnumeration(uint256 tokenId) private {
+        // To prevent a gap in the tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        uint256 lastTokenIndex = _allTokens.length - 1;
+        uint256 tokenIndex = _allTokensIndex[tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary. However, since this occurs so
+        // rarely (when the last minted token is burnt) that we still do the swap here to avoid the gas cost of adding
+        // an 'if' statement (like in _removeTokenFromOwnerEnumeration)
+        uint256 lastTokenId = _allTokens[lastTokenIndex];
+
+        _allTokens[tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+        _allTokensIndex[lastTokenId] = tokenIndex; // Update the moved token's index
+
+        // This also deletes the contents at the last position of the array
+        delete _allTokensIndex[tokenId];
+        _allTokens.pop();
+    }
+
+    /**
+     * See {ERC721-_increaseBalance}. We need that to account tokens that were minted in batch
+     */
+    function _increaseBalance(address account, uint128 amount) internal virtual override {
+        if (amount > 0) {
+            revert ERC721EnumerableForbiddenBatchMint();
+        }
+        super._increaseBalance(account, amount);
     }
 }
 
 
-// File contracts/core/EquoraDAOMembership.sol
+// File contracts/interfaces/IEquoraNFT.sol
 
 // Original license: SPDX_License_Identifier: MIT
 
 /**
- * @title EquoraDAOMembership
- * @dev Soulbound (Non-Transferable) ERC-721 representing Genesis DAO Membership.
- *
- * Requirements:
- *   - Exactly 100 tokens can ever exist (Token IDs 1 to 100).
- *   - Only the immutable EquoraDAO contract can mint tokens.
- *   - Tokens are soulbound: transfers between wallets revert automatically.
- *   - Each token ID directly corresponds to the member's queue position (1 to 100).
+ * @title IEquoraNFT
+ * @dev Interface for the Equora NFT contract (Welcome Pass + Rank Badges)
  */
-contract EquoraDAOMembership is ERC721 {
-    address public immutable daoContract;
-    uint256 public constant MAX_SUPPLY = 100;
-    uint256 public totalSupply;
+interface IEquoraNFT {
+    enum Rank {
+        NONE,       // Not yet ranked
+        ALPHA,      // Slot 3 completed (Levels 1-3 | 42 slots)
+        PRIME,      // Slot 6 completed (Levels 4-6 | 84 slots)
+        ELITE,      // Slot 9 completed (Levels 7-9 | 126 slots)
+        CROWN       // Slot 12 completed (Levels 10-12 | 168 slots - max)
+    }
 
-    // Token ID => Queue Position (1 to 100)
-    mapping(uint256 => uint256) public tokenPosition;
-    // Wallet => Owned Token ID (0 if none)
-    mapping(address => uint256) public memberTokenId;
+    function mintWelcomePass(address to) external returns (uint256 tokenId);
+    function mintRankBadge(address to, Rank rank) external returns (uint256 tokenId);
+    function getWelcomePassTokenId(address user) external view returns (uint256);
+    function getUserRank(address user) external view returns (Rank);
+    function hasWelcomePass(address user) external view returns (bool);
+}
 
-    event MembershipMinted(address indexed member, uint256 indexed tokenId, uint256 position);
 
-    error OnlyDAO();
-    error SoulboundTransferBlocked();
-    error MaxSupplyExceeded();
-    error AlreadyMember();
-    error NotMember();
+// File contracts/rewards/EquoraNFT.sol
 
-    bool private _reassigning;
+// Original license: SPDX_License_Identifier: MIT
 
-    modifier onlyDAO() {
-        if (msg.sender != daoContract) revert OnlyDAO();
+
+
+
+/**
+ * @title EquoraNFT
+ * @dev Equora Platform NFT Contract — ERC-721 compliant (via OpenZeppelin)
+ *
+ * Token Types:
+ *   1. WELCOME PASS — Minted when any user first joins the platform (DAO or Matrix)
+ *      - Soul-bound (non-transferable) by default
+ *      - Proof of membership
+ *
+ *   2. RANK BADGES — Minted at Magic Box milestones:
+ *      - RISING    → Slot 3 first cycle complete
+ *      - PRIME     → Slot 6 first cycle complete
+ *      - ROYAL     → Slot 9 first cycle complete
+ *      - LEGENDARY → Slot 12 first cycle complete
+ *
+ * Security:
+ *   - Only authorized contracts (Matrix, DAO) can mint
+ *   - Each user can only have 1 Welcome Pass
+ *   - Rank badges stack (user can have all 4 ranks)
+ */
+contract EquoraNFT is ERC721, ERC721Enumerable, IEquoraNFT, Ownable {
+    // ─── State ─────────────────────────────────────────────────────────────
+
+    uint256 private _nextTokenId = 1;
+
+    // Token metadata
+    struct TokenData {
+        IEquoraNFT.Rank rank;
+        bool isWelcomePass;
+        uint256 mintTimestamp;
+    }
+
+    mapping(uint256 => TokenData) public tokenData;
+    mapping(address => uint256) private _welcomePassId;   // user → tokenId (0 = none)
+    mapping(address => IEquoraNFT.Rank) private _userRanks;
+
+    // Authorized minter contracts
+    mapping(address => bool) public isMinter;
+
+    // ─── Events ────────────────────────────────────────────────────────────
+
+    event WelcomePassMinted(address indexed to, uint256 indexed tokenId);
+    event RankBadgeMinted(address indexed to, uint256 indexed tokenId, IEquoraNFT.Rank rank);
+    event MinterSet(address indexed minter, bool authorized);
+
+    // ─── Modifiers ─────────────────────────────────────────────────────────
+
+    modifier onlyMinter() {
+        require(
+            isMinter[msg.sender] || msg.sender == owner(),
+            "EquoraNFT: Not authorized minter"
+        );
         _;
     }
 
-    constructor(address _daoContract) ERC721("Equora Genesis DAO Membership", "EQR-DAO") {
-        require(_daoContract != address(0), "Invalid DAO address");
-        daoContract = _daoContract;
-    }
+    // ─── Constructor ────────────────────────────────────────────────────────
+
+    constructor() ERC721("Equora Pass", "EQPASS") Ownable(msg.sender) {}
+
+    // ─── Admin ─────────────────────────────────────────────────────────────
 
     /**
-     * @dev Mint a soulbound membership token to a new DAO member.
-     * @param to Wallet address of the member
-     * @param position 1-indexed queue position (1 to 100)
-     * @return tokenId The minted token ID (same as position)
+     * @dev Grant or revoke minting rights to a contract address
      */
-    function mint(address to, uint256 position) external onlyDAO returns (uint256 tokenId) {
-        if (position < 1 || position > MAX_SUPPLY) revert MaxSupplyExceeded();
-        if (memberTokenId[to] != 0) revert AlreadyMember();
+    function setMinter(address minter, bool authorized) external onlyOwner {
+        isMinter[minter] = authorized;
+        emit MinterSet(minter, authorized);
+    }
 
-        tokenId = position;
-        tokenPosition[tokenId] = position;
-        memberTokenId[to] = tokenId;
-        totalSupply += 1;
+    // ─── Minting ───────────────────────────────────────────────────────────
 
+    /**
+     * @dev Mint a Welcome Pass to a new platform member.
+     *      Each address can only have 1 Welcome Pass.
+     */
+    function mintWelcomePass(address to) external override onlyMinter returns (uint256 tokenId) {
+        require(to != address(0), "EquoraNFT: Mint to zero address");
+        require(_welcomePassId[to] == 0, "EquoraNFT: Welcome pass already minted");
+
+        tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
-        emit MembershipMinted(to, tokenId, position);
+
+        tokenData[tokenId] = TokenData({
+            rank: IEquoraNFT.Rank.NONE,
+            isWelcomePass: true,
+            mintTimestamp: block.timestamp
+        });
+
+        _welcomePassId[to] = tokenId;
+
+        emit WelcomePassMinted(to, tokenId);
     }
 
     /**
-     * @dev Reassign an existing seat NFT when an expired member forfeits their seat after missing the 48h retopup window.
-     *      Can ONLY be called by the immutable EquoraDAO contract during vacant seat takeover.
-     * @param from Previous defaulted member address
-     * @param to New incoming member address
-     * @param position Seat number being taken over (1 to 100)
-     * @return tokenId The reassigned token ID
+     * @dev Mint a Rank Badge NFT at a Magic Box milestone.
+     *      Multiple rank badges can be minted per user (one per milestone).
      */
-    function reassignSeat(address from, address to, uint256 position) external onlyDAO returns (uint256 tokenId) {
-        if (position < 1 || position > MAX_SUPPLY) revert MaxSupplyExceeded();
-        if (memberTokenId[to] != 0) revert AlreadyMember();
-        if (memberTokenId[from] != position) revert NotMember();
+    function mintRankBadge(
+        address to,
+        IEquoraNFT.Rank rank
+    ) external override onlyMinter returns (uint256 tokenId) {
+        require(to != address(0), "EquoraNFT: Mint to zero address");
+        require(rank != IEquoraNFT.Rank.NONE, "EquoraNFT: Invalid rank");
 
-        tokenId = position;
-        tokenPosition[tokenId] = position;
-        memberTokenId[from] = 0;
-        memberTokenId[to] = tokenId;
+        tokenId = _nextTokenId++;
+        _safeMint(to, tokenId);
 
-        _reassigning = true;
-        _transfer(from, to, tokenId);
-        _reassigning = false;
+        tokenData[tokenId] = TokenData({
+            rank: rank,
+            isWelcomePass: false,
+            mintTimestamp: block.timestamp
+        });
 
-        emit MembershipMinted(to, tokenId, position);
+        // Update user's highest rank
+        if (uint8(rank) > uint8(_userRanks[to])) {
+            _userRanks[to] = rank;
+        }
+
+        emit RankBadgeMinted(to, tokenId, rank);
+    }
+
+    // ─── View Functions ────────────────────────────────────────────────────
+
+    function getWelcomePassTokenId(address user) external view override returns (uint256) {
+        return _welcomePassId[user];
+    }
+
+    function getUserRank(address user) external view override returns (IEquoraNFT.Rank) {
+        return _userRanks[user];
+    }
+
+    function hasWelcomePass(address user) external view override returns (bool) {
+        return _welcomePassId[user] != 0;
     }
 
     /**
-     * @dev Enforce soulbound property in OpenZeppelin ERC721 v5.
-     *      Allows minting (from == address(0)) and DAO reassignments, but blocks peer-to-peer transfers.
+     * @dev Get all token IDs owned by a user
      */
+    function getUserTokens(address user) external view returns (uint256[] memory) {
+        uint256 count = balanceOf(user);
+        uint256[] memory tokens = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            tokens[i] = tokenOfOwnerByIndex(user, i);
+        }
+        return tokens;
+    }
+
+    // ─── Required Overrides ────────────────────────────────────────────────
+
     function _update(
         address to,
         uint256 tokenId,
         address auth
-    ) internal override returns (address) {
-        address from = _ownerOf(tokenId);
-        // If from is not address(0), block transfers unless it is an authorized DAO seat reassignment
-        if (from != address(0) && !_reassigning) {
-            revert SoulboundTransferBlocked();
-        }
+    ) internal override(ERC721, ERC721Enumerable) returns (address) {
         return super._update(to, tokenId, auth);
     }
 
-    /**
-     * @dev Check if an address holds a DAO membership.
-     */
-    function isMember(address wallet) external view returns (bool) {
-        return memberTokenId[wallet] != 0;
+    function _increaseBalance(
+        address account,
+        uint128 value
+    ) internal override(ERC721, ERC721Enumerable) {
+        super._increaseBalance(account, value);
     }
 
-    /**
-     * @dev Get the seat position for a wallet.
-     */
-    function getPosition(address wallet) external view returns (uint256) {
-        return tokenPosition[memberTokenId[wallet]];
-    }
-}
-
-
-// File contracts/interfaces/IEquoraRegistry.sol
-
-// Original license: SPDX_License_Identifier: MIT
-
-/**
- * @title IEquoraRegistry
- * @dev Interface for the Equora.Fi user registry, referral tracking, and 5-digit referral code system
- */
-interface IEquoraRegistry {
-    function registerUser(address user, uint32 sponsorCode) external returns (bool);
-    function registerUser(address user, address sponsor) external returns (bool);
-    function isRegistered(address user) external view returns (bool);
-    function getSponsor(address user) external view returns (address);
-    function getDirectReferrals(address user) external view returns (address[] memory);
-    function getDirectReferralsCount(address user) external view returns (uint256);
-    function isQualified(address user) external view returns (bool);
-    function getRoot() external view returns (address);
-
-    // 5-digit referral code system
-    function getUserByCode(uint32 code) external view returns (address);
-    function getCodeByUser(address user) external view returns (uint32);
-    function getUserId(address user) external view returns (uint256);
-}
-
-
-// File contracts/core/EquoraDAO.sol
-
-// Original license: SPDX_License_Identifier: MIT
-
-
-
-
-/**
- * @title EquoraDAO
- * @dev Genesis DAO — 100-seat founding council on the Equora.Fi platform.
- *
- * === ECONOMIC MODEL (USD-PEGGED) =============================================
- *   Entry Fee: $300 USD worth of TROB tokens per seat.
- *   Max Members: 100 (hard cap, immutable)
- *
- *   The `entryFee` state variable is set in TROB token units (18 decimals)
- *   equivalent to $300 USD at the current live TROB market price.
- *   Admin can call `setEntryFee()` to sync with the live price oracle.
- *
- *   When member N joins (Position 1 to 100):
- *     Their entry fee (in TROB) is split equally among all N active members:
- *       Share per member = entryFee / N
- *     - Member 1 receives entryFee / 1 instant cashback (100% refund).
- *     - Member 2 receives entryFee / 2 instant cashback, and Member 1 receives the same.
- *     - Member 100 receives entryFee / 100, and all 100 members each receive the same.
- *     Total Payout = entryFee (100% peer distribution, zero platform fees).
- *
- * === 5X EARNINGS CAP + 48-HOUR RE-TOPUP =====================================
- *   - Each member can earn a maximum of 5× their deposit = $1,500 USD in TROB.
- *   - earningsCap = entryFee × 5. Updated automatically when setEntryFee() is called.
- *   - When a member's lifetime earnings (in TROB) hit earningsCap, their slot is capped.
- *   - They have 48 hours to call retopup() and pay entryFee TROB again.
- *   - If they miss the window, their slot is BLANKED (permanently skipped in
- *     future distributions) until they retopup.
- *   - Retopup resets their lifetime earnings counter.
- *
- * === SEAT EXPIRY WINDOW ======================================================
- *   - Each seat must be filled within 21 days of the previous seat being filled.
- *   - If 21 days pass with no new join, the DAO queue expires permanently.
- *
- * === ELIGIBILITY =============================================================
- *   - Open to any participant (0 referrals required, no sponsor/referral ID needed)
- *
- * === PRESERVED ===============================================================
- *   - Soulbound ERC-721 per seat (EquoraDAOMembership NFT)
- *   - Instant push distribution to all prior members
- *   - Anti-griefing: failed push → pullFallbackBalance for manual claim
- *   - Zero platform fees: 100% of entry flows to members
- *
- * === PRICE ORACLE NOTE =======================================================
- *   The `entryFeeUsd` is stored as the fixed USD peg ($300 with 6 decimals = 300_000_000).
- *   The `entryFee` (in TROB 18-decimal tokens) must be updated via `setEntryFee()`
- *   whenever the live TROB/USD price changes significantly. The deployer (admin)
- *   address is stored for this purpose.
- *
- * === NULL KEY =================================================================
- *   Beyond setEntryFee(), this contract has no privileged admin functions.
- *   setEntryFee can be called by the deployer or a future price-keeper bot.
- */
-contract EquoraDAO is ReentrancyGuard {
-
-    // ─── Constants ─────────────────────────────────────────────────────────────
-
-    /// @dev USD peg for entry fee: $300.00 (6 decimal places, i.e. 300_000_000 = $300)
-    uint256 public constant ENTRY_FEE_USD          = 300_000_000; // $300 USD (6 decimals)
-    /// @dev USD peg for earnings cap: $1,500.00 (6 decimal places)
-    uint256 public constant EARNINGS_CAP_USD       = 1_500_000_000; // $1,500 USD (6 decimals)
-
-    uint256 public constant MAX_MEMBERS            = 100;
-    uint256 public constant SEAT_WINDOW            = 21 days;
-    uint256 public constant RETOPUP_WINDOW         = 48 hours;
-
-    /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
-    string public constant OFFICIAL_SR_BASE58      = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
-    /// @dev Minimum creation timestamp for eligible deposit wallets: 1 October 2026 00:00:00 UTC
-    uint256 public constant MIN_WALLET_CREATION_DATE = 1790812800;
-    /// @dev Target daily free transactions for DAO members (Formula: 50 TX/day)
-    uint256 public constant DAO_TARGET_FREE_TX_PER_DAY = 50;
-    /// @dev Target daily free transactions for Matrix members (Formula: 5 TX/day)
-    uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
-
-    // ─── Admin ─────────────────────────────────────────────────────────────────
-
-    /// @dev Deployer address — can update entryFee to match live USD peg
-    address public immutable admin;
-
-    // ─── Immutable Dependencies ────────────────────────────────────────────────
-
-    IERC20              public immutable paymentToken;
-    EquoraDAOMembership public immutable membershipNFT;
-    IEquoraRegistry     public immutable registry;
-
-    // ─── Dynamic Price State ───────────────────────────────────────────────────
-
-    /// @dev Current entry fee in TROB tokens (18 decimals). Equivalent to $300 USD.
-    ///      Default: 300 * 10**18 (assumes 1 TROB = $1 at deployment; update via setEntryFee)
-    uint256 public entryFee    = 300 * 10 ** 18;
-
-    /// @dev Current earnings cap in TROB tokens (18 decimals). Always = entryFee × 5 = $1,500 USD.
-    uint256 public earningsCap = 1500 * 10 ** 18;
-
-    /// @dev Last TROB price used (in USD with 6 decimals, e.g. 0.055 TROB/USD = 55_000)
-    uint256 public lastTrobPriceUsd6;
-
-    /// @dev Timestamp when entryFee was last updated
-    uint256 public lastPriceUpdateTimestamp;
-
-    // ─── Configured Contracts ──────────────────────────────────────────────────
-
-    address public vaultContract;
-
-    // ─── State Variables ───────────────────────────────────────────────────────
-
-    address[] public daoMembers;
-    mapping(address => bool)    public isDaoMember;
-    mapping(address => uint256) public memberPosition;
-    mapping(address => uint256) public pullFallbackBalance;
-
-    // DAO Plan Share Benefit (35% Matrix Volume Pool)
-    uint256 public accPoolSharePerMember; // scaled by 1e18
-    uint256 public totalPoolReceived;      // total 35% matrix volume received
-    uint256 public totalPoolDistributed;   // total pool share claimed by members
-    mapping(address => uint256) public memberRewardDebt;
-    mapping(address => uint256) public pendingPoolShare;
-
-    // Earnings tracking
-    mapping(address => uint256) public lifetimeEarnings;  // total TROB received from DAO distributions
-    mapping(address => uint256) public capHitTimestamp;   // when 5X cap was reached (0 = not capped)
-    mapping(address => bool)    public slotBlank;         // true = slot expired, skip in distributions
-
-    // Deposit eligibility attestation (Condition 1 + Condition 2 + Community Verification)
-    mapping(address => bool)    public isEligibilityAttested;
-    bool                        public eligibilityEnforced;
-
-    bool    public daoCompleted;
-    bool    public daoExpired;
-    uint256 public totalCollected;
-    uint256 public totalDistributed;
-    uint256 public lastJoinTimestamp;
-    uint256 public daoLaunchTimestamp;
-
-    // ─── Custom Errors ─────────────────────────────────────────────────────────
-
-    error QueueFull();
-    error QueueExpired();
-    error AlreadyMember();
-    error NotQualified();
-    error PaymentFailed();
-    error NotMember();
-    error NothingToClaim();
-    error TransferFailed();
-    error NotCapped();
-    error RetopupWindowExpired();
-    error SlotNotBlank();
-    error Unauthorized();
-
-    // ─── Events ────────────────────────────────────────────────────────────────
-
-    event VaultContractSet(address indexed vault);
-    event DAOPositionJoined(
-        address indexed user,
-        uint256 indexed position,
-        uint256 tokenId,
-        uint256 timestamp
-    );
-    event DAOPayoutPushed(
-        address indexed recipient,
-        uint256 amount,
-        uint256 fromPosition,
-        uint256 timestamp
-    );
-    event DAOPayoutFallback(
-        address indexed recipient,
-        uint256 amount,
-        uint256 fromPosition,
-        string  reason,
-        uint256 timestamp
-    );
-    event FallbackClaimed(address indexed user, uint256 amount, uint256 timestamp);
-    event QueueClosed(uint256 totalMembers, uint256 timestamp);
-    event QueueExpiredEvent(uint256 seatsFilledSoFar, uint256 timestamp);
-    event EarningsCapHit(address indexed member, uint256 lifetimeEarnings, uint256 retopupDeadline);
-    event SlotBlanked(address indexed member, uint256 timestamp);
-    event SlotReactivated(address indexed member, uint256 timestamp);
-    event Retopup(address indexed member, uint256 position, uint256 timestamp);
-    event PoolDepositReceived(uint256 amount, uint256 accPerMember, uint256 timestamp);
-    event PoolShareClaimed(address indexed member, uint256 amount, uint256 timestamp);
-    /// @dev Emitted when admin updates entry fee to reflect current USD–TROB rate
-    event EntryFeeUpdated(uint256 newEntryFee, uint256 newEarningsCap, uint256 trobPriceUsd6, uint256 timestamp);
-    /// @dev Emitted when wallet deposit eligibility is attested
-    event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
-    /// @dev Emitted when eligibility enforcement is toggled
-    event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
-
-    // ─── Constructor ───────────────────────────────────────────────────────────
-
-    constructor(
-        address _paymentToken,
-        address _registry
-    ) {
-        require(_paymentToken != address(0), "EquoraDAO: Invalid token");
-        require(_registry     != address(0), "EquoraDAO: Invalid registry");
-
-        admin        = msg.sender;
-        paymentToken = IERC20(_paymentToken);
-        registry     = IEquoraRegistry(_registry);
-
-        // Initialize DAO launch timestamp for 21-day founding window
-        daoLaunchTimestamp = block.timestamp;
-        lastJoinTimestamp  = block.timestamp;
-
-        // Deploy Soulbound Membership NFT — this contract is sole minter
-        membershipNFT = new EquoraDAOMembership(address(this));
-    }
-
-    // ─── Vault Configuration (One-Time Deployment Wiring) ──────────────────────
-
-    /**
-     * @dev Set the EquoraVault contract address (authorized to call receivePoolDeposit).
-     *      Can only be set once during deployment wiring.
-     */
-    function setVaultContract(address _vault) external {
-        require(vaultContract == address(0), "EquoraDAO: vault already set");
-        require(_vault != address(0), "EquoraDAO: invalid vault");
-        vaultContract = _vault;
-        emit VaultContractSet(_vault);
-    }
-
-    // ─── Entry Fee Management (Price Oracle Sync) ──────────────────────────────
-
-    /**
-     * @dev Update the TROB entry fee to reflect the current live USD market price.
-     *      Only callable by admin (the deployer or a price-keeper bot).
-     *
-     * @param _newEntryFee   TROB amount (18-decimal) equivalent to $300 USD.
-     *                       Example: TROB = $0.056 => $300 / 0.056 ≈ 5357.14 TROB
-     *                                => _newEntryFee = 5357142857142857142857 (5357.14 * 1e18)
-     * @param _trobPriceUsd6 The TROB/USD price used, with 6 decimals. E.g. $0.056 => 56000
-     *                       Stored for on-chain auditing only.
-     */
-    function setEntryFee(uint256 _newEntryFee, uint256 _trobPriceUsd6) external {
-        require(msg.sender == admin, "EquoraDAO: not admin");
-        require(_newEntryFee > 0, "EquoraDAO: entry fee must be > 0");
-        require(_trobPriceUsd6 > 0, "EquoraDAO: price must be > 0");
-
-        // Sanity: entry fee must represent $150 to $600 USD (allowing for 2x price swings)
-        uint256 expectedMin = (150_000_000 * 1e18) / _trobPriceUsd6; // $150 floor
-        uint256 expectedMax = (600_000_000 * 1e18) / _trobPriceUsd6; // $600 ceiling
-        require(
-            _newEntryFee >= expectedMin && _newEntryFee <= expectedMax,
-            "EquoraDAO: fee deviates too far from $300 peg"
-        );
-
-        entryFee    = _newEntryFee;
-        earningsCap = _newEntryFee * 5;  // 5x fee = $1,500 USD in TROB
-        lastTrobPriceUsd6        = _trobPriceUsd6;
-        lastPriceUpdateTimestamp = block.timestamp;
-
-        emit EntryFeeUpdated(_newEntryFee, earningsCap, _trobPriceUsd6, block.timestamp);
-    }
-
-    /**
-     * @dev Attest or update an account's deposit eligibility against protocol conditions:
-     *      - Condition 1: Wallet created on or after 1 October 2026
-     *      - Condition 2: Resource Stake (Energy + Bandwidth) + Equora SR Vote
-     *      - Official Community Channel Verified
-     *      Callable by admin or authorized verifier relayer.
-     */
-    function setEligibilityAttestation(address account, bool eligible) external {
-        require(msg.sender == admin, "EquoraDAO: not admin");
-        require(account != address(0), "EquoraDAO: invalid address");
-        isEligibilityAttested[account] = eligible;
-        emit EligibilityAttested(account, eligible, block.timestamp);
-    }
-
-    /**
-     * @dev Toggle on-chain enforcement of eligibility condition attestation prior to joinDAO.
-     */
-    function setEligibilityEnforced(bool _enforced) external {
-        require(msg.sender == admin, "EquoraDAO: not admin");
-        eligibilityEnforced = _enforced;
-        emit EligibilityEnforcementUpdated(_enforced, block.timestamp);
-    }
-
-    receive() external payable {}
-
-    // ─── Core Join Function ────────────────────────────────────────────────────
-
-    /**
-     * @dev Join the Genesis DAO as one of 100 founding members.
-     *      Requirements:
-     *        - Queue not full (< 100 seats, or a vacant seat exists from an expired 48h retopup)
-     *        - Caller not already a member
-     *        - Open to any participant (0 referrals required)
-     *        - Entry fee is $300 USD worth of TROB (payable via native TROB or paymentToken)
-     *
-     *      If an existing seat is vacant (due to missed 48h retopup), the lowest-numbered
-     *      blank seat (scanned from Seat 1 to 100) is filled first!
-     *
-     * @return position The 1-indexed seat number assigned (1 to 100)
-     */
-    function joinDAO() external payable nonReentrant returns (uint256 position) {
-        if (isDaoMember[msg.sender]) revert AlreadyMember();
-        if (eligibilityEnforced && !isEligibilityAttested[msg.sender]) revert NotQualified();
-
-        // 1. Scan from Seat 1 to 100 for any blank/vacant slot (missed 48-hour retopup)
-        uint256 vacantIndex = type(uint256).max;
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            address m = daoMembers[i];
-            if (slotBlank[m] || (capHitTimestamp[m] > 0 && block.timestamp > capHitTimestamp[m] + RETOPUP_WINDOW)) {
-                vacantIndex = i;
-                break;
-            }
-        }
-
-        // 2. Collect entry fee payment ($300 USD worth of TROB)
-        // Accepts native TROB from TrobSafe wallet (msg.value) or paymentToken transferFrom
-        uint256 paidAmount = entryFee;
-        if (msg.value > 0) {
-            paidAmount = msg.value;
-            totalCollected += paidAmount;
-        } else {
-            bool ok = paymentToken.transferFrom(msg.sender, address(this), entryFee);
-            if (!ok) revert PaymentFailed();
-            totalCollected += entryFee;
-        }
-
-        uint256 tokenId;
-        // 3. If a vacant seat exists, replace the expired member
-        if (vacantIndex != type(uint256).max) {
-            address oldMember = daoMembers[vacantIndex];
-            isDaoMember[oldMember]      = false;
-            slotBlank[oldMember]        = false;
-            capHitTimestamp[oldMember]  = 0;
-            memberPosition[oldMember]   = 0;
-            lifetimeEarnings[oldMember] = 0;
-            memberRewardDebt[oldMember] = 0;
-
-            daoMembers[vacantIndex]     = msg.sender;
-            isDaoMember[msg.sender]     = true;
-            position                    = vacantIndex + 1;
-            memberPosition[msg.sender]  = position;
-            memberRewardDebt[msg.sender] = accPoolSharePerMember;
-            lastJoinTimestamp           = block.timestamp;
-
-            // Auto-register new joiner in EquoraRegistry if not yet registered
-            _registerUserInRegistry(msg.sender);
-
-            tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
-            emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
-
-            // Distribute entry fee to all active members except new joiner
-            _distributeRetopup(msg.sender, entryFee);
-            return position;
-        }
-
-        // 4. No vacant seat — standard new join up to 100 seats
-        if (daoMembers.length >= MAX_MEMBERS) revert QueueFull();
-
-        position = daoMembers.length + 1;
-        daoMembers.push(msg.sender);
-        isDaoMember[msg.sender]    = true;
-        memberPosition[msg.sender] = position;
-
-        if (position == 1) daoLaunchTimestamp = block.timestamp;
-        lastJoinTimestamp = block.timestamp;
-
-        // Auto-register new joiner in EquoraRegistry if not yet registered
-        _registerUserInRegistry(msg.sender);
-
-        tokenId = membershipNFT.mint(msg.sender, position);
-        emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
-
-        memberRewardDebt[msg.sender] = accPoolSharePerMember;
-        _distributeEntryFee(position);
-
-        if (daoMembers.length == MAX_MEMBERS) {
-            daoCompleted = true;
-            emit QueueClosed(MAX_MEMBERS, block.timestamp);
-        }
-
-        return position;
-    }
-
-    /**
-     * @dev Internal helper to register a DAO joiner in EquoraRegistry.
-     *      Ensures all 100 DAO members have 5-digit referral codes from Day 1.
-     */
-    function _registerUserInRegistry(address user) internal {
-        if (address(registry) != address(0)) {
-            try registry.isRegistered(user) returns (bool reg) {
-                if (!reg) {
-                    try registry.registerUser(user, address(0)) {} catch {}
-                }
-            } catch {}
-        }
-    }
-
-    // ─── Re-topup (5X Cap Reset) ───────────────────────────────────────────────
-
-    /**
-     * @dev Called by a member who has hit their 5X earnings cap to re-activate
-     *      their slot. Must be called within 48 hours of the cap being hit.
-     *      Pays entry fee ($300 USD worth of TROB) again and resets lifetime earnings.
-     */
-    function retopup() external payable nonReentrant {
-        if (!isDaoMember[msg.sender]) revert NotMember();
-        if (capHitTimestamp[msg.sender] == 0) revert NotCapped();
-
-        // 48-hour window check
-        if (block.timestamp > capHitTimestamp[msg.sender] + RETOPUP_WINDOW) {
-            // Window expired — slot should already be blank (or we blank it now)
-            if (!slotBlank[msg.sender]) {
-                _updateMemberPoolReward(msg.sender);
-                slotBlank[msg.sender] = true;
-                emit SlotBlanked(msg.sender, block.timestamp);
-            }
-            revert RetopupWindowExpired();
-        }
-
-        // Collect re-topup fee ($300 USD worth of TROB at current rate)
-        uint256 paidAmount = entryFee;
-        if (msg.value > 0) {
-            paidAmount = msg.value;
-            totalCollected += paidAmount;
-        } else {
-            bool ok = paymentToken.transferFrom(msg.sender, address(this), entryFee);
-            if (!ok) revert PaymentFailed();
-            totalCollected += entryFee;
-        }
-
-        // Reset cap state
-        lifetimeEarnings[msg.sender] = 0;
-        capHitTimestamp[msg.sender]  = 0;
-
-        // Reactivate if blanked (shouldn't be blanked if within window, but safety)
-        if (slotBlank[msg.sender]) {
-            slotBlank[msg.sender] = false;
-            memberRewardDebt[msg.sender] = accPoolSharePerMember;
-            emit SlotReactivated(msg.sender, block.timestamp);
-        }
-
-        // Distribute the re-topup fee to all active members
-        _distributeRetopup(msg.sender, paidAmount);
-
-        emit Retopup(msg.sender, memberPosition[msg.sender], block.timestamp);
-    }
-
-    /**
-     * @dev Public function to blank expired cap slots.
-     *      Callable by anyone to enforce the 48-hour re-topup deadline.
-     *      Loops over all members and blanks those whose window has expired.
-     */
-    function enforceCapExpirations() external {
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            address member = daoMembers[i];
-            if (
-                capHitTimestamp[member] > 0 &&
-                !slotBlank[member] &&
-                block.timestamp > capHitTimestamp[member] + RETOPUP_WINDOW
-            ) {
-                _updateMemberPoolReward(member);
-                slotBlank[member] = true;
-                emit SlotBlanked(member, block.timestamp);
-            }
-        }
-    }
-
-    // ─── DAO Plan Share Benefit (35% Matrix Volume Pool) ───────────────────────
-
-    /**
-     * @dev Receive 35% matrix volume pool deposit from EquoraVault.
-     *      Dividends are accrued to active (non-blank) DAO members via O(1) accumulator.
-     */
-    function receivePoolDeposit(uint256 amount) external {
-        if (msg.sender != vaultContract) revert Unauthorized();
-        if (amount == 0 || daoMembers.length == 0) return;
-
-        uint256 activeCount = 0;
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            if (!slotBlank[daoMembers[i]]) {
-                activeCount++;
-            }
-        }
-        if (activeCount == 0) return;
-
-        accPoolSharePerMember += (amount * 1e18) / activeCount;
-        totalPoolReceived += amount;
-
-        emit PoolDepositReceived(amount, accPoolSharePerMember, block.timestamp);
-    }
-
-    /**
-     * @dev Internal helper to settle member's pending pool share up to current accumulator.
-     */
-    function _updateMemberPoolReward(address member) internal {
-        if (!isDaoMember[member] || slotBlank[member]) return;
-
-        uint256 accumulated = accPoolSharePerMember - memberRewardDebt[member];
-        if (accumulated > 0) {
-            pendingPoolShare[member] += accumulated / 1e18;
-        }
-        memberRewardDebt[member] = accPoolSharePerMember;
-    }
-
-    /**
-     * @dev View function to get current claimable 35% matrix pool dividend.
-     */
-    function getPendingPoolShare(address member) public view returns (uint256) {
-        if (!isDaoMember[member] || slotBlank[member]) return pendingPoolShare[member];
-        uint256 accumulated = accPoolSharePerMember - memberRewardDebt[member];
-        return pendingPoolShare[member] + (accumulated / 1e18);
-    }
-
-    /**
-     * @dev Claim accrued 35% matrix volume pool share (DAO Plan Share Benefit).
-     */
-    function claimPoolShare() external nonReentrant {
-        if (!isDaoMember[msg.sender]) revert NotMember();
-        _updateMemberPoolReward(msg.sender);
-
-        uint256 claimable = pendingPoolShare[msg.sender];
-        if (claimable == 0) revert NothingToClaim();
-
-        pendingPoolShare[msg.sender] = 0;
-        totalPoolDistributed += claimable;
-
-        bool ok = paymentToken.transfer(msg.sender, claimable);
-        if (!ok) revert TransferFailed();
-
-        emit PoolShareClaimed(msg.sender, claimable, block.timestamp);
-    }
-
-    function getPoolShareStats() external view returns (
-        uint256 totalReceived,
-        uint256 totalDistributed_,
-        uint256 accPerMember
-    ) {
-        return (totalPoolReceived, totalPoolDistributed, accPoolSharePerMember);
-    }
-
-    // ─── Expiry Check ──────────────────────────────────────────────────────────
-
-    /**
-     * @dev Check and mark expiry. Called at the top of joinDAO().
-     *      Expiry: founding window is 21 days from launch.
-     */
-    function _checkExpiry() internal {
-        if (daoCompleted || daoExpired) return;
-        if (daoMembers.length == 0) return;
-
-        if (block.timestamp > lastJoinTimestamp + SEAT_WINDOW) {
-            daoExpired = true;
-            emit QueueExpiredEvent(daoMembers.length, block.timestamp);
-        }
-    }
-
-    // ─── Internal Distribution Logic ──────────────────────────────────────────
-
-    /**
-     * @dev Distribute $300 entry fee (in TROB) instantly following 300 / N formula:
-     *      - Incoming member N is INCLUDED in the distribution.
-     *      - Position 1 (N = 1): entryFee / 1 returned to Member 1 immediately.
-     *      - Position 2 (N = 2): entryFee / 2 to Member 2 (immediate return) & entryFee / 2 to Member 1.
-     *      - Position 3 (N = 3): entryFee / 3 to Member 3 (immediate return) & entryFee / 3 each to Members 1 & 2.
-     *      - Position N: entryFee / activeCount to all active members from 1 to N (including new joiner).
-     *      - Blanked slots are SKIPPED in distribution.
-     *      - After crediting, checks if recipient has hit 5X cap ($1,500 worth of TROB).
-     */
-    function _distributeEntryFee(uint256 incomingPosition) internal {
-        // Count active (non-blank) recipients among all members up to incomingPosition (inclusive)
-        uint256 activeCount = 0;
-        for (uint256 i = 0; i < incomingPosition; i++) {
-            if (!slotBlank[daoMembers[i]]) {
-                activeCount++;
-            }
-        }
-
-        if (activeCount == 0) return;
-
-        uint256 amountPerRecipient = entryFee / activeCount;
-        if (amountPerRecipient == 0) return;
-
-        for (uint256 i = 0; i < incomingPosition; i++) {
-            address recipient = daoMembers[i];
-            if (!slotBlank[recipient]) {
-                _pushTransfer(recipient, amountPerRecipient, incomingPosition);
-            }
-        }
-    }
-
-    /**
-     * @dev Distribute re-topup fee to all active members EXCEPT the retopup caller.
-     */
-    function _distributeRetopup(address caller, uint256 amount) internal {
-        uint256 activeCount = 0;
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            if (daoMembers[i] != caller && !slotBlank[daoMembers[i]]) {
-                activeCount++;
-            }
-        }
-
-        if (activeCount == 0) {
-            // No active members to distribute to — credit caller back (safety)
-            _pushTransfer(caller, amount, memberPosition[caller]);
-            return;
-        }
-
-        uint256 amountPerRecipient = amount / activeCount;
-        if (amountPerRecipient == 0) return;
-
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            address recipient = daoMembers[i];
-            if (recipient != caller && !slotBlank[recipient]) {
-                _pushTransfer(recipient, amountPerRecipient, memberPosition[caller]);
-            }
-        }
-    }
-
-    /**
-     * @dev Push transfer helper with:
-     *      1. Anti-griefing fallback (failed push → pullFallbackBalance)
-     *      2. 5X cap enforcement (track lifetimeEarnings, set capHitTimestamp)
-     */
-    function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
-        bool ok = false;
-        if (address(this).balance >= amount && amount > 0) {
-            (bool sent, ) = payable(recipient).call{value: amount, gas: 10000}("");
-            ok = sent;
-        }
-        if (!ok && address(paymentToken) != address(0)) {
-            try paymentToken.transfer(recipient, amount) returns (bool res) {
-                ok = res;
-            } catch {}
-        }
-
-        if (ok) {
-            lifetimeEarnings[recipient] += amount;
-            totalDistributed            += amount;
-            emit DAOPayoutPushed(recipient, amount, fromPosition, block.timestamp);
-        } else {
-            pullFallbackBalance[recipient] += amount;
-            lifetimeEarnings[recipient]    += amount;
-            totalDistributed               += amount;
-            emit DAOPayoutFallback(recipient, amount, fromPosition, "Transfer failed", block.timestamp);
-        }
-
-        // Check 5X cap after crediting
-        _checkCap(recipient);
-    }
-
-    /**
-     * @dev Check if a member has hit their 5X earnings cap.
-     *      If so, record the timestamp — they have 48 hours to retopup.
-     */
-    function _checkCap(address member) internal {
-        if (capHitTimestamp[member] > 0) return; // Already capped
-        if (slotBlank[member]) return;
-
-        if (lifetimeEarnings[member] >= earningsCap) {
-            capHitTimestamp[member] = block.timestamp;
-            uint256 deadline = block.timestamp + RETOPUP_WINDOW;
-            emit EarningsCapHit(member, lifetimeEarnings[member], deadline);
-        }
-    }
-
-    // ─── Fallback Claim ────────────────────────────────────────────────────────
-
-    /**
-     * @dev Claim accumulated fallback balance (from failed push transfers).
-     */
-    function claimFallback() external nonReentrant {
-        if (!isDaoMember[msg.sender]) revert NotMember();
-        uint256 amount = pullFallbackBalance[msg.sender];
-        if (amount == 0) revert NothingToClaim();
-
-        pullFallbackBalance[msg.sender] = 0;
-
-        bool ok = false;
-        if (address(this).balance >= amount && amount > 0) {
-            (bool sent, ) = payable(msg.sender).call{value: amount, gas: 10000}("");
-            ok = sent;
-        }
-        if (!ok && address(paymentToken) != address(0)) {
-            ok = paymentToken.transfer(msg.sender, amount);
-        }
-        if (!ok) revert TransferFailed();
-
-        emit FallbackClaimed(msg.sender, amount, block.timestamp);
-    }
-
-    // ─── View Functions ────────────────────────────────────────────────────────
-
-    /**
-     * @dev Full member state for UI display.
-     */
-    function getMemberDetails(address user)
-        external view
-        returns (
-            bool    isMember,
-            uint256 position,
-            uint256 nftTokenId,
-            uint256 fallbackClaimable,
-            uint256 totalEarned,
-            bool    isCapped,
-            uint256 retopupDeadline,
-            bool    isBlank,
-            uint256 poolClaimable
-        )
-    {
-        isMember          = isDaoMember[user];
-        position          = memberPosition[user];
-        nftTokenId        = isMember ? position : 0;
-        fallbackClaimable = pullFallbackBalance[user];
-        totalEarned       = lifetimeEarnings[user];
-        isCapped          = capHitTimestamp[user] > 0;
-        retopupDeadline   = capHitTimestamp[user] > 0 ? capHitTimestamp[user] + RETOPUP_WINDOW : 0;
-        isBlank           = slotBlank[user];
-        poolClaimable     = getPendingPoolShare(user);
-    }
-
-    /**
-     * @dev Explicit getter for Genesis DAO launch timestamp.
-     *      Used by EquoraMatrix to synchronize the 21-day founding window.
-     */
-    function getLaunchTimestamp() external view returns (uint256) {
-        return daoLaunchTimestamp;
-    }
-
-    function getDAOStats()
-        external view
-        returns (
-            uint256 memberCount,
-            uint256 totalCollectedAmount,
-            uint256 totalDistributedAmount,
-            bool    isCompleted,
-            bool    isExpiredStatus,
-            uint256 secondsRemaining,
-            uint256 activeMembers,
-            uint256 blankSlots,
-            uint256 totalPoolReceivedAmount,
-            uint256 totalPoolDistributedAmount
-        )
-    {
-        bool exp = false; // Permanent queue — no 21-day inactivity timeout
-        uint256 rem = 0;
-        if (!daoCompleted && !exp) {
-            uint256 startTs = daoLaunchTimestamp > 0 ? daoLaunchTimestamp : lastJoinTimestamp;
-            if (startTs > 0) {
-                uint256 deadline = startTs + SEAT_WINDOW;
-                if (deadline > block.timestamp) {
-                    rem = deadline - block.timestamp;
-                }
-            } else {
-                rem = SEAT_WINDOW;
-            }
-        }
-
-        uint256 blanks = 0;
-        for (uint256 i = 0; i < daoMembers.length; i++) {
-            if (slotBlank[daoMembers[i]]) blanks++;
-        }
-
-        return (
-            daoMembers.length,
-            totalCollected,
-            totalDistributed,
-            daoCompleted,
-            exp,
-            rem,
-            daoMembers.length - blanks,
-            blanks,
-            totalPoolReceived,
-            totalPoolDistributed
-        );
-    }
-
-    function getRemainingPositions() external view returns (uint256) {
-        if (daoMembers.length >= MAX_MEMBERS) {
-            // Check for blank/vacant slots that can be taken
-            uint256 blanks = 0;
-            for (uint256 i = 0; i < daoMembers.length; i++) {
-                address m = daoMembers[i];
-                if (slotBlank[m] || (capHitTimestamp[m] > 0 && block.timestamp > capHitTimestamp[m] + RETOPUP_WINDOW)) {
-                    blanks++;
-                }
-            }
-            return blanks;
-        }
-        return MAX_MEMBERS - daoMembers.length;
-    }
-
-    function getAllMembers() external view returns (address[] memory) {
-        return daoMembers;
-    }
-
-    /**
-     * @dev Returns the last member who joined the Genesis DAO.
-     *      On Day 22, this member becomes the Root Matrix Owner of the Retail Matrix.
-     */
-    function getLastMember() external view returns (address) {
-        if (daoMembers.length == 0) return address(0);
-        return daoMembers[daoMembers.length - 1];
-    }
-
-    function isClosed() external view returns (bool) {
-        return daoCompleted;
-    }
-
-    function isExpired() external pure returns (bool) {
-        return false;
-    }
-
-    /**
-     * @dev Returns remaining seconds in the 21-day founding window.
-     *      Exact match with the 21-day countdown on the Matrix Bridge page.
-     */
-    function timeRemainingInWindow() external view returns (uint256) {
-        if (daoCompleted || daoExpired) return 0;
-        uint256 startTs = daoLaunchTimestamp > 0 ? daoLaunchTimestamp : lastJoinTimestamp;
-        if (startTs == 0) return SEAT_WINDOW; // 21 days
-        uint256 deadline = startTs + SEAT_WINDOW;
-        if (block.timestamp >= deadline) return 0;
-        return deadline - block.timestamp;
-    }
-
-    /**
-     * @dev Returns the time remaining for a member to retopup before their slot is blanked.
-     *      Returns 0 if not capped or window already expired.
-     */
-    function retopupTimeRemaining(address member) external view returns (uint256) {
-        if (capHitTimestamp[member] == 0) return 0;
-        uint256 deadline = capHitTimestamp[member] + RETOPUP_WINDOW;
-        if (block.timestamp >= deadline) return 0;
-        return deadline - block.timestamp;
-    }
-
-    /**
-     * @dev Returns cap progress for a member (earnings / cap, both in TROB).
-     */
-    function getCapProgress(address member) external view returns (
-        uint256 earned,
-        uint256 cap,
-        uint256 remaining
-    ) {
-        earned = lifetimeEarnings[member];
-        cap    = earningsCap;
-        remaining = earned >= cap ? 0 : cap - earned;
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { ethers } = require("ethers");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 require("dotenv").config();
 
 // ─── Base58Check Helpers ───────────────────────────────────────────────────────
@@ -216,6 +217,30 @@ async function main() {
     privKey
   );
 
+  // 5. Deploy EquoraNFT
+  const nft = await deployContractToTrob(
+    "EquoraNFT",
+    "artifacts/contracts/rewards/EquoraNFT.sol/EquoraNFT.json",
+    "",
+    privKey
+  );
+
+  // 6. Deploy EquoraMatrix
+  const matrixParams = coder.encode(
+    ["address", "address", "address"],
+    [
+      "0x" + token.addressHex.slice(2),
+      "0x" + registry.addressHex.slice(2),
+      "0x" + nft.addressHex.slice(2),
+    ]
+  );
+  const matrix = await deployContractToTrob(
+    "EquoraMatrix",
+    "artifacts/contracts/core/EquoraMatrix.sol/EquoraMatrix.json",
+    matrixParams,
+    privKey
+  );
+
   const deploymentSummary = {
     network: "trobchain-testnet",
     deployer: tronBase58,
@@ -223,8 +248,10 @@ async function main() {
     contracts: {
       EquoraToken: token,
       EquoraRegistry: registry,
+      EquoraNFT: nft,
       EquoraDAO: dao,
       EquoraVault: vault,
+      EquoraMatrix: matrix,
     },
   };
 
@@ -232,7 +259,7 @@ async function main() {
     path.resolve(__dirname, "..", "deployed-trobchain.json"),
     JSON.stringify(deploymentSummary, null, 2)
   );
-  console.log("\n🎉 ALL 4 CONTRACTS DEPLOYED SUCCESSFULLY!");
+  console.log("\n🎉 ALL 6 PROTOCOL CONTRACTS DEPLOYED SUCCESSFULLY ON TROBCHAIN!");
   console.log("Summary saved to packages/hardhat/deployed-trobchain.json\n");
 }
 

@@ -5,8 +5,10 @@ const path = require('path');
 const contracts = [
   { name: 'EquoraToken', src: 'contracts/token/EquoraToken.sol' },
   { name: 'EquoraRegistry', src: 'contracts/core/EquoraRegistry.sol' },
+  { name: 'EquoraNFT', src: 'contracts/rewards/EquoraNFT.sol' },
   { name: 'EquoraDAO', src: 'contracts/core/EquoraDAO.sol' },
   { name: 'EquoraVault', src: 'contracts/core/EquoraVault.sol' },
+  { name: 'EquoraMatrix', src: 'contracts/core/EquoraMatrix.sol' },
 ];
 
 const outDir = path.join(__dirname, '../contracts-flattened');

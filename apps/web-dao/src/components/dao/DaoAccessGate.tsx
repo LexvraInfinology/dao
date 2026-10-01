@@ -40,6 +40,7 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
 const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
+export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
 
 // ─── Eligibility Types (matches PDF) ──────────────────────────────────────────
 
@@ -238,40 +239,54 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
       // 1. Prompt wallet to broadcast Freeze V2 for Energy if needed
       if (!eligibility?.condition2.energy.passed) {
-        const energyTrob = eligibility?.formula?.dao?.energyStakeTrob ?? 1070;
-        const energySun = Math.round(energyTrob * 1e6);
-        const txEnergy = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', activeAddress);
-        if (txEnergy?.Error) throw new Error(txEnergy.Error);
-        const signedEnergy = await tw.trx.sign(txEnergy);
-        await tw.trx.sendRawTransaction(signedEnergy);
+        const targetEnergy = eligibility?.formula?.dao?.energyStakeTrob ?? 1070;
+        const currentEnergy = eligibility?.condition2.energy.stakedTrob ?? 0;
+        const missingEnergy = Math.max(0, targetEnergy - currentEnergy);
+        if (missingEnergy > 0) {
+          const energySun = Math.round(missingEnergy * 1e6);
+          const txEnergy = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', activeAddress);
+          if (txEnergy?.Error) throw new Error(txEnergy.Error);
+          const signedEnergy = await tw.trx.sign(txEnergy);
+          await tw.trx.sendRawTransaction(signedEnergy);
+        }
       }
 
       // 2. Prompt wallet to broadcast Freeze V2 for Bandwidth if needed
       if (!eligibility?.condition2.bandwidth.passed) {
-        const bandwidthTrob = eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237;
-        const bandwidthSun = Math.round(bandwidthTrob * 1e6);
-        const txBandwidth = await tw.transactionBuilder.freezeBalanceV2(bandwidthSun, 'BANDWIDTH', activeAddress);
-        if (txBandwidth?.Error) throw new Error(txBandwidth.Error);
-        const signedBandwidth = await tw.trx.sign(txBandwidth);
-        await tw.trx.sendRawTransaction(signedBandwidth);
+        const targetBandwidth = eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237;
+        const currentBandwidth = eligibility?.condition2.bandwidth.stakedTrob ?? 0;
+        const missingBandwidth = Math.max(0, targetBandwidth - currentBandwidth);
+        if (missingBandwidth > 0) {
+          const bandwidthSun = Math.round(missingBandwidth * 1e6);
+          const txBandwidth = await tw.transactionBuilder.freezeBalanceV2(bandwidthSun, 'BANDWIDTH', activeAddress);
+          if (txBandwidth?.Error) throw new Error(txBandwidth.Error);
+          const signedBandwidth = await tw.trx.sign(txBandwidth);
+          await tw.trx.sendRawTransaction(signedBandwidth);
+        }
       }
 
       // 3. Prompt wallet to cast SR governance vote if needed
       if (!eligibility?.condition2.srVote.passed) {
+        const totalFrozen =
+          (eligibility?.condition2.energy.stakedTrob ?? 1070) +
+          (eligibility?.condition2.bandwidth.stakedTrob ?? 237);
+        const votesToCast = Math.max(1, Math.min(1000, totalFrozen));
+
+        let txVote: any = null;
+        // Prioritize Testnet SR on testnet environments
         try {
-          const txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_SR]: 1000 }, activeAddress);
-          if (txVote && !txVote.Error) {
-            const signedVote = await tw.trx.sign(txVote);
-            await tw.trx.sendRawTransaction(signedVote);
-          }
-        } catch {
+          txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_TESTNET_SR]: votesToCast }, activeAddress);
+        } catch { /* ignore */ }
+
+        if (!txVote || txVote.Error) {
           try {
-            const txTestnetVote = await tw.transactionBuilder.vote({ ['TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5']: 1000 }, activeAddress);
-            if (txTestnetVote && !txTestnetVote.Error) {
-              const signed = await tw.trx.sign(txTestnetVote);
-              await tw.trx.sendRawTransaction(signed);
-            }
+            txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_SR]: votesToCast }, activeAddress);
           } catch { /* ignore */ }
+        }
+
+        if (txVote && !txVote.Error) {
+          const signedVote = await tw.trx.sign(txVote);
+          await tw.trx.sendRawTransaction(signedVote);
         }
       }
 
@@ -580,7 +595,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-[#60739A] mt-1 pl-1 font-sans">
-                      <span>Connected from TrobSafe (Read-Only)</span>
+                      <span>Connected from TrobSafe (Active)</span>
                       {copiedAddress && <span className="text-emerald-600 font-semibold">Address copied</span>}
                     </div>
                   </div>
@@ -722,10 +737,22 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       ) : (
                         <Zap className="w-3.5 h-3.5 text-amber-300" />
                       )}
-                      <span>Synchronize Stake (1,070 Energy) & SR Vote</span>
+                      <span>
+                        {isStakingHelper
+                          ? 'Broadcasting On-Chain Freeze & Vote…'
+                          : !eligibility?.condition2.energy.passed && !eligibility?.condition2.bandwidth.passed
+                          ? `Stake Resources (${(eligibility?.formula?.dao?.energyStakeTrob ?? 1070) - (eligibility?.condition2.energy.stakedTrob ?? 0)} Energy, ${(eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237) - (eligibility?.condition2.bandwidth.stakedTrob ?? 0)} Bandwidth) & Vote`
+                          : !eligibility?.condition2.energy.passed
+                          ? `Stake Remaining Energy (${(eligibility?.formula?.dao?.energyStakeTrob ?? 1070) - (eligibility?.condition2.energy.stakedTrob ?? 0)} TROB) & Vote`
+                          : !eligibility?.condition2.bandwidth.passed && !eligibility?.condition2.srVote.passed
+                          ? `Stake Remaining Bandwidth (${Math.max(0, (eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237) - (eligibility?.condition2.bandwidth.stakedTrob ?? 0))} TROB) & Cast SR Vote`
+                          : !eligibility?.condition2.bandwidth.passed
+                          ? `Stake Remaining Bandwidth (${Math.max(0, (eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237) - (eligibility?.condition2.bandwidth.stakedTrob ?? 0))} TROB)`
+                          : 'Cast Official Equora SR Governance Vote'}
+                      </span>
                     </button>
                     <p className="text-[10px] text-[#60739A] text-center font-sans">
-                      Bypasses extension Stake 1.0 limitation via automated Freeze V2 verification.
+                      Automatically stakes exact missing TROB via Freeze V2 and casts official SR vote.
                     </p>
                   </div>
                 )}

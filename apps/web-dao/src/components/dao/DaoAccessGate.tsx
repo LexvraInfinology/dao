@@ -21,6 +21,10 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
+  Calendar,
+  Crown,
+  Copy,
+  Lock,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
@@ -107,6 +111,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // Wallet address resolution
   const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || '';
+  const [copiedAddress, setCopiedAddress] = useState(false);
+
+  const handleCopyAddress = () => {
+    if (!activeAddress) return;
+    try {
+      navigator.clipboard.writeText(activeAddress);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch { /* ignore */ }
+  };
 
   // Quick fallback timeout for detection probe (800ms max)
   useEffect(() => {
@@ -342,28 +356,35 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           <div className="text-center space-y-2 pt-1">
             <div className="flex justify-center">
               <div className="relative group">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#155EEF] via-[#0D3B99] to-[#0A1733] border border-blue-400/30 p-2.5 flex items-center justify-center shadow-[0_8px_24px_rgba(21,94,239,0.35)]">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1E3A8A]/40 via-[#0D1E47] to-[#081226] border border-blue-400/25 p-3 flex items-center justify-center shadow-[0_8px_24px_rgba(21,94,239,0.25)]">
                   <img
                     src="/icons/equora-symbol.svg"
                     alt="EQUORA"
                     className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
-                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center text-[9px] font-black text-slate-950 shadow-sm">
-                    👑
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md border border-amber-200/60">
+                    <Crown className="w-2.5 h-2.5 text-slate-950" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <h1 className="text-2xl font-black tracking-wider uppercase font-sora text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400">
-              EQUORA DAO
-            </h1>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-black tracking-wider uppercase font-sora text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-200 to-amber-400">
+                EQUORA DAO
+              </h1>
+              <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-slate-400 tracking-wide uppercase">
+                <span>Genesis Council</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-amber-400/90 font-mono">100 Seats Cap</span>
+              </div>
+            </div>
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-[340px] mx-auto">
               {!wallet.isConnected
-                ? 'Connect your TrobSafe wallet to verify protocol conditions and claim your Genesis Council seat.'
-                : 'Wallet connected. Fulfill protocol requirements and submit real-time $300 TROB entry payment.'}
+                ? 'Connect your verified TrobSafe wallet to evaluate protocol criteria and claim your Genesis seat.'
+                : 'Wallet active. Verify mandatory protocol compliance and authorize real-time 300 USD entry payment.'}
             </p>
           </div>
 
@@ -380,7 +401,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   className="text-[10px] font-bold text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <LogOut className="w-3 h-3" />
-                  <span>Switch</span>
+                  <span>Disconnect</span>
                 </button>
               )}
             </div>
@@ -388,12 +409,27 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
             {wallet.isConnected && activeAddress ? (
               <div className="relative">
                 <div className="w-full py-3 px-3.5 rounded-xl bg-[#040814] border border-slate-700/80 text-xs font-mono font-medium text-slate-200 flex items-center justify-between shadow-inner">
-                  <span className="truncate pr-2">{activeAddress}</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
+                  <span className="truncate pr-2 font-mono text-[11px]">{activeAddress}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleCopyAddress}
+                      title="Copy Address"
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      {copiedAddress ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ring-4 ring-emerald-400/20" />
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1 pl-1">
-                  Connected from TrobSafe. Address cannot be typed manually.
-                </p>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 pl-1">
+                  <span>Connected from TrobSafe (Read-Only)</span>
+                  {copiedAddress && <span className="text-emerald-400 font-semibold">Address copied</span>}
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -421,7 +457,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     className="hover:text-blue-400 underline flex items-center gap-1"
                   >
                     <Smartphone className="w-3 h-3" />
-                    <span>Download APK</span>
+                    <span>Download Android APK</span>
                   </a>
                 </div>
               </div>
@@ -502,12 +538,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               {/* Equora_Fi SR Vote */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Vote className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="text-slate-300">Equora_Fi SR Vote</span>
+                  <Vote className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="text-slate-300">Equora_Fi SR Governance Vote</span>
                 </div>
                 {eligibility?.condition2.srVote.passed ? (
                   <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Completed
+                    <Check className="w-3 h-3" /> Confirmed
                   </span>
                 ) : (
                   <span className="text-[11px] font-semibold text-slate-400">Required</span>
@@ -517,8 +553,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               {/* Condition 1: Wallet Creation Date */}
               <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px]">🆕</span>
-                  <span className="text-slate-300">Created on/after 1 Oct 2026</span>
+                  <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="text-slate-300">Activation Date (≥ 1 Oct 2026)</span>
                 </div>
                 {eligibility?.condition1.passed ? (
                   <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
@@ -538,37 +574,40 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 type="button"
                 onClick={handleStakeAndVote}
                 disabled={isStakingHelper}
-                className="w-full py-2 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/60 text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-600/50 text-slate-200 text-[11px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
               >
                 {isStakingHelper ? (
-                  <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
                 ) : (
-                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
                 )}
-                <span>Fulfill Resource Stake & Equora SR Vote (Condition 2)</span>
+                <span>Synchronize Resource Allocation & SR Vote</span>
               </button>
             )}
           </div>
 
-          {/* ── 4. Official WhatsApp Channel (Gold Gradient matching Screenshot) */}
+          {/* ── 4. Official WhatsApp Channel (Refined Metallic Gold finish) ─── */}
           <div className="space-y-1.5">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#F5D061] via-[#E8BD2D] to-[#C99700] p-3.5 sm:p-4 text-slate-950 shadow-[0_8px_20px_rgba(232,189,45,0.25)] border border-amber-300/50 flex items-center justify-between gap-3">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#DFB76C] via-[#F4D388] to-[#C99C44] p-3.5 sm:p-4 text-slate-950 shadow-[0_8px_24px_rgba(212,175,55,0.2)] border border-amber-200/60 flex items-center justify-between gap-3">
               {/* WhatsApp Icon + Titles */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-[#1FAF51] text-white flex items-center justify-center shrink-0 shadow-md ring-2 ring-white/30">
                   <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[9px] font-black uppercase tracking-wider text-amber-950/80">
-                    Official Channel
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-950/80">
+                      Verified Community
+                    </span>
+                    <ShieldCheck className="w-3 h-3 text-emerald-800 shrink-0" />
                   </div>
-                  <div className="text-xs font-black text-slate-950 truncate tracking-tight">
-                    ❤️ EQUORA DAO TROBIUM ❤️
+                  <div className="text-xs font-black text-slate-950 truncate tracking-tight uppercase font-sora">
+                    EQUORA DAO Official Channel
                   </div>
                   <div className="text-[10px] font-semibold text-slate-900/80">
-                    Follow on WhatsApp
+                    Mandatory Community Verification
                   </div>
                 </div>
               </div>
@@ -577,7 +616,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               <button
                 type="button"
                 onClick={handleJoinWhatsApp}
-                className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider shadow-md shrink-0 transition-transform active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider shadow-md shrink-0 transition-all active:scale-95 cursor-pointer"
               >
                 Join
               </button>
@@ -586,15 +625,15 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
             {/* Telegram-style Cross-Check Membership Verification */}
             <div className="px-1 pt-1">
               {eligibility?.whatsapp.joined ? (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-xl">
+                <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-xl">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>WhatsApp Channel Membership Confirmed</span>
+                  <span>Channel Membership Verified • Access Authorized</span>
                 </div>
               ) : (
                 <div className="p-2.5 rounded-xl bg-amber-950/20 border border-amber-800/40 flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-1.5 text-amber-300/90 text-[11px]">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                    <span>Join WhatsApp group & verify membership to proceed</span>
+                    <span>Channel membership required prior to seat entry</span>
                   </div>
                   <button
                     type="button"
@@ -602,7 +641,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     disabled={waVerifying || !wallet.isConnected}
                     className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    {waVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Verify Join'}
+                    {waVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Verify Membership'}
                   </button>
                 </div>
               )}
@@ -619,7 +658,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
               />
-              <span className="text-[11px] leading-tight select-none">
+              <span className="text-[11px] leading-tight select-none text-slate-400">
                 I accept the{' '}
                 <button
                   type="button"
@@ -629,7 +668,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   }}
                   className="font-bold text-blue-400 hover:text-blue-300 underline cursor-pointer"
                 >
-                  Terms & Conditions
+                  Genesis DAO Governance Terms & Conditions
                 </button>
                 .
               </span>
@@ -664,8 +703,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               <>
                 <span>
                   {priceData
-                    ? `Pay ${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB & Enter DAO`
-                    : 'Pay $300 TROB & Enter DAO'}
+                    ? `Submit Entry Deposit (${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`
+                    : 'Submit Entry Deposit (300 USD)'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </>
@@ -674,23 +713,25 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
             ) : !eligibility?.condition1.passed ? (
               <span>Ineligible: Wallet Must Be Created On/After 1 Oct 2026</span>
             ) : !eligibility?.condition2.passed ? (
-              <span>Fulfill Resource Stake & SR Vote Above</span>
+              <span>Fulfill Resource Stake & SR Vote Requirements</span>
             ) : !eligibility?.whatsapp.joined ? (
-              <span>Join & Verify WhatsApp Channel Above</span>
+              <span>Complete WhatsApp Channel Verification</span>
             ) : !termsAccepted ? (
               <span>Accept Terms & Conditions to Register</span>
             ) : (
-              <span>Complete Verification Requirements Above</span>
+              <span>Complete Protocol Verification Requirements</span>
             )}
           </button>
 
           {/* Bottom Branding */}
           <div className="pt-2 text-center border-t border-slate-800/80">
             <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
-              <span>✦ Powered by TrobChain L1</span>
-              <span>·</span>
+              <span>Autonomous Consensus Protocol</span>
+              <span>•</span>
+              <span>TrobChain L1</span>
+              <span>•</span>
               <Link href="/" className="hover:text-blue-400 underline">
-                Back to EQUORA.FI
+                EQUORA.FI
               </Link>
             </p>
           </div>

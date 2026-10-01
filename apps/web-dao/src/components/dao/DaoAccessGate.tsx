@@ -145,10 +145,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // If user is disconnected, redirect to landing page
   useEffect(() => {
-    if (detectTimeout && !wallet.isConnected && !wallet.isConnecting) {
+    if (detectTimeout && !wallet.isConnected && wallet.status !== 'connecting' && wallet.status !== 'detecting') {
       window.location.href = '/';
     }
-  }, [detectTimeout, wallet.isConnected, wallet.isConnecting]);
+  }, [detectTimeout, wallet.isConnected, wallet.status]);
 
   // ── Fetch protocol eligibility conditions from API ──────────────────────────
   const fetchEligibility = useCallback(async () => {

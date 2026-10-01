@@ -525,14 +525,14 @@ export default function MatrixTreeGraph() {
             <div className="text-center px-3">
               <div className="text-[10px] text-[#64748B] uppercase font-bold tracking-wider">Earned Income</div>
               <div className="text-base font-black text-emerald-600 mt-0.5">
-                ${earnedIncomeUsd} TROB
+                ${earnedIncomeUsd} USD
               </div>
             </div>
             <div className="w-px h-8 bg-[#E2E8F0]" />
             <div className="text-center px-3">
               <div className="text-[10px] text-[#64748B] uppercase font-bold tracking-wider">Cycle Capacity</div>
               <div className="text-base font-black text-[#071A4A] mt-0.5">
-                ${cyclePotentialUsd} TROB
+                ${cyclePotentialUsd} USD
               </div>
             </div>
           </div>
@@ -554,7 +554,7 @@ export default function MatrixTreeGraph() {
                   </span>
                   {activeNode.isFilled && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      $30 TROB Deposited
+                      $30 USD in TROB Deposited
                     </span>
                   )}
                   {DIRECT_INCOME_POSITIONS.has(activeNode.position) && (

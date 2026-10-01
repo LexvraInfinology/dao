@@ -11,7 +11,7 @@ export const CouncilStatCards: React.FC = () => {
   const seatsFilled    = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? (100 - seatsFilled);
   const filledPct      = Math.min(100, Math.round((seatsFilled / 100) * 100));
-  const nextSeat       = seatsFilled + 1;
+  const nextSeat       = Math.min(100, seatsFilled + 1);
   const cashback       = (300 / Math.max(1, nextSeat)).toFixed(2);
   const entryTrob      = price ? price.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—';
   return (

@@ -14,12 +14,13 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
   const totalEarnedBtt = bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0;
 
   const isMember = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
-  const capProgressPct  = isMember ? (profile?.capProgressPct  ?? 0) : 0;
   const effectivePrice  = bttPrice > 0 ? bttPrice : 0.056;
-  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt ?? Math.round(1500 / effectivePrice)) : 0;
-  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt ?? Math.round(300 / effectivePrice)) : 0;
   const pushedUsd       = isMember ? (profile?.pushedAmountUsdEstimate ?? ((profile?.pushedAmountBtt ?? 0) * effectivePrice)) : 0;
-  const remainingCapUsd = isMember ? Math.max(0, 1500 - pushedUsd) : 0;
+  const effectiveCapUsd = (profile?.earningsCapUsd && profile.earningsCapUsd >= 300) ? profile.earningsCapUsd : 1500;
+  const capProgressPct  = isMember && effectiveCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100)) : 0;
+  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt && profile.earningsCapBtt > 1500 ? profile.earningsCapBtt : Math.round(effectiveCapUsd / effectivePrice)) : 0;
+  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt && profile.entryAmountBtt > 300 ? profile.entryAmountBtt : Math.round(300 / effectivePrice)) : 0;
+  const remainingCapUsd = isMember ? Math.max(0, effectiveCapUsd - pushedUsd) : 0;
 
   const status   = isMember ? (profile?.status ?? 'active') : 'unclaimed';
   const isActive = isMember && status === 'active';

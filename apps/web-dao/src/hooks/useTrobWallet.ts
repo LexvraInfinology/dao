@@ -203,8 +203,6 @@ export function useTrobWallet(): TrobWalletState {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
     } catch { /* */ }
     setAddress(null);
     setStatus('disconnected');

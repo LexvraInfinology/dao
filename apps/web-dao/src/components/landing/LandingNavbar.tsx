@@ -16,7 +16,6 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { WalletModal } from '@/components/ui/WalletModal';
-import { DevModeButton } from '@/components/ui/DevModeButton';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle } from '@/components/dao/DaoWhatsAppCircle';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
@@ -148,8 +147,6 @@ export const LandingNavbar: React.FC = () => {
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
     } catch {}
   };
 
@@ -200,8 +197,6 @@ export const LandingNavbar: React.FC = () => {
 
             {/* Desktop CTA actions */}
             <div className="hidden lg:flex items-center gap-3">
-              {/* Dev Mode button: Direct bypass to /dao without wallet */}
-              <DevModeButton />
 
               {(!mounted || !wallet.isConnected) ? (
                 <button
@@ -339,8 +334,6 @@ export const LandingNavbar: React.FC = () => {
 
             {/* Bottom Actions from landing page navbar */}
             <div className="pt-4 border-t border-[#E2ECF9] space-y-2.5">
-              {/* Mobile Dev Mode Button */}
-              <DevModeButton variant="drawer" />
 
               {!isConnected ? (
                 <button

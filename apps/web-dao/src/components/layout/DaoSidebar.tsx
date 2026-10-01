@@ -135,8 +135,6 @@ export const DaoSidebar: React.FC = () => {
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
     } catch {}
   };
 

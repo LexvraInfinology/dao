@@ -10,7 +10,6 @@ import { EarningsCapCard } from '@/components/dao/lounge/EarningsCapCard';
 import { IncomeChannelsCard } from '@/components/dao/lounge/IncomeChannelsCard';
 import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
-import { DaoAccessGate } from '@/components/dao/DaoAccessGate';
 
 export default function MemberLoungePage() {
   const wallet     = useWallet();
@@ -24,9 +23,8 @@ export default function MemberLoungePage() {
   const earningsCapUsd     = lounge?.earningsCapUsd || 1500;
 
   return (
-    <DaoAccessGate>
-      <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
-        <LoungeHero loungeData={lounge} loading={loading} />
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
+      <LoungeHero loungeData={lounge} loading={loading} />
 
       {/* Desktop view */}
       <div className="hidden lg:block space-y-6 sm:space-y-8">
@@ -73,6 +71,5 @@ export default function MemberLoungePage() {
         <IncomeChannelsCard loungeData={lounge} />
       </div>
     </div>
-    </DaoAccessGate>
   );
 }

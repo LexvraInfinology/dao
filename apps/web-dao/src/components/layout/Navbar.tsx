@@ -7,7 +7,6 @@ import { LANDING_NAV_ITEMS } from '@/data/navigation';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
-import { DevModeButton } from '@/components/ui/DevModeButton';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 
 export const Navbar: React.FC = () => {
@@ -80,8 +79,6 @@ export const Navbar: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="hidden sm:flex items-center gap-2.5">
-              {/* Dev Mode direct bypass to DAO */}
-              <DevModeButton />
 
               {/* Connect / Address */}
               <button
@@ -137,8 +134,6 @@ export const Navbar: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
-              {/* Dev Mode button in mobile menu */}
-              <DevModeButton variant="drawer" />
 
               <button
                 onClick={() => {

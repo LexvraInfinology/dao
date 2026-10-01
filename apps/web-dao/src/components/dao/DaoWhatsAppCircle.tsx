@@ -23,18 +23,11 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
 
   const [mounted, setMounted] = useState<boolean>(false);
   const [storedAddr, setStoredAddr] = useState<string>('');
-  const [isDev, setIsDev] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
     try {
-      const dev =
-        sessionStorage.getItem('equora_dao_preview') === 'true' ||
-        localStorage.getItem('equora_dev_mode') === 'true' ||
-        window.location.search.includes('dev=');
-      setIsDev(dev);
-
       const stored = localStorage.getItem('trobsafe_address') || localStorage.getItem('equora_auth_address');
       if (stored) {
         try {

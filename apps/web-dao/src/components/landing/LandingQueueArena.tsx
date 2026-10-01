@@ -40,7 +40,7 @@ export const LandingQueueArena: React.FC = () => {
   return (
     <section id="queue" className="scroll-mt-20 relative pt-8 sm:pt-12 lg:pt-14 pb-12 sm:pb-16 lg:pb-20 overflow-hidden bg-gradient-to-b from-[#FFFFFF] via-[#F0F6FD] to-[#F8FAFC] border-b border-slate-200/80">
       {/* Background Arena Image */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-90 select-none">
+      <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image
           src="/landing/queue-arena.webp"
           alt="Genesis Queue Amphitheater"
@@ -49,29 +49,26 @@ export const LandingQueueArena: React.FC = () => {
           loading="lazy"
           className="object-cover object-bottom"
         />
-        {/* Soft top gradient to blend text readability */}
-        <div className="absolute inset-x-0 top-0 h-[48%] bg-gradient-to-b from-white via-white/85 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/50 to-transparent" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Top Header Block */}
         <div className="text-center max-w-3xl mx-auto space-y-2.5 sm:space-y-4">
           {/* Pill Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF8FF] border border-[#D1E9FF] shadow-xs">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-blue-200/90 shadow-sm backdrop-blur-md">
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
               The Genesis Queue
             </span>
           </div>
 
           {/* Heading */}
-          <h2 className="text-xl sm:text-3xl lg:text-[42px] font-bold uppercase text-[#0B132B] leading-tight tracking-tight">
+          <h2 className="text-xl sm:text-3xl lg:text-[42px] font-extrabold uppercase text-[#0B132B] leading-tight tracking-tight drop-shadow-[0_1px_8px_rgba(255,255,255,0.75)]">
             100 Seats<br />
             <span className="text-[#155EEF]">One Genesis Queue.</span>
           </h2>
 
           {/* Subtitle */}
-          <p className="text-xs sm:text-base text-[#475467] leading-relaxed max-w-2xl mx-auto">
+          <p className="text-xs sm:text-base text-[#1D2939] font-medium leading-relaxed max-w-2xl mx-auto drop-shadow-[0_1px_6px_rgba(255,255,255,0.85)]">
             Every seat enters a transparent FIFO queue. Automated cashback distribution via smart contract. No intermediaries. Ever.
           </p>
 

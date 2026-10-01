@@ -150,26 +150,22 @@ export const LandingLiveActivity: React.FC = () => {
           loading="lazy"
           className="object-cover object-[98%_top] sm:object-[90%_center] lg:object-center"
         />
-        {/* Soft linear gradient from left: keeps card and text readable while preserving character visibility */}
-        <div className="absolute inset-y-0 left-0 w-full sm:w-[65%] lg:w-[48%] bg-gradient-to-r from-[#F0F6FD] via-[#F0F6FD]/90 sm:via-[#F0F6FD]/75 to-transparent z-0" />
-        <div className="absolute inset-x-0 top-0 h-16 sm:h-28 bg-gradient-to-b from-white via-white/80 to-transparent z-0" />
-        <div className="absolute inset-x-0 bottom-0 h-16 sm:h-32 bg-gradient-to-t from-white via-white/60 to-transparent z-0" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
         {/* Header Block — Clean, compact typography, aligned left on mobile so the boy on right is clearly visible */}
         <div className="text-left sm:text-center max-w-[240px] min-[360px]:max-w-[260px] sm:max-w-2xl sm:mx-auto mb-6 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/85 border border-blue-200/80 shadow-xs backdrop-blur-md mb-2 sm:mb-2.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/90 border border-blue-200/90 shadow-sm backdrop-blur-md mb-2 sm:mb-2.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
               LIVE ACTIVITY
             </span>
           </div>
-          <h2 className="text-xl min-[360px]:text-2xl sm:text-3xl lg:text-[42px] font-bold uppercase text-[#0B132B] leading-tight tracking-tight">
+          <h2 className="text-xl min-[360px]:text-2xl sm:text-3xl lg:text-[42px] font-extrabold uppercase text-[#0B132B] leading-tight tracking-tight drop-shadow-[0_1px_8px_rgba(255,255,255,0.75)]">
             The Genesis Queue Is<br />
             <span className="text-[#155EEF]">Always Moving.</span>
           </h2>
-          <p className="mt-1.5 sm:mt-2.5 text-[11px] min-[360px]:text-xs sm:text-base text-[#475467] leading-relaxed">
+          <p className="mt-1.5 sm:mt-2.5 text-[11px] min-[360px]:text-xs sm:text-base text-[#1D2939] font-medium leading-relaxed drop-shadow-[0_1px_6px_rgba(255,255,255,0.85)]">
             Track seat deposits, queue distributions, and Genesis DAO activity in real time.
           </p>
         </div>

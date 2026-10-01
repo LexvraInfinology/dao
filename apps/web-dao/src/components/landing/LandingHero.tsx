@@ -32,9 +32,6 @@ export const LandingHero: React.FC = () => {
             type="video/mp4"
           />
         </video>
-        {/* Soft linear gradient from left: keeps left-aligned text crystal clear while revealing right background video */}
-        <div className="absolute inset-y-0 left-0 w-[72%] sm:w-[65%] lg:w-[55%] xl:w-[50%] bg-gradient-to-r from-[#F0F6FD] via-[#F0F6FD]/95 sm:via-[#F0F6FD]/85 to-transparent z-0" />
-        <div className="absolute inset-x-0 bottom-0 h-20 sm:h-28 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF]/60 to-transparent z-0" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10 w-full">
@@ -42,22 +39,22 @@ export const LandingHero: React.FC = () => {
           {/* Left Column — Compact, Left-Aligned on ALL Screens so Background Video/Artwork on Right is Clearly Seen */}
           <div className="lg:col-span-7 xl:col-span-6 space-y-3 sm:space-y-6 text-left">
             {/* Pill Badge */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/85 border border-blue-200/80 shadow-xs backdrop-blur-md">
+            <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/90 border border-blue-200/90 shadow-sm backdrop-blur-md">
               <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
               <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
                 Genesis DAO Phase 1
               </span>
             </div>
 
-            {/* Headline — Scaled cleanly on left side so it doesn't crowd out the background video */}
-            <h1 className="text-[22px] min-[360px]:text-[26px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-bold uppercase text-[#0B132B] leading-[1.1] tracking-tight max-w-[220px] min-[360px]:max-w-[250px] sm:max-w-md lg:max-w-xl text-left">
+            {/* Headline — Scaled cleanly on left side without white shade overlay */}
+            <h1 className="text-[22px] min-[360px]:text-[26px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-extrabold uppercase text-[#0B132B] leading-[1.1] tracking-tight max-w-[220px] min-[360px]:max-w-[250px] sm:max-w-md lg:max-w-xl text-left drop-shadow-[0_1px_8px_rgba(255,255,255,0.75)]">
               100 Seats.<br />
               <span className="text-[#155EEF]">One Council.</span><br />
               A Shared Future.
             </h1>
 
-            {/* Subtitle — Compact width */}
-            <p className="text-[11px] min-[360px]:text-xs sm:text-base text-[#475467] leading-relaxed max-w-[210px] min-[360px]:max-w-[240px] sm:max-w-[480px] text-left">
+            {/* Subtitle — Clean high-contrast text */}
+            <p className="text-[11px] min-[360px]:text-xs sm:text-base text-[#1D2939] font-medium leading-relaxed max-w-[210px] min-[360px]:max-w-[240px] sm:max-w-[480px] text-left drop-shadow-[0_1px_6px_rgba(255,255,255,0.85)]">
               Fixed sovereign positions with direct dividend distribution and governance rights.
               Zero referrals, infinite protocol cash flow.
             </p>

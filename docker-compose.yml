@@ -1,40 +1,189 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: equora_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-equora_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equora_secret_password}
-      POSTGRES_DB: ${POSTGRES_DB:-equora_db}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
     volumes:
       - equora_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-equora_admin} -d ${POSTGRES_DB:-equora_db}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - equora_network
 
   redis:
     image: redis:7-alpine
-    container_name: equora_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-equora_redis_secret}
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"]
     volumes:
       - equora_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-equora_redis_secret}", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    networks:
+      - equora_network
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node-service
+      network: host
+      args:
+        SERVICE_PACKAGE: '@equora/api'
+        SERVICE_DIR: apps/api
+        SERVICE_PORT: 4000
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      SIWE_NONCE_TTL_SECONDS: ${SIWE_NONCE_TTL_SECONDS:-300}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN must be set}
+      CHAIN_ID: ${CHAIN_ID:?CHAIN_ID must be set}
+      RPC_URL: ${RPC_URL:?RPC_URL must be set}
+      NEXT_PUBLIC_DAO_ADDRESS: ${NEXT_PUBLIC_DAO_ADDRESS:-}
+      TROB_PRICE_API_URL: ${TROB_PRICE_API_URL:-https://backend.trobchain.com/v1/market/price}
+      PRICE_CACHE_TTL_MS: ${PRICE_CACHE_TTL_MS:-30000}
+      DAO_SEAT_ENTRY_USD: ${DAO_SEAT_ENTRY_USD:-300}
+      CHAINLINK_BTT_USD_FEED: ${CHAINLINK_BTT_USD_FEED:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - equora_network
+
+  indexer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node-service
+      network: host
+      args:
+        SERVICE_PACKAGE: '@equora/indexer'
+        SERVICE_DIR: apps/indexer
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      CHAIN_ID: ${CHAIN_ID:?CHAIN_ID must be set}
+      RPC_URL: ${RPC_URL:?RPC_URL must be set}
+      INDEXER_POLL_INTERVAL_MS: ${INDEXER_POLL_INTERVAL_MS:-3000}
+      INDEXER_START_BLOCK: ${INDEXER_START_BLOCK:-0}
+      NEXT_PUBLIC_REGISTRY_ADDRESS: ${NEXT_PUBLIC_REGISTRY_ADDRESS:-}
+      NEXT_PUBLIC_TOKEN_ADDRESS: ${NEXT_PUBLIC_TOKEN_ADDRESS:-}
+      NEXT_PUBLIC_NFT_ADDRESS: ${NEXT_PUBLIC_NFT_ADDRESS:-}
+      NEXT_PUBLIC_VESTING_ADDRESS: ${NEXT_PUBLIC_VESTING_ADDRESS:-}
+      NEXT_PUBLIC_DAO_ADDRESS: ${NEXT_PUBLIC_DAO_ADDRESS:-}
+      NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-}
+      NEXT_PUBLIC_VAULT_ADDRESS: ${NEXT_PUBLIC_VAULT_ADDRESS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - equora_network
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node-service
+      network: host
+      args:
+        SERVICE_PACKAGE: '@equora/queue'
+        SERVICE_DIR: apps/queue
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-5}
+      QUEUE_POLL_INTERVAL_MS: ${QUEUE_POLL_INTERVAL_MS:-3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - equora_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      network: host
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL must be set}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
+        NEXT_PUBLIC_MATRIX_DOMAIN: ${NEXT_PUBLIC_MATRIX_DOMAIN:-}
+        NEXT_PUBLIC_DAO_DOMAIN: ${NEXT_PUBLIC_DAO_DOMAIN:-}
+        NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-}
+        NEXT_PUBLIC_DAO_URL: ${NEXT_PUBLIC_DAO_URL:-}
+        NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-${CHAIN_ID:-31337}}
+        NEXT_PUBLIC_TARGET_NETWORK: ${NEXT_PUBLIC_TARGET_NETWORK:-}
+        NEXT_PUBLIC_EXPLORER_URL: ${NEXT_PUBLIC_EXPLORER_URL:-}
+        NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID:?NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID must be set}
+        NEXT_PUBLIC_TOKEN_ADDRESS: ${NEXT_PUBLIC_TOKEN_ADDRESS:-}
+        NEXT_PUBLIC_REGISTRY_ADDRESS: ${NEXT_PUBLIC_REGISTRY_ADDRESS:-}
+        NEXT_PUBLIC_NFT_ADDRESS: ${NEXT_PUBLIC_NFT_ADDRESS:-}
+        NEXT_PUBLIC_DAO_ADDRESS: ${NEXT_PUBLIC_DAO_ADDRESS:-}
+        NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS: ${NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS:-}
+        NEXT_PUBLIC_VAULT_ADDRESS: ${NEXT_PUBLIC_VAULT_ADDRESS:-}
+        NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-}
+        NEXT_PUBLIC_SALARY_POOL_ADDRESS: ${NEXT_PUBLIC_SALARY_POOL_ADDRESS:-}
+        NEXT_PUBLIC_MAGIC_BOX_ADDRESS: ${NEXT_PUBLIC_MAGIC_BOX_ADDRESS:-}
+        NEXT_PUBLIC_REWARD_POOL_ADDRESS: ${NEXT_PUBLIC_REWARD_POOL_ADDRESS:-}
+        NEXT_PUBLIC_VESTING_ADDRESS: ${NEXT_PUBLIC_VESTING_ADDRESS:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BACKEND_API_URL: http://api:4000
+      TROB_PRICE_API_URL: ${TROB_PRICE_API_URL:-https://backend.trobchain.com/v1/market/price}
+      TROBSAFE_APK_URL: ${TROBSAFE_APK_URL:-}
+      NEXT_PUBLIC_TROBSAFE_APK_URL: ${NEXT_PUBLIC_TROBSAFE_APK_URL:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - equora_network
 

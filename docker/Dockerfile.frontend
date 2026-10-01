@@ -1,0 +1,116 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:22-bookworm-slim AS base
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && corepack enable \
+    && corepack prepare pnpm@11.8.0 --activate \
+    && pnpm config set store-dir /pnpm/store
+WORKDIR /workspace
+
+FROM base AS dependencies
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
+COPY scripts/patch-qr.js scripts/patch-qr.js
+COPY apps/api/package.json apps/api/package.json
+COPY apps/indexer/package.json apps/indexer/package.json
+COPY apps/queue/package.json apps/queue/package.json
+COPY apps/web-dao/package.json apps/web-dao/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/hardhat/package.json packages/hardhat/package.json
+COPY packages/logger/package.json packages/logger/package.json
+COPY packages/services/package.json packages/services/package.json
+COPY packages/trpc/package.json packages/trpc/package.json
+COPY packages/tsconfig/package.json packages/tsconfig/package.json
+COPY packages/types/package.json packages/types/package.json
+
+RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+FROM dependencies AS builder
+
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_MATRIX_DOMAIN
+ARG NEXT_PUBLIC_DAO_DOMAIN
+ARG NEXT_PUBLIC_MATRIX_URL
+ARG NEXT_PUBLIC_DAO_URL
+ARG NEXT_PUBLIC_CHAIN_ID
+ARG NEXT_PUBLIC_TARGET_NETWORK
+ARG NEXT_PUBLIC_EXPLORER_URL
+ARG NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
+ARG NEXT_PUBLIC_TOKEN_ADDRESS
+ARG NEXT_PUBLIC_REGISTRY_ADDRESS
+ARG NEXT_PUBLIC_NFT_ADDRESS
+ARG NEXT_PUBLIC_DAO_ADDRESS
+ARG NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS
+ARG NEXT_PUBLIC_VAULT_ADDRESS
+ARG NEXT_PUBLIC_MATRIX_ADDRESS
+ARG NEXT_PUBLIC_SALARY_POOL_ADDRESS
+ARG NEXT_PUBLIC_MAGIC_BOX_ADDRESS
+ARG NEXT_PUBLIC_REWARD_POOL_ADDRESS
+ARG NEXT_PUBLIC_VESTING_ADDRESS
+
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_MATRIX_DOMAIN=$NEXT_PUBLIC_MATRIX_DOMAIN \
+    NEXT_PUBLIC_DAO_DOMAIN=$NEXT_PUBLIC_DAO_DOMAIN \
+    NEXT_PUBLIC_MATRIX_URL=$NEXT_PUBLIC_MATRIX_URL \
+    NEXT_PUBLIC_DAO_URL=$NEXT_PUBLIC_DAO_URL \
+    NEXT_PUBLIC_CHAIN_ID=$NEXT_PUBLIC_CHAIN_ID \
+    NEXT_PUBLIC_TARGET_NETWORK=$NEXT_PUBLIC_TARGET_NETWORK \
+    NEXT_PUBLIC_EXPLORER_URL=$NEXT_PUBLIC_EXPLORER_URL \
+    NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=$NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID \
+    NEXT_PUBLIC_TOKEN_ADDRESS=$NEXT_PUBLIC_TOKEN_ADDRESS \
+    NEXT_PUBLIC_REGISTRY_ADDRESS=$NEXT_PUBLIC_REGISTRY_ADDRESS \
+    NEXT_PUBLIC_NFT_ADDRESS=$NEXT_PUBLIC_NFT_ADDRESS \
+    NEXT_PUBLIC_DAO_ADDRESS=$NEXT_PUBLIC_DAO_ADDRESS \
+    NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS=$NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS \
+    NEXT_PUBLIC_VAULT_ADDRESS=$NEXT_PUBLIC_VAULT_ADDRESS \
+    NEXT_PUBLIC_MATRIX_ADDRESS=$NEXT_PUBLIC_MATRIX_ADDRESS \
+    NEXT_PUBLIC_SALARY_POOL_ADDRESS=$NEXT_PUBLIC_SALARY_POOL_ADDRESS \
+    NEXT_PUBLIC_MAGIC_BOX_ADDRESS=$NEXT_PUBLIC_MAGIC_BOX_ADDRESS \
+    NEXT_PUBLIC_REWARD_POOL_ADDRESS=$NEXT_PUBLIC_REWARD_POOL_ADDRESS \
+    NEXT_PUBLIC_VESTING_ADDRESS=$NEXT_PUBLIC_VESTING_ADDRESS \
+    NEXT_TELEMETRY_DISABLED=1
+
+COPY . .
+RUN pnpm --filter equora-app build
+RUN CI=true pnpm install --prod --filter=equora-app --frozen-lockfile --ignore-scripts
+RUN set -eux; \
+    rm -rf /out; \
+    mkdir -p /out/apps/web-dao; \
+    cp package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc /out/; \
+    cp apps/web-dao/package.json /out/apps/web-dao/package.json; \
+    cp -R apps/web-dao/.next /out/apps/web-dao/.next; \
+    cp -R apps/web-dao/public /out/apps/web-dao/public; \
+    cp apps/web-dao/next.config.mjs /out/apps/web-dao/next.config.mjs
+
+FROM base AS production-dependencies
+
+WORKDIR /app
+
+COPY --from=builder /out/ ./
+RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
+    CI=true pnpm install --prod --filter=equora-app --frozen-lockfile --ignore-scripts
+
+FROM base AS runtime
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app
+
+COPY --from=production-dependencies /app/ ./
+
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 CMD node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+WORKDIR /app/apps/web-dao
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "3000"]

@@ -84,20 +84,20 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Card 5: Genesis Root */}
+        {/* Card 5: Apex Matrix Root Priority */}
         <div className="bg-white rounded-xl border border-[#E2EEF9] p-3.5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex items-start gap-2.5 hover:border-[#0E62E4]/40 transition-colors">
           <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
             <Crown className="w-4 h-4" />
           </div>
           <div>
             <div className="text-[10px] text-amber-700 font-medium">
-              Genesis Root
+              Apex Matrix Root
             </div>
             <div className="text-base font-bold text-[#14304A] tracking-tight mt-0.5">
-              Last DAO Member
+              DAO Seats #1–#10
             </div>
             <p className="text-[11px] text-[#4F6D87] mt-0.5 leading-snug">
-              Top of the entire matrix tree.
+              Priority waterfall offer for top apex matrix owner.
             </p>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function MatrixFeatureCards() {
           </div>
         </div>
 
-        {/* Mobile Card 5: Genesis Root */}
+        {/* Mobile Card 5: Apex Matrix Root Priority */}
         <div className="bg-white rounded-xl border border-[#E2EEF9] p-3 shadow-xs flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shrink-0">
@@ -193,15 +193,15 @@ export default function MatrixFeatureCards() {
             </div>
             <div className="min-w-0">
               <div className="text-[11px] text-amber-700 font-medium">
-                Genesis Root
+                Apex Matrix Root
               </div>
               <div className="text-[11px] text-[#4F6D87] truncate">
-                Top of the entire matrix tree.
+                Waterfall priority offer.
               </div>
             </div>
           </div>
           <div className="text-sm font-bold text-[#14304A] tracking-tight shrink-0">
-            Last DAO Member
+            DAO Seats #1–#10
           </div>
         </div>
       </div>

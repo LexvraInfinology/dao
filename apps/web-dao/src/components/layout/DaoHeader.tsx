@@ -34,6 +34,8 @@ import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle, WHATSAPP_DAO_GROUP_URL } from '@/components/dao/DaoWhatsAppCircle';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
+import { DaoSearchBar } from '@/components/layout/DaoSearchBar';
+import { DaoNotificationCenter } from '@/components/layout/DaoNotificationCenter';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -219,22 +221,12 @@ export const DaoHeader: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop search */}
-          <div className="relative w-full min-w-[180px] max-w-[340px] hidden lg:block">
-            <Search className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search member ID / wallet / transaction…"
-              className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/20 text-xs text-[#17334F] placeholder-[#4F6D87] focus:outline-none focus:border-[#0E62E4] focus:bg-white transition-all font-sans"
-            />
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-white border border-[#E2ECF9] text-[10px] text-[#94A3B8] font-mono shadow-xs">
-              /
-            </div>
-          </div>
+          {/* Fuzzy Search Bar (Desktop input + Mobile modal trigger) */}
+          <DaoSearchBar />
         </div>
 
-        {/* Right: Status + bell + wallet pill + avatar */}
-        <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 shrink-0">
+        {/* Right: Status + notification center + wallet pill + avatar */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
 
           {/* Protocol status pill — desktop only */}
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-xs font-semibold text-[#047857] font-jakarta shadow-xs shrink-0">
@@ -242,20 +234,11 @@ export const DaoHeader: React.FC = () => {
             <span>Protocol Live</span>
           </div>
 
-          {/* Notification bell — desktop only */}
-          <button
-            className="hidden lg:flex relative w-9 h-9 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] hover:bg-slate-100 items-center justify-center transition-all shadow-xs"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#EF4444] border-2 border-white" />
-          </button>
-
-
-          {/* Round circle for WhatsApp (only for real DAO seat members, hide on tiny screens to avoid header crowding) */}
-          <div className="hidden sm:flex shrink-0">
-            <DaoWhatsAppCircle variant="header" />
-          </div>
+          {/* Notification Center with Web Audio chime & priority alerts */}
+          <DaoNotificationCenter
+            userSeat={memberData?.position ?? auth.user?.daoPosition ?? null}
+            userAddress={displayAddress}
+          />
 
           {/* ── Wallet pill / connect button ───────────────────────────── */}
           {isConnected ? (

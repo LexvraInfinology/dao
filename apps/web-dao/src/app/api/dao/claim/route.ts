@@ -21,12 +21,29 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Direct Serverless Execution to Neon Database (Vercel native)
-    const { address, position, txHash } = body;
+    const { address, position, txHash, deviceFingerprint } = body;
+    const clientFingerprint = deviceFingerprint || req.headers.get('x-device-fingerprint') || null;
+
     if (!address || !position) {
       return NextResponse.json({ success: false, error: 'Address and position are required' }, { status: 400 });
     }
 
     const pos = parseInt(position, 10);
+
+    // Anti-Sybil Check: Strictly 1 DAO Seat per Physical Device
+    if (clientFingerprint) {
+      const existingDevice = await queryNeon<any>(
+        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 LIMIT 1`,
+        [clientFingerprint]
+      );
+      if (existingDevice.rows.length > 0 && existingDevice.rows[0].address.toLowerCase() !== address.trim().toLowerCase()) {
+        return NextResponse.json({
+          success: false,
+          error: `Device Restriction: This device has already claimed Council Seat #${existingDevice.rows[0].position}. The Genesis DAO strictly enforces 1 seat per physical device to protect decentralized fairness.`,
+        }, { status: 403 });
+      }
+    }
+
     const bttPriceUsd = 0.056;
     const entryAmountUsd = 300;
     const entryAmountTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
@@ -52,11 +69,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 1. Insert new member
+    // 1. Insert new member with device fingerprint
     await queryNeon(
-      `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, NOW(), $3, 1, $4, 300, $2, 'trobchain-api', $5, 'active', NOW(), NOW())`,
-      [address.trim(), pos, cleanTx, entryAmountTrob, cashbackTrob]
+      `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt", "deviceFingerprint")
+       VALUES (gen_random_uuid(), $1, $2, NOW(), $3, 1, $4, 300, $2, 'trobchain-api', $5, 'active', NOW(), NOW(), $6)`,
+      [address.trim(), pos, cleanTx, entryAmountTrob, cashbackTrob, clientFingerprint]
     );
 
     // 2. Insert 'joined' event

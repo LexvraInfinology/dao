@@ -364,11 +364,11 @@ export default function DaoDashboardPage() {
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
                     {isMember && myPosition
-                      ? `+$${((300 / myPosition) + (memberData?.pushedAmountUsdEstimate ?? 0)).toFixed(2)}`
+                      ? `+$${Math.max(300 / myPosition, memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0 ? memberData.pushedAmountUsdEstimate : (300 / myPosition)).toFixed(2)}`
                       : 'Total Return'}
                   </div>
                   <div className="text-[9px] text-[#4F6D87] font-medium leading-tight truncate">
-                    Continuous Cash Flow
+                    Cashback + Pool Dividends
                   </div>
                 </div>
 
@@ -395,7 +395,7 @@ export default function DaoDashboardPage() {
                   </span>
                   <span className="text-[11px] text-[#4F6D87] truncate">
                     {isMember && myPosition
-                      ? `Active Member &bull; ${myNftId ? `SBT #${myNftId}` : 'Pass'}`
+                      ? `Active Member • ${myNftId ? `SBT #${myNftId}` : 'Pass'}`
                       : (stats?.memberCount && stats.memberCount >= 100 ? 'Queue Complete' : 'Seats Available')}
                   </span>
                 </div>

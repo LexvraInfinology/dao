@@ -19,6 +19,7 @@ import { Check, Loader2 } from 'lucide-react';
 
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
 import { DEPLOYED_CONTRACTS } from '@/utils/trobAddress';
+import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 interface ApiMembersPayload {
   members: RawMemberData[];
@@ -132,15 +133,20 @@ export default function CouncilSeatsPage() {
         }
       }
 
-      // 2. Synchronize database via API
+      // 2. Synchronize database via API with Anti-Sybil device fingerprint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const deviceFingerprint = await getDeviceFingerprint();
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-fingerprint': deviceFingerprint,
+        },
         body: JSON.stringify({
           address: activeAddr,
           txHash: txId,
           position: seatNumber,
+          deviceFingerprint,
           termsAccepted: true,
         }),
       });

@@ -35,6 +35,7 @@ import { WalletModal } from '@/components/ui/WalletModal';
 import { TermsModal } from '@/components/dao/TermsModal';
 import { triggerSmartConnectWallet, TROBSAFE_CHROME_STORE_URL } from '@/utils/walletConnect';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
+import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 // ─── Constants & Addresses ───────────────────────────────────────────────────
 const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD';
@@ -380,14 +381,19 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       // Wait 3.5s for TrobChain testnet to mine the block containing this payment
       await new Promise((r) => setTimeout(r, 3500));
 
-      // 2. Register membership in database via backend API with verified on-chain tx
+      // 2. Register membership in database via backend API with verified on-chain tx & Anti-Sybil device fingerprint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const deviceFingerprint = await getDeviceFingerprint();
       const claimRes = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-fingerprint': deviceFingerprint,
+        },
         body: JSON.stringify({
           address: activeAddr,
           txHash: txId,
+          deviceFingerprint,
           termsAccepted: true,
         }),
       });

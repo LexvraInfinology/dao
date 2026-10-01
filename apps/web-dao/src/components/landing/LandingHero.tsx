@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Play, Users } from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
 
 export const LandingHero: React.FC = () => {
@@ -107,47 +107,8 @@ export const LandingHero: React.FC = () => {
             </div>
           </div>
 
-          {/* Right column: Dynamic Floating Badges on Desktop */}
-          <div className="hidden lg:flex lg:col-span-5 xl:col-span-6 h-[480px] relative items-center justify-center">
-            {/* Ambient Backlight Aura */}
-            <div className="absolute w-80 h-80 rounded-full bg-gradient-to-tr from-[#155EEF]/20 via-[#0052FF]/15 to-transparent blur-3xl pointer-events-none" />
-
-            {/* Floating Glass Badge 1 - Top Right */}
-            <div className="absolute top-10 right-4 xl:right-10 p-4 rounded-2xl bg-white/85 backdrop-blur-xl border border-white/80 shadow-[0_16px_36px_rgba(21,94,239,0.12)] animate-float max-w-[240px]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#EFF8FF] border border-[#D1E9FF] flex items-center justify-center text-[#155EEF] shrink-0">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#155EEF] font-inter">
-                    Council Matrix
-                  </div>
-                  <div className="text-sm font-bold font-sora text-[#0B132B]">
-                    100 Sovereign Seats
-                  </div>
-                </div>
-              </div>
-              <p className="text-[11px] text-[#64748B] font-inter mt-1.5 leading-snug">
-                Zero dilution. Lifetime voting rights and automatic dividend pool access.
-              </p>
-            </div>
-
-            {/* Floating Glass Badge 2 - Bottom Left */}
-            <div className="absolute bottom-10 left-0 xl:left-4 p-4 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/80 shadow-[0_20px_40px_rgba(15,23,42,0.1)] animate-float max-w-[260px]">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#027A48] bg-[#ECFDF5] px-2 py-0.5 rounded-full border border-[#A7F3D0]">
-                  Algorithmic Cashback
-                </span>
-                <span className="text-xs font-mono font-bold text-[#155EEF]">$300 / N</span>
-              </div>
-              <div className="text-xs font-bold text-[#0B132B] font-inter">
-                Instant Smart Contract Return
-              </div>
-              <p className="text-[10px] text-[#64748B] font-inter mt-1">
-                Direct to connected wallet on block finality. No claim fees.
-              </p>
-            </div>
-          </div>
+          {/* Right column: Clean unobstructed view of background video/artwork */}
+          <div className="hidden lg:block lg:col-span-5 xl:col-span-6 h-[480px] pointer-events-none" />
         </div>
       </div>
 

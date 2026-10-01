@@ -17,6 +17,7 @@ import {
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
+import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 const DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS &&
@@ -138,12 +139,20 @@ export const DaoOnboardingModal: React.FC = () => {
         }
       }
 
-      // 2. Register membership in database via backend API
+      // 2. Register membership in database via backend API & Anti-Sybil device fingerprint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const deviceFingerprint = await getDeviceFingerprint();
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: activeAddress, txHash: broadcastTxId || 'confirmed_protocol' }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-fingerprint': deviceFingerprint,
+        },
+        body: JSON.stringify({
+          address: activeAddress,
+          txHash: broadcastTxId || 'confirmed_protocol',
+          deviceFingerprint,
+        }),
       });
       const data = await res.json();
       if (!data.success) {

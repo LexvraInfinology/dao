@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Wallet, Copy, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 
 export default function WalletSecurityCard() {
   const wallet = useWallet();
@@ -14,11 +15,7 @@ export default function WalletSecurityCard() {
     ? `${activeAddress.slice(0, 8)}…${activeAddress.slice(-6)}`
     : activeAddress || '—';
 
-  const explorerUrl = wallet.base58Address
-    ? `https://tronscan.io/#/address/${wallet.base58Address}`
-    : wallet.hexAddress
-    ? `https://tronscan.io/#/address/${wallet.hexAddress}`
-    : 'https://tronscan.io';
+  const explorerUrl = getExplorerAddressUrl(wallet.base58Address || wallet.hexAddress);
 
   const isConnected = wallet.isConnected;
 

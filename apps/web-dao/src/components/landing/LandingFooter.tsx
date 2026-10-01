@@ -38,7 +38,7 @@ export const LandingFooter: React.FC = () => {
   const resourceLinks = [
     { label: 'Docs', href: '#' },
     { label: 'Whitepaper', href: '#' },
-    { label: 'TrobiumScan', href: 'https://trobiumscan.io' },
+    { label: 'TrobiumScan', href: 'https://testnet.trobchain.com' },
     { label: 'Community', href: 'https://t.me/EquoraFi' },
     { label: 'Security Audit', href: '#' },
   ];

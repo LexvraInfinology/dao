@@ -97,9 +97,9 @@ export const LandingTrobChain: React.FC = () => {
               </div>
 
               <a
-                href="https://trobiumscan.io"
+                href="https://testnet.trobchain.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#155EEF] hover:text-[#004EEB] transition-colors"
               >
                 <span>Explore on TrobiumScan</span>

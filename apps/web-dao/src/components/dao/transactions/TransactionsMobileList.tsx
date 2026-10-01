@@ -7,6 +7,7 @@ import {
   ArrowRight, Globe, Wallet, Filter, Check, Copy, ExternalLink
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
+import { getExplorerTxUrl } from '@/utils/explorer';
 
 interface TransactionsMobileListProps {
   transactions?: TransactionItem[];
@@ -335,13 +336,13 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
                 Close
               </button>
               <a
-                href={`https://trobiumscan.io/tx/${selectedTx.txHash}`}
+                href={getExplorerTxUrl(selectedTx.txHash)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex-1 py-2.5 rounded-xl border border-[#E2ECF9] text-[#155EEF] font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1"
               >
                 <ExternalLink className="w-3 h-3" />
-                TrobiumScan
+                View on Explorer
               </a>
             </div>
           </div>

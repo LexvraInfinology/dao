@@ -28,6 +28,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle, WHATSAPP_DAO_GROUP_URL } from '@/components/dao/DaoWhatsAppCircle';
@@ -248,11 +249,11 @@ export const DaoHeader: React.FC = () => {
                           </span>
                         </div>
                         <a
-                          href={`https://tronscan.org/#/address/${displayAddress}`}
+                          href={getExplorerAddressUrl(displayAddress)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
-                          title="View on Explorer"
+                          title="View on Trobium Explorer"
                         >
                           <span>Explorer</span>
                           <ExternalLink className="w-3 h-3" />

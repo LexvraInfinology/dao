@@ -7,6 +7,7 @@ import {
   Search, ChevronsLeft, ChevronsRight, Globe, Wallet, Filter, Check, Copy
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
+import { getExplorerTxUrl } from '@/utils/explorer';
 
 interface TransactionsTableProps {
   transactions?: TransactionItem[];
@@ -342,22 +343,16 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               </div>
               {/* Explorer link */}
               <div className="col-span-1 flex justify-end">
-                {tx.txHash && tx.txHash.length > 20 && !tx.txHash.startsWith('0x_claim') ? (
-                  <a
-                    href={`https://trobiumscan.io/tx/${tx.txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#155EEF] hover:bg-blue-50 transition-colors"
-                    title="View on TrobiumScan Explorer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                ) : (
-                  <span className="p-1.5 text-slate-300 cursor-not-allowed" title="On-chain block sync pending">
-                    <ExternalLink className="w-3.5 h-3.5 opacity-30" />
-                  </span>
-                )}
+                <a
+                  href={getExplorerTxUrl(tx.txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#155EEF] hover:bg-blue-50 transition-colors"
+                  title={tx.txHash && tx.txHash.length > 10 && !tx.txHash.startsWith('0x_') ? "View on Trobium Explorer" : "View Transactions on Trobium Explorer"}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
           );
@@ -522,13 +517,13 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 Close
               </button>
               <a
-                href={`https://trobiumscan.io/tx/${selectedTx.txHash}`}
+                href={getExplorerTxUrl(selectedTx.txHash)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex-1 py-2.5 rounded-xl border border-[#E2ECF9] text-[#155EEF] font-bold text-xs hover:bg-blue-50 transition-all flex items-center justify-center gap-1"
               >
                 <ExternalLink className="w-3 h-3" />
-                TrobiumScan
+                View on Explorer
               </a>
             </div>
           </div>

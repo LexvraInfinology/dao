@@ -6,6 +6,7 @@ import { Copy, Check, ExternalLink, ArrowRight, Landmark, Loader2 } from 'lucide
 import type { ProfileData } from '@/hooks/useApi';
 import { useWallet } from '@/context/WalletContext';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 
 interface ProfileMemberCardProps {
   profile?: ProfileData | null;
@@ -89,9 +90,10 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
                   {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                 </button>
               </div>
-              <a href={`https://tronscan.io/#/address/${displayAddr}`} target="_blank" rel="noreferrer"
-                className="text-xs font-bold font-sans text-[#0E62E4] hover:underline flex items-center gap-1">
-                <span>TrobiumScan</span><ExternalLink className="w-3 h-3" />
+              <a href={getExplorerAddressUrl(displayAddr)} target="_blank" rel="noopener noreferrer"
+                className="text-xs font-bold font-sans text-[#0E62E4] hover:underline flex items-center gap-1"
+                title="View on Trobium Explorer">
+                <span>Explorer</span><ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </div>

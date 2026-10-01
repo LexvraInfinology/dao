@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp } from 'lucide-react';
 import { CouncilSeatDetail } from '@/data/councilSeatsData';
 import { TrobPriceData } from '@/hooks/useApi';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 
 interface SeatInspectorProps {
   seat: CouncilSeatDetail;
@@ -233,10 +234,11 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
 
         {/* View on Explorer Button */}
         <a
-          href={process.env.NEXT_PUBLIC_EXPLORER_URL ? `${process.env.NEXT_PUBLIC_EXPLORER_URL}/address/${seat.ownerAddress.replace(' (You)', '')}` : 'https://tronscan.org'}
+          href={getExplorerAddressUrl(seat.ownerAddress)}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full py-2.5 rounded-xl bg-[#F7FBFF] hover:bg-[#EFF6FF] border border-[#E2EEF9] text-[#0E62E4] text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+          title="View on Trobium Explorer"
         >
           <span>View on Explorer</span>
           <ExternalLink className="w-3.5 h-3.5" />

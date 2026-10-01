@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Wallet, Copy, Check, ExternalLink, LogOut, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 
 export default function ConnectedWalletCard() {
   const wallet = useWallet();
@@ -28,11 +29,7 @@ export default function ConnectedWalletCard() {
     wallet.disconnect();
   };
 
-  const explorerUrl = wallet.base58Address
-    ? `https://tronscan.io/#/address/${wallet.base58Address}`
-    : wallet.hexAddress
-    ? `https://tronscan.io/#/address/${wallet.hexAddress}`
-    : 'https://tronscan.io';
+  const explorerUrl = getExplorerAddressUrl(wallet.base58Address || wallet.hexAddress);
 
   const isConnected = wallet.isConnected;
 

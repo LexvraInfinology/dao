@@ -305,8 +305,10 @@ export function createApp(): Express {
   const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
   const OFFICIAL_SR_TESTNET_B58 = "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
 
-  // Official WhatsApp Verification Passcode published in the pinned group description
-  const OFFICIAL_WHATSAPP_PASSCODE = (process.env.WHATSAPP_COMMUNITY_PASSCODE || "EQUORA2026").trim().toUpperCase();
+  // Official WhatsApp Verification Passcode loaded strictly from .env (no hardcoded fallback)
+  const getOfficialWhatsappPasscode = (): string => {
+    return (process.env.WHATSAPP_COMMUNITY_PASSCODE || "").trim().toUpperCase();
+  };
 
   const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
 
@@ -503,8 +505,9 @@ export function createApp(): Express {
         });
         return;
       }
+      const officialCode = getOfficialWhatsappPasscode();
       const submittedCode = (passcode || "").trim().toUpperCase();
-      if (submittedCode !== OFFICIAL_WHATSAPP_PASSCODE) {
+      if (!officialCode || submittedCode !== officialCode) {
         res.status(403).json({
           success: false,
           error: "Invalid Community Verification Passcode. Please join the official WhatsApp group and enter the verification passcode from the pinned group description."
@@ -653,39 +656,46 @@ export function createApp(): Express {
 
       // A. Verify against Trobchain Fullnode / Explorer if 64-char hex hash provided
       if (cleanTx && /^[0-9a-fA-F]{64}$/.test(cleanTx)) {
-        try {
-          const trobRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/gettransactionbyid", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ value: cleanTx }),
-          });
-          if (trobRes.ok) {
-            const trobData = (await trobRes.json()) as any;
-            if (trobData && trobData.txID) {
-              const contractRet = trobData.ret?.[0]?.contractRet;
-              if (contractRet === "SUCCESS" || !contractRet) {
-                onchainVerified = true;
-                verifiedBlockNumber = BigInt(trobData.raw_data?.ref_block_num || 1);
-              }
-            }
+        for (let attempt = 0; attempt < 5 && !onchainVerified; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 1200));
           }
-        } catch (e) {
-          console.log(`[DAO Claim] Trobchain node check note for ${cleanTx}:`, (e as Error).message);
-        }
-
-        if (!onchainVerified) {
           try {
-            const expRes = await fetch(`https://testnet-backend.trobchain.com/v1/transactions/${cleanTx}`);
-            if (expRes.ok) {
-              const expData = (await expRes.json()) as any;
-              if (expData?.data?.successful || expData?.data?.status === "confirmed") {
-                onchainVerified = true;
-                if (expData.data.block_number) {
-                  verifiedBlockNumber = BigInt(expData.data.block_number);
+            const trobRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/gettransactionbyid", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ value: cleanTx }),
+            });
+            if (trobRes.ok) {
+              const trobData = (await trobRes.json()) as any;
+              if (trobData && trobData.txID) {
+                const contractRet = trobData.ret?.[0]?.contractRet;
+                if (contractRet === "SUCCESS" || !contractRet) {
+                  onchainVerified = true;
+                  verifiedBlockNumber = BigInt(trobData.raw_data?.ref_block_num || 1);
+                  break;
                 }
               }
             }
-          } catch (_) {}
+          } catch (e) {
+            console.log(`[DAO Claim] Trobchain node check note for ${cleanTx}:`, (e as Error).message);
+          }
+
+          if (!onchainVerified) {
+            try {
+              const expRes = await fetch(`https://testnet-backend.trobchain.com/v1/transactions/${cleanTx}`);
+              if (expRes.ok) {
+                const expData = (await expRes.json()) as any;
+                if (expData?.data?.successful || expData?.data?.status === "confirmed") {
+                  onchainVerified = true;
+                  if (expData.data.block_number) {
+                    verifiedBlockNumber = BigInt(expData.data.block_number);
+                  }
+                  break;
+                }
+              }
+            } catch (_) {}
+          }
         }
       }
 
@@ -704,16 +714,11 @@ export function createApp(): Express {
         } catch (_) {}
       }
 
-      // C. Development / Testnet voucher fallback
-      if (!onchainVerified && (isDevClaim || config.env === "development" || process.env.NODE_ENV === "development")) {
-        onchainVerified = true;
-        verifiedBlockNumber = 1n;
-      }
-
+      // C. Strict On-Chain Enforcement (No dev bypasses)
       if (!onchainVerified) {
         res.status(400).json({
           success: false,
-          error: "On-chain verification required. A valid confirmed transaction calling EquoraDAO.joinDAO() on TrobChain is required.",
+          error: "On-chain verification required. A confirmed transaction calling EquoraDAO.joinDAO() with the $300 entry fee on TrobChain is required.",
         });
         return;
       }

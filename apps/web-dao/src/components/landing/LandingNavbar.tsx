@@ -217,13 +217,23 @@ export const LandingNavbar: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="whitespace-nowrap select-none">{shortAddress}</span>
                   </button>
-                  <Link
-                    href="/dao"
-                    className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-semibold text-xs uppercase tracking-[0.05em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all duration-200 flex items-center gap-1.5 group shrink-0 whitespace-nowrap"
-                  >
-                    <span>Dashboard</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
-                  </Link>
+                  {isSeatMember ? (
+                    <Link
+                      href="/dao"
+                      className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-semibold text-xs uppercase tracking-[0.05em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all duration-200 flex items-center gap-1.5 group shrink-0 whitespace-nowrap"
+                    >
+                      <span>Member Dashboard</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/dao"
+                      className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-bold text-xs uppercase tracking-[0.05em] text-white bg-gradient-to-r from-[#0E62E4] to-[#1F70F5] hover:from-[#0B52C4] hover:to-[#175cd3] shadow-[0_2px_10px_rgba(14,98,228,0.3)] transition-all duration-200 flex items-center gap-1.5 group shrink-0 whitespace-nowrap active:scale-[0.98]"
+                    >
+                      <span>Claim Seat ($300)</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
@@ -241,10 +251,14 @@ export const LandingNavbar: React.FC = () => {
               ) : (
                 <Link
                   href="/dao"
-                  className="whitespace-nowrap h-9 px-3.5 sm:px-4 rounded-xl font-semibold text-[11px] sm:text-xs uppercase tracking-[0.04em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all flex items-center gap-1.5 shrink-0"
+                  className={`whitespace-nowrap h-9 px-3 sm:px-3.5 rounded-xl font-bold text-[11px] uppercase tracking-[0.04em] text-white shadow-xs transition-all flex items-center gap-1.5 shrink-0 ${
+                    isSeatMember
+                      ? 'bg-[#0B132B] hover:bg-[#1E293B]'
+                      : 'bg-[#0E62E4] hover:bg-[#0B52C4]'
+                  }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span>DAO</span>
+                  {isSeatMember && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
+                  <span>{isSeatMember ? 'Dashboard' : 'Claim Seat'}</span>
                   <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
                 </Link>
               )}
@@ -354,7 +368,7 @@ export const LandingNavbar: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full py-3 rounded-xl font-semibold text-xs sm:text-sm text-white bg-[#0B132B] hover:bg-[#1E293B] flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                   >
-                    <span>Enter Genesis DAO</span>
+                    <span>{isSeatMember ? 'Open Member Dashboard' : 'Claim Genesis Seat ($300)'}</span>
                     <ArrowUpRight className="w-4 h-4" />
                   </Link>
                   <button

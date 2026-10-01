@@ -348,37 +348,41 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     setPayTxHash('pending');
 
     try {
-      let txId: string | null = null;
-
-      // 1. Trigger smart contract on TrobChain if deployed
-      if (
+      // 1. Mandatory on-chain execution of EquoraDAO.sol contract joinDAO()
+      const targetContract =
         DAO_CONTRACT_ADDRESS &&
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
         DAO_CONTRACT_ADDRESS.length > 10
-      ) {
-        try {
-          const seatEntryTrob = priceData.seatEntryTrob;
-          const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
-          const payload = {
-            contract_address:   DAO_CONTRACT_ADDRESS,
-            function_selector: 'joinDAO()',
-            parameter:         '',
-            call_value:        callValueSun,
-            fee_limit:         100_000_000,
-            owner_address:     activeAddr,
-          };
-          const res = await wallet.callContract(payload);
-          if (res?.result && res.txid) {
-            txId = res.txid;
-          }
-        } catch (onChainErr: unknown) {
-          console.warn('[DaoAccessGate] On-chain broadcast note:', onChainErr);
-        }
+          ? DAO_CONTRACT_ADDRESS
+          : 'TBTFF31sZWYHJTibAiyFVJB968ZdaE4grU';
+
+      const seatEntryTrob = priceData.seatEntryTrob;
+      const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
+
+      const payload = {
+        contract_address:   targetContract,
+        function_selector: 'joinDAO()',
+        parameter:         '',
+        call_value:        callValueSun,
+        fee_limit:         100_000_000,
+        owner_address:     activeAddr,
+      };
+
+      const res = await wallet.callContract(payload);
+
+      if (!res || !res.txid || res.result === false) {
+        const errorDetail = (res as any)?.Error || (res as any)?.message || 'Transaction rejected or failed in TrobSafe wallet.';
+        throw new Error(errorDetail);
       }
 
-      // 2. Register membership in database via backend API
+      const txId = res.txid;
+
+      // Wait 3.5s for TrobChain testnet to mine the block containing this payment
+      await new Promise((r) => setTimeout(r, 3500));
+
+      // 2. Register membership in database via backend API with verified on-chain tx
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      const res = await fetch(`${apiUrl}/api/dao/claim`, {
+      const claimRes = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -387,12 +391,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           termsAccepted: true,
         }),
       });
-      const data = await res.json();
+      const data = await claimRes.json();
       if (!data.success) {
-        throw new Error(data.error || 'Failed to verify membership payment.');
+        throw new Error(data.error || 'Failed to verify membership payment on TrobChain.');
       }
 
-      setPayTxHash(txId || 'confirmed');
+      setPayTxHash(txId);
       await refetchMember();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Claim transaction failed. Please try again.';
@@ -823,7 +827,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                           <label className="text-[10px] text-[#60739A] font-semibold block mb-1">Community Passcode</label>
                           <input
                             type="text"
-                            placeholder="e.g. EQUORA2026"
+                            placeholder="e.g. EQUORA####"
                             value={waPasscode}
                             onChange={(e) => setWaPasscode(e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#CBD5E1] text-[#17334F] text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#0E62E4] uppercase tracking-wider"

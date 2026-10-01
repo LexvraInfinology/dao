@@ -1,15 +1,18 @@
-const BACKEND_URL = process.env.BACKEND_API_URL || 'http://127.0.0.1:4000';
+const BACKEND_URL = process.env.BACKEND_API_URL;
 
 /**
- * Attempts to proxy request to the backend Express server on port 4000.
- * If backend is unreachable or returns an error, returns null to trigger fallback data.
+ * Attempts to proxy request to the backend Express server if configured.
+ * If backend is not configured or unreachable, returns null immediately to trigger fallback.
  */
 export async function fetchFromBackend<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T | null> {
+  if (!BACKEND_URL) {
+    return null;
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
+  const timer = setTimeout(() => controller.abort(), 2000);
 
   try {
     const res = await fetch(`${BACKEND_URL}${endpoint}`, {

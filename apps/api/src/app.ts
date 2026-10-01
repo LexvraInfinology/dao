@@ -262,16 +262,52 @@ export function createApp(): Express {
     }
   });
 
-  // ── In-Memory Registries for Dynamic Protocol Conditions ──────────────────
-  interface StakedResourceRecord {
-    energyStakeTrob: number;
-    bandwidthStakeTrob: number;
-    srVoted: boolean;
-    srVoteAddress?: string;
-    updatedAt: string;
+  // ── Helpers & Constants for Protocol Verification ──────────────────────────
+  const B58_CHARS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  function base58ToHex(b58: string): string {
+    const bytes = [0];
+    for (let i = 0; i < b58.length; i++) {
+      const c = b58[i];
+      const val = B58_CHARS.indexOf(c);
+      if (val === -1) return b58;
+      for (let j = 0; j < bytes.length; j++) bytes[j] *= 58;
+      bytes[0] += val;
+      let carry = 0;
+      for (let j = 0; j < bytes.length; j++) {
+        bytes[j] += carry;
+        carry = bytes[j] >> 8;
+        bytes[j] &= 0xff;
+      }
+      while (carry) {
+        bytes.push(carry & 0xff);
+        carry >>= 8;
+      }
+    }
+    for (let i = 0; i < b58.length && b58[i] === "1"; i++) bytes.push(0);
+    const buf = Buffer.from(bytes.reverse());
+    return buf.subarray(0, buf.length - 4).toString("hex");
   }
 
-  const userStakeRegistry: Record<string, StakedResourceRecord> = {};
+  function toTronHex(address: string): string {
+    const clean = address.trim();
+    if (clean.startsWith("T") && clean.length === 34) {
+      return base58ToHex(clean).toLowerCase();
+    }
+    if (clean.startsWith("0x")) {
+      return ("41" + clean.slice(2)).toLowerCase();
+    }
+    return clean.toLowerCase();
+  }
+
+  // Official SRs: Mainnet and Testnet
+  const OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052"; // TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY
+  const OFFICIAL_SR_TESTNET_HEX = "415cc58ba778a87ac1ea060d4aa116509691fb0ae0"; // TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5
+  const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+  const OFFICIAL_SR_TESTNET_B58 = "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
+
+  // Official WhatsApp Verification Passcode published in the pinned group description
+  const OFFICIAL_WHATSAPP_PASSCODE = (process.env.WHATSAPP_COMMUNITY_PASSCODE || "EQUORA2026").trim().toUpperCase();
+
   const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
 
   async function checkWalletEligibility(address: string) {
@@ -285,12 +321,16 @@ export function createApp(): Express {
     let condition1Passed = true;
     let condition1Reason: string | undefined;
 
+    let currentEnergyStakeTrob = 0;
+    let currentBandwidthStakeTrob = 0;
+    let currentSrVoted = false;
+
     try {
-      // Query TrobChain fullnode getaccount
+      const hexAddress = toTronHex(rawAddress);
       const acctRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/getaccount", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: rawAddress, visible: true }),
+        body: JSON.stringify({ address: hexAddress }),
       });
 
       if (acctRes.ok) {
@@ -302,51 +342,45 @@ export function createApp(): Express {
             condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
           }
         }
-      }
-    } catch (err) {
-      console.warn("[Eligibility Check] Note checking wallet creation:", err);
-    }
 
-    // 2. Condition 2 — Resource Stake + Equora_Fi SR Vote
-    const registeredStake = userStakeRegistry[canonical] || {
-      energyStakeTrob: 0,
-      bandwidthStakeTrob: 0,
-      srVoted: false,
-    };
-
-    let currentEnergyStakeTrob = registeredStake.energyStakeTrob;
-    let currentBandwidthStakeTrob = registeredStake.bandwidthStakeTrob;
-    let currentSrVoted = registeredStake.srVoted;
-
-    // Check live on-chain account resource if not in memory
-    try {
-      const acctRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/getaccount", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: rawAddress, visible: true }),
-      });
-      if (acctRes.ok) {
-        const acct = (await acctRes.json()) as any;
-        if (acct) {
-          // Bandwidth frozen
-          if (Array.isArray(acct.frozen)) {
-            const sumFrozen = acct.frozen.reduce((acc: number, f: any) => acc + Number(f.frozen_balance || 0), 0);
-            const trobBandwidth = Math.floor(sumFrozen / 1_000_000);
-            if (trobBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = trobBandwidth;
-          }
-          // Energy frozen
-          if (acct.account_resource?.frozen_balance_for_energy?.frozen_balance) {
-            const trobEnergy = Math.floor(Number(acct.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000);
-            if (trobEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = trobEnergy;
-          }
-          // SR Votes
-          if (Array.isArray(acct.votes)) {
-            const hasVote = acct.votes.some((v: any) => v.vote_address === OFFICIAL_EQUORA_SR);
-            if (hasVote) currentSrVoted = true;
+        // Live On-Chain Freeze V2 (Stake 2.0)
+        if (Array.isArray(acctData.frozenV2)) {
+          for (const f of acctData.frozenV2) {
+            const amountSun = Number(f.amount || 0);
+            const trobAmount = Math.floor(amountSun / 1_000_000);
+            if (f.type === "ENERGY") {
+              currentEnergyStakeTrob += trobAmount;
+            } else if (!f.type || f.type === "BANDWIDTH") {
+              currentBandwidthStakeTrob += trobAmount;
+            }
           }
         }
+        // Fallback for legacy Freeze 1.0 (if present)
+        if (Array.isArray(acctData.frozen)) {
+          const sumFrozen = acctData.frozen.reduce((acc: number, f: any) => acc + Number(f.frozen_balance || 0), 0);
+          currentBandwidthStakeTrob += Math.floor(sumFrozen / 1_000_000);
+        }
+        if (acctData.account_resource?.frozen_balance_for_energy?.frozen_balance) {
+          currentEnergyStakeTrob += Math.floor(Number(acctData.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000);
+        }
+
+        // Live On-Chain SR Votes
+        if (Array.isArray(acctData.votes)) {
+          const hasVote = acctData.votes.some((v: any) => {
+            const vAddr = (v.vote_address || "").toLowerCase();
+            return (
+              vAddr === OFFICIAL_SR_MAINNET_HEX ||
+              vAddr === OFFICIAL_SR_TESTNET_HEX ||
+              vAddr === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+              vAddr === OFFICIAL_SR_TESTNET_B58.toLowerCase()
+            );
+          });
+          if (hasVote) currentSrVoted = true;
+        }
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn("[Eligibility Check] Error checking live on-chain account:", err);
+    }
 
     const energyPassed = currentEnergyStakeTrob >= daoRequirements.energyStakeTrob;
     const bandwidthPassed = currentBandwidthStakeTrob >= daoRequirements.bandwidthStakeTrob;
@@ -450,24 +484,44 @@ export function createApp(): Express {
     }
   });
 
-  /** POST /api/dao/verify-whatsapp — verifies and registers user join in official WhatsApp group */
+  /** POST /api/dao/verify-whatsapp — verifies user join in official WhatsApp group via Passcode & Phone */
   app.post("/api/dao/verify-whatsapp", async (req, res) => {
     try {
-      const { address, phone } = req.body as { address?: string; phone?: string };
+      const { address, phone, passcode } = req.body as {
+        address?: string;
+        phone?: string;
+        passcode?: string;
+      };
       if (!address || typeof address !== "string") {
-        res.status(400).json({ success: false, error: "wallet address is required" });
+        res.status(400).json({ success: false, error: "Wallet address is required." });
         return;
       }
+      if (!phone || phone.trim().length < 8) {
+        res.status(400).json({
+          success: false,
+          error: "Valid WhatsApp phone number with country code (e.g. +1... or +91...) is required."
+        });
+        return;
+      }
+      const submittedCode = (passcode || "").trim().toUpperCase();
+      if (submittedCode !== OFFICIAL_WHATSAPP_PASSCODE) {
+        res.status(403).json({
+          success: false,
+          error: "Invalid Community Verification Passcode. Please join the official WhatsApp group and enter the verification passcode from the pinned group description."
+        });
+        return;
+      }
+
       const canonical = address.trim().toLowerCase();
       whatsappRegistry[canonical] = {
         verified: true,
         verifiedAt: new Date().toISOString(),
-        phone: phone?.trim(),
+        phone: phone.trim(),
       };
       res.json({
         success: true,
         verified: true,
-        message: "WhatsApp official channel membership confirmed.",
+        message: "WhatsApp official community membership confirmed.",
         data: whatsappRegistry[canonical],
       });
     } catch (err) {
@@ -475,35 +529,21 @@ export function createApp(): Express {
     }
   });
 
-  /** POST /api/dao/stake-resources — records or executes energy/bandwidth stake and SR vote */
+  /** POST /api/dao/stake-resources — queries live on-chain stake and vote verification */
   app.post("/api/dao/stake-resources", async (req, res) => {
     try {
-      const { address, energyStakeTrob, bandwidthStakeTrob, srVoted } = req.body as {
-        address?: string;
-        energyStakeTrob?: number;
-        bandwidthStakeTrob?: number;
-        srVoted?: boolean;
-      };
+      const { address } = req.body as { address?: string };
       if (!address || typeof address !== "string") {
-        res.status(400).json({ success: false, error: "wallet address is required" });
+        res.status(400).json({ success: false, error: "Wallet address is required." });
         return;
       }
-
-      const canonical = address.trim().toLowerCase();
-      const dynamicFormula = getDynamicFormulaEvaluation();
-
-      userStakeRegistry[canonical] = {
-        energyStakeTrob: energyStakeTrob ?? dynamicFormula.dao.energyStakeTrob,
-        bandwidthStakeTrob: bandwidthStakeTrob ?? dynamicFormula.dao.bandwidthStakeTrob,
-        srVoted: srVoted ?? true,
-        srVoteAddress: OFFICIAL_EQUORA_SR,
-        updatedAt: new Date().toISOString(),
-      };
 
       const eligibility = await checkWalletEligibility(address);
       res.json({
         success: true,
-        message: "Resource stake and SR vote verified.",
+        message: eligibility.condition2.passed
+          ? "On-chain resource stake and SR vote verified on TrobChain."
+          : `On-chain requirements incomplete: ${eligibility.condition2.missingRequirements.join("; ")}`,
         data: eligibility,
       });
     } catch (err) {

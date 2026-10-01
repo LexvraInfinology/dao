@@ -96,10 +96,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityError, setEligibilityError]     = useState<string | null>(null);
 
-  // WhatsApp cross-check state (Telegram bot style)
+  // WhatsApp cross-check state (community passcode + phone)
   const [waJoining, setWaJoining]             = useState(false);
   const [waVerifying, setWaVerifying]         = useState(false);
   const [waError, setWaError]                 = useState<string | null>(null);
+  const [waPhone, setWaPhone]                 = useState('');
+  const [waPasscode, setWaPasscode]           = useState('');
 
   // Resource staking & SR voting helper state
   const [isStakingHelper, setIsStakingHelper] = useState(false);
@@ -186,13 +188,25 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       setWaError('Please connect your TrobSafe wallet first.');
       return;
     }
+    if (!waPhone.trim()) {
+      setWaError('Please enter your WhatsApp phone number with country code (e.g. +1... or +91...).');
+      return;
+    }
+    if (!waPasscode.trim()) {
+      setWaError('Please enter the Community Verification Passcode pinned in the official WhatsApp group.');
+      return;
+    }
     setWaVerifying(true);
     setWaError(null);
     try {
       const res = await fetch('/api/dao/verify-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: activeAddress }),
+        body: JSON.stringify({
+          address: activeAddress,
+          phone: waPhone.trim(),
+          passcode: waPasscode.trim(),
+        }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -206,44 +220,70 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
   };
 
-  // ── 1-Click Resource Staking & SR Voting Assistant ─────────────────────────
+  // ── Live On-Chain Resource Staking & SR Voting via Injected Wallet ──────────
   const handleStakeAndVote = async () => {
     if (!activeAddress) return;
     setIsStakingHelper(true);
     setPayError(null);
     try {
-      // 1. Attempt Freeze V2 via injected wallet if supported
-      if (typeof window !== 'undefined') {
-        const w = window as any;
-        const tw = w?.trobWeb || w?.tronWeb || w?.trobSafe;
-        if (tw?.transactionBuilder?.freezeBalanceV2) {
+      if (typeof window === 'undefined') return;
+      const w = window as any;
+      const tw = w?.trobWeb || w?.tronWeb || w?.trobSafe;
+      if (!tw || !tw.transactionBuilder || !tw.trx?.sign) {
+        throw new Error('TrobSafe wallet extension is not detected or locked. Please unlock your wallet.');
+      }
+
+      // 1. Prompt wallet to broadcast Freeze V2 for Energy if needed
+      if (!eligibility?.condition2.energy.passed) {
+        const energyTrob = eligibility?.formula?.dao?.energyStakeTrob ?? 1070;
+        const energySun = Math.round(energyTrob * 1e6);
+        const txEnergy = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', activeAddress);
+        if (txEnergy?.Error) throw new Error(txEnergy.Error);
+        const signedEnergy = await tw.trx.sign(txEnergy);
+        await tw.trx.sendRawTransaction(signedEnergy);
+      }
+
+      // 2. Prompt wallet to broadcast Freeze V2 for Bandwidth if needed
+      if (!eligibility?.condition2.bandwidth.passed) {
+        const bandwidthTrob = eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237;
+        const bandwidthSun = Math.round(bandwidthTrob * 1e6);
+        const txBandwidth = await tw.transactionBuilder.freezeBalanceV2(bandwidthSun, 'BANDWIDTH', activeAddress);
+        if (txBandwidth?.Error) throw new Error(txBandwidth.Error);
+        const signedBandwidth = await tw.trx.sign(txBandwidth);
+        await tw.trx.sendRawTransaction(signedBandwidth);
+      }
+
+      // 3. Prompt wallet to cast SR governance vote if needed
+      if (!eligibility?.condition2.srVote.passed) {
+        try {
+          const txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_SR]: 1000 }, activeAddress);
+          if (txVote && !txVote.Error) {
+            const signedVote = await tw.trx.sign(txVote);
+            await tw.trx.sendRawTransaction(signedVote);
+          }
+        } catch {
           try {
-            const energySun = Math.round((eligibility?.formula?.dao?.energyStakeTrob ?? 1070) * 1e6);
-            const tx = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', activeAddress);
-            if (tx && tw.trx?.sign) {
-              const signed = await tw.trx.sign(tx);
+            const txTestnetVote = await tw.transactionBuilder.vote({ ['TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5']: 1000 }, activeAddress);
+            if (txTestnetVote && !txTestnetVote.Error) {
+              const signed = await tw.trx.sign(txTestnetVote);
               await tw.trx.sendRawTransaction(signed);
             }
-          } catch (freezeErr) {
-            console.warn('[DaoAccessGate] FreezeV2 broadcast attempt note:', freezeErr);
-          }
+          } catch { /* ignore */ }
         }
       }
 
-      // 2. Synchronize with protocol verification service
+      // Wait 3 seconds for on-chain block confirmation
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Query live on-chain status from TrobChain node
       const res = await fetch('/api/dao/stake-resources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: activeAddress,
-          energyStakeTrob: eligibility?.formula?.dao?.energyStakeTrob ?? 1070,
-          bandwidthStakeTrob: eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237,
-          srVoted: true,
-        }),
+        body: JSON.stringify({ address: activeAddress }),
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || 'Failed to verify resource staking.');
+        throw new Error(data.error || 'Failed to verify on-chain resource staking.');
       }
       await fetchEligibility();
     } catch (err: unknown) {
@@ -657,27 +697,54 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               </button>
             </div>
 
-            {/* Telegram-style Cross-Check Membership Verification */}
-            <div className="px-1 pt-1">
+            {/* Telegram/WhatsApp Community Verification with Phone & Pinned Passcode */}
+            <div className="px-1 pt-1 space-y-2">
               {eligibility?.whatsapp.joined ? (
                 <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold bg-emerald-950/30 border border-emerald-800/40 p-2.5 rounded-xl">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>Channel Membership Verified • Access Authorized</span>
                 </div>
               ) : (
-                <div className="p-2.5 rounded-xl bg-amber-950/20 border border-amber-800/40 flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 text-amber-300/90 text-[11px]">
+                <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/40 space-y-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-amber-300 text-[11px] font-semibold">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                    <span>Channel membership required prior to seat entry</span>
+                    <span>Join the group to retrieve the verified council passcode from the group header:</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleVerifyWhatsApp}
-                    disabled={waVerifying || !wallet.isConnected}
-                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {waVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Verify Membership'}
-                  </button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">WhatsApp Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="+1 234 567 8900"
+                        value={waPhone}
+                        onChange={(e) => setWaPhone(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Community Passcode</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. EQUORA2026"
+                        value={waPasscode}
+                        onChange={(e) => setWaPasscode(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400 uppercase tracking-wider"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-[10px] text-slate-400">Passcode is pinned in the group description.</span>
+                    <button
+                      type="button"
+                      onClick={handleVerifyWhatsApp}
+                      disabled={waVerifying || !wallet.isConnected}
+                      className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {waVerifying ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Verify Channel Membership'}
+                    </button>
+                  </div>
                 </div>
               )}
               {waError && <p className="text-[10px] text-rose-400 mt-1 pl-1">{waError}</p>}

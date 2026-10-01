@@ -1,6 +1,23 @@
 import prisma from "@equora/database";
 import { formatUnits } from "viem";
 
+async function getLiveTrobPer300Usd(): Promise<number> {
+  const apiUrl = process.env.TROB_PRICE_API_URL || "https://backend.trobchain.com/v1/market/price";
+  try {
+    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const json = (await res.json()) as any;
+      const price = json?.data?.priceUsd || json?.priceUsd || json?.price || 0.0531;
+      if (price > 0) {
+        return Math.round((300 / price) * 100) / 100;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return 5648.55;
+}
+
 export async function handleDAOPositionJoined(event: {
   user: string;
   position: bigint;
@@ -13,6 +30,7 @@ export async function handleDAOPositionJoined(event: {
   const joinedDate = new Date(Number(event.timestamp) * 1000);
   const position = Number(event.position);
   const nftTokenId = Number(event.tokenId);
+  const entryFeeTrob = await getLiveTrobPer300Usd();
 
   // If this seat was previously occupied by another address (vacant takeover), clear the prior record
   const priorOccupant = await prisma.daoMember.findFirst({
@@ -39,7 +57,7 @@ export async function handleDAOPositionJoined(event: {
         address: canonicalUser,
         position,
         nftTokenId,
-        entryAmountBtt: 300,
+        entryAmountBtt: entryFeeTrob,
         pushedAmountBtt: 0,
         joinedAt: joinedDate,
         status: "active",
@@ -61,7 +79,7 @@ export async function handleDAOPositionJoined(event: {
         userAddress: canonicalUser,
         incomingPosition: position,
         recipientCount: position > 1 ? position - 1 : 1,
-        amountBtt: 300,
+        amountBtt: entryFeeTrob,
         txHash: `${event.txHash}-joined`,
         blockNumber: event.blockNumber,
         timestamp: joinedDate,
@@ -84,7 +102,7 @@ export async function handleDAOPositionJoined(event: {
 
   ]);
 
-  console.log(`🏛️ [Indexer] DAO Position #${position} (Soulbound NFT #${nftTokenId}) Joined by ${canonicalUser}`);
+  console.log(`🏛️ [Indexer] DAO Position #${position} (Soulbound NFT #${nftTokenId}) Joined by ${canonicalUser} with ${entryFeeTrob} TROB ($300 USD)`);
 }
 
 export async function handleDAOPayoutPushed(event: {
@@ -130,7 +148,7 @@ export async function handleDAOPayoutPushed(event: {
     }),
   ]);
 
-  console.log(`⚡ [Indexer] Instant Payout Pushed: ${amountFormatted} BTT to ${canonicalRecipient} from Seat #${fromPosition}`);
+  console.log(`⚡ [Indexer] Instant Payout Pushed: ${amountFormatted} TROB to ${canonicalRecipient} from Seat #${fromPosition}`);
 }
 
 export async function handleDAOPayoutFallback(event: {
@@ -159,7 +177,7 @@ export async function handleDAOPayoutFallback(event: {
     },
   });
 
-  console.log(`⚠️ [Indexer] Direct Push Failed (${event.reason}): Saved ${amountFormatted} BTT in Fallback for ${canonicalRecipient}`);
+  console.log(`⚠️ [Indexer] Direct Push Failed (${event.reason}): Saved ${amountFormatted} TROB in Fallback for ${canonicalRecipient}`);
 }
 
 export async function handleFallbackClaimed(event: {
@@ -209,7 +227,7 @@ export async function handleFallbackClaimed(event: {
     ]);
   }
 
-  console.log(`💎 [Indexer] Fallback Claimed: ${amountFormatted} BTT by ${canonicalUser}`);
+  console.log(`💎 [Indexer] Fallback Claimed: ${amountFormatted} TROB by ${canonicalUser}`);
 }
 
 export async function handleQueueClosed(event: {
@@ -249,6 +267,7 @@ export async function handleRetopup(event: {
   const canonicalMember = event.member.toLowerCase();
   const eventDate = new Date(Number(event.timestamp) * 1000);
   const position = Number(event.position);
+  const retopupFeeTrob = await getLiveTrobPer300Usd();
 
   await prisma.$transaction([
     prisma.daoMember.updateMany({
@@ -256,7 +275,7 @@ export async function handleRetopup(event: {
       data: {
         status: "active",
         entryAmountBtt: {
-          increment: 300,
+          increment: retopupFeeTrob,
         },
       },
     }),
@@ -265,7 +284,7 @@ export async function handleRetopup(event: {
         eventType: "retopup",
         userAddress: canonicalMember,
         incomingPosition: position,
-        amountBtt: 300,
+        amountBtt: retopupFeeTrob,
         txHash: `${event.txHash}-retopup-${canonicalMember}`,
         blockNumber: event.blockNumber,
         timestamp: eventDate,
@@ -273,7 +292,7 @@ export async function handleRetopup(event: {
     }),
   ]);
 
-  console.log(`🔄 [Indexer] Genesis DAO Seat #${position} Re-topup (300 BTT) by ${canonicalMember}`);
+  console.log(`🔄 [Indexer] Genesis DAO Seat #${position} Re-topup (${retopupFeeTrob} TROB / $300 USD) by ${canonicalMember}`);
 }
 
 export async function handleEarningsCapHit(event: {
@@ -395,7 +414,7 @@ export async function handlePoolShareClaimed(event: {
     },
   });
 
-  console.log(`🏛️ [Indexer] 35% Pool Share Claimed: ${amountFormatted} BTT by ${canonicalMember}`);
+  console.log(`🏛️ [Indexer] 35% Pool Share Claimed: ${amountFormatted} TROB by ${canonicalMember}`);
 }
 
 

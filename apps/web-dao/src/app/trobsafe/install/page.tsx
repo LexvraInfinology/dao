@@ -70,15 +70,6 @@ const FEATURES = [
 ];
 
 export default function TrobSafeInstallPage() {
-  const handleDevBypass = () => {
-    try {
-      sessionStorage.setItem('equora_dao_preview', 'true');
-      localStorage.setItem('equora_dev_mode', 'true');
-      document.cookie = 'equora_dev_mode=true; path=/; max-age=86400';
-    } catch { /* ignore */ }
-    window.location.href = '/dao?dev=1';
-  };
-
   return (
     <div className="min-h-screen bg-[#F6F9FF] text-[#071A4A] font-jakarta">
       {/* Top bar */}
@@ -92,13 +83,6 @@ export default function TrobSafeInstallPage() {
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleDevBypass}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold transition-all cursor-pointer"
-          >
-            <Zap className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
-            <span>Dev Mode: Enter DAO</span>
-          </button>
           <Link href="/" className="text-xs font-semibold text-[#60739A] hover:text-[#071A4A] transition-colors flex items-center gap-1">
             ← Back to EQUORA.FI
           </Link>
@@ -287,9 +271,9 @@ export default function TrobSafeInstallPage() {
           </div>
         </div>
 
-        {/* Bottom Actions: Enter DAO or Dev Mode */}
+        {/* Bottom Actions: Enter DAO */}
         <div className="text-center space-y-4 pt-4 border-t border-[#E2ECF9]">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex items-center justify-center">
             <Link
               href="/dao"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-sm text-white bg-[#0B132B] hover:bg-[#1E293B] transition-all shadow-sm"
@@ -297,18 +281,7 @@ export default function TrobSafeInstallPage() {
               <span>Go to Genesis DAO</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
-
-            <button
-              onClick={handleDevBypass}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full font-bold text-sm text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all cursor-pointer shadow-xs"
-            >
-              <Zap className="w-4 h-4 fill-amber-600 text-amber-600" />
-              <span>⚡ Dev Mode: Enter DAO (No Wallet Needed)</span>
-            </button>
           </div>
-          <p className="text-xs text-[#60739A]">
-            Use Dev Mode to inspect all council seats, treasury stats, and member lounge dashboards without connecting a wallet.
-          </p>
         </div>
       </main>
     </div>

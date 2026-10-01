@@ -81,11 +81,15 @@ export function buildLiveCouncilSeats(
       const isDefaulted = liveMember.status === 'blank' || liveMember.status === 'defaulted';
       const isPriorityTakeover = seatNumber === lowestVacantSeat;
 
+      const liveTrob = pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0);
+
       return {
         seatNumber,
         status: isDefaulted ? 'defaulted' : isMine ? 'mine' : 'claimed',
         ownerAddress: isDefaulted ? 'Defaulted Vacancy (Open for Takeover)' : isMine ? `${shortAddr} (You)` : shortAddr,
-        lifetimeEarnings: `$${earningsUsd.toFixed(2)} USD`,
+        lifetimeEarnings: liveTrob > 0
+          ? `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
+          : `$${earningsUsd.toFixed(2)} USD`,
         capProgress: capPct,
         votingPower: '1.0%',
         statusText: isDefaulted
@@ -95,7 +99,9 @@ export function buildLiveCouncilSeats(
           : liveMember.status ?? 'Active Member',
         statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Active Member',
         soulboundId,
-        entryAmount: '$300 USD',
+        entryAmount: bttPriceUsd > 0
+          ? `$300 USD (≈ ${Math.round(300 / bttPriceUsd).toLocaleString()} TROB)`
+          : '$300 USD',
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
               month: 'short',
@@ -117,7 +123,9 @@ export function buildLiveCouncilSeats(
         statusText: 'Next in Queue • Ready for Instant Mint',
         statusBadge: 'Next Available',
         soulboundId,
-        entryAmount: '$300 USD',
+        entryAmount: bttPriceUsd > 0
+          ? `$300 USD (≈ ${Math.round(300 / bttPriceUsd).toLocaleString()} TROB)`
+          : '$300 USD',
       };
     }
 

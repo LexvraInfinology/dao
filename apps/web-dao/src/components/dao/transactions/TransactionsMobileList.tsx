@@ -90,21 +90,24 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
             </div>
 
             {/* Amount row */}
-            {tx.amountBtt > 0 && (
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className={`text-lg font-black font-jakarta tracking-tight ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#071A4A]'}`}>
-                    {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)} USD
+            {(() => {
+              const trobAmt = tx.amountTrob ?? tx.amountBtt;
+              return trobAmt > 0 || tx.amountUsd > 0 ? (
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className={`text-lg font-black font-jakarta tracking-tight ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#071A4A]'}`}>
+                      {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)} USD
+                    </div>
+                    <div className={`text-xs font-bold font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#155EEF]'}`}>
+                      {tx.isPositive === false ? '-' : '+'}{trobAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                    </div>
                   </div>
-                  <div className={`text-xs font-bold font-jakarta ${tx.isPositive === false ? 'text-[#DC2626]' : 'text-[#155EEF]'}`}>
-                    {tx.isPositive === false ? '-' : '+'}{tx.amountBtt.toFixed(2)} TROB
+                  <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
+                    <ChevronRight className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-            )}
+              ) : null;
+            })()}
 
             {/* Entity box */}
             <div className="bg-[#F8FAFC] border border-[#E2ECF9] rounded-xl p-2.5 flex items-center justify-between gap-2">
@@ -152,7 +155,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
               {[
                 ['Type',    selectedTx.typeLabel],
                 ['Time',    timeAgoLabel(selectedTx.timestamp)],
-                ['Amount',  selectedTx.amountBtt > 0 ? `$${selectedTx.amountUsd.toFixed(2)} / ${selectedTx.amountBtt.toFixed(2)} TROB` : '—'],
+                ['Amount',  ((selectedTx.amountTrob ?? selectedTx.amountBtt) > 0 || selectedTx.amountUsd > 0) ? `$${selectedTx.amountUsd.toFixed(2)} / ${(selectedTx.amountTrob ?? selectedTx.amountBtt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : '—'],
                 ['From',    selectedTx.from],
                 ['To',      selectedTx.to],
                 ['Tx Hash', selectedTx.txHash],

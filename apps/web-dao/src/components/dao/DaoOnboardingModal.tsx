@@ -36,7 +36,6 @@ export const DaoOnboardingModal: React.FC = () => {
   const [depositError, setDepositError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [completed, setCompleted] = useState<boolean>(false);
-  const [devBypass, setDevBypass] = useState<boolean>(false);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
 
   // Check stored onboarding state for this address
@@ -63,26 +62,8 @@ export const DaoOnboardingModal: React.FC = () => {
     }
   }, [memberData]);
 
-  // Check dev mode bypass
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const isDev =
-      sessionStorage.getItem('equora_dao_preview') === 'true' ||
-      sessionStorage.getItem('equora_dao_preview_mode') === 'true' ||
-      localStorage.getItem('equora_dev_mode') === 'true' ||
-      window.location.search.includes('dev=');
-    if (isDev) {
-      setDevBypass(true);
-    }
-  }, []);
-
-  // If wallet is not connected, user is not blocked
-  if (!wallet.isConnected || !activeAddress || isDismissed) {
-    return null;
-  }
-
-  // If dev bypass active or already completed onboarding, do not show
-  if (devBypass || completed) {
+  // If already completed onboarding, do not show
+  if (completed) {
     return null;
   }
 
@@ -105,8 +86,6 @@ export const DaoOnboardingModal: React.FC = () => {
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
     } catch {
       /* ignore */
     }
@@ -204,15 +183,6 @@ export const DaoOnboardingModal: React.FC = () => {
     setIsDismissed(true);
   };
 
-  const handleSkipDev = () => {
-    setDevBypass(true);
-    try {
-      sessionStorage.setItem('equora_dao_preview', 'true');
-      localStorage.setItem('equora_dev_mode', 'true');
-    } catch {
-      /* ignore */
-    }
-  };
 
   const isAllDone = (hasDeposited || memberData?.isMember) && hasJoinedWhatsApp;
 
@@ -507,8 +477,8 @@ export const DaoOnboardingModal: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          {/* Bottom Actions: Sign out / switch wallet + Dev preview */}
-          <div className="flex items-center justify-between text-xs text-[#64748B] pt-1">
+          {/* Bottom Actions: Sign out / switch wallet */}
+          <div className="flex items-center justify-center text-xs text-[#64748B] pt-1">
             <button
               type="button"
               onClick={handleSignOut}
@@ -516,13 +486,6 @@ export const DaoOnboardingModal: React.FC = () => {
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out / Disconnect</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleSkipDev}
-              className="text-[#155EEF] hover:underline font-semibold cursor-pointer"
-            >
-              Dev Preview Mode →
             </button>
           </div>
         </div>

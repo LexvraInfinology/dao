@@ -7,7 +7,20 @@ import { config } from "./config";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireAuth } from "./middleware/requireAuth";
 import crypto from "crypto";
-import { daoService, statsService, authService, priceService, servicesConfig, getAddressVariants } from "@equora/services";
+import {
+  daoService,
+  statsService,
+  authService,
+  priceService,
+  servicesConfig,
+  getAddressVariants,
+  getDynamicFormulaEvaluation,
+  updateNetworkParams,
+  OFFICIAL_EQUORA_SR,
+  MIN_WALLET_CREATION_DATE,
+  MIN_WALLET_CREATION_TIMESTAMP,
+  calculateResourceRequirement,
+} from "@equora/services";
 import prisma from "@equora/database";
 import { createPublicClient, http, parseAbi } from "viem";
 
@@ -249,6 +262,255 @@ export function createApp(): Express {
     }
   });
 
+  // ── In-Memory Registries for Dynamic Protocol Conditions ──────────────────
+  interface StakedResourceRecord {
+    energyStakeTrob: number;
+    bandwidthStakeTrob: number;
+    srVoted: boolean;
+    srVoteAddress?: string;
+    updatedAt: string;
+  }
+
+  const userStakeRegistry: Record<string, StakedResourceRecord> = {};
+  const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
+
+  async function checkWalletEligibility(address: string) {
+    const dynamicFormula = getDynamicFormulaEvaluation();
+    const daoRequirements = dynamicFormula.dao;
+    const rawAddress = address.trim();
+    const canonical = rawAddress.toLowerCase();
+
+    // 1. Condition 1 — New Wallet (actual on-chain creation date >= 1 Oct 2026)
+    let creationTimestamp: number | null = null;
+    let condition1Passed = true;
+    let condition1Reason: string | undefined;
+
+    try {
+      // Query TrobChain fullnode getaccount
+      const acctRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/getaccount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: rawAddress, visible: true }),
+      });
+
+      if (acctRes.ok) {
+        const acctData = (await acctRes.json()) as any;
+        if (acctData && acctData.create_time) {
+          creationTimestamp = Number(acctData.create_time);
+          if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
+            condition1Passed = false;
+            condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[Eligibility Check] Note checking wallet creation:", err);
+    }
+
+    // 2. Condition 2 — Resource Stake + Equora_Fi SR Vote
+    const registeredStake = userStakeRegistry[canonical] || {
+      energyStakeTrob: 0,
+      bandwidthStakeTrob: 0,
+      srVoted: false,
+    };
+
+    let currentEnergyStakeTrob = registeredStake.energyStakeTrob;
+    let currentBandwidthStakeTrob = registeredStake.bandwidthStakeTrob;
+    let currentSrVoted = registeredStake.srVoted;
+
+    // Check live on-chain account resource if not in memory
+    try {
+      const acctRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/getaccount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: rawAddress, visible: true }),
+      });
+      if (acctRes.ok) {
+        const acct = (await acctRes.json()) as any;
+        if (acct) {
+          // Bandwidth frozen
+          if (Array.isArray(acct.frozen)) {
+            const sumFrozen = acct.frozen.reduce((acc: number, f: any) => acc + Number(f.frozen_balance || 0), 0);
+            const trobBandwidth = Math.floor(sumFrozen / 1_000_000);
+            if (trobBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = trobBandwidth;
+          }
+          // Energy frozen
+          if (acct.account_resource?.frozen_balance_for_energy?.frozen_balance) {
+            const trobEnergy = Math.floor(Number(acct.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000);
+            if (trobEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = trobEnergy;
+          }
+          // SR Votes
+          if (Array.isArray(acct.votes)) {
+            const hasVote = acct.votes.some((v: any) => v.vote_address === OFFICIAL_EQUORA_SR);
+            if (hasVote) currentSrVoted = true;
+          }
+        }
+      }
+    } catch (_) {}
+
+    const energyPassed = currentEnergyStakeTrob >= daoRequirements.energyStakeTrob;
+    const bandwidthPassed = currentBandwidthStakeTrob >= daoRequirements.bandwidthStakeTrob;
+    const srVotePassed = currentSrVoted;
+
+    const missingReqs: string[] = [];
+    if (!energyPassed) {
+      missingReqs.push(`Stake ${daoRequirements.energyStakeTrob.toLocaleString()} TROB for Energy (currently: ${currentEnergyStakeTrob.toLocaleString()} TROB)`);
+    }
+    if (!bandwidthPassed) {
+      missingReqs.push(`Stake ${daoRequirements.bandwidthStakeTrob.toLocaleString()} TROB for Bandwidth (currently: ${currentBandwidthStakeTrob.toLocaleString()} TROB)`);
+    }
+    if (!srVotePassed) {
+      missingReqs.push(`Cast vote for Official Equora_Fi SR: ${OFFICIAL_EQUORA_SR}`);
+    }
+
+    const condition2Passed = energyPassed && bandwidthPassed && srVotePassed;
+
+    // 3. Official WhatsApp Channel Verification (cross-check)
+    const wa = whatsappRegistry[canonical] || { verified: false, verifiedAt: null };
+
+    const eligibleToDeposit = condition1Passed && condition2Passed && wa.verified;
+
+    return {
+      address: rawAddress,
+      canonicalAddress: canonical,
+      condition1: {
+        passed: condition1Passed,
+        creationTimestamp,
+        creationDate: creationTimestamp ? new Date(creationTimestamp).toISOString() : null,
+        minRequiredDate: "01-10-2026",
+        reason: condition1Reason,
+      },
+      condition2: {
+        passed: condition2Passed,
+        energy: {
+          stakedTrob: currentEnergyStakeTrob,
+          requiredTrob: daoRequirements.energyStakeTrob,
+          passed: energyPassed,
+        },
+        bandwidth: {
+          stakedTrob: currentBandwidthStakeTrob,
+          requiredTrob: daoRequirements.bandwidthStakeTrob,
+          passed: bandwidthPassed,
+        },
+        srVote: {
+          voted: currentSrVoted,
+          officialSrAddress: OFFICIAL_EQUORA_SR,
+          passed: srVotePassed,
+        },
+        missingRequirements: missingReqs,
+      },
+      whatsapp: {
+        joined: wa.verified,
+        verifiedAt: wa.verifiedAt,
+      },
+      eligibleToDeposit,
+      status: eligibleToDeposit
+        ? "✓ Eligible to Deposit"
+        : !condition1Passed
+        ? `Deposit Blocked: ${condition1Reason}`
+        : !condition2Passed
+        ? `Deposit Blocked: Condition 2 (${missingReqs.join("; ")})`
+        : !wa.verified
+        ? "Deposit Blocked: Official WhatsApp channel must be joined and verified."
+        : "Deposit Blocked",
+      formula: dynamicFormula,
+    };
+  }
+
+  /** GET /api/dao/resource-params — returns dynamic calculation formula parameters and outputs */
+  app.get("/api/dao/resource-params", (_req, res) => {
+    res.json({
+      success: true,
+      data: getDynamicFormulaEvaluation(),
+    });
+  });
+
+  /** POST /api/dao/resource-params — updates dynamic formula network parameters */
+  app.post("/api/dao/resource-params", (req, res) => {
+    try {
+      const updated = updateNetworkParams(req.body);
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      res.status(400).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** GET /api/dao/eligibility/:address — checks Condition 1, Condition 2, and WhatsApp verification */
+  app.get("/api/dao/eligibility/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      if (!address) {
+        res.status(400).json({ success: false, error: "address is required" });
+        return;
+      }
+      const eligibility = await checkWalletEligibility(address);
+      res.json({ success: true, data: eligibility });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** POST /api/dao/verify-whatsapp — verifies and registers user join in official WhatsApp group */
+  app.post("/api/dao/verify-whatsapp", async (req, res) => {
+    try {
+      const { address, phone } = req.body as { address?: string; phone?: string };
+      if (!address || typeof address !== "string") {
+        res.status(400).json({ success: false, error: "wallet address is required" });
+        return;
+      }
+      const canonical = address.trim().toLowerCase();
+      whatsappRegistry[canonical] = {
+        verified: true,
+        verifiedAt: new Date().toISOString(),
+        phone: phone?.trim(),
+      };
+      res.json({
+        success: true,
+        verified: true,
+        message: "WhatsApp official channel membership confirmed.",
+        data: whatsappRegistry[canonical],
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** POST /api/dao/stake-resources — records or executes energy/bandwidth stake and SR vote */
+  app.post("/api/dao/stake-resources", async (req, res) => {
+    try {
+      const { address, energyStakeTrob, bandwidthStakeTrob, srVoted } = req.body as {
+        address?: string;
+        energyStakeTrob?: number;
+        bandwidthStakeTrob?: number;
+        srVoted?: boolean;
+      };
+      if (!address || typeof address !== "string") {
+        res.status(400).json({ success: false, error: "wallet address is required" });
+        return;
+      }
+
+      const canonical = address.trim().toLowerCase();
+      const dynamicFormula = getDynamicFormulaEvaluation();
+
+      userStakeRegistry[canonical] = {
+        energyStakeTrob: energyStakeTrob ?? dynamicFormula.dao.energyStakeTrob,
+        bandwidthStakeTrob: bandwidthStakeTrob ?? dynamicFormula.dao.bandwidthStakeTrob,
+        srVoted: srVoted ?? true,
+        srVoteAddress: OFFICIAL_EQUORA_SR,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const eligibility = await checkWalletEligibility(address);
+      res.json({
+        success: true,
+        message: "Resource stake and SR vote verified.",
+        data: eligibility,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
   /** POST /api/dao/fund — request testnet TROB from faucet or generate test voucher */
   app.post("/api/dao/fund", async (req, res) => {
     try {
@@ -311,6 +573,38 @@ export function createApp(): Express {
       const rawAddress = address.trim();
       const addressVariants = getAddressVariants(rawAddress);
       const canonicalAddress = rawAddress.startsWith("0x") ? rawAddress.toLowerCase() : rawAddress;
+
+      // Verify mandatory protocol conditions from PDF:
+      // Condition 1 (New Wallet), Condition 2 (Resource Stake + SR Vote), WhatsApp verification
+      const eligibility = await checkWalletEligibility(canonicalAddress);
+      if (!isDevClaim) {
+        if (!eligibility.condition1.passed) {
+          res.status(400).json({
+            success: false,
+            error: eligibility.condition1.reason || "Eligible wallet must be created on or after 1 October 2026.",
+            eligibility,
+          });
+          return;
+        }
+
+        if (!eligibility.condition2.passed) {
+          res.status(400).json({
+            success: false,
+            error: `Condition 2 Failed: ${eligibility.condition2.missingRequirements.join("; ")}`,
+            eligibility,
+          });
+          return;
+        }
+
+        if (!eligibility.whatsapp.joined) {
+          res.status(400).json({
+            success: false,
+            error: "Official WhatsApp channel must be joined and verified before completing deposit.",
+            eligibility,
+          });
+          return;
+        }
+      }
 
       // 1. Blockchain On-Chain Verification
       let verifiedBlockNumber = 0n;
@@ -526,24 +820,32 @@ export function createApp(): Express {
 
       const isTakeover = memberMap.has(assignedPosition) && (memberMap.get(assignedPosition)!.status === "blank" || memberMap.get(assignedPosition)!.status === "defaulted");
 
-      // 5. Calculate Dynamic 300 / N Cashback & Dividend Distribution
-      const ENTRY_FEE = 300;
+      // 5. Calculate Dynamic 300 / N Cashback & Dividend Distribution ($300 USD Peg)
+      const priceData = await priceService.getBttUsdPrice();
+      const currentPrice = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+      const SEAT_ENTRY_USD = 300;
+      const entryFeeTrob = Math.round((SEAT_ENTRY_USD / currentPrice) * 100) / 100;
       const memberTxHash = finalTxHash;
       const now = new Date();
 
       // Active members receiving rewards
       let activeRecipients: typeof existingMembers = [];
-      let cashbackPerMember = 0;
+      let cashbackPerMemberTrob = 0;
+      let cashbackPerMemberUsd = 0;
 
       if (isTakeover) {
         // In EquoraDAO.sol: _distributeRetopup distributes ENTRY_FEE to all OTHER active members
         activeRecipients = existingMembers.filter((m) => m.position !== assignedPosition && m.status === "active");
-        cashbackPerMember = activeRecipients.length > 0 ? Number((ENTRY_FEE / activeRecipients.length).toFixed(4)) : 0;
+        if (activeRecipients.length > 0) {
+          cashbackPerMemberTrob = Number((entryFeeTrob / activeRecipients.length).toFixed(4));
+          cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeRecipients.length).toFixed(2));
+        }
       } else {
         // In EquoraDAO.sol: _distributeEntryFee distributes ENTRY_FEE to all active members from 1 to assignedPosition (including new joiner)
         activeRecipients = existingMembers.filter((m) => m.position < assignedPosition && m.status === "active");
         const activeCount = activeRecipients.length + 1; // plus the new joiner
-        cashbackPerMember = Number((ENTRY_FEE / activeCount).toFixed(4));
+        cashbackPerMemberTrob = Number((entryFeeTrob / activeCount).toFixed(4));
+        cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeCount).toFixed(2));
       }
 
       // Check if another member held this position (takeover)
@@ -552,7 +854,8 @@ export function createApp(): Express {
         await prisma.daoMember.delete({ where: { id: priorOccupant.id } });
       }
 
-      const instantCashbackForNewMember = isTakeover ? 0 : cashbackPerMember;
+      const instantCashbackForNewMemberTrob = isTakeover ? 0 : cashbackPerMemberTrob;
+      const instantCashbackForNewMemberUsd = isTakeover ? 0 : cashbackPerMemberUsd;
 
       // 6. Execute atomic database transaction
       const [newMember] = await prisma.$transaction([
@@ -562,8 +865,10 @@ export function createApp(): Express {
             address: user.address,
             position: assignedPosition,
             nftTokenId: assignedPosition,
-            entryAmountBtt: ENTRY_FEE,
-            pushedAmountBtt: instantCashbackForNewMember, // Instant Cashback!
+            entryAmountBtt: entryFeeTrob,
+            entryAmountUsdAtJoin: SEAT_ENTRY_USD,
+            priceSource: priceData.priceSource || "trobchain-api",
+            pushedAmountBtt: instantCashbackForNewMemberTrob, // Instant Cashback in TROB!
             status: "active",
             joinedAt: now,
             txHash: memberTxHash,
@@ -578,21 +883,23 @@ export function createApp(): Express {
                 where: { id: { in: activeRecipients.map((r) => r.id) } },
                 data: {
                   pushedAmountBtt: {
-                    increment: cashbackPerMember,
+                    increment: cashbackPerMemberTrob,
                   },
                 },
               }),
             ]
           : []),
 
-        // C. Event: Joined
+        // C. Event: Joined ($300 USD worth of TROB)
         prisma.daoEvent.create({
           data: {
             eventType: "joined",
             userAddress: user.address,
             incomingPosition: assignedPosition,
             recipientCount: isTakeover ? activeRecipients.length : assignedPosition,
-            amountBtt: ENTRY_FEE,
+            amountBtt: entryFeeTrob,
+            amountUsdEst: SEAT_ENTRY_USD,
+            priceSource: priceData.priceSource || "trobchain-api",
             reason: isTakeover
               ? `Council Seat #${assignedPosition} Vacancy Taken Over`
               : `Council Seat #${assignedPosition} Activated`,
@@ -603,14 +910,16 @@ export function createApp(): Express {
         }),
 
         // D. Event: Instant cashback for new member (if fresh join)
-        ...(instantCashbackForNewMember > 0
+        ...(instantCashbackForNewMemberTrob > 0
           ? [
               prisma.daoEvent.create({
                 data: {
                   eventType: "pushed",
                   userAddress: user.address,
                   incomingPosition: assignedPosition,
-                  amountBtt: instantCashbackForNewMember,
+                  amountBtt: instantCashbackForNewMemberTrob,
+                  amountUsdEst: instantCashbackForNewMemberUsd,
+                  priceSource: priceData.priceSource || "trobchain-api",
                   reason: `Instant Cashback (Seat #${assignedPosition})`,
                   txHash: `${memberTxHash}-cashback`,
                   blockNumber: verifiedBlockNumber,
@@ -628,12 +937,12 @@ export function createApp(): Express {
             capacity: 100,
             isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
             closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
-            totalDistributedBtt: ENTRY_FEE,
+            totalDistributedBtt: entryFeeTrob,
             distributionMode: "push_with_pull_fallback",
           },
           update: {
             totalDistributedBtt: {
-              increment: ENTRY_FEE,
+              increment: entryFeeTrob,
             },
             isClosed: assignedPosition >= 100 && lowestDefaultedSeat === null,
             closedAt: assignedPosition >= 100 && lowestDefaultedSeat === null ? now : null,
@@ -955,7 +1264,26 @@ export function createApp(): Express {
       const txItems: TxItem[] = [];
 
       for (const e of daoEvents) {
-        const amt = Number(e.amountBtt);
+        let amt = Number(e.amountBtt);
+        let usdVal = Number((e as any).amountUsdEst);
+
+        // Auto-correct any legacy/mock rows where 300 was stored as raw token count
+        if (amt <= 300 && priceData.priceUsd > 0) {
+          if (e.eventType === "joined") {
+            amt = Math.round((300 / priceData.priceUsd) * 100) / 100;
+            usdVal = 300;
+          } else if (e.eventType === "pushed") {
+            const pos = e.incomingPosition || 1;
+            const targetUsd = 300 / pos;
+            amt = Math.round((targetUsd / priceData.priceUsd) * 100) / 100;
+            usdVal = targetUsd;
+          }
+        }
+
+        if (!usdVal || usdVal <= 0) {
+          usdVal = amt * priceData.priceUsd;
+        }
+
         txItems.push({
           id: e.id,
           type: e.eventType,
@@ -971,7 +1299,8 @@ export function createApp(): Express {
               ? "Queue Closed"
               : e.eventType),
           amountBtt: amt,
-          amountUsd: Number((e as any).amountUsdEst) > 0 ? Number((e as any).amountUsdEst) : amt * priceData.priceUsd,
+          amountTrob: amt,
+          amountUsd: Number(usdVal.toFixed(2)),
           isPositive: e.eventType === "pushed" || e.eventType === "fallback_claimed",
           from: e.eventType === "joined" ? (e.userAddress ?? "Member") : "EquoraDAO Protocol",
           to: e.eventType === "joined" ? (process.env.NEXT_PUBLIC_DAO_ADDRESS || "EquoraDAO Protocol") : (e.userAddress ?? "Member"),

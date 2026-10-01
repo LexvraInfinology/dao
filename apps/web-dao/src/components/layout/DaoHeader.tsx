@@ -60,21 +60,11 @@ export const DaoHeader: React.FC = () => {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
-  const [isDevMode, setIsDevMode]           = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const dev =
-      sessionStorage.getItem('equora_dao_preview') === 'true' ||
-      sessionStorage.getItem('equora_dao_preview_mode') === 'true' ||
-      localStorage.getItem('equora_dev_mode') === 'true' ||
-      window.location.search.includes('dev=');
-    setIsDevMode(dev);
-  }, []);
 
   const handleConnectClick = () => {
     triggerSmartConnectWallet({
@@ -135,8 +125,7 @@ export const DaoHeader: React.FC = () => {
   const isSeatMember = Boolean(
     memberData?.isMember ||
     (memberData?.position && memberData.position > 0) ||
-    (auth.user?.daoPosition && auth.user.daoPosition > 0) ||
-    isDevMode
+    (auth.user?.daoPosition && auth.user.daoPosition > 0)
   );
 
   // ── handlers ──────────────────────────────────────────────────────────────
@@ -159,9 +148,9 @@ export const DaoHeader: React.FC = () => {
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
+      sessionStorage.clear();
     } catch { /* */ }
+    window.location.href = '/';
   };
 
   return (
@@ -216,13 +205,6 @@ export const DaoHeader: React.FC = () => {
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#EF4444] border-2 border-white" />
           </button>
 
-          {/* Dev Mode Indicator (if not connected and in dev mode) */}
-          {!isConnected && isDevMode && (
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span>Dev Mode (Preview)</span>
-            </div>
-          )}
 
           {/* Round circle for WhatsApp (only for real DAO seat members) */}
           <DaoWhatsAppCircle variant="header" />

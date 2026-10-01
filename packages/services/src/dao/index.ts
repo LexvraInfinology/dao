@@ -103,7 +103,7 @@ export class PriceService {
     }
   }
 
-  async getBttUsdPrice(): Promise<PriceData> {
+  async getTrobUsdPrice(): Promise<PriceData> {
     const now = Date.now();
     if (this.cachedPrice && now - this.lastFetchTime < this.cacheTtlMs) {
       return this.cachedPrice;
@@ -186,6 +186,10 @@ export class PriceService {
 
     throw new Error("Live TROB market rate unavailable: dynamic price feed must be reachable.");
   }
+
+  async getBttUsdPrice(): Promise<PriceData> {
+    return this.getTrobUsdPrice();
+  }
 }
 
 export const priceService = new PriceService();
@@ -244,16 +248,22 @@ export class DaoService {
       earningsCapUsd: EARNINGS_CAP_USD,
       // TROB equivalents at current price
       entryFeeBtt: entryFeeTrob,
+      entryFeeTrob,
       earningsCapBtt: earningsCapTrob,
+      earningsCapTrob,
       totalCollectedBTT: totalCollectedTrob,
+      totalCollectedTROB: totalCollectedTrob,
       totalCollectedUSDEstimate,
       totalDistributedBTT: totalDistributedTROB,
+      totalDistributedTROB,
       totalDistributedUSDEstimate,
       totalPoolReceivedBTT,
+      totalPoolReceivedTROB: totalPoolReceivedBTT,
       totalPoolReceivedUSDEstimate: totalPoolReceivedBTT * priceUsd,
       isClosed: isCompleted,
       distributionMode: "push_with_pull_fallback",
       bttPriceUsd: priceUsd,
+      trobPriceUsd: priceUsd,
       priceSource: priceData.priceSource,
       priceUpdatedAt: priceData.updatedAt,
     };
@@ -263,6 +273,7 @@ export class DaoService {
     total: number;
     priceSource: string;
     bttPriceUsd: number;
+    trobPriceUsd?: number;
     members: DaoMemberDTO[];
   }> {
     const skip = (page - 1) * limit;
@@ -283,24 +294,40 @@ export class DaoService {
           fallbackClaims: true,
         },
       }),
-      this.priceService.getBttUsdPrice(),
+      this.priceService.getTrobUsdPrice(),
     ]);
 
     return {
       total,
       priceSource: priceData.priceSource,
       bttPriceUsd: priceData.priceUsd,
+      trobPriceUsd: priceData.priceUsd,
       members: members.map((m: any) => {
-        const pushedBtt = Number(m.pushedAmountBtt);
+        let entryTrob = Number(m.entryAmountBtt);
+        let pushedTrob = Number(m.pushedAmountBtt);
+        const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+
+        if (entryTrob <= 300 && priceUsd > 0) {
+          entryTrob = Math.round((300 / priceUsd) * 100) / 100;
+        }
+        if (pushedTrob <= 300 && m.position === 1 && priceUsd > 0) {
+          pushedTrob = Math.round((300 / priceUsd) * 100) / 100;
+        }
+
+        const entryUsd = Number(m.entryAmountUsdAtJoin) > 0 ? Number(m.entryAmountUsdAtJoin) : 300;
+        const pushedUsd = Number((pushedTrob * priceUsd).toFixed(2));
+
         return {
           position: m.position,
           address: m.address,
           userId: m.user?.userId || null,
           nftTokenId: m.nftTokenId || m.position,
-          entryAmountBtt: Number(m.entryAmountBtt),
-          entryAmountUsdEstimate: Number(m.entryAmountBtt) * priceData.priceUsd,
-          pushedAmountBtt: pushedBtt,
-          pushedAmountUsdEstimate: pushedBtt * priceData.priceUsd,
+          entryAmountBtt: entryTrob,
+          entryAmountTrob: entryTrob,
+          entryAmountUsdEstimate: entryUsd,
+          pushedAmountBtt: pushedTrob,
+          pushedAmountTrob: pushedTrob,
+          pushedAmountUsdEstimate: pushedUsd,
           status: m.status,
           joinedAt: m.joinedAt,
           txHash: m.txHash,
@@ -325,7 +352,7 @@ export class DaoService {
           fallbackClaims: true,
         },
       }),
-      this.priceService.getBttUsdPrice(),
+      this.priceService.getTrobUsdPrice(),
     ]);
 
     if (!member) {
@@ -337,20 +364,32 @@ export class DaoService {
         isQualified: false,
         nftTokenId: null,
         pushedAmountBtt: 0,
+        pushedAmountTrob: 0,
         pushedAmountUsdEstimate: 0,
       };
     }
 
-    const pushedBtt         = Number(member.pushedAmountBtt);
-    const priceUsd          = priceData.priceUsd || 0;
+    const priceUsd          = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+    let pushedTrob          = Number(member.pushedAmountBtt);
+    let entryTrob           = Number(member.entryAmountBtt);
+
+    if (entryTrob <= 300 && priceUsd > 0) {
+      entryTrob = Math.round((300 / priceUsd) * 100) / 100;
+    }
+    if (pushedTrob <= 300 && member.position === 1 && priceUsd > 0) {
+      pushedTrob = Math.round((300 / priceUsd) * 100) / 100;
+    }
+
     const SEAT_ENTRY_USD    = servicesConfig.price.seatEntryUsd; // $300
     const EARNINGS_CAP_USD  = SEAT_ENTRY_USD * 5;               // $1,500
 
     // Compute cap in TROB using live price
-    const earningsCapTrob = priceUsd > 0 ? EARNINGS_CAP_USD / priceUsd : 0;
+    const earningsCapTrob = priceUsd > 0 ? Math.round((EARNINGS_CAP_USD / priceUsd) * 100) / 100 : 0;
 
-    // Cap progress based on USD value (not raw TROB count)
-    const pushedUsd       = pushedBtt * priceUsd;
+    // Cap progress based on USD value (5x limit hits only when $1,500 is earned)
+    const pushedUsd       = Number((pushedTrob * priceUsd).toFixed(2));
+    const remainingCapUsd = Math.max(0, Number((EARNINGS_CAP_USD - pushedUsd).toFixed(2)));
+    const remainingCapTrob= priceUsd > 0 ? Math.round((remainingCapUsd / priceUsd) * 100) / 100 : 0;
     const capProgressPct  = EARNINGS_CAP_USD > 0 ? Math.min(100, (pushedUsd / EARNINGS_CAP_USD) * 100) : 0;
 
     return {
@@ -361,22 +400,30 @@ export class DaoService {
       isQualified: member.user?.isQualified || false,
       nftTokenId: member.nftTokenId || member.position,
       joinedAt: member.joinedAt,
-      entryAmountBtt: Number(member.entryAmountBtt),
+      entryAmountBtt: entryTrob,
+      entryAmountTrob: entryTrob,
       entryAmountUsdEstimate: SEAT_ENTRY_USD, // Always $300 USD regardless of TROB price
-      pushedAmountBtt: pushedBtt,
+      pushedAmountBtt: pushedTrob,
+      pushedAmountTrob: pushedTrob,
       pushedAmountUsdEstimate: pushedUsd,
-      // USD-pegged cap values
+      // USD-pegged cap values ($1,500 max cap)
       earningsCapUsd: EARNINGS_CAP_USD,
       earningsCapBtt: earningsCapTrob,
+      earningsCapTrob,
+      remainingCapUsd,
+      remainingCapTrob,
       capProgressPct,
       isCapped: pushedUsd >= EARNINGS_CAP_USD,
       priceSource: priceData.priceSource,
+      trobPriceUsd: priceUsd,
+      bttPriceUsd: priceUsd,
       status: member.status,
       txHash: member.txHash,
       fallbackClaims: (member.fallbackClaims || []).map((f: any) => ({
         id: f.id,
         round: f.round,
         amountBtt: Number(f.amountBtt),
+        amountTrob: Number(f.amountBtt),
         claimed: f.claimed,
         txHash: f.txHash,
         claimedAt: f.claimedAt,
@@ -391,19 +438,40 @@ export class DaoService {
         take: limit,
         orderBy: { timestamp: "desc" },
       }),
-      this.priceService.getBttUsdPrice(),
+      this.priceService.getTrobUsdPrice(),
     ]);
 
+    const priceUsd = priceData?.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+
     return events.map((e: any) => {
-      const amountBtt = Number(e.amountBtt || 0);
+      let amt = Number(e.amountBtt || 0);
+      let usdEst = Number(e.amountUsdEst);
+
+      if (amt <= 300 && priceUsd > 0) {
+        if (e.eventType === "joined") {
+          amt = Math.round((300 / priceUsd) * 100) / 100;
+          usdEst = 300;
+        } else if (e.eventType === "pushed") {
+          const pos = e.incomingPosition || 1;
+          const targetUsd = 300 / pos;
+          amt = Math.round((targetUsd / priceUsd) * 100) / 100;
+          usdEst = targetUsd;
+        }
+      }
+
+      if (!usdEst || usdEst <= 0) {
+        usdEst = amt * priceUsd;
+      }
+
       return {
         id: e.id,
         eventType: e.eventType,
         userAddress: e.userAddress,
         incomingPosition: e.incomingPosition,
         recipientCount: e.recipientCount,
-        amountBtt,
-        amountUsdEstimate: amountBtt * (priceData?.priceUsd || 0),
+        amountBtt: amt,
+        amountTrob: amt,
+        amountUsdEstimate: Number(usdEst.toFixed(2)),
         priceSource: priceData?.priceSource || "trobchain-api",
         reason:
           e.reason ||
@@ -468,3 +536,4 @@ export class DaoService {
 
 export const daoService = new DaoService();
 export * from "./model";
+export * from "./resourceCalculator";

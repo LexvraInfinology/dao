@@ -270,6 +270,16 @@ export function useAuth(): AuthState {
     setUser(null);
     setStatus('idle');
     setError(null);
+    try {
+      localStorage.setItem('equora_wallet_explicit_disconnect', 'true');
+      localStorage.removeItem('trobsafe_address');
+      localStorage.removeItem('equora_auth_address');
+      localStorage.removeItem('equora_jwt');
+      sessionStorage.clear();
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   }, []);
 
   return {

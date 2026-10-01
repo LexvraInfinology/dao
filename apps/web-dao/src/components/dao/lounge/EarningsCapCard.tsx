@@ -8,6 +8,7 @@ interface EarningsCapCardProps {
   capProgressPct?: number;
   pushedUsd?: number;
   earningsCapUsd?: number;
+  trobPriceUsd?: number;
 }
 
 export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
@@ -15,6 +16,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   capProgressPct = 0,
   pushedUsd = 0,
   earningsCapUsd = 1500,
+  trobPriceUsd,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -22,6 +24,10 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   const remaining   = Math.max(0, earningsCapUsd - pushedUsd);
   const zone        = pct >= 90 ? 'Danger Zone' : pct >= 70 ? 'Caution' : 'Safe Zone';
   const zoneColor   = pct >= 90 ? 'text-[#DC2626] bg-red-50 border-red-200' : pct >= 70 ? 'text-[#D97706] bg-amber-50 border-amber-200' : 'text-[#059669] bg-[#ECFDF5] border-[#A7F3D0]/60';
+
+  const earnedTrob    = trobPriceUsd && trobPriceUsd > 0 ? (pushedUsd / trobPriceUsd) : 0;
+  const capTrob       = trobPriceUsd && trobPriceUsd > 0 ? (earningsCapUsd / trobPriceUsd) : 0;
+  const remainingTrob = trobPriceUsd && trobPriceUsd > 0 ? (remaining / trobPriceUsd) : 0;
 
   const radius        = 33;
   const circumference = 2 * Math.PI * radius;
@@ -60,10 +66,15 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
               ${pushedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-xs sm:text-sm font-semibold font-jakarta text-[#60739A]">
-              / ${earningsCapUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              / ${earningsCapUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
             </span>
           </div>
-          <div className="text-xs font-medium font-jakarta text-[#60739A]">Earned (USD Value in TROB)</div>
+          {trobPriceUsd && trobPriceUsd > 0 && (
+            <div className="text-[11px] font-bold font-jakarta text-[#155EEF]">
+              ≈ {earnedTrob.toLocaleString(undefined, { maximumFractionDigits: 0 })} / {capTrob.toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB (@ ${trobPriceUsd.toFixed(4)})
+            </div>
+          )}
+          <div className="text-xs font-medium font-jakarta text-[#60739A]">5X Cap hits at ${earningsCapUsd.toLocaleString()} earned</div>
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold ${zoneColor}`}>
             {zone}
           </span>
@@ -75,14 +86,17 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#60739A] font-medium font-jakarta">Earnings remaining until 5X cap:</span>
-              <span className="font-bold font-jakarta text-[#071A4A]">${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="font-bold font-jakarta text-[#071A4A]">
+                ${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                {remainingTrob > 0 && ` (≈ ${remainingTrob.toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB)`}
+              </span>
             </div>
             <div className="w-full h-2 rounded-full bg-[#F1F5F9] overflow-hidden">
               <div className="h-full rounded-full bg-[#00D492] transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
             </div>
           </div>
           <div className="rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] p-3.5 text-xs text-[#60739A] leading-relaxed font-jakarta">
-            When you reach ${earningsCapUsd.toLocaleString()} (5X of $300 entry fee worth of TROB), a $300 re-top-up is required within 48 hours to reset your cap and continue earning.
+            When your total dividends reach ${earningsCapUsd.toLocaleString()} USD (5X of the $300 deposit paid in TROB), a $300 re-top-up in TROB is required within 48 hours to reset your cap and continue earning.
           </div>
         </div>
       )}
@@ -95,8 +109,9 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-1 text-xs pt-0.5">
             <div className="text-[#60739A] font-medium font-jakarta">
               Remaining: <span className="font-bold text-[#071A4A]">${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              {remainingTrob > 0 && <span className="text-[10px] text-[#155EEF] ml-1">({remainingTrob.toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB)</span>}
             </div>
-            <div className="text-[11px] text-[#94A3B8] font-jakarta">Re-top: $300</div>
+            <div className="text-[11px] text-[#94A3B8] font-jakarta">Re-top: $300 USD</div>
           </div>
         </div>
       )}

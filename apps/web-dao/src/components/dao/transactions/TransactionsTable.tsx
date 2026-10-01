@@ -15,6 +15,7 @@ interface TransactionsTableProps {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   bttPriceUsd?: number;
+  trobPriceUsd?: number;
 }
 
 function getTypeIcon(type: string) {
@@ -57,7 +58,9 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
   totalPages = 1,
   onPageChange,
   bttPriceUsd = 0,
+  trobPriceUsd,
 }) => {
+  const effectiveTrobPrice = trobPriceUsd && trobPriceUsd > 0 ? trobPriceUsd : bttPriceUsd;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
 
@@ -76,9 +79,9 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
           {loading && <Loader2 className="w-4 h-4 animate-spin text-[#155EEF]" />}
         </div>
         <div className="flex items-center gap-2">
-          {bttPriceUsd > 0 && (
+          {effectiveTrobPrice > 0 && (
             <span className="text-xs text-[#60739A] font-jakarta hidden sm:block">
-              TROB @ <span className="font-bold text-[#071A4A]">${bttPriceUsd.toFixed(4)}</span>
+              TROB @ <span className="font-bold text-[#071A4A]">${effectiveTrobPrice.toFixed(4)}</span>
             </span>
           )}
           <button onClick={handleRefresh}
@@ -124,18 +127,21 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
             <div className="col-span-2 font-mono text-[#60739A] truncate">{shortAddr(tx.to)}</div>
             {/* Amount */}
             <div className="col-span-2 text-right">
-              {tx.amountBtt > 0 ? (
-                <>
-                  <div className={`font-black ${tx.isPositive === false ? 'text-[#DC2626]' : tx.isPositive ? 'text-[#059669]' : 'text-[#071A4A]'}`}>
-                    {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)}
-                  </div>
-                  <div className="text-[#94A3B8] text-[10px]">
-                    {tx.isPositive === false ? '-' : '+'}{tx.amountBtt.toFixed(2)} TROB
-                  </div>
-                </>
-              ) : (
-                <div className="text-[#94A3B8]">—</div>
-              )}
+              {(() => {
+                const trobAmt = tx.amountTrob ?? tx.amountBtt;
+                return trobAmt > 0 || tx.amountUsd > 0 ? (
+                  <>
+                    <div className={`font-black ${tx.isPositive === false ? 'text-[#DC2626]' : tx.isPositive ? 'text-[#059669]' : 'text-[#071A4A]'}`}>
+                      {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)}
+                    </div>
+                    <div className="text-[#94A3B8] text-[10px]">
+                      {tx.isPositive === false ? '-' : '+'}{trobAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[#94A3B8]">—</div>
+                );
+              })()}
             </div>
             {/* Status */}
             <div className="col-span-1 text-right">
@@ -195,7 +201,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               {[
                 ['Type',      selectedTx.typeLabel],
                 ['Time',      timeAgoLabel(selectedTx.timestamp)],
-                ['Amount',    selectedTx.amountBtt > 0 ? `$${selectedTx.amountUsd.toFixed(2)} / ${selectedTx.amountBtt.toFixed(2)} TROB` : '—'],
+                ['Amount',    ((selectedTx.amountTrob ?? selectedTx.amountBtt) > 0 || selectedTx.amountUsd > 0) ? `$${selectedTx.amountUsd.toFixed(2)} / ${(selectedTx.amountTrob ?? selectedTx.amountBtt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : '—'],
                 ['From',      selectedTx.from],
                 ['To',        selectedTx.to],
                 ['Status',    selectedTx.status],

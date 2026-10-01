@@ -20,13 +20,18 @@ export interface DaoStats {
   entryFeeUsd?: number;
   earningsCapUsd?: number;
   entryFeeBtt: number;
+  entryFeeTrob?: number;
   earningsCapBtt: number;
+  earningsCapTrob?: number;
   totalCollectedBTT: number;
+  totalCollectedTROB?: number;
   totalCollectedUSDEstimate: number;
   totalDistributedBTT: number;
+  totalDistributedTROB?: number;
   totalDistributedUSDEstimate: number;
   isClosed: boolean;
   bttPriceUsd: number;
+  trobPriceUsd?: number;
   priceSource: string;
   priceUpdatedAt: string;
 }
@@ -48,6 +53,7 @@ export interface DaoMember {
   position: number;
   nftTokenId: number | null;
   entryAmountBtt: string | number;
+  entryAmountTrob?: string | number;
   entryAmountUsdAtJoin?: string | number | null;
   joinedAt: string;
   status: string;
@@ -55,9 +61,11 @@ export interface DaoMember {
   blockNumber: string | number;
   isMember: boolean;
   pushedAmountBtt: number | string;
+  pushedAmountTrob?: number | string;
   pushedAmountUsdEstimate: number;
   earningsCapUsd?: number;
   earningsCapBtt: number;
+  earningsCapTrob?: number;
   capProgressPct: number;
 }
 
@@ -68,6 +76,7 @@ export interface DaoEvent {
   incomingPosition: number | null;
   recipientCount: number | null;
   amountBtt: string | number;
+  amountTrob?: string | number;
   amountUsdEst: string | number | null;
   txHash: string;
   blockNumber: string | number;

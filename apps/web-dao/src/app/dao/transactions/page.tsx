@@ -17,13 +17,13 @@ export default function DaoTransactionsPage() {
 
   const transactions = txData?.transactions ?? [];
   const totalPages   = txData?.pages        ?? 1;
-  const bttPrice     = txData?.bttPriceUsd  ?? 0;
+  const trobPrice    = txData?.trobPriceUsd ?? txData?.bttPriceUsd ?? 0;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
       <TransactionsHero
         totalTransactions={txData?.total}
-        bttPriceUsd={bttPrice > 0 ? bttPrice : undefined}
+        bttPriceUsd={trobPrice > 0 ? trobPrice : undefined}
       />
 
       {/* Desktop */}
@@ -35,7 +35,8 @@ export default function DaoTransactionsPage() {
           page={page}
           totalPages={totalPages}
           onPageChange={setPage}
-          bttPriceUsd={bttPrice}
+          bttPriceUsd={trobPrice}
+          trobPriceUsd={trobPrice}
         />
       </div>
 
@@ -43,7 +44,7 @@ export default function DaoTransactionsPage() {
       <div className="lg:hidden space-y-4 sm:space-y-5">
         <TransactionsMobileMetrics
           transactions={transactions}
-          bttPriceUsd={bttPrice}
+          bttPriceUsd={trobPrice}
         />
         <TransactionsMobileList
           transactions={transactions}

@@ -71,6 +71,15 @@ contract EquoraDAO is ReentrancyGuard {
     uint256 public constant SEAT_WINDOW            = 21 days;
     uint256 public constant RETOPUP_WINDOW         = 48 hours;
 
+    /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
+    string public constant OFFICIAL_SR_BASE58      = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+    /// @dev Minimum creation timestamp for eligible deposit wallets: 1 October 2026 00:00:00 UTC
+    uint256 public constant MIN_WALLET_CREATION_DATE = 1790812800;
+    /// @dev Target daily free transactions for DAO members (Formula: 50 TX/day)
+    uint256 public constant DAO_TARGET_FREE_TX_PER_DAY = 50;
+    /// @dev Target daily free transactions for Matrix members (Formula: 5 TX/day)
+    uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
+
     // ─── Admin ─────────────────────────────────────────────────────────────────
 
     /// @dev Deployer address — can update entryFee to match live USD peg
@@ -119,6 +128,10 @@ contract EquoraDAO is ReentrancyGuard {
     mapping(address => uint256) public lifetimeEarnings;  // total TROB received from DAO distributions
     mapping(address => uint256) public capHitTimestamp;   // when 5X cap was reached (0 = not capped)
     mapping(address => bool)    public slotBlank;         // true = slot expired, skip in distributions
+
+    // Deposit eligibility attestation (Condition 1 + Condition 2 + Community Verification)
+    mapping(address => bool)    public isEligibilityAttested;
+    bool                        public eligibilityEnforced;
 
     bool    public daoCompleted;
     bool    public daoExpired;
@@ -175,6 +188,10 @@ contract EquoraDAO is ReentrancyGuard {
     event PoolShareClaimed(address indexed member, uint256 amount, uint256 timestamp);
     /// @dev Emitted when admin updates entry fee to reflect current USD–TROB rate
     event EntryFeeUpdated(uint256 newEntryFee, uint256 newEarningsCap, uint256 trobPriceUsd6, uint256 timestamp);
+    /// @dev Emitted when wallet deposit eligibility is attested
+    event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
+    /// @dev Emitted when eligibility enforcement is toggled
+    event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
 
     // ─── Constructor ───────────────────────────────────────────────────────────
 
@@ -243,6 +260,29 @@ contract EquoraDAO is ReentrancyGuard {
         emit EntryFeeUpdated(_newEntryFee, earningsCap, _trobPriceUsd6, block.timestamp);
     }
 
+    /**
+     * @dev Attest or update an account's deposit eligibility against protocol conditions:
+     *      - Condition 1: Wallet created on or after 1 October 2026
+     *      - Condition 2: Resource Stake (Energy + Bandwidth) + Equora SR Vote
+     *      - Official Community Channel Verified
+     *      Callable by admin or authorized verifier relayer.
+     */
+    function setEligibilityAttestation(address account, bool eligible) external {
+        require(msg.sender == admin, "EquoraDAO: not admin");
+        require(account != address(0), "EquoraDAO: invalid address");
+        isEligibilityAttested[account] = eligible;
+        emit EligibilityAttested(account, eligible, block.timestamp);
+    }
+
+    /**
+     * @dev Toggle on-chain enforcement of eligibility condition attestation prior to joinDAO.
+     */
+    function setEligibilityEnforced(bool _enforced) external {
+        require(msg.sender == admin, "EquoraDAO: not admin");
+        eligibilityEnforced = _enforced;
+        emit EligibilityEnforcementUpdated(_enforced, block.timestamp);
+    }
+
     receive() external payable {}
 
     // ─── Core Join Function ────────────────────────────────────────────────────
@@ -262,6 +302,7 @@ contract EquoraDAO is ReentrancyGuard {
      */
     function joinDAO() external payable nonReentrant returns (uint256 position) {
         if (isDaoMember[msg.sender]) revert AlreadyMember();
+        if (eligibilityEnforced && !isEligibilityAttested[msg.sender]) revert NotQualified();
 
         // 1. Scan from Seat 1 to 100 for any blank/vacant slot (missed 48-hour retopup)
         uint256 vacantIndex = type(uint256).max;

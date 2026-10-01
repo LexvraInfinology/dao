@@ -36,6 +36,6 @@ export async function handleDepositRouted(event: {
   });
 
   console.log(
-    `[Vault] Deposit split: Total ${total} BTT (DAO: ${dao}, Salary: ${salary}, MagicBox: ${magicBox}, Rewards: ${rewards}) for ${user}`
+    `[Vault] Deposit split: Total ${total} TROB (DAO: ${dao}, Salary: ${salary}, MagicBox: ${magicBox}, Rewards: ${rewards}) for ${user}`
   );
 }

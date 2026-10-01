@@ -111,8 +111,6 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
       localStorage.removeItem('trobsafe_address');
       localStorage.removeItem('equora_auth_address');
       localStorage.removeItem('equora_jwt');
-      localStorage.removeItem('equora_dao_preview');
-      localStorage.removeItem('equora_dev_mode');
     } catch {}
     setStep(wallet.isInstalled ? 'connect' : 'detect');
     onClose();
@@ -410,24 +408,6 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
           )}
         </div>
 
-        {/* Bottom Dev Mode / Preview */}
-        <div className="pt-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => {
-              try {
-                sessionStorage.setItem('equora_dao_preview', 'true');
-                sessionStorage.setItem('equora_dao_preview_mode', 'true');
-                localStorage.setItem('equora_dev_mode', 'true');
-              } catch {}
-              onClose();
-              window.location.href = '/dao?dev=1';
-            }}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <span>Continue to DAO in Preview Mode →</span>
-          </button>
-        </div>
       </aside>
     </div>
   );

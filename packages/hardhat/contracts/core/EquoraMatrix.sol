@@ -79,6 +79,13 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     uint256 public constant BASE_SLOT_COST   = 30 * 10 ** 18;
     uint256 public constant MAX_UPLINE_DEPTH = 12;
 
+    /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
+    string public constant OFFICIAL_SR_BASE58      = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+    /// @dev Minimum creation timestamp for eligible deposit wallets: 1 October 2026 00:00:00 UTC
+    uint256 public constant MIN_WALLET_CREATION_DATE = 1790812800;
+    /// @dev Target daily free transactions for Matrix members (Formula: 5 TX/day)
+    uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
+
     // -------------------------------------------------------------------------
     // Enums
     // -------------------------------------------------------------------------

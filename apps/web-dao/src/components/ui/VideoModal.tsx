@@ -14,7 +14,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   isOpen,
   onClose,
   title = 'A Clearer Look at EQUORA Network',
-  videoSrc = 'https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov',
+  videoSrc = '/landing/Timeline_1_4K_kxuhex.mp4',
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 

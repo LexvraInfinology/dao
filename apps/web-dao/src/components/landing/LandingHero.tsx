@@ -35,14 +35,6 @@ export const LandingHero: React.FC = () => {
           className="w-full h-full object-cover object-[80%_center] xl:object-right max-w-full"
         >
           <source
-            src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
-            type="video/quicktime"
-          />
-          <source
-            src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mp4"
-            type="video/mp4"
-          />
-          <source
             src="/landing/Timeline_1_4K_kxuhex.mp4"
             type="video/mp4"
           />
@@ -110,14 +102,6 @@ export const LandingHero: React.FC = () => {
                   preload="auto"
                   className="w-full h-full object-cover"
                 >
-                  <source
-                    src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
-                    type="video/quicktime"
-                  />
-                  <source
-                    src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mp4"
-                    type="video/mp4"
-                  />
                   <source
                     src="/landing/Timeline_1_4K_kxuhex.mp4"
                     type="video/mp4"
@@ -221,7 +205,7 @@ export const LandingHero: React.FC = () => {
       <VideoModal
         isOpen={videoOpen}
         onClose={() => setVideoOpen(false)}
-        videoSrc="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
+        videoSrc="/landing/Timeline_1_4K_kxuhex.mp4"
         title="EQUORA Protocol Genesis Overview"
       />
     </section>

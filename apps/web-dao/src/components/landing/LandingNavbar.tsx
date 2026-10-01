@@ -95,7 +95,8 @@ export const LandingNavbar: React.FC = () => {
 
   const isConnected = mounted && Boolean(
     wallet.isConnected ||
-    auth.isAuthenticated
+    auth.isAuthenticated ||
+    storedAddr
   );
 
   const displayAddress = isConnected ? (
@@ -168,30 +169,30 @@ export const LandingNavbar: React.FC = () => {
         className="fixed top-2.5 sm:top-3.5 inset-x-0 z-50 flex flex-col items-center px-2.5 sm:px-6 pointer-events-none transition-all duration-300"
       >
         <div
-          className={`w-full max-w-[1040px] pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl transition-all duration-300 ${
+          className={`w-full max-w-[1140px] 2xl:max-w-[1180px] pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl transition-all duration-300 ${
             scrolled
-              ? 'shadow-[0_12px_32px_-6px_rgba(0,0,0,0.08),0_2px_8px_-2px_rgba(0,0,0,0.04)] py-2 px-3 sm:px-5 md:px-6 border-slate-300/80'
-              : 'shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_4px_rgba(0,0,0,0.03)] py-2 sm:py-2.5 px-3 sm:px-5 md:px-6'
+              ? 'shadow-[0_12px_32px_-6px_rgba(0,0,0,0.08),0_2px_8px_-2px_rgba(0,0,0,0.04)] py-2 px-3 sm:px-4 lg:px-5 xl:px-6 border-slate-300/80'
+              : 'shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_4px_rgba(0,0,0,0.03)] py-2 sm:py-2.5 px-3 sm:px-4 lg:px-5 xl:px-6'
           }`}
         >
-          <div className="flex items-center justify-between min-h-[44px] gap-1.5 sm:gap-4">
+          <div className="flex items-center justify-between min-h-[44px] gap-2 lg:gap-3 xl:gap-4 w-full">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group shrink-0">
               <div className="w-6.5 h-6.5 sm:w-7 sm:h-7 shrink-0 flex items-center justify-center">
                 <EquoraLogo className="w-6.5 h-6.5 sm:w-7 sm:h-7 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)] transition-transform group-hover:scale-105 duration-200" />
               </div>
-              <span className="text-[13.5px] min-[360px]:text-[14.5px] sm:text-[15px] font-semibold tracking-wide uppercase text-[#0F172A] shrink-0">
+              <span className="text-[13.5px] min-[360px]:text-[14.5px] sm:text-[15px] font-semibold tracking-wide uppercase text-[#0F172A] shrink-0 whitespace-nowrap">
                 EQUORA<span className="text-[#155EEF]">.FI</span>
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1">
+            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 2xl:gap-1.5 shrink-0">
               {navLinks.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
-                  className="px-2.5 xl:px-3 py-1.5 rounded-lg text-sm font-medium text-[#475467] hover:text-[#0F172A] hover:bg-slate-100/80 transition-all duration-150"
+                  className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded-lg text-[13px] xl:text-sm font-medium text-[#475467] hover:text-[#0F172A] hover:bg-slate-100/80 transition-all duration-150 whitespace-nowrap shrink-0"
                 >
                   {item.label}
                 </a>
@@ -199,34 +200,34 @@ export const LandingNavbar: React.FC = () => {
             </nav>
 
             {/* Desktop CTA actions */}
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
               {/* Dev Mode button: Direct bypass to /dao without wallet */}
               <DevModeButton />
 
-              {(!mounted || !wallet.isConnected) ? (
+              {!isConnected ? (
                 <button
                   onClick={handleConnectClick}
-                  className="h-10 px-5 rounded-xl font-semibold text-xs uppercase tracking-[0.06em] text-white bg-[#155EEF] hover:bg-[#124bcf] active:bg-[#0e3ea6] shadow-[0_1px_3px_rgba(21,94,239,0.3),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(21,94,239,0.3)] border border-blue-400/20 transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-[0.98]"
+                  className="h-9 xl:h-10 px-4 xl:px-5 rounded-xl font-semibold text-xs uppercase tracking-[0.05em] text-white bg-[#155EEF] hover:bg-[#124bcf] active:bg-[#0e3ea6] shadow-[0_1px_3px_rgba(21,94,239,0.3),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(21,94,239,0.3)] border border-blue-400/20 transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap active:scale-[0.98]"
                 >
                   <Wallet className="w-4 h-4 text-white shrink-0" />
                   <span>Connect Wallet</span>
                 </button>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
                   <button
                     onClick={() => setWalletModalOpen(true)}
-                    className="h-10 px-3.5 rounded-xl font-mono text-[11px] font-medium tabular-nums text-[#0F172A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="h-9 xl:h-10 px-2.5 xl:px-3 rounded-xl font-mono text-[11px] xl:text-[11.5px] font-medium tabular-nums text-[#0F172A] bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                     title="TrobSafe Wallet Connected"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{shortAddress}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="whitespace-nowrap select-none">{shortAddress}</span>
                   </button>
                   <Link
                     href="/dao"
-                    className="h-10 px-4 rounded-xl font-semibold text-xs uppercase tracking-[0.06em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all duration-200 flex items-center gap-1.5 group"
+                    className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-semibold text-xs uppercase tracking-[0.05em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all duration-200 flex items-center gap-1.5 group shrink-0 whitespace-nowrap"
                   >
                     <span>Dashboard</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
                   </Link>
                 </div>
               )}
@@ -234,7 +235,7 @@ export const LandingNavbar: React.FC = () => {
 
             {/* Mobile CTA + hamburger */}
             <div className="flex lg:hidden items-center gap-2 shrink-0">
-              {(!mounted || !wallet.isConnected) ? (
+              {!isConnected ? (
                 <button
                   onClick={handleConnectClick}
                   className="whitespace-nowrap h-9 px-3.5 sm:px-4 rounded-xl font-semibold text-[11px] sm:text-xs uppercase tracking-[0.04em] text-white bg-[#155EEF] hover:bg-[#124bcf] active:bg-[#0e3ea6] shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-[0.98]"

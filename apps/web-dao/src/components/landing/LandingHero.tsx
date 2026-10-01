@@ -8,7 +8,14 @@ import { useDaoStats } from '@/hooks/useApi';
 
 export const LandingHero: React.FC = () => {
   const [videoOpen, setVideoOpen] = useState(false);
+  const desktopVideoRef = React.useRef<HTMLVideoElement>(null);
+  const mobileVideoRef = React.useRef<HTMLVideoElement>(null);
   const { data: stats } = useDaoStats(30_000); // refresh every 30s
+
+  React.useEffect(() => {
+    desktopVideoRef.current?.play().catch(() => {});
+    mobileVideoRef.current?.play().catch(() => {});
+  }, []);
 
   const seatsClaimed = stats?.memberCount ?? 0;
   const isFull = seatsClaimed >= 100;
@@ -19,18 +26,29 @@ export const LandingHero: React.FC = () => {
       {/* Desktop Full-Bleed Video Background */}
       <div className="hidden lg:block absolute inset-0 z-0 pointer-events-none select-none overflow-hidden max-w-full">
         <video
+          ref={desktopVideoRef}
           autoPlay
           loop
           muted
           playsInline
-          preload="metadata"
-          poster="/landing/hero-bg.png"
-          onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+          preload="auto"
           className="w-full h-full object-cover object-[80%_center] xl:object-right max-w-full"
         >
           <source
-            src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790674302/Equora_video_no_Gemini_logo_aw95jx.mp4"
+            src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
+            type="video/quicktime"
+          />
+          <source
+            src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mp4"
             type="video/mp4"
+          />
+          <source
+            src="/landing/Timeline_1_4K_kxuhex.mp4"
+            type="video/mp4"
+          />
+          <source
+            src="/landing/Timeline_1_4K_kxuhex.mov"
+            type="video/quicktime"
           />
         </video>
         <div className="absolute inset-y-0 left-0 w-[55%] xl:w-[50%] bg-gradient-to-r from-[#F0F6FD] via-[#F0F6FD]/85 via-40% to-transparent z-0" />
@@ -84,18 +102,29 @@ export const LandingHero: React.FC = () => {
             <div className="block lg:hidden pt-4 pb-2">
               <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden shadow-xl border border-white/80 pointer-events-none select-none">
                 <video
+                  ref={mobileVideoRef}
                   autoPlay
                   loop
                   muted
                   playsInline
-                  preload="metadata"
-                  poster="/landing/hero-bg.png"
-                  onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
+                  preload="auto"
                   className="w-full h-full object-cover"
                 >
                   <source
-                    src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790674302/Equora_video_no_Gemini_logo_aw95jx.mp4"
+                    src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
+                    type="video/quicktime"
+                  />
+                  <source
+                    src="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mp4"
                     type="video/mp4"
+                  />
+                  <source
+                    src="/landing/Timeline_1_4K_kxuhex.mp4"
+                    type="video/mp4"
+                  />
+                  <source
+                    src="/landing/Timeline_1_4K_kxuhex.mov"
+                    type="video/quicktime"
                   />
                 </video>
               </div>
@@ -192,6 +221,7 @@ export const LandingHero: React.FC = () => {
       <VideoModal
         isOpen={videoOpen}
         onClose={() => setVideoOpen(false)}
+        videoSrc="https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov"
         title="EQUORA Protocol Genesis Overview"
       />
     </section>

@@ -46,10 +46,10 @@ export const DevModeButton: React.FC<DevModeButtonProps> = ({
       onClick={handleEnterDevMode}
       type="button"
       title="Direct access to /dao without connecting wallet (Dev Preview Mode)"
-      className={`group relative flex items-center gap-1.5 transition-all duration-200 cursor-pointer ${
+      className={`group relative flex items-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap select-none ${
         variant === 'compact'
-          ? 'h-7.5 px-2 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/80 shadow-xs'
-          : 'h-8 px-2.5 rounded-lg text-[11.5px] font-medium bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/70 transition-colors'
+          ? 'h-8 px-2 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/80 shadow-xs'
+          : 'h-9 xl:h-10 px-2.5 rounded-xl text-[11px] xl:text-[11.5px] font-medium bg-slate-100/90 hover:bg-slate-200/90 text-slate-600 hover:text-slate-900 border border-slate-200/70 transition-colors'
       } ${className}`}
     >
       <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-600 shrink-0">

@@ -14,7 +14,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   isOpen,
   onClose,
   title = 'A Clearer Look at EQUORA Network',
-  videoSrc = '/assets/equora_overview.mp4',
+  videoSrc = 'https://res.cloudinary.com/da9c3vejh/video/upload/v1790836338/Timeline_1_4K_kxuhex.mov',
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -70,12 +70,14 @@ export const VideoModal: React.FC<VideoModalProps> = ({
         <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black flex items-center justify-center shadow-inner">
           <video
             ref={videoRef}
-            src={videoSrc}
             controls
             autoPlay
             playsInline
             className="w-full h-full object-contain"
           >
+            <source src={videoSrc} type="video/quicktime" />
+            <source src="/landing/Timeline_1_4K_kxuhex.mp4" type="video/mp4" />
+            <source src="/landing/Timeline_1_4K_kxuhex.mov" type="video/quicktime" />
             Your browser does not support the video tag.
           </video>
         </div>

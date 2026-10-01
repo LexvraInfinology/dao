@@ -1615,7 +1615,7 @@ export function createApp(): Express {
       const { address } = (req as any).user as { address: string };
       const canonicalAddress = address.trim().toLowerCase();
 
-      const settings = await prisma.userSettings.upsert({
+      const settings = await (prisma as any).userSettings.upsert({
         where: { userAddress: canonicalAddress },
         create: { userAddress: canonicalAddress },
         update: {},
@@ -1660,7 +1660,7 @@ export function createApp(): Express {
         return;
       }
 
-      const settings = await prisma.userSettings.upsert({
+      const settings = await (prisma as any).userSettings.upsert({
         where: { userAddress: canonicalAddress },
         create: { userAddress: canonicalAddress, ...updateData },
         update: updateData,

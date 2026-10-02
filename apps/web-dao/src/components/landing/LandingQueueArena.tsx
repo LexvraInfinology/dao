@@ -32,7 +32,7 @@ export const LandingQueueArena: React.FC = () => {
     },
     {
       icon: <TrendingUp className="w-5 h-5 text-[#155EEF]" />,
-      title: '500% Baseline ROI',
+      title: '5X Cap ($1,500 USD)',
       description: 'Council members receive ongoing dividend pool distributions up to $1,500 worth of TROB.',
     },
   ];

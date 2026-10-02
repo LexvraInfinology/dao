@@ -928,7 +928,7 @@ export const LandingSimulator: React.FC = () => {
                 <div className="x5" id="x5" ref={x5Ref}>
                   <i></i><i></i><i></i><i></i><i></i>
                 </div>
-                <p>500% baseline earnings cap on initial deposit with continuous dividend distributions.</p>
+                <p>5X Cap ($1,500 USD) on initial deposit with continuous dividend distributions.</p>
               </div>
             </div>
 

@@ -232,7 +232,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   Seat #{seatPosition} Successfully Retopuped!
                 </h4>
                 <p className="text-xs text-[#4F6D87] max-w-sm mx-auto">
-                  Your 500% cap ($1,500 USD) has been reset to zero, and your seat remains permanently secured.
+                  Your 5X Cap ($1,500 USD) has been reset to zero, and your seat remains permanently secured.
                 </p>
               </div>
 
@@ -317,7 +317,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
                   {timeLeft.isExpired
                     ? `Your 48-hour retopup window has lapsed. Seat #${seatPosition} is now vacant and open to any queue claimant.`
-                    : `You have reached the 500% cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat and receive your instant cashback loop.`}
+                    : `You have reached the 5X Cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat and receive your instant cashback loop.`}
                 </p>
               </div>
 
@@ -349,7 +349,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
 
                 <div className="flex items-center justify-between text-[11px] text-[#4F6D87]">
                   <span>Restored Earning Capacity:</span>
-                  <span className="font-bold text-emerald-600">$1,500.00 USD (500% Fresh Cap)</span>
+                  <span className="font-bold text-emerald-600">$1,500.00 USD (5X Fresh Cap)</span>
                 </div>
               </div>
 

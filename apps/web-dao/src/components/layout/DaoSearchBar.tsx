@@ -53,9 +53,9 @@ const SEARCH_INDEX: SearchItem[] = [
     id: 'page_lounge',
     category: 'Pages',
     title: 'Member Lounge',
-    subtitle: 'SBT proof of membership, 500% earnings cap & governance access',
+    subtitle: 'SBT proof of membership, 5X Cap ($1,500 USD) & governance access',
     url: '/dao/lounge',
-    keywords: ['lounge', 'sbt', 'nft', 'cap', '500%', 'governance', 'dividends', 'vote'],
+    keywords: ['lounge', 'sbt', 'nft', 'cap', '5x', '1500', 'retopup', 'governance', 'dividends', 'vote'],
     icon: 'page',
   },
   {

@@ -141,10 +141,10 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                 type: 'retopup_alert',
                 title: isExpired
                   ? `Seat #${seatPos} Vacated (48h Expired)`
-                  : `⚡ 500% Cap Reached — 48h Retopup Active (Seat #${seatPos})`,
+                  : `⚡ 5X Cap ($1,500 USD) Reached — 48h Retopup Active (Seat #${seatPos})`,
                 message: isExpired
                   ? `The 48-hour re-topup deadline has expired without payment. Seat #${seatPos} is now vacant and open for others to claim.`
-                  : `You've reached $1,500 USD (500% cap). Re-topup $300 USD within 48 hours to secure your seat, reset your cap to zero, and receive your instant blockchain cashback loop (+${cashback} USD).`,
+                  : `You've reached the 5X Cap ($1,500 USD). Re-topup $300 USD within 48 hours to secure your seat, reset your cap to zero, and receive your instant blockchain cashback loop (+${cashback} USD).`,
                 timestamp: isExpired ? 'Expired' : 'URGENT (48h)',
                 read: false,
                 priority: !isExpired,

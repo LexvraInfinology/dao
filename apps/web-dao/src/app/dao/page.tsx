@@ -421,7 +421,7 @@ export default function DaoDashboardPage() {
                     $1,500 USD
                   </div>
                   <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
-                    500% Cap ($1,500 in TROB)
+                    5X Cap ($1,500 USD in TROB)
                   </div>
                 </div>
               </div>

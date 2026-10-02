@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { broadcastNativePayout } from '../../_lib/payoutRelayer';
+import { checkServerlessEligibility } from '../../_lib/eligibility';
 import { getActiveDaoAddress, getActiveDaoHex, isDaoAddressDeprecated } from '@/utils/trobAddress';
 import { EXPLORER_API_URL, TROB_PRICE_API_URL } from '@/config/env';
 
@@ -109,6 +110,22 @@ export async function POST(req: NextRequest) {
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()`
     );
+
+    // Strictly validate server-side eligibility (Wallet Date >= 1 Oct 2026 & Device Restriction)
+    const elig = await checkServerlessEligibility(address, clientFingerprint);
+    if (!elig.condition1.passed) {
+      return NextResponse.json({
+        success: false,
+        error: `Ineligible Wallet: ${elig.condition1.reason || 'Only wallets created on or after 1 October 2026 are eligible.'}`,
+      }, { status: 403 });
+    }
+
+    if (elig.deviceRestriction?.hasClaimed) {
+      return NextResponse.json({
+        success: false,
+        error: `Device Restriction: This physical device has already claimed Council Seat #${elig.deviceRestriction.claimedSeat}. The Genesis DAO strictly enforces 1 seat per physical device.`,
+      }, { status: 403 });
+    }
 
     // Anti-Sybil Check: Strictly 1 DAO Seat per Physical Device
     if (clientFingerprint) {

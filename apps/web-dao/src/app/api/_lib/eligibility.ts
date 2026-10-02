@@ -49,7 +49,7 @@ const OFFICIAL_SR_MAINNET_HEX = toTronHex(OFFICIAL_SR_MAINNET_B58);
 const OFFICIAL_SR_TESTNET_HEX = toTronHex(OFFICIAL_SR_TESTNET_B58);
 const MIN_WALLET_CREATION_TIMESTAMP = 1790812800000; // 01-10-2026
 
-export async function checkServerlessEligibility(address: string) {
+export async function checkServerlessEligibility(address: string, deviceFingerprint?: string | null) {
   const rawAddress = address.trim();
   const canonical = rawAddress.toLowerCase();
 
@@ -206,7 +206,34 @@ export async function checkServerlessEligibility(address: string) {
     }
   } catch {}
 
-  const eligibleToDeposit = condition1Passed && condition2Passed && waVerified;
+  // Anti-Sybil: Strictly 1 DAO Seat per Physical Device
+  let deviceRestriction: {
+    hasClaimed: boolean;
+    claimedSeat?: number;
+    claimedAddress?: string;
+  } = { hasClaimed: false };
+
+  if (deviceFingerprint && deviceFingerprint.trim()) {
+    try {
+      const devRes = await queryNeon<any>(
+        `SELECT id, position, address FROM "DaoMember" 
+         WHERE "deviceFingerprint" = $1 AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
+        [deviceFingerprint.trim()]
+      );
+      if (devRes.rows.length > 0) {
+        const claimed = devRes.rows[0];
+        if (claimed.address.toLowerCase() !== canonical) {
+          deviceRestriction = {
+            hasClaimed: true,
+            claimedSeat: claimed.position,
+            claimedAddress: claimed.address,
+          };
+        }
+      }
+    } catch {}
+  }
+
+  const eligibleToDeposit = condition1Passed && condition2Passed && waVerified && !deviceRestriction.hasClaimed;
 
   return {
     address: rawAddress,
@@ -241,9 +268,12 @@ export async function checkServerlessEligibility(address: string) {
       joined: waVerified,
       verifiedAt: waVerifiedAt,
     },
+    deviceRestriction,
     eligibleToDeposit,
     status: eligibleToDeposit
       ? 'Eligible to Deposit'
+      : deviceRestriction.hasClaimed
+      ? `Deposit Blocked: This physical device has already claimed Council Seat #${deviceRestriction.claimedSeat}. Only 1 seat per physical device is permitted.`
       : !condition1Passed
       ? `Deposit Blocked: ${condition1Reason}`
       : !condition2Passed

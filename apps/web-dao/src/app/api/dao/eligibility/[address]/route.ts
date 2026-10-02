@@ -5,7 +5,7 @@ import { checkServerlessEligibility } from '../../../_lib/eligibility';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { address: string } }
 ) {
   try {
@@ -14,9 +14,14 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Address is required' }, { status: 400 });
     }
 
+    const deviceFingerprint =
+      req.nextUrl.searchParams.get('deviceFingerprint') ||
+      req.headers.get('x-device-fingerprint') ||
+      null;
+
     // Try Express backend if configured
     const backendRes = await fetchFromBackend<{ success: boolean; data?: any; error?: string }>(
-      `/api/dao/eligibility/${address}`
+      `/api/dao/eligibility/${address}${deviceFingerprint ? `?deviceFingerprint=${encodeURIComponent(deviceFingerprint)}` : ''}`
     );
 
     if (backendRes && backendRes.success && backendRes.data) {
@@ -24,7 +29,7 @@ export async function GET(
     }
 
     // Serverless Direct Execution
-    const eligibility = await checkServerlessEligibility(address);
+    const eligibility = await checkServerlessEligibility(address, deviceFingerprint);
     return NextResponse.json({
       success: true,
       data: eligibility,

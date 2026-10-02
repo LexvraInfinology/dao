@@ -33,6 +33,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { TermsModal } from '@/components/dao/TermsModal';
+import { WhatsAppJoinModal } from '@/components/dao/WhatsAppJoinModal';
 import {
   triggerSmartConnectWallet,
   TROBSAFE_CHROME_STORE_URL,
@@ -91,6 +92,11 @@ interface EligibilityData {
     joined: boolean;
     verifiedAt: string | null;
   };
+  deviceRestriction?: {
+    hasClaimed: boolean;
+    claimedSeat?: number;
+    claimedAddress?: string;
+  };
   eligibleToDeposit: boolean;
   status: string;
   formula?: any;
@@ -116,6 +122,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // WhatsApp community join state
   const [waJoining, setWaJoining]             = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [isLocalMember, setIsLocalMember]     = useState(false);
 
   // Resource staking & SR voting helper state
@@ -183,12 +190,20 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // Note: Do not kick disconnected mobile users back to landing page;
   // allow them to view registration criteria and connect wallet directly on mobile.
 
-  // ── Fetch protocol eligibility conditions from API ──────────────────────────
+  // ── Fetch protocol eligibility conditions from API with Hardware Anti-Sybil ─
   const fetchEligibility = useCallback(async () => {
     if (!activeAddress) return;
     setEligibilityLoading(true);
     try {
-      const res = await fetch(`/api/dao/eligibility/${encodeURIComponent(activeAddress)}`);
+      const deviceFingerprint = await getDeviceFingerprint();
+      const res = await fetch(
+        `/api/dao/eligibility/${encodeURIComponent(activeAddress)}?deviceFingerprint=${encodeURIComponent(deviceFingerprint)}`,
+        {
+          headers: {
+            'x-device-fingerprint': deviceFingerprint,
+          },
+        }
+      );
       const json = await res.json();
       if (json.success && json.data) {
         setEligibility(json.data);
@@ -220,41 +235,33 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         return {
           ...prev,
           whatsapp: { joined: true, verifiedAt: prev.whatsapp?.verifiedAt || new Date().toISOString() },
-          eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed),
+          eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed && !prev.deviceRestriction?.hasClaimed),
         };
       });
     }
   }, [activeAddress]);
 
-  // ── WhatsApp Community One-Click Join & Auto-Verification ───────────────────
-  const handleJoinWhatsApp = async () => {
-    setWaJoining(true);
-    if (typeof window !== 'undefined') {
-      window.open(OFFICIAL_WHATSAPP_URL, '_blank', 'noopener,noreferrer');
-    }
+  // ── WhatsApp Community Safe Trigger (Opens modal to avoid mobile webview crash) ──
+  const handleOpenWhatsAppModal = () => {
+    setWhatsappModalOpen(true);
+  };
+
+  const handleWhatsAppVerified = () => {
     if (activeAddress) {
       try {
         localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
         localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
-        await fetch('/api/dao/verify-whatsapp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: activeAddress }),
-        });
-      } catch (err) {
-        console.warn('[handleJoinWhatsApp] verification note:', err);
-      }
+      } catch {}
       setEligibility((prev) =>
         prev
           ? {
               ...prev,
               whatsapp: { joined: true, verifiedAt: new Date().toISOString() },
-              eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed),
+              eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed && !prev.deviceRestriction?.hasClaimed),
             }
           : prev
       );
     }
-    setWaJoining(false);
   };
 
   // ── Live On-Chain Resource Staking & SR Voting via Injected Wallet ──────────
@@ -306,20 +313,23 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         const votesToCast = Math.max(1, Math.min(1000, totalFrozen));
 
         let txVote: any = null;
-        // Prioritize Testnet SR on testnet environments
-        try {
-          txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_TESTNET_SR]: votesToCast }, activeAddress);
-        } catch { /* ignore */ }
-
-        if (!txVote || txVote.Error) {
+        const voteMethod = (tw.transactionBuilder?.voteWitnessAccount || tw.transactionBuilder?.vote)?.bind(tw.transactionBuilder);
+        if (voteMethod) {
+          // Prioritize Testnet SR on testnet environments
           try {
-            txVote = await tw.transactionBuilder.vote({ [OFFICIAL_EQUORA_SR]: votesToCast }, activeAddress);
+            txVote = await voteMethod({ [OFFICIAL_EQUORA_TESTNET_SR]: votesToCast }, activeAddress);
           } catch { /* ignore */ }
-        }
 
-        if (txVote && !txVote.Error) {
-          const signedVote = await tw.trx.sign(txVote);
-          await tw.trx.sendRawTransaction(signedVote);
+          if (!txVote || txVote.Error) {
+            try {
+              txVote = await voteMethod({ [OFFICIAL_EQUORA_SR]: votesToCast }, activeAddress);
+            } catch { /* ignore */ }
+          }
+
+          if (txVote && !txVote.Error) {
+            const signedVote = await tw.trx.sign(txVote);
+            await tw.trx.sendRawTransaction(signedVote);
+          }
         }
       }
 
@@ -352,6 +362,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
     if (!termsAccepted) {
       setPayError('You must accept the Terms & Conditions before registering.');
+      return;
+    }
+    if (eligibility?.deviceRestriction?.hasClaimed) {
+      setPayError(
+        `Device Restriction: This physical device has already registered Council Seat #${eligibility.deviceRestriction.claimedSeat}. Only 1 seat per physical device is permitted.`
+      );
       return;
     }
     if (!eligibility?.condition1.passed) {
@@ -494,6 +510,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     termsAccepted &&
     eligibility?.condition1.passed &&
     eligibility?.condition2.passed &&
+    !eligibility?.deviceRestriction?.hasClaimed &&
     (eligibility?.whatsapp.joined || (activeAddress && typeof window !== 'undefined' && (localStorage.getItem(`equora_wa_joined_${activeAddress}`) === 'true' || localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`) === 'true'))) &&
     priceData &&
     priceData.seatEntryTrob > 0
@@ -624,6 +641,30 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
             {/* ── RIGHT COLUMN: Wallet, Requirements, Verification, Action CTA ────── */}
             <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+
+              {/* ── Anti-Sybil Device Limit Warning (Enforces 1 Seat Per Device) ── */}
+              {eligibility?.deviceRestriction?.hasClaimed && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300/80 text-amber-950 font-sans space-y-1.5 shadow-xs">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                        Device Restriction Enforced (1 Seat Per Device)
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
+                        This physical device is already associated with{' '}
+                        <strong className="font-bold text-amber-950">
+                          Council Seat #{eligibility.deviceRestriction.claimedSeat}
+                        </strong>{' '}
+                        ({eligibility.deviceRestriction.claimedAddress?.slice(0, 6)}...{eligibility.deviceRestriction.claimedAddress?.slice(-4)}).
+                        To protect decentralized governance and prevent Sybil farming, only 1 seat per physical device is permitted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ── 1. YOUR WALLET ─────────────────────────────────────────────── */}
               <div className="space-y-1.5">
@@ -799,7 +840,20 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       <div className="w-6 h-6 rounded-lg bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0">
                         <Calendar className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
                       </div>
-                      <span className="text-[#334155] text-[11px] sm:text-xs font-medium truncate">Activation Date (≥ 1 Oct 2026)</span>
+                      <div className="min-w-0">
+                        <span className="text-[#334155] text-[11px] sm:text-xs font-medium block truncate">
+                          Activation Date (≥ 1 Oct 2026)
+                        </span>
+                        {eligibility?.condition1.creationDate && (
+                          <span className="text-[10px] text-[#60739A] block truncate">
+                            {new Date(eligibility.condition1.creationDate).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {eligibility?.condition1.passed ? (
                       <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
@@ -874,18 +928,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     </div>
                   </div>
 
-                  {/* Single Clean WhatsApp Action Button */}
+                  {/* Single Clean WhatsApp Action Button - Opens Modal To Prevent Mobile WebView Crash */}
                   {eligibility?.whatsapp.joined ? (
                     <div className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] sm:text-xs flex items-center gap-1.5 shrink-0 shadow-xs">
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                       <span>Joined</span>
                     </div>
                   ) : (
-                    <a
-                      href={OFFICIAL_WHATSAPP_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={handleJoinWhatsApp}
+                    <button
+                      type="button"
+                      onClick={handleOpenWhatsAppModal}
                       className="px-4 py-2 rounded-xl bg-[#1FAF51] hover:bg-[#178C40] active:scale-95 text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-md shrink-0 transition-all cursor-pointer font-sans flex items-center gap-1.5"
                     >
                       {waJoining ? (
@@ -896,7 +948,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                           <ExternalLink className="w-3 h-3" />
                         </>
                       )}
-                    </a>
+                    </button>
                   )}
                 </div>
 
@@ -995,6 +1047,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   </>
                 ) : !wallet.isConnected ? (
                   <span>Connect TrobSafe Wallet to Register</span>
+                ) : eligibility?.deviceRestriction?.hasClaimed ? (
+                  <span className="leading-snug">
+                    Blocked: Device Already Claimed Seat #{eligibility.deviceRestriction.claimedSeat}
+                  </span>
                 ) : !eligibility?.condition1.passed ? (
                   <span className="leading-snug">Not Eligible: Wallet Must Be Activated On/After 1 Oct 2026</span>
                 ) : !eligibility?.condition2.passed ? (
@@ -1030,6 +1086,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         isOpen={termsModalOpen}
         onClose={() => setTermsModalOpen(false)}
         onAccept={() => setTermsAccepted(true)}
+      />
+      <WhatsAppJoinModal
+        isOpen={whatsappModalOpen}
+        onClose={() => setWhatsappModalOpen(false)}
+        onVerified={handleWhatsAppVerified}
+        address={activeAddress}
       />
     </>
   );

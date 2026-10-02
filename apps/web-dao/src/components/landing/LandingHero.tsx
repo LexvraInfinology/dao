@@ -24,7 +24,7 @@ export const LandingHero: React.FC = () => {
   }, []);
 
   return (
-    <section className="relative pt-18 min-[360px]:pt-20 sm:pt-28 lg:pt-36 pb-10 sm:pb-16 lg:pb-20 overflow-hidden min-h-[480px] min-[360px]:min-h-[520px] sm:min-h-[620px] lg:min-h-[720px] flex items-center bg-[#EBF3FC] border-b border-slate-200/80">
+    <section className="relative pt-16 min-[360px]:pt-20 sm:pt-28 lg:pt-36 pb-6 min-[360px]:pb-8 sm:pb-16 lg:pb-20 overflow-hidden min-h-[560px] min-[360px]:min-h-[600px] sm:min-h-[640px] lg:min-h-[720px] flex flex-col justify-end lg:justify-center bg-[#EBF3FC] border-b border-slate-200/80">
       {/* Background Media Container — Preserves scene composition without aggressive cropping or zooming */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden max-w-full">
         {/* Instant Fallback WebP Image (87 KB) — Instant display, zero blank state */}
@@ -34,7 +34,7 @@ export const LandingHero: React.FC = () => {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[64%_center] sm:object-[70%_center] lg:object-[78%_center] xl:object-right transition-opacity duration-700"
+          className="object-cover object-[center_18%] sm:object-[70%_center] lg:object-[78%_center] xl:object-right transition-opacity duration-700"
         />
 
         {/* Web-Optimized 1080p Video (1.91 MB) — Smooth fade-in ONLY once buffered and ready to play */}
@@ -47,7 +47,7 @@ export const LandingHero: React.FC = () => {
           preload="auto"
           onCanPlayThrough={handleVideoReady}
           onLoadedData={handleVideoReady}
-          className={`w-full h-full object-cover object-[64%_center] sm:object-[70%_center] lg:object-[78%_center] xl:object-right max-w-full transition-opacity duration-700 ${
+          className={`w-full h-full object-cover object-[center_18%] sm:object-[70%_center] lg:object-[78%_center] xl:object-right max-w-full transition-opacity duration-700 ${
             videoLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -56,15 +56,18 @@ export const LandingHero: React.FC = () => {
             type="video/mp4"
           />
         </video>
+
+        {/* Soft Ambient Bottom Gradient Vignette on Mobile — Ensures strong text contrast without blocking the scene */}
+        <div className="absolute inset-x-0 bottom-0 h-72 sm:h-48 lg:hidden bg-gradient-to-t from-[#EBF3FC] via-[#EBF3FC]/75 to-transparent pointer-events-none" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-3.5 sm:px-8 lg:px-12 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          {/* Left Column — Frosted glass panel on mobile so text is 100% visible, dissolving into natural sky on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-end lg:items-center">
+          {/* Left Column — Anchored towards bottom-left on mobile with unobstructed view of the background video */}
           <div className="lg:col-span-7 xl:col-span-6 text-left">
-            <div className="max-w-[340px] min-[380px]:max-w-[380px] sm:max-w-lg lg:max-w-xl p-3.5 min-[360px]:p-4 sm:p-6 lg:p-0 rounded-2xl sm:rounded-3xl lg:rounded-none bg-white/80 sm:bg-white/70 lg:bg-transparent backdrop-blur-md sm:backdrop-blur-sm lg:backdrop-blur-none border border-white/90 sm:border-white/70 lg:border-none shadow-[0_8px_30px_rgba(15,23,42,0.06)] lg:shadow-none space-y-3 sm:space-y-5">
+            <div className="max-w-[325px] min-[360px]:max-w-[360px] min-[400px]:max-w-[400px] sm:max-w-lg lg:max-w-xl p-0 rounded-none bg-transparent border-none shadow-none space-y-2.5 min-[360px]:space-y-3 sm:space-y-5">
               {/* Pill Badge */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/95 border border-blue-200/90 shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs border border-blue-200/90 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
                   Genesis DAO Phase 1
@@ -72,14 +75,14 @@ export const LandingHero: React.FC = () => {
               </div>
 
               {/* Headline */}
-              <h1 className="text-[21px] min-[360px]:text-[24px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-extrabold uppercase text-[#0B132B] leading-[1.12] tracking-tight text-left">
+              <h1 className="text-[22px] min-[360px]:text-[25px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-black uppercase text-[#071437] leading-[1.12] tracking-tight text-left drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] sm:drop-shadow-none">
                 100 Seats.<br />
                 <span className="text-[#155EEF]">One Council.</span><br />
                 A Shared Future.
               </h1>
 
               {/* Subtitle */}
-              <p className="text-[11.5px] min-[360px]:text-xs sm:text-base text-[#334155] font-medium leading-relaxed text-left">
+              <p className="text-[11.5px] min-[360px]:text-[12.5px] sm:text-base text-[#1E293B] font-semibold sm:font-medium leading-snug sm:leading-relaxed text-left drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] sm:drop-shadow-none">
                 Fixed sovereign positions with direct dividend distribution and governance rights.
                 Zero referrals, infinite protocol cash flow.
               </p>
@@ -96,7 +99,7 @@ export const LandingHero: React.FC = () => {
 
                 <button
                   onClick={() => setVideoOpen(true)}
-                  className="px-3 min-[360px]:px-4 sm:px-6 py-2 min-[360px]:py-2.5 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#334155] hover:text-[#0B132B] bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                  className="px-3 min-[360px]:px-4 sm:px-6 py-2 min-[360px]:py-2.5 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#071437] hover:text-[#0B132B] bg-white/95 hover:bg-white border border-slate-200/90 shadow-2xs transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
                 >
                   <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-50 flex items-center justify-center text-[#155EEF] shrink-0">
                     <Play className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current ml-0.5" />

@@ -305,11 +305,6 @@ export function createApp(): Express {
   const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
   const OFFICIAL_SR_TESTNET_B58 = "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
 
-  // Official WhatsApp Verification Passcode loaded strictly from .env (no hardcoded fallback)
-  const getOfficialWhatsappPasscode = (): string => {
-    return (process.env.WHATSAPP_COMMUNITY_PASSCODE || "").trim().toUpperCase();
-  };
-
   const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
 
   async function checkWalletEligibility(address: string) {

@@ -270,10 +270,12 @@ export async function getOnChainDaoTransactions(
 
     cachedParsedItems = parsedItems;
 
-    // Asynchronously reconcile discovered on-chain members into Neon DB without blocking response
-    syncOnChainMembersToDb(discoveredMembers).catch((err) => {
-      console.warn('[BlockchainSync] DB sync error:', err);
-    });
+    // Reconcile discovered on-chain members into Neon DB only if explicitly enabled
+    if (process.env.ENABLE_HISTORICAL_EXPLORER_SYNC === 'true') {
+      syncOnChainMembersToDb(discoveredMembers).catch((err) => {
+        console.warn('[BlockchainSync] DB sync error:', err);
+      });
+    }
 
     return filterItems(cachedParsedItems, filterAddress);
   } catch (err) {

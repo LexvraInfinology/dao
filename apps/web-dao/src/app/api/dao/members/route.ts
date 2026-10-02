@@ -34,11 +34,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(backendRes);
   }
 
-  // Sync on-chain members if any occurred directly on contract
-  try {
-    await getOnChainDaoTransactions();
-  } catch {}
-
   // 2. Direct Serverless Fallback to Neon Database (Vercel native)
   try {
     const pageNum = parseInt(page, 10);

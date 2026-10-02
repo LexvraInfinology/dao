@@ -42,64 +42,67 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    // 2. Fetch direct on-chain smart contract transactions from EquoraDAO.sol
-    const onChainItems = await getOnChainDaoTransactions(address, true);
-
-    // 3. Primary source: Blockchain ledger. Fallback to DB only if blockchain explorer network error
+    // 2. Fetch transactions directly from DaoEvent in Neon DB
     let rawList: TransactionItem[] = [];
-    if (onChainItems && onChainItems.length > 0) {
-      rawList = onChainItems;
-    } else {
-      try {
-        let whereClauses: string[] = [];
-        let params: any[] = [];
+    try {
+      let whereClauses: string[] = [];
+      let params: any[] = [];
 
-        if (address && address.trim()) {
-          params.push(address.trim().toLowerCase());
-          whereClauses.push(`LOWER("userAddress") = $${params.length}`);
-        }
-
-        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-        const rowsRes = await queryNeon<any>(
-          `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst", "priceSource", reason
-           FROM "DaoEvent"
-           ${whereSql}
-           ORDER BY "timestamp" DESC, "createdAt" DESC
-           LIMIT 200`,
-          params
-        );
-
-        rawList = rowsRes.rows.map((evt) => {
-          const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-          const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
-          const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
-
-          return {
-            id: evt.id,
-            type: evt.eventType as any,
-            typeLabel:
-              evt.reason ||
-              (evt.eventType === 'joined'
-                ? `Council Seat #${evt.incomingPosition || ''} Activated`
-                : evt.eventType === 'pushed'
-                ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-                : evt.eventType === 'retopup'
-                ? '5X Cap Retopup'
-                : 'Dividend Reward Claimed'),
-            amountBtt: amtBtt,
-            amountTrob: amtBtt,
-            amountUsd: amtUsd,
-            isPositive,
-            from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-            to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-            txHash: evt.txHash || '',
-            timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-            status: 'Confirmed',
-          };
-        });
-      } catch (dbErr) {
-        console.warn('[Transactions API] DB fetch warning:', dbErr);
+      if (address && address.trim()) {
+        params.push(address.trim().toLowerCase());
+        whereClauses.push(`LOWER("userAddress") = $${params.length}`);
       }
+
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const rowsRes = await queryNeon<any>(
+        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
+         FROM "DaoEvent"
+         ${whereSql}
+         ORDER BY "timestamp" DESC, "createdAt" DESC
+         LIMIT 200`,
+        params
+      );
+
+      rawList = rowsRes.rows.map((evt) => {
+        const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+        const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+        const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
+
+        return {
+          id: evt.id,
+          type: evt.eventType as any,
+          typeLabel:
+            evt.reason ||
+            (evt.eventType === 'joined'
+              ? `Council Seat #${evt.incomingPosition || ''} Activated`
+              : evt.eventType === 'pushed'
+              ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+              : evt.eventType === 'retopup'
+              ? '5X Cap Retopup'
+              : 'Dividend Reward Claimed'),
+          amountBtt: amtBtt,
+          amountTrob: amtBtt,
+          amountUsd: amtUsd,
+          isPositive,
+          from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+          to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+          txHash: evt.txHash || '',
+          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+          status: 'Confirmed',
+        };
+      });
+    } catch (dbErr) {
+      console.warn('[Transactions API] DB fetch warning:', dbErr);
+    }
+
+    // 3. Fallback to on-chain explorer scraper only if explicitly enabled
+    if (rawList.length === 0 && process.env.ENABLE_LEGACY_EXPLORER_TXS === 'true') {
+      try {
+        const onChainItems = await getOnChainDaoTransactions(address, true);
+        if (onChainItems && onChainItems.length > 0) {
+          rawList = onChainItems;
+        }
+      } catch {}
     }
 
     // 4. Apply search and type filtering

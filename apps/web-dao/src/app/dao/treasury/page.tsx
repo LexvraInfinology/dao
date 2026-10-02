@@ -6,6 +6,7 @@ import { TreasuryBalanceCard } from '@/components/dao/treasury/TreasuryBalanceCa
 import { TreasuryWithdrawCard } from '@/components/dao/treasury/TreasuryWithdrawCard';
 import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 export default function DaoTreasuryPage() {
   const wallet = useWallet();
@@ -36,7 +37,7 @@ export default function DaoTreasuryPage() {
         <TreasuryBalanceCard
           balance={balance}
           totalVaultAssets={lounge?.totalReceivedUsd}
-          contractAddress={process.env.NEXT_PUBLIC_DAO_ADDRESS}
+          contractAddress={getActiveDaoAddress()}
         />
         <TreasuryWithdrawCard
           availableBalance={balance}
@@ -57,7 +58,7 @@ export default function DaoTreasuryPage() {
         <TreasuryBalanceCard
           balance={balance}
           totalVaultAssets={lounge?.totalReceivedUsd}
-          contractAddress={process.env.NEXT_PUBLIC_DAO_ADDRESS}
+          contractAddress={getActiveDaoAddress()}
         />
       </div>
     </div>

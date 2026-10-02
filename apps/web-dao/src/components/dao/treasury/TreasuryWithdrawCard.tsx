@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, Zap, Wallet, Layers, ArrowRight, Info, AlertTriangle, Check } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface TreasuryWithdrawCardProps {
   availableBalance?: number;
@@ -37,7 +38,7 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
     setStatus('claiming');
 
     try {
-      const daoAddress = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+      const daoAddress = getActiveDaoAddress();
       if (daoAddress && wallet.isConnected) {
         const result = await wallet.callContract({
           contract_address:  daoAddress,

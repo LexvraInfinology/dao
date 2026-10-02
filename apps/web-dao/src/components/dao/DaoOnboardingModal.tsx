@@ -19,12 +19,9 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
-const DAO_CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_DAO_ADDRESS &&
-  process.env.NEXT_PUBLIC_DAO_ADDRESS !== '0x4b6aB5F819A515382B0dEB6935D793817bB4af28'
-    ? process.env.NEXT_PUBLIC_DAO_ADDRESS
-    : 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
 export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 
 export const DaoOnboardingModal: React.FC = () => {

@@ -7,10 +7,48 @@ import { sha256, getBytes } from 'ethers';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
+export const ACTIVE_DAO_BASE58 = 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+export const ACTIVE_DAO_HEX = '4196cc34af00df982ef8260849f1d0747a0de3366e';
+
+export const DEPRECATED_DAO_ADDRESSES = new Set([
+  'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD',
+  '415467fea66ec96d1d9d0f5063cee941a24eb7e5cf',
+  '0x5467fea66ec96d1d9d0f5063cee941a24eb7e5cf',
+  '0x4b6aB5F819A515382B0dEB6935D793817bB4af28',
+  '0x0000000000000000000000000000000000000000',
+  '',
+]);
+
+export function isDaoAddressDeprecated(addr?: string | null): boolean {
+  if (!addr) return true;
+  const clean = addr.trim();
+  if (DEPRECATED_DAO_ADDRESSES.has(clean)) return true;
+  const hex = toTronHex(clean);
+  if (DEPRECATED_DAO_ADDRESSES.has(hex)) return true;
+  return false;
+}
+
+export function getActiveDaoAddress(): string {
+  const env = (process.env.NEXT_PUBLIC_DAO_ADDRESS || process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || '').trim();
+  if (!env || DEPRECATED_DAO_ADDRESSES.has(env)) {
+    return ACTIVE_DAO_BASE58;
+  }
+  return env;
+}
+
+export function getActiveDaoHex(): string {
+  const env = (process.env.NEXT_PUBLIC_DAO_HEX || '').trim();
+  const clean = env.replace(/^0x/, '41').toLowerCase();
+  if (!env || DEPRECATED_DAO_ADDRESSES.has(env) || DEPRECATED_DAO_ADDRESSES.has(clean)) {
+    return ACTIVE_DAO_HEX;
+  }
+  return clean;
+}
+
 export const DEPLOYED_CONTRACTS = {
   EquoraDAO: {
-    base58: process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup',
-    hex: (process.env.NEXT_PUBLIC_DAO_HEX || '0x96cc34af00df982ef8260849f1d0747a0de3366e').replace(/^0x/, '41'),
+    base58: getActiveDaoAddress(),
+    hex: getActiveDaoHex(),
   },
   EquoraToken: {
     base58: 'TFUBj9wdogDvS212LwqMcw5AjxaBcaYjaR',

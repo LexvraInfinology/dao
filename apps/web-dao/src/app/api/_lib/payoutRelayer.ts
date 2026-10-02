@@ -4,7 +4,33 @@ import crypto from 'crypto';
 const FULLNODE_URL = process.env.FULLNODE_URL || 'https://fullnode-one-testnet.trobchain.com';
 
 function getDeployerWallet(): { key: string; hexAddress: string } | null {
-  const rawKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
+  let rawKey = (process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY)?.trim();
+  if (!rawKey && typeof process !== 'undefined') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const candidates = [
+        path.resolve(process.cwd(), '.env.local'),
+        path.resolve(process.cwd(), '.env'),
+        path.resolve(process.cwd(), '../../.env'),
+        path.resolve(process.cwd(), '../.env'),
+        path.resolve(__dirname, '../../../../.env'),
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand)) {
+          const lines = fs.readFileSync(cand, 'utf8').split('\n');
+          for (const line of lines) {
+            const match = line.match(/^DEPLOYER_PRIVATE_KEY\s*=\s*(.+)$/);
+            if (match) {
+              rawKey = match[1].trim().replace(/^["']|["']$/g, '');
+              break;
+            }
+          }
+          if (rawKey) break;
+        }
+      }
+    } catch {}
+  }
   if (!rawKey) return null;
   const cleanKey = rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`;
   try {

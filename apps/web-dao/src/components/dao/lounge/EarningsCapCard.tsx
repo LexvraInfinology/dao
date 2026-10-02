@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Info, AlertTriangle, Clock, Loader2, ArrowRight, Zap, TrendingUp, X } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { RetopupModal } from './RetopupModal';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface EarningsCapCardProps {
   variant?: 'desktop' | 'mobile' | 'auto';
@@ -96,7 +97,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   async function handleRetopup() {
     try {
       setRetopupLoading(true);
-      const contractAddress = process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+      const contractAddress = getActiveDaoAddress();
       const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
       const activeAddr = wallet.base58Address || wallet.hexAddress || '';
 

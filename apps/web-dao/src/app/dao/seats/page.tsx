@@ -18,7 +18,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { Check, Loader2 } from 'lucide-react';
 
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
-import { DEPLOYED_CONTRACTS } from '@/utils/trobAddress';
+import { DEPLOYED_CONTRACTS, getActiveDaoAddress } from '@/utils/trobAddress';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 interface ApiMembersPayload {
@@ -99,13 +99,7 @@ export default function CouncilSeatsPage() {
 
     const seatEntryTrob = price?.seatEntryTrob ?? Math.round((300 / (price?.priceUsd || 0.056)) * 100) / 100;
     const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
-    const configuredDao = process.env.NEXT_PUBLIC_DAO_ADDRESS;
-    const daoAddress =
-      configuredDao &&
-      configuredDao !== '0x4b6aB5F819A515382B0dEB6935D793817bB4af28' &&
-      configuredDao !== '0x0000000000000000000000000000000000000000'
-        ? configuredDao
-        : DEPLOYED_CONTRACTS.EquoraDAO.base58;
+    const daoAddress = getActiveDaoAddress();
     const activeAddr = wallet.base58Address ?? wallet.hexAddress ?? '';
 
     try {

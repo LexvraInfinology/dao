@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Zap, CheckCircle2, ShieldCheck, ArrowRight, Wallet, Info } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface ClaimableDividendsCardProps {
   initialAmount?: number;     // Unclaimed fallback if any (normally 0)
@@ -43,7 +44,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
     setStatus('claiming');
 
     try {
-      const daoAddress = process.env.NEXT_PUBLIC_DAO_ADDRESS ?? '';
+      const daoAddress = getActiveDaoAddress();
       if (daoAddress && wallet.isConnected) {
         // claimFallback() on the EquoraDAO contract
         const result = await wallet.callContract({

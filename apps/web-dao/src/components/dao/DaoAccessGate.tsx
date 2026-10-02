@@ -42,9 +42,10 @@ import {
 } from '@/utils/walletConnect';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 // ─── Constants & Addresses ───────────────────────────────────────────────────
-const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
 const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';

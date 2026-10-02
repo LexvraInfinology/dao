@@ -17,6 +17,7 @@ import {
 import { useWallet } from '@/context/WalletContext';
 import { playPriorityAlertChime } from '@/utils/soundEffects';
 import { getExplorerTxUrl } from '@/utils/explorer';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface RetopupModalProps {
   isOpen: boolean;
@@ -116,8 +117,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
     setError(null);
 
     try {
-      const contractAddress =
-        process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+      const contractAddress = getActiveDaoAddress();
       const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
 
       let txId: string | null = null;

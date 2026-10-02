@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 export const dynamic = 'force-dynamic';
 
-const PROTOCOL_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
+const PROTOCOL_ADDRESS = getActiveDaoAddress();
 
 export async function GET(req: NextRequest) {
   try {

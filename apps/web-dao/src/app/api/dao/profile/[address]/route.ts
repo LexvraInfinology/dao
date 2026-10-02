@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,7 @@ export async function GET(
           tokenId: m.nftTokenId || m.position,
           name: `Genesis Council Seat #${m.position}`,
           type: 'Soulbound Token (SBT)',
-          contractAddress: process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup',
+          contractAddress: getActiveDaoAddress(),
           mintDate: m.joinedAt,
           rarity: 'Genesis Founder (1 of 100)',
           image: '/badges/genesis-founder.png',

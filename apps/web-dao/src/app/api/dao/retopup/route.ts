@@ -84,24 +84,26 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // 5. Record instant cashback returned to member from retopup loop
+    // Broadcast instant cashback payout on-chain
+    let cashbackTxId: string | null = null;
+    try {
+      cashbackTxId = await broadcastNativePayout(m.address, cashbackTrob);
+    } catch (e) {
+      console.error(`[Payout Relayer] Failed to broadcast retopup cashback to Seat #${pos}:`, e);
+    }
+
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
       [
         m.address,
         pos,
-        `${cleanTx}-retopup-cashback`,
+        cashbackTxId || `${cleanTx}-retopup-cashback`,
         cashbackTrob,
         cashbackUsd,
         `Instant Cashback on Retopup Loop (Seat #${pos})`,
       ]
     );
-
-    // Broadcast instant cashback payout on-chain
-    broadcastNativePayout(m.address, cashbackTrob).catch((e) => {
-      console.error(`[Payout Relayer] Failed to broadcast retopup cashback to Seat #${pos}:`, e);
-    });
 
     // 6. Distribute dividend push to all prior active members (< pos)
     if (pos > 1) {
@@ -115,14 +117,17 @@ export async function POST(req: NextRequest) {
           `UPDATE "DaoMember" SET "pushedAmountBtt" = $1, "updatedAt" = NOW() WHERE id = $2`,
           [newPushed, prior.id]
         );
+        let divTxId: string | null = null;
+        try {
+          divTxId = await broadcastNativePayout(prior.address, cashbackTrob);
+        } catch (e) {
+          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${prior.position}:`, e);
+        }
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-          [prior.address, pos, `${cleanTx}-retopup-push-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${pos} (Retopup Loop)`]
+          [prior.address, pos, divTxId || `${cleanTx}-retopup-push-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${pos} (Retopup Loop)`]
         );
-        broadcastNativePayout(prior.address, cashbackTrob).catch((e) => {
-          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${prior.position}:`, e);
-        });
       }
     }
 

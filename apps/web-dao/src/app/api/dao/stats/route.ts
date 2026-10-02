@@ -4,69 +4,107 @@ import { queryNeon } from '../../_lib/neonDb';
 
 export const dynamic = 'force-dynamic';
 
+// Ultra-fast in-memory cache (3s for live DB stats, 30s for TROB market price)
+let cachedStatsData: any = null;
+let cachedStatsTime = 0;
+let cachedTrobPrice = 0.057097;
+let cachedTrobPriceTime = 0;
+
 export async function GET() {
+  const now = Date.now();
+  if (cachedStatsData && now - cachedStatsTime < 3000) {
+    return NextResponse.json({ success: true, data: cachedStatsData });
+  }
+
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>('/api/dao/stats');
   if (backendRes && backendRes.success && backendRes.data) {
+    cachedStatsData = backendRes.data;
+    cachedStatsTime = now;
     return NextResponse.json(backendRes);
   }
 
-  const bttPriceUsd = 0.056;
+  // Live market price with 30s cache
+  if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {
+    try {
+      const pRes = await fetch(process.env.TROB_PRICE_API_URL || 'https://backend.trobchain.com/v1/market/price', {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(1200),
+      });
+      if (pRes.ok) {
+        const pJson = await pRes.json();
+        const pVal = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd);
+        if (Number.isFinite(pVal) && pVal > 0) {
+          cachedTrobPrice = pVal;
+          cachedTrobPriceTime = now;
+        }
+      }
+    } catch {}
+  }
+
+  const trobPriceUsd = cachedTrobPrice;
+  const bttPriceUsd = trobPriceUsd;
   const entryFeeUsd = 300;
   const earningsCapUsd = 1500;
-  const entryFeeBtt = Math.ceil((entryFeeUsd / bttPriceUsd) * 100) / 100;
-  const earningsCapBtt = Math.ceil((earningsCapUsd / bttPriceUsd) * 100) / 100;
+  const entryFeeBtt = Math.ceil((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const earningsCapBtt = Math.ceil((earningsCapUsd / trobPriceUsd) * 100) / 100;
 
   let memberCount = 0;
   let totalCollectedBTT = 0;
   let totalDistributedBTT = 0;
 
+  // Single combined live query to Neon DB
   try {
-    const countRes = await queryNeon<{ count: string }>(
-      `SELECT COUNT(*) as count FROM "DaoMember" WHERE LOWER(status) = 'active'`
-    );
-    if (countRes.rows.length > 0) {
-      memberCount = parseInt(countRes.rows[0].count, 10);
-    }
-
-    const sumRes = await queryNeon<{ total_collected: string; total_distributed: string }>(
-      `SELECT COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
-              COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
+    const combinedRes = await queryNeon<{
+      active_count: string;
+      total_collected: string;
+      total_distributed: string;
+    }>(
+      `SELECT 
+        COUNT(*) FILTER (WHERE LOWER(status) = 'active') as active_count,
+        COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
+        COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
        FROM "DaoMember"`
     );
-    if (sumRes.rows.length > 0) {
-      totalCollectedBTT = parseFloat(sumRes.rows[0].total_collected) || 0;
-      totalDistributedBTT = parseFloat(sumRes.rows[0].total_distributed) || 0;
+    if (combinedRes.rows.length > 0) {
+      memberCount = parseInt(combinedRes.rows[0].active_count, 10) || 0;
+      totalCollectedBTT = parseFloat(combinedRes.rows[0].total_collected) || 0;
+      totalDistributedBTT = parseFloat(combinedRes.rows[0].total_distributed) || 0;
     }
   } catch (err) {
-    console.warn('[dao stats] Neon DB query fallback failed:', err);
+    console.warn('[dao stats] Neon DB combined query note:', err);
   }
 
   const remainingPositions = Math.max(0, 100 - memberCount);
 
+  const payload = {
+    memberCount,
+    activeMembers: memberCount,
+    capacity: 100,
+    remainingPositions,
+    entryFeeUsd,
+    earningsCapUsd,
+    entryFeeBtt,
+    entryFeeTrob: entryFeeBtt,
+    earningsCapBtt,
+    earningsCapTrob: earningsCapBtt,
+    totalCollectedBTT,
+    totalCollectedTROB: totalCollectedBTT,
+    totalDistributedBTT,
+    totalDistributedTROB: totalDistributedBTT,
+    isClosed: memberCount >= 100,
+    bttPriceUsd,
+    trobPriceUsd: bttPriceUsd,
+    priceSource: 'trobchain-market',
+    priceUpdatedAt: new Date().toISOString(),
+    dividendYieldApy: '0%',
+    treasurySnapshotUsd: 0,
+  };
+
+  cachedStatsData = payload;
+  cachedStatsTime = Date.now();
+
   return NextResponse.json({
     success: true,
-    data: {
-      memberCount,
-      activeMembers: memberCount,
-      capacity: 100,
-      remainingPositions,
-      entryFeeUsd,
-      earningsCapUsd,
-      entryFeeBtt,
-      entryFeeTrob: entryFeeBtt,
-      earningsCapBtt,
-      earningsCapTrob: earningsCapBtt,
-      totalCollectedBTT,
-      totalCollectedTROB: totalCollectedBTT,
-      totalDistributedBTT,
-      totalDistributedTROB: totalDistributedBTT,
-      isClosed: memberCount >= 100,
-      bttPriceUsd,
-      trobPriceUsd: bttPriceUsd,
-      priceSource: 'trobchain-market',
-      priceUpdatedAt: new Date().toISOString(),
-      dividendYieldApy: '0%',
-      treasurySnapshotUsd: 0,
-    },
+    data: payload,
   });
 }

@@ -1,18 +1,22 @@
-const BACKEND_URL = process.env.BACKEND_API_URL;
+const BACKEND_URL = (process.env.BACKEND_API_URL || '').trim();
+
+let isBackendDown = false;
+let backendDownUntil = 0;
 
 /**
- * Attempts to proxy request to the backend Express server if configured.
- * If backend is not configured or unreachable, returns null immediately to trigger fallback.
+ * Attempts to proxy request to the backend Express server if configured and online.
+ * Uses a circuit breaker with 200ms timeout so offline local backend never blocks
+ * serverless execution with 2-second timeouts.
  */
 export async function fetchFromBackend<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T | null> {
-  if (!BACKEND_URL) {
+  if (!BACKEND_URL || BACKEND_URL === '' || (isBackendDown && Date.now() < backendDownUntil)) {
     return null;
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2000);
+  const timer = setTimeout(() => controller.abort(), 200);
 
   try {
     const res = await fetch(`${BACKEND_URL}${endpoint}`, {
@@ -27,14 +31,15 @@ export async function fetchFromBackend<T>(
     clearTimeout(timer);
 
     if (res.ok) {
+      isBackendDown = false;
       const json = await res.json();
       return json;
     }
-    console.warn('[proxy res not ok]', res.status, `${BACKEND_URL}${endpoint}`);
     return null;
-  } catch (err) {
-    console.error('[proxy fetch failed]', `${BACKEND_URL}${endpoint}`, err);
+  } catch {
     clearTimeout(timer);
+    isBackendDown = true;
+    backendDownUntil = Date.now() + 60_000; // Skip proxy for 60s when backend is offline
     return null;
   }
 }

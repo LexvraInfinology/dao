@@ -8,6 +8,7 @@ export const CouncilStatCards: React.FC = () => {
   const { data: stats } = useDaoStats(30_000);
   const { data: price } = useTrobPrice(30_000);
 
+  const isLoaded       = stats !== null && stats !== undefined;
   const seatsFilled    = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? (100 - seatsFilled);
   const filledPct      = Math.min(100, Math.round((seatsFilled / 100) * 100));
@@ -26,16 +27,26 @@ export const CouncilStatCards: React.FC = () => {
             </div>
             <div className="text-right">
               <div className="text-lg sm:text-xl font-bold font-sans text-[#14304A]">
-                {seatsRemaining}{' '}
-                <span className="text-xs font-normal text-slate-400">/ 100</span>
+                {!isLoaded ? (
+                  <span className="inline-block w-14 h-6 bg-[#EFF6FF] rounded animate-pulse" />
+                ) : (
+                  <>
+                    {seatsRemaining}{' '}
+                    <span className="text-xs font-normal text-slate-400">/ 100</span>
+                  </>
+                )}
               </div>
               <div className="text-[10px] sm:text-xs font-medium text-[#4F6D87]">Seats Remaining</div>
             </div>
           </div>
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between gap-1.5">
-            <span className="text-[10px] text-[#4F6D87]">{seatsFilled} claimed</span>
+            {!isLoaded ? (
+              <span className="inline-block w-16 h-3 bg-[#EFF6FF] rounded animate-pulse" />
+            ) : (
+              <span className="text-[10px] text-[#4F6D87]">{seatsFilled} claimed</span>
+            )}
             <div className="w-16 sm:w-20 bg-[#E2EEF9] rounded-full h-1.5 overflow-hidden flex items-center">
-              <div className="h-full bg-[#0E62E4] rounded-full transition-all duration-700" style={{ width: `${filledPct}%` }} />
+              <div className="h-full bg-[#0E62E4] rounded-full transition-all duration-700" style={{ width: `${!isLoaded ? 10 : filledPct}%` }} />
             </div>
           </div>
         </div>
@@ -47,13 +58,23 @@ export const CouncilStatCards: React.FC = () => {
               <User className="w-4 h-4" />
             </div>
             <div className="text-right">
-              <div className="text-lg sm:text-xl font-bold font-sans text-[#14304A]">#{nextSeat}</div>
+              <div className="text-lg sm:text-xl font-bold font-sans text-[#14304A]">
+                {!isLoaded ? (
+                  <span className="inline-block w-10 h-6 bg-[#EFF6FF] rounded animate-pulse" />
+                ) : (
+                  `#${nextSeat}`
+                )}
+              </div>
               <div className="text-[10px] sm:text-xs font-medium text-[#4F6D87]">Next in Line</div>
             </div>
           </div>
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between text-[10px] sm:text-xs">
             <span className="text-emerald-700 font-medium">
-              Back: <strong className="text-[#14304A]">${cashback}</strong>
+              {!isLoaded ? (
+                <span className="inline-block w-16 h-3 bg-[#EFF6FF] rounded animate-pulse" />
+              ) : (
+                <>Back: <strong className="text-[#14304A]">${cashback}</strong></>
+              )}
             </span>
             <span className="inline-flex items-center gap-1 text-[#0E62E4] font-semibold bg-[#EFF6FF] px-1.5 py-0.5 rounded text-[10px]">
               <span className="w-1 h-1 rounded-full bg-[#0E62E4] animate-pulse" />

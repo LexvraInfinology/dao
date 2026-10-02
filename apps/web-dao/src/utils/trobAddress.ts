@@ -9,20 +9,24 @@ const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 export const DEPLOYED_CONTRACTS = {
   EquoraDAO: {
-    base58: 'TLrAb4JDCwoPRd5sd3rvvqRnup99i1e5qn',
-    hex: '41775474f9cda2509e1887f029f5e9ee6ac15e1f23',
+    base58: 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid',
+    hex: '415ab39f5a64832d7efd0d59d3c84d6e13468d0534',
   },
   EquoraToken: {
-    base58: 'TBeK724evPPgx5gASBuLPvJVpwzQiq3w8S',
-    hex: '41125d714facc00d824dfcd50cc48872353f54c791',
+    base58: 'TFUBj9wdogDvS212LwqMcw5AjxaBcaYjaR',
+    hex: '413c53a0ced96d38906e5d8f4e6cd8c8c04b31e7a4',
   },
   EquoraRegistry: {
-    base58: 'TMjsweQf3Nch5edNNRHv1Y6oB3AvDZQdox',
-    hex: '41811c313f952ed77609b71094a7966994c3889cb9',
+    base58: 'TVZjYU4M5qUmQMQpx59bNSaKzowUNXG8u5',
+    hex: '41d6f20701da8518fadc9d31f6dd9f1dd26cdb0e70',
   },
   EquoraVault: {
-    base58: 'TPdrgna9oJLohys2hjtK4s9YLpMXSbcRL4',
-    hex: '4195e8e6494358c1e861d52fd2bee2a5ff0001cfbb',
+    base58: 'TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB',
+    hex: '41d1c52987ccd9528457cb81a8b9685d2f15889dbb',
+  },
+  EquoraMatrix: {
+    base58: 'TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE',
+    hex: '41e50ec6ce93b6a7f91099ebc7d08c510c7dd3e0b7',
   },
 } as const;
 

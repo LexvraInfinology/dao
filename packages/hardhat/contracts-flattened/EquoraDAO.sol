@@ -1901,12 +1901,12 @@ contract EquoraDAO is ReentrancyGuard {
 
     // ─── Dynamic Price State ───────────────────────────────────────────────────
 
-    /// @dev Current entry fee in TROB tokens (18 decimals). Equivalent to $300 USD.
-    ///      Default: 300 * 10**18 (assumes 1 TROB = $1 at deployment; update via setEntryFee)
-    uint256 public entryFee    = 300 * 10 ** 18;
+    /// @dev Current entry fee in TROB tokens (6 decimals for native TROB sun). Equivalent to $300 USD.
+    ///      Default: 5460 * 10**6 (at $0.054945/TROB; update via setEntryFee)
+    uint256 public entryFee    = 5460 * 10 ** 6;
 
-    /// @dev Current earnings cap in TROB tokens (18 decimals). Always = entryFee × 5 = $1,500 USD.
-    uint256 public earningsCap = 1500 * 10 ** 18;
+    /// @dev Current earnings cap in TROB tokens (6 decimals). Always = entryFee × 5 = $1,500 USD (27,300 TROB).
+    uint256 public earningsCap = 27300 * 10 ** 6;
 
     /// @dev Last TROB price used (in USD with 6 decimals, e.g. 0.055 TROB/USD = 55_000)
     uint256 public lastTrobPriceUsd6;
@@ -2053,8 +2053,8 @@ contract EquoraDAO is ReentrancyGuard {
         require(_trobPriceUsd6 > 0, "EquoraDAO: price must be > 0");
 
         // Sanity: entry fee must represent $150 to $600 USD (allowing for 2x price swings)
-        uint256 expectedMin = (150_000_000 * 1e18) / _trobPriceUsd6; // $150 floor
-        uint256 expectedMax = (600_000_000 * 1e18) / _trobPriceUsd6; // $600 ceiling
+        uint256 expectedMin = (150_000_000 * 1e6) / _trobPriceUsd6; // $150 floor (6 decimals)
+        uint256 expectedMax = (600_000_000 * 1e6) / _trobPriceUsd6; // $600 ceiling (6 decimals)
         require(
             _newEntryFee >= expectedMin && _newEntryFee <= expectedMax,
             "EquoraDAO: fee deviates too far from $300 peg"
@@ -2159,7 +2159,7 @@ contract EquoraDAO is ReentrancyGuard {
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
             // Distribute entry fee to all active members except new joiner
-            _distributeRetopup(msg.sender, entryFee);
+            _distributeRetopup(msg.sender, paidAmount);
             return position;
         }
 
@@ -2181,7 +2181,7 @@ contract EquoraDAO is ReentrancyGuard {
         emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
         memberRewardDebt[msg.sender] = accPoolSharePerMember;
-        _distributeEntryFee(position);
+        _distributeEntryFee(position, paidAmount);
 
         if (daoMembers.length == MAX_MEMBERS) {
             daoCompleted = true;
@@ -2376,7 +2376,7 @@ contract EquoraDAO is ReentrancyGuard {
      *      - Blanked slots are SKIPPED in distribution.
      *      - After crediting, checks if recipient has hit 5X cap ($1,500 worth of TROB).
      */
-    function _distributeEntryFee(uint256 incomingPosition) internal {
+    function _distributeEntryFee(uint256 incomingPosition, uint256 amountToDistribute) internal {
         // Count active (non-blank) recipients among all members up to incomingPosition (inclusive)
         uint256 activeCount = 0;
         for (uint256 i = 0; i < incomingPosition; i++) {
@@ -2387,7 +2387,7 @@ contract EquoraDAO is ReentrancyGuard {
 
         if (activeCount == 0) return;
 
-        uint256 amountPerRecipient = entryFee / activeCount;
+        uint256 amountPerRecipient = amountToDistribute / activeCount;
         if (amountPerRecipient == 0) return;
 
         for (uint256 i = 0; i < incomingPosition; i++) {
@@ -2434,7 +2434,8 @@ contract EquoraDAO is ReentrancyGuard {
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         bool ok = false;
         if (address(this).balance >= amount && amount > 0) {
-            (bool sent, ) = payable(recipient).call{value: amount, gas: 10000}("");
+            // Direct native TROB transfer to council member wallet on-chain
+            (bool sent, ) = payable(recipient).call{value: amount}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {
@@ -2487,7 +2488,7 @@ contract EquoraDAO is ReentrancyGuard {
 
         bool ok = false;
         if (address(this).balance >= amount && amount > 0) {
-            (bool sent, ) = payable(msg.sender).call{value: amount, gas: 10000}("");
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {

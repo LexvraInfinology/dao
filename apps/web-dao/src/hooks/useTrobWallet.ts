@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TrobWalletAPI, TrobAddress } from '@/types/trobsafe.d';
-import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
+import { toTrobBase58, toTronHex, DEPLOYED_CONTRACTS } from '@/utils/trobAddress';
 
 // ─── Extension detection ──────────────────────────────────────────────────────
 
@@ -595,55 +595,111 @@ export function useTrobWallet(): TrobWalletState {
 
       const p = (Array.isArray(rawPayload) ? rawPayload[0] : rawPayload) as any;
 
-      // Sanitize address: TrobSafe RPC (/wallet/triggersmartcontract) requires 41-hex
-      let sanitizedContract = p.contract_address || '';
-      // Map local Hardhat placeholder to real deployed EquoraDAO on Trobchain
+      // Base58 contract address: TrobSafe RPC requires Base58 format because it sends visible: true
+      let contractAddr = p.contract_address || p.contractAddress || p.vaultAddress || '';
       if (
-        !sanitizedContract ||
-        sanitizedContract === '0x4b6aB5F819A515382B0dEB6935D793817bB4af28' ||
-        sanitizedContract.toLowerCase() === '0x4b6ab5f819a515382b0deb6935d793817bb4af28' ||
-        sanitizedContract === '0x0000000000000000000000000000000000000000'
+        !contractAddr ||
+        contractAddr === '0x4b6aB5F819A515382B0dEB6935D793817bB4af28' ||
+        contractAddr.toLowerCase() === '0x4b6ab5f819a515382b0deb6935d793817bb4af28' ||
+        contractAddr === '0x0000000000000000000000000000000000000000'
       ) {
-        sanitizedContract = '41775474f9cda2509e1887f029f5e9ee6ac15e1f23'; // EquoraDAO on Trobchain
+        contractAddr = DEPLOYED_CONTRACTS.EquoraDAO.base58;
       } else {
-        sanitizedContract = toTronHex(sanitizedContract);
+        contractAddr = toTrobBase58(contractAddr);
       }
 
-      // Owner address must also be 41-hex for Trobchain fullnode triggersmartcontract
-      let sanitizedOwner = p.owner_address ? toTronHex(p.owner_address) : '';
-      if (!sanitizedOwner && (address?.base58 || address?.hex)) {
-        sanitizedOwner = toTronHex(address.base58 || address.hex);
+      // Base58 owner address: TrobSafe requires Base58 format
+      let ownerAddr = p.owner_address || p.ownerAddress || '';
+      if (!ownerAddr && (address?.base58 || address?.hex)) {
+        ownerAddr = address.base58 || toTrobBase58(address.hex);
+      } else if (ownerAddr) {
+        ownerAddr = toTrobBase58(ownerAddr);
       }
 
-      // Call value in SUN (integer)
-      const sanitizedCallValue = Math.round(Number(p.call_value) || 0);
+      // Call value in SUN / TROBI (integer)
+      const callValueSun = Math.round(Number(p.call_value ?? p.callValue ?? p.amount) || 0);
+      const feeLimitSun = Math.round(Number(p.fee_limit ?? p.feeLimit) || 100_000_000);
 
       const payload = {
         ...p,
-        contract_address: sanitizedContract,
-        owner_address: sanitizedOwner,
-        call_value: sanitizedCallValue,
-        fee_limit: p.fee_limit || 100_000_000,
+        contract_address: contractAddr,
+        contractAddress: contractAddr,
+        owner_address: ownerAddr,
+        ownerAddress: ownerAddr,
+        call_value: callValueSun,
+        callValue: callValueSun,
+        fee_limit: feeLimitSun,
+        feeLimit: feeLimitSun,
+        network: p.network || 'testnet',
       };
 
+      // 1. TrobSafe native triggersmartcontract
       if (typeof trob.triggersmartcontract === 'function') {
-        return trob.triggersmartcontract(payload);
+        const res = await trob.triggersmartcontract(payload);
+        const txid = res?.txid || res?.txID || res?.txHash || (typeof res === 'string' ? res : null);
+        if (txid) {
+          return { txid, txID: txid, txHash: txid, result: true, ...res };
+        }
+        if (res && res.result === false) {
+          throw new Error(res.Error || res.message || 'Transaction rejected in TrobSafe.');
+        }
+        return res;
       }
-      if (typeof trob.transactionBuilder?.triggerSmartContract === 'function') {
-        const tx = await trob.transactionBuilder.triggerSmartContract(
-          payload.contract_address,
+
+      // 2. TrobSafe request({ method: 'triggersmartcontract' })
+      if (typeof trob.request === 'function') {
+        const res = await trob.request({
+          method: 'triggersmartcontract',
+          params: [payload],
+        });
+        const txid = res?.txid || res?.txID || res?.txHash || (typeof res === 'string' ? res : null);
+        if (txid) {
+          return { txid, txID: txid, txHash: txid, result: true, ...res };
+        }
+        return res;
+      }
+
+      // 3. Fallback: TronWeb / standard provider if present
+      const tw = trob.trx ? trob : ((window as any).trobWeb || (window as any).tronWeb || trob);
+      const funcName = (payload.function_selector || '').replace(/\(.*$/, '');
+
+      if (typeof tw.contract === 'function' && funcName) {
+        const contractInstance = await tw.contract().at(contractAddr);
+        if (typeof contractInstance[funcName] === 'function') {
+          const sendRes = await contractInstance[funcName]().send({
+            feeLimit: feeLimitSun,
+            callValue: callValueSun,
+          });
+          const txid = typeof sendRes === 'string' ? sendRes : (sendRes?.txid || sendRes?.transaction?.txID);
+          if (txid) {
+            return { txid, txID: txid, txHash: txid, result: true };
+          }
+        }
+      }
+
+      if (typeof tw.transactionBuilder?.triggerSmartContract === 'function') {
+        const tx = await tw.transactionBuilder.triggerSmartContract(
+          contractAddr,
           payload.function_selector,
           {
-            feeLimit: payload.fee_limit,
-            callValue: payload.call_value,
+            feeLimit: feeLimitSun,
+            callValue: callValueSun,
           },
           [],
-          payload.owner_address
+          ownerAddr
         );
-        const signedTx = await trob.trx.sign(tx.transaction);
-        const broadcast = await trob.trx.sendRawTransaction(signedTx);
-        return { txid: broadcast.txid || tx.transaction?.txID || 'confirmed', result: Boolean(broadcast.result) };
+        if (!tx || !tx.result || !tx.transaction) {
+          const errMsg = tx?.result?.message || 'Failed to prepare contract transaction.';
+          throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+        }
+        const signedTx = await tw.trx.sign(tx.transaction);
+        const broadcast = await tw.trx.sendRawTransaction(signedTx);
+        const txid = broadcast?.txid || tx.transaction?.txID;
+        if (txid) {
+          return { txid, txID: txid, txHash: txid, result: true };
+        }
       }
+
       throw new Error('Contract trigger not supported by current wallet provider.');
     },
     [status, address]

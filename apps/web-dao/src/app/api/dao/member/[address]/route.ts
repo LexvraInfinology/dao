@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
+import { toTronHex } from '../../../_lib/eligibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,6 +100,91 @@ export async function GET(
     }
   } catch (dbErr) {
     console.warn('[member route] Neon lookup error:', dbErr);
+  }
+
+  // 3. On-Chain Direct Verification Fallback (EquoraDAO.sol)
+  try {
+    const hexContract = '415ab39f5a64832d7efd0d59d3c84d6e13468d0534';
+    const userHex = toTronHex(address);
+    if (userHex && userHex.length === 42) {
+      const param = '000000000000000000000000' + userHex.slice(2);
+      const onChainRes = await fetch('https://fullnode-one-testnet.trobchain.com/wallet/triggersmartcontract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contract_address: hexContract,
+          function_selector: 'isDaoMember(address)',
+          parameter: param,
+          owner_address: hexContract,
+        }),
+        cache: 'no-store',
+      });
+      if (onChainRes.ok) {
+        const onChainJson = await onChainRes.json();
+        const hexVal = onChainJson?.constant_result?.[0];
+        const isMemberOnChain = hexVal && hexVal.endsWith('1');
+        if (isMemberOnChain) {
+          let pos = 1;
+          try {
+            const posRes = await fetch('https://fullnode-one-testnet.trobchain.com/wallet/triggersmartcontract', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contract_address: hexContract,
+                function_selector: 'memberPosition(address)',
+                parameter: param,
+                owner_address: hexContract,
+              }),
+              cache: 'no-store',
+            });
+            if (posRes.ok) {
+              const posJson = await posRes.json();
+              const posHex = posJson?.constant_result?.[0];
+              if (posHex) pos = parseInt(posHex, 16) || 1;
+            }
+          } catch {}
+
+          // Auto-sync into Neon database
+          try {
+            await queryNeon(
+              `INSERT INTO "DaoMember" (address, position, status, "pushedAmountBtt", "entryAmountBtt", "joinedAt", "updatedAt")
+               VALUES ($1, $2, 'active', 0, 5254.40, NOW(), NOW())
+               ON CONFLICT (address) DO UPDATE SET position = $2, status = 'active'`,
+              [address.trim(), pos]
+            );
+          } catch {}
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              isMember: true,
+              position: pos,
+              nftTokenId: null,
+              status: 'active',
+              joinedAt: new Date().toISOString(),
+              pushedAmountBtt: 0,
+              pushedAmountTrob: 0,
+              pushedAmountUsdEstimate: 0,
+              earningsCapBtt: 26272,
+              earningsCapTrob: 26272,
+              earningsCapUsd: 1500,
+              capProgressPct: 0,
+              isCapped: false,
+              retopupDeadline: null,
+              retopupTimeRemainingSeconds: null,
+              entryAmountBtt: 5254.40,
+              entryAmountTrob: 5254.40,
+              entryAmountUsdEstimate: 300,
+              directReferralsCount: 0,
+              isQualified: true,
+              userId: null,
+            },
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[member route] On-chain check note:', err);
   }
 
   // Non-member response

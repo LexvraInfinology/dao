@@ -124,13 +124,17 @@ export default function CouncilSeatsPage() {
 
         if (result?.result && result.txid) {
           txId = result.txid;
+        } else if (result?.txid) {
+          txId = result.txid;
         }
       } catch (onChainErr: unknown) {
         console.warn('[CouncilSeatsPage] On-chain broadcast notice:', onChainErr);
         const msg = onChainErr instanceof Error ? onChainErr.message : String(onChainErr);
-        if (msg.includes('rejected') || msg.includes('cancelled') || msg.includes('denied') || msg.includes('User rejected')) {
-          throw new Error('Transaction was cancelled or rejected in TrobSafe.');
-        }
+        throw new Error(msg || 'Transaction was not completed in TrobSafe.');
+      }
+
+      if (!txId) {
+        throw new Error('On-chain payment was not confirmed by TrobSafe. Please approve the transaction in the wallet popup.');
       }
 
       // 2. Synchronize database via API with Anti-Sybil device fingerprint

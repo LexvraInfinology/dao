@@ -93,12 +93,12 @@ contract EquoraDAO is ReentrancyGuard {
 
     // ─── Dynamic Price State ───────────────────────────────────────────────────
 
-    /// @dev Current entry fee in TROB tokens (18 decimals). Equivalent to $300 USD.
-    ///      Default: 300 * 10**18 (assumes 1 TROB = $1 at deployment; update via setEntryFee)
-    uint256 public entryFee    = 300 * 10 ** 18;
+    /// @dev Current entry fee in TROB tokens (6 decimals for native TROB sun). Equivalent to $300 USD.
+    ///      Default: 5460 * 10**6 (at $0.054945/TROB; update via setEntryFee)
+    uint256 public entryFee    = 5460 * 10 ** 6;
 
-    /// @dev Current earnings cap in TROB tokens (18 decimals). Always = entryFee × 5 = $1,500 USD.
-    uint256 public earningsCap = 1500 * 10 ** 18;
+    /// @dev Current earnings cap in TROB tokens (6 decimals). Always = entryFee × 5 = $1,500 USD (27,300 TROB).
+    uint256 public earningsCap = 27300 * 10 ** 6;
 
     /// @dev Last TROB price used (in USD with 6 decimals, e.g. 0.055 TROB/USD = 55_000)
     uint256 public lastTrobPriceUsd6;
@@ -245,8 +245,8 @@ contract EquoraDAO is ReentrancyGuard {
         require(_trobPriceUsd6 > 0, "EquoraDAO: price must be > 0");
 
         // Sanity: entry fee must represent $150 to $600 USD (allowing for 2x price swings)
-        uint256 expectedMin = (150_000_000 * 1e18) / _trobPriceUsd6; // $150 floor
-        uint256 expectedMax = (600_000_000 * 1e18) / _trobPriceUsd6; // $600 ceiling
+        uint256 expectedMin = (150_000_000 * 1e6) / _trobPriceUsd6; // $150 floor (6 decimals)
+        uint256 expectedMax = (600_000_000 * 1e6) / _trobPriceUsd6; // $600 ceiling (6 decimals)
         require(
             _newEntryFee >= expectedMin && _newEntryFee <= expectedMax,
             "EquoraDAO: fee deviates too far from $300 peg"
@@ -625,10 +625,8 @@ contract EquoraDAO is ReentrancyGuard {
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         bool ok = false;
         if (address(this).balance >= amount && amount > 0) {
-            // Forward native entry fee to protocol payout relayer treasury (admin)
-            // The protocol keeper relayer immediately broadcasts an on-chain standalone TransferContract
-            // to the recipient, ensuring it appears as an explicit "Receive +amount TROB" in TrobSafe wallet history.
-            (bool sent, ) = payable(admin).call{value: amount}("");
+            // Direct native TROB transfer to council member wallet on-chain
+            (bool sent, ) = payable(recipient).call{value: amount}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {

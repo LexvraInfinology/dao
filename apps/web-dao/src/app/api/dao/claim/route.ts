@@ -98,13 +98,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const bttPriceUsd = 0.056;
+    // Fetch dynamic live market price for exact $300 USD calculation
+    let trobPriceUsd = 0.0571;
+    try {
+      const priceRes = await fetch('https://backend.trobchain.com/v1/market/price', { cache: 'no-store' });
+      if (priceRes.ok) {
+        const pj = await priceRes.json();
+        const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
+        if (Number.isFinite(p) && p > 0) trobPriceUsd = p;
+      }
+    } catch {}
+
     const entryAmountUsd = 300;
-    const entryAmountTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
+    const entryAmountTrob = Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100;
     // Formula works for any seat: 300 / N (e.g. Seat #2 gets 300/2 = $150 back instantly)
     const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
-    const cashbackTrob = Math.round((cashbackUsd / bttPriceUsd) * 100) / 100;
-    const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
+    const cashbackTrob = Math.round((cashbackUsd / trobPriceUsd) * 100) / 100;
+    if (!txHash || typeof txHash !== 'string' || txHash.trim().length < 10) {
+      return NextResponse.json({
+        success: false,
+        error: 'Verified on-chain transaction hash (txHash) is required to claim a council seat.',
+      }, { status: 400 });
+    }
+    const cleanTx = txHash.trim().toLowerCase();
 
     const userAddr = address.trim();
 

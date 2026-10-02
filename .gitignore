@@ -8,6 +8,8 @@ node_modules/
 # Turborepo Cache
 .turbo/
 **/.turbo/
+scratch/
+scripts/*.json
 
 # Hardhat & Contracts
 packages/hardhat/artifacts/

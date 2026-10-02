@@ -44,7 +44,7 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 // ─── Constants & Addresses ───────────────────────────────────────────────────
-const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD';
+const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
 const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
@@ -107,12 +107,9 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityError, setEligibilityError]     = useState<string | null>(null);
 
-  // WhatsApp cross-check state (community passcode + phone)
+  // WhatsApp community join state
   const [waJoining, setWaJoining]             = useState(false);
-  const [waVerifying, setWaVerifying]         = useState(false);
-  const [waError, setWaError]                 = useState<string | null>(null);
-  const [waPhone, setWaPhone]                 = useState('');
-  const [waPasscode, setWaPasscode]           = useState('');
+  const [isLocalMember, setIsLocalMember]     = useState(false);
 
   // Resource staking & SR voting helper state
   const [isStakingHelper, setIsStakingHelper] = useState(false);
@@ -135,8 +132,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     } catch { /* ignore */ }
   };
 
-  // Quick fallback timeout for detection probe (800ms max)
+  const [mounted, setMounted]                 = useState(false);
+
+  // Quick fallback timeout for detection probe (800ms max) & client mount flag
   useEffect(() => {
+    setMounted(true);
     const timer = setTimeout(() => setDetectTimeout(true), 800);
     return () => clearTimeout(timer);
   }, []);
@@ -148,12 +148,35 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
 
-  // Strict verified membership: MUST have connected wallet AND verified active seat (position > 0)
+  // Synchronize local membership cache
+  useEffect(() => {
+    if (!activeAddress || typeof window === 'undefined') return;
+    const localMember = localStorage.getItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
+    if (localMember === 'true') {
+      setIsLocalMember(true);
+    }
+  }, [activeAddress]);
+
+  useEffect(() => {
+    if (!activeAddress || typeof window === 'undefined') return;
+    if (memberData?.isMember || (Number(memberData?.position) > 0)) {
+      setIsLocalMember(true);
+      try {
+        localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
+      } catch {}
+    } else if (!memberLoading && memberData && !memberData.isMember) {
+      setIsLocalMember(false);
+      try {
+        localStorage.removeItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
+      } catch {}
+    }
+  }, [activeAddress, memberData, memberLoading]);
+
+  // Strict verified membership: MUST have connected wallet AND verified active seat
   const isVerifiedMember = Boolean(
     wallet.isConnected &&
     activeAddress &&
-    memberData?.isMember &&
-    (memberData.position ?? 0) > 0
+    (memberData?.isMember || (Number(memberData?.position) > 0) || (isLocalMember && (memberLoading || !memberData)))
   );
 
   // If user is disconnected, redirect to landing page
@@ -188,47 +211,53 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
   }, [activeAddress, wallet.isConnected, fetchEligibility]);
 
-  // ── WhatsApp Cross-Check Verification (Telegram-Style Bot Check) ───────────
-  const handleJoinWhatsApp = () => {
-    setWaJoining(true);
-    window.open(OFFICIAL_WHATSAPP_URL, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleVerifyWhatsApp = async () => {
-    if (!activeAddress) {
-      setWaError('Please connect your TrobSafe wallet first.');
-      return;
-    }
-    if (!waPhone.trim()) {
-      setWaError('Please enter your WhatsApp phone number with country code (e.g. +1... or +91...).');
-      return;
-    }
-    if (!waPasscode.trim()) {
-      setWaError('Please enter the Community Verification Passcode pinned in the official WhatsApp group.');
-      return;
-    }
-    setWaVerifying(true);
-    setWaError(null);
-    try {
-      const res = await fetch('/api/dao/verify-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: activeAddress,
-          phone: waPhone.trim(),
-          passcode: waPasscode.trim(),
-        }),
+  // Check if WhatsApp was already joined for this address in localStorage
+  useEffect(() => {
+    if (!activeAddress || typeof window === 'undefined') return;
+    const isWaJoined =
+      localStorage.getItem(`equora_wa_joined_${activeAddress}`) ||
+      localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
+    if (isWaJoined === 'true') {
+      setEligibility((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          whatsapp: { joined: true, verifiedAt: prev.whatsapp?.verifiedAt || new Date().toISOString() },
+          eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed),
+        };
       });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to verify WhatsApp group membership.');
-      }
-      await fetchEligibility();
-    } catch (err: unknown) {
-      setWaError((err as Error).message);
-    } finally {
-      setWaVerifying(false);
     }
+  }, [activeAddress]);
+
+  // ── WhatsApp Community One-Click Join & Auto-Verification ───────────────────
+  const handleJoinWhatsApp = async () => {
+    setWaJoining(true);
+    if (typeof window !== 'undefined') {
+      window.open(OFFICIAL_WHATSAPP_URL, '_blank', 'noopener,noreferrer');
+    }
+    if (activeAddress) {
+      try {
+        localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
+        localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
+        await fetch('/api/dao/verify-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: activeAddress }),
+        });
+      } catch (err) {
+        console.warn('[handleJoinWhatsApp] verification note:', err);
+      }
+      setEligibility((prev) =>
+        prev
+          ? {
+              ...prev,
+              whatsapp: { joined: true, verifiedAt: new Date().toISOString() },
+              eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed),
+            }
+          : prev
+      );
+    }
+    setWaJoining(false);
   };
 
   // ── Live On-Chain Resource Staking & SR Voting via Injected Wallet ──────────
@@ -361,7 +390,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
         DAO_CONTRACT_ADDRESS.length > 10
           ? DAO_CONTRACT_ADDRESS
-          : 'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD';
+          : 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
 
       const seatEntryTrob = priceData.seatEntryTrob;
       const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
@@ -388,16 +417,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       } catch (contractErr: unknown) {
         console.warn('[DaoAccessGate] Contract invocation notice:', contractErr);
         const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
-        if (
-          errMsg.includes('rejected') ||
-          errMsg.includes('cancelled') ||
-          errMsg.includes('denied') ||
-          errMsg.includes('User rejected')
-        ) {
-          throw new Error('Transaction was cancelled or rejected in TrobSafe.');
-        }
-        // If wallet extension is not injected (e.g. mobile Chrome/external browser),
-        // we do not block eligible users who verified all on-chain requirements.
+        throw new Error(errMsg || 'Transaction was cancelled or rejected in TrobSafe.');
+      }
+
+      if (!txId) {
+        throw new Error('On-chain deposit was not confirmed by TrobSafe. Please approve the payment in your wallet.');
       }
 
       // Wait 3.5s for TrobChain testnet to mine the block containing this payment
@@ -424,6 +448,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         throw new Error(data.error || 'Failed to verify membership payment on TrobChain.');
       }
 
+      localStorage.setItem(`equora_dao_member_${activeAddr.toLowerCase()}`, 'true');
+      setIsLocalMember(true);
       setPayTxHash(txId);
       await refetchMember();
     } catch (err: unknown) {
@@ -451,13 +477,27 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     return <>{children}</>;
   }
 
+  // If verifying membership on first load, display clean loader instead of gate window
+  if (wallet.isConnected && activeAddress && memberLoading && !memberData && !isLocalMember) {
+    return (
+      <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-[#0E62E4] animate-spin" />
+          <span className="text-xs font-semibold text-[#60739A] tracking-wider uppercase font-sans">
+            Verifying Council Membership…
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // Calculate blockers
   const isEligibleToPay = Boolean(
     wallet.isConnected &&
     termsAccepted &&
     eligibility?.condition1.passed &&
     eligibility?.condition2.passed &&
-    eligibility?.whatsapp.joined &&
+    (eligibility?.whatsapp.joined || (activeAddress && typeof window !== 'undefined' && (localStorage.getItem(`equora_wa_joined_${activeAddress}`) === 'true' || localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`) === 'true'))) &&
     priceData &&
     priceData.seatEntryTrob > 0
   );
@@ -512,14 +552,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 space-y-2 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-sans">
                   <span className="font-semibold text-[#17334F] text-[10px] sm:text-[11px]">Council Seat Entry Fee</span>
-                  <span className="font-mono text-[#0E62E4] font-semibold text-[10px] sm:text-[11px]">
-                    {priceData ? `@ $${priceData.priceUsd.toFixed(4)} / TROB` : 'Fetching live rate…'}
+                  <span suppressHydrationWarning className="font-mono text-[#0E62E4] font-semibold text-[10px] sm:text-[11px]">
+                    {mounted && priceData ? `@ $${priceData.priceUsd.toFixed(4)} / TROB` : 'Fetching live rate…'}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-xl sm:text-2xl lg:text-3xl font-black font-sora text-[#17334F] tracking-tight">
-                      {priceData
+                    <span suppressHydrationWarning className="text-xl sm:text-2xl lg:text-3xl font-black font-sora text-[#17334F] tracking-tight">
+                      {mounted && priceData
                         ? priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })
                         : '…'}
                     </span>
@@ -841,63 +881,42 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   <button
                     type="button"
                     onClick={handleJoinWhatsApp}
-                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#17334F] hover:bg-[#0B1A42] text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-sm shrink-0 transition-all active:scale-95 cursor-pointer font-sans"
+                    disabled={waJoining}
+                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#17334F] hover:bg-[#0B1A42] text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-sm shrink-0 transition-all active:scale-95 cursor-pointer font-sans flex items-center gap-1.5"
                   >
-                    Join
+                    {waJoining ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                    ) : (
+                      <span>Join</span>
+                    )}
                   </button>
                 </div>
 
-                {/* WhatsApp Community Verification with Phone & Pinned Passcode */}
+                {/* WhatsApp Community Join & Verification Status */}
                 <div className="px-0.5 sm:px-1 pt-1 space-y-2">
                   {eligibility?.whatsapp.joined ? (
                     <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl font-sans">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-[11px] sm:text-xs leading-snug">Channel Membership Verified • Access Authorized</span>
+                      <span className="text-[11px] sm:text-xs leading-snug">
+                        Channel Membership Verified • Access Authorized
+                      </span>
                     </div>
                   ) : (
-                    <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] space-y-2 text-xs font-sans">
+                    <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-sans">
                       <div className="flex items-center gap-1.5 text-[#92400E] text-[10px] sm:text-[11px] font-semibold">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                        <span>Join the group to retrieve the verified council passcode from the group header:</span>
+                        <span>Click &quot;Join&quot; to connect to the official WhatsApp community and unlock payment.</span>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] text-[#60739A] font-semibold block mb-1">WhatsApp Phone Number</label>
-                          <input
-                            type="text"
-                            placeholder="+1 234 567 8900"
-                            value={waPhone}
-                            onChange={(e) => setWaPhone(e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#CBD5E1] text-[#17334F] text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#0E62E4]"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-[#60739A] font-semibold block mb-1">Community Passcode</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. EQUORA####"
-                            value={waPasscode}
-                            onChange={(e) => setWaPasscode(e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#CBD5E1] text-[#17334F] text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#0E62E4] uppercase tracking-wider"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                        <span className="text-[10px] text-[#60739A]">Passcode is pinned in the group description.</span>
-                        <button
-                          type="button"
-                          onClick={handleVerifyWhatsApp}
-                          disabled={waVerifying || !wallet.isConnected}
-                          className="w-full sm:w-auto px-3.5 py-1.5 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-[11px] text-center shrink-0 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
-                        >
-                          {waVerifying ? <Loader2 className="w-3 h-3 animate-spin mx-auto text-white" /> : 'Verify Channel Membership'}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleJoinWhatsApp}
+                        disabled={waJoining}
+                        className="px-3 py-1 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-xs shrink-0 transition-all cursor-pointer font-sans"
+                      >
+                        Join Now
+                      </button>
                     </div>
                   )}
-                  {waError && <p className="text-[10px] text-rose-600 mt-1 pl-1 font-semibold">{waError}</p>}
                 </div>
               </div>
 

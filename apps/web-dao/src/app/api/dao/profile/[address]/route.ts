@@ -44,7 +44,7 @@ export async function GET(
           tokenId: m.nftTokenId || m.position,
           name: `Genesis Council Seat #${m.position}`,
           type: 'Soulbound Token (SBT)',
-          contractAddress: process.env.NEXT_PUBLIC_DAO_ADDRESS || 'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD',
+          contractAddress: process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid',
           mintDate: m.joinedAt,
           rarity: 'Genesis Founder (1 of 100)',
           image: '/badges/genesis-founder.png',

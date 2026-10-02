@@ -19,6 +19,27 @@ export interface UseApiResult<T> {
  * Automatically attaches JWT Bearer token from AuthContext when available.
  * Supports optional polling via `pollMs`.
  */
+// Global in-memory cache for live dynamic API responses (persists across component mounts)
+const memoryApiCache = new Map<string, any>();
+
+function getInitialCachedData<T>(path: string | null, fallback: T | null): T | null {
+  if (!path) return fallback;
+  if (memoryApiCache.has(path)) {
+    return memoryApiCache.get(path) as T;
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`eq_cache_${path}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        memoryApiCache.set(path, parsed);
+        return parsed as T;
+      }
+    } catch {}
+  }
+  return fallback;
+}
+
 export function useApi<T>(
   path: string | null,
   options?: {
@@ -33,10 +54,30 @@ export function useApi<T>(
   const auth = useAuthContext();
   const { fallback = null, pollMs, enabled = true } = options ?? {};
 
+  // Initial state matches server-rendered HTML exactly to prevent hydration mismatch
   const [data, setData]       = useState<T | null>(fallback ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const pollRef               = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Safely hydrate from memory or sessionStorage cache on client immediately after mount
+  useEffect(() => {
+    if (!path) return;
+    if (memoryApiCache.has(path)) {
+      setData(memoryApiCache.get(path));
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem(`eq_cache_${path}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          memoryApiCache.set(path, parsed);
+          setData(parsed);
+        }
+      } catch {}
+    }
+  }, [path]);
 
   const fetchData = useCallback(async () => {
     if (!path || !enabled) return;
@@ -60,7 +101,16 @@ export function useApi<T>(
       }
 
       const json = await res.json();
-      setData(json.data !== undefined ? json.data : json);
+      const result = json.data !== undefined ? json.data : json;
+      setData(result);
+      if (path) {
+        memoryApiCache.set(path, result);
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem(`eq_cache_${path}`, JSON.stringify(result));
+          } catch {}
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error';
       setError(msg);

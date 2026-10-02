@@ -71,6 +71,7 @@ export function DaoDashboardStats() {
     setActiveSlide(Math.min(2, Math.max(0, idx)));
   };
 
+  const isStatsLoaded = stats !== null && stats !== undefined;
   const seatsFilled = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? Math.max(0, 100 - seatsFilled);
   const filledPct = Math.min(100, Math.round((seatsFilled / 100) * 100));
@@ -107,23 +108,38 @@ export function DaoDashboardStats() {
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
                 : 'bg-[#0E62E4]/10 text-[#0E62E4] border-[#0E62E4]/20'
             }`}>
-              {seatsFilled >= 100 ? 'Queue Filled' : 'Queue Active'}
+              {!isStatsLoaded ? 'Syncing...' : seatsFilled >= 100 ? 'Queue Filled' : 'Queue Active'}
             </span>
           </div>
 
           <div>
             <div className="text-xl sm:text-2xl font-bold text-[#17334F] tabular-nums tracking-tight">
-              {seatsFilled >= 100 ? '100 / 100 Filled' : `${seatsRemaining} Seats Open`}
+              {!isStatsLoaded ? (
+                <span className="inline-block w-36 h-7 bg-[#EFF6FF] rounded animate-pulse" />
+              ) : seatsFilled >= 100 ? (
+                '100 / 100 Filled'
+              ) : (
+                `${seatsRemaining} Seats Open`
+              )}
             </div>
             <div className="flex items-center justify-between text-[10.5px] sm:text-[11px] text-[#4F6D87] mt-1 font-medium">
-              <span>{seatsFilled} / 100 Claimed</span>
-              <span>{filledPct}% Filled</span>
+              {!isStatsLoaded ? (
+                <>
+                  <span className="inline-block w-20 h-3.5 bg-[#EFF6FF] rounded animate-pulse" />
+                  <span className="inline-block w-12 h-3.5 bg-[#EFF6FF] rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <span>{seatsFilled} / 100 Claimed</span>
+                  <span>{filledPct}% Filled</span>
+                </>
+              )}
             </div>
             {/* Subtle Progress Bar */}
             <div className="w-full h-1.5 bg-[#EFF6FF] rounded-full overflow-hidden mt-1.5 sm:mt-2 border border-[#0E62E4]/10">
               <div
-                className="h-full bg-gradient-to-r from-[#0E62E4] to-[#0B52C4] rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(5, filledPct)}%` }}
+                className={`h-full bg-gradient-to-r from-[#0E62E4] to-[#0B52C4] rounded-full transition-all duration-500 ${!isStatsLoaded ? 'animate-pulse' : ''}`}
+                style={{ width: `${!isStatsLoaded ? 15 : Math.max(5, filledPct)}%` }}
               />
             </div>
           </div>

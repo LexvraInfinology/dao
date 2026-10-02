@@ -24,7 +24,7 @@ const DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS &&
   process.env.NEXT_PUBLIC_DAO_ADDRESS !== '0x4b6aB5F819A515382B0dEB6935D793817bB4af28'
     ? process.env.NEXT_PUBLIC_DAO_ADDRESS
-    : 'TLrAb4JDCwoPRd5sd3rvvqRnup99i1e5qn';
+    : 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
 export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 
 export const DaoOnboardingModal: React.FC = () => {
@@ -49,7 +49,9 @@ export const DaoOnboardingModal: React.FC = () => {
     if (!activeAddress || typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem(`equora_onboarded_${activeAddress}`);
-      const waJoined = localStorage.getItem(`equora_wa_joined_${activeAddress}`);
+      const waJoined =
+        localStorage.getItem(`equora_wa_joined_${activeAddress}`) ||
+        localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
       if (waJoined === 'true') {
         setHasJoinedWhatsApp(true);
       }
@@ -63,23 +65,38 @@ export const DaoOnboardingModal: React.FC = () => {
 
   // Sync if memberData confirms membership
   useEffect(() => {
-    if (memberData?.isMember) {
+    if (memberData?.isMember || (Number(memberData?.position) > 0)) {
       setHasDeposited(true);
+      if (typeof window !== 'undefined' && activeAddress) {
+        try {
+          localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
+        } catch {}
+      }
     }
-  }, [memberData]);
+  }, [memberData, activeAddress]);
+
+  // If already dismissed, do not show
+  if (isDismissed) {
+    return null;
+  }
 
   // If already completed onboarding, do not show
   if (completed) {
     return null;
   }
 
-  // If memberData is still loading initial state, do not flicker modal
-  if (memberLoading && !memberData) {
+  // If user is already verified on-chain and registered as member, grant full access immediately
+  const isAlreadyMember = Boolean(
+    memberData?.isMember ||
+    (Number(memberData?.position) > 0) ||
+    (activeAddress && typeof window !== 'undefined' && localStorage.getItem(`equora_dao_member_${activeAddress.toLowerCase()}`) === 'true')
+  );
+  if (isAlreadyMember) {
     return null;
   }
 
-  // If user is already verified on-chain and registered as member, grant full access
-  if (memberData?.isMember) {
+  // If memberData is still loading initial state, do not flicker modal
+  if (memberLoading && !memberData) {
     return null;
   }
 
@@ -134,9 +151,17 @@ export const DaoOnboardingModal: React.FC = () => {
           const res = await wallet.callContract(payload);
           if (res?.result && res.txid) {
             broadcastTxId = res.txid;
+          } else if (res?.txid) {
+            broadcastTxId = res.txid;
           }
         } catch (onChainErr: unknown) {
           console.warn('[DaoOnboardingModal] On-chain call note:', onChainErr);
+          const msg = onChainErr instanceof Error ? onChainErr.message : String(onChainErr);
+          throw new Error(msg || 'Transaction failed in TrobSafe.');
+        }
+
+        if (!broadcastTxId) {
+          throw new Error('On-chain deposit transaction was not confirmed. Please approve the transaction in TrobSafe.');
         }
       }
 
@@ -151,7 +176,7 @@ export const DaoOnboardingModal: React.FC = () => {
         },
         body: JSON.stringify({
           address: activeAddress,
-          txHash: broadcastTxId || 'confirmed_protocol',
+          txHash: broadcastTxId,
           deviceFingerprint,
         }),
       });
@@ -171,12 +196,18 @@ export const DaoOnboardingModal: React.FC = () => {
     }
   };
 
-  const handleJoinWhatsApp = () => {
+  const handleJoinWhatsApp = async () => {
     window.open(WHATSAPP_DAO_GROUP_URL, '_blank', 'noopener,noreferrer');
     setHasJoinedWhatsApp(true);
     if (activeAddress && typeof window !== 'undefined') {
       try {
         localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
+        localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
+        await fetch('/api/dao/verify-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: activeAddress }),
+        });
       } catch {
         /* ignore */
       }

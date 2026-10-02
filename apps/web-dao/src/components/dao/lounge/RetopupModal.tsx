@@ -117,7 +117,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
 
     try {
       const contractAddress =
-        process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || 'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD';
+        process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
       const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
 
       let txId: string | null = null;

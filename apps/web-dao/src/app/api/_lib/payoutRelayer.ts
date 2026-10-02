@@ -1,10 +1,22 @@
 import { ethers } from 'ethers';
 import crypto from 'crypto';
 
-const DEPLOYER_PRIVATE_KEY =
-  process.env.DEPLOYER_PRIVATE_KEY || '11555126483d8f687eb1c721788730c65b3e986b302d68fe04eece7dc9382eca';
 const FULLNODE_URL = process.env.FULLNODE_URL || 'https://fullnode-one-testnet.trobchain.com';
-const DEPLOYER_HEX = '41f3e68b5fb76382683baf1e8512c4c0ab39490717';
+
+function getDeployerWallet(): { key: string; hexAddress: string } | null {
+  const rawKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
+  if (!rawKey) return null;
+  const cleanKey = rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`;
+  try {
+    const wallet = new ethers.Wallet(cleanKey);
+    return {
+      key: cleanKey,
+      hexAddress: '41' + wallet.address.slice(2).toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function base58ToHexAddress(base58: string): string | null {
   const clean = base58.trim();
@@ -60,9 +72,15 @@ export async function broadcastNativePayout(
     const amountSun = Math.round(amountTrob * 1_000_000);
     if (amountSun <= 0) return null;
 
+    const deployer = getDeployerWallet();
+    if (!deployer) {
+      console.warn('[Payout Relayer] DEPLOYER_PRIVATE_KEY not configured. Payout relayer inactive.');
+      return null;
+    }
+
     const payload = {
       to_address: recipientHex,
-      owner_address: DEPLOYER_HEX,
+      owner_address: deployer.hexAddress,
       amount: amountSun,
     };
 
@@ -77,10 +95,7 @@ export async function broadcastNativePayout(
       return null;
     }
 
-    const cleanKey = DEPLOYER_PRIVATE_KEY.startsWith('0x')
-      ? DEPLOYER_PRIVATE_KEY
-      : `0x${DEPLOYER_PRIVATE_KEY}`;
-    const signingKey = new ethers.SigningKey(cleanKey);
+    const signingKey = new ethers.SigningKey(deployer.key);
     const sig = signingKey.sign(`0x${tx.txID}`);
     const vHex = sig.v.toString(16).padStart(2, '0');
     const signatureHex = sig.r.slice(2) + sig.s.slice(2) + vHex;

@@ -4,26 +4,28 @@
  * Zero npm dependencies, 100% compatible with Vercel Serverless & Edge.
  */
 
-const DEFAULT_DATABASE_URL =
-  process.env.DATABASE_URL ||
-  'postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
-
-function getNeonSqlEndpoint(dbUrl: string): string {
+export function getNeonSqlEndpoint(dbUrl: string): string {
   try {
     const match = dbUrl.match(/@([^/:]+)/);
     if (match && match[1]) {
       return `https://${match[1]}/sql`;
     }
   } catch {}
-  return 'https://ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/sql';
+  return '';
 }
 
 export async function queryNeon<T = any>(
   sql: string,
   params: any[] = []
 ): Promise<{ rows: T[]; rowCount: number }> {
-  const dbUrl = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL environment variable is not configured');
+  }
   const endpoint = getNeonSqlEndpoint(dbUrl);
+  if (!endpoint) {
+    throw new Error('Unable to resolve Neon SQL endpoint from DATABASE_URL');
+  }
 
   const res = await fetch(endpoint, {
     method: 'POST',

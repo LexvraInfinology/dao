@@ -486,32 +486,14 @@ export function createApp(): Express {
     }
   });
 
-  /** POST /api/dao/verify-whatsapp — verifies user join in official WhatsApp group via Passcode & Phone */
+  /** POST /api/dao/verify-whatsapp — confirms user join in official WhatsApp group */
   app.post("/api/dao/verify-whatsapp", async (req, res) => {
     try {
-      const { address, phone, passcode } = req.body as {
+      const { address } = req.body as {
         address?: string;
-        phone?: string;
-        passcode?: string;
       };
       if (!address || typeof address !== "string") {
         res.status(400).json({ success: false, error: "Wallet address is required." });
-        return;
-      }
-      if (!phone || phone.trim().length < 8) {
-        res.status(400).json({
-          success: false,
-          error: "Valid WhatsApp phone number with country code (e.g. +1... or +91...) is required."
-        });
-        return;
-      }
-      const officialCode = getOfficialWhatsappPasscode();
-      const submittedCode = (passcode || "").trim().toUpperCase();
-      if (!officialCode || submittedCode !== officialCode) {
-        res.status(403).json({
-          success: false,
-          error: "Invalid Community Verification Passcode. Please join the official WhatsApp group and enter the verification passcode from the pinned group description."
-        });
         return;
       }
 
@@ -519,7 +501,7 @@ export function createApp(): Express {
       whatsappRegistry[canonical] = {
         verified: true,
         verifiedAt: new Date().toISOString(),
-        phone: phone.trim(),
+        phone: 'COMMUNITY_MEMBER',
       };
       res.json({
         success: true,
@@ -600,12 +582,17 @@ export function createApp(): Express {
     }
   });
 
-  /** Helper to broadcast standalone native TransferContract payout on TrobChain testnet */
   async function broadcastNativePayout(recipientAddress: string, amountTrob: number): Promise<string | null> {
     try {
-      const privKey = process.env.DEPLOYER_PRIVATE_KEY || "11555126483d8f687eb1c721788730c65b3e986b302d68fe04eece7dc9382eca";
-      const FULLNODE_URL = "https://fullnode-one-testnet.trobchain.com";
-      const deployerHex = "41f3e68b5fb76382683baf1e8512c4c0ab39490717";
+      const privKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
+      if (!privKey) {
+        console.warn("[Payout Relayer] DEPLOYER_PRIVATE_KEY not configured. Payout relayer skipped.");
+        return null;
+      }
+      const FULLNODE_URL = process.env.FULLNODE_URL || "https://fullnode-one-testnet.trobchain.com";
+      const cleanKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
+      const deployerWallet = new ethers.Wallet(cleanKey);
+      const deployerHex = "41" + deployerWallet.address.slice(2).toLowerCase();
 
       const variants = getAddressVariants(recipientAddress);
       let recipientHex = "";

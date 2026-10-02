@@ -48,7 +48,8 @@ function privateKeyToAddress(privKeyHex) {
 const FULLNODE_URL = "https://fullnode-one-testnet.trobchain.com";
 
 async function main() {
-  const privKey = process.env.DEPLOYER_PRIVATE_KEY || "11555126483d8f687eb1c721788730c65b3e986b302d68fe04eece7dc9382eca";
+  const privKey = process.env.DEPLOYER_PRIVATE_KEY;
+  if (!privKey) throw new Error("DEPLOYER_PRIVATE_KEY is not defined in environment");
   const { tronBase58, tronHex, evmAddress } = privateKeyToAddress(privKey);
   console.log("Deployer:", tronBase58, `(${tronHex})`);
 

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
-import { toTronHex } from '../../../_lib/eligibility';
-import { FULLNODE_RPC_URL, ACTIVE_DAO_CONTRACT_HEX } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,92 +101,8 @@ export async function GET(
     console.warn('[member route] Neon lookup error:', dbErr);
   }
 
-  // 3. On-Chain Direct Verification Fallback (EquoraDAO.sol)
-  try {
-    const hexContract = ACTIVE_DAO_CONTRACT_HEX
-      .replace(/^0x/, '41')
-      .toLowerCase();
-    const userHex = toTronHex(address);
-    if (userHex && userHex.length === 42) {
-      const param = '000000000000000000000000' + userHex.slice(2);
-      const onChainRes = await fetch(`${FULLNODE_RPC_URL}/wallet/triggersmartcontract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contract_address: hexContract,
-          function_selector: 'isDaoMember(address)',
-          parameter: param,
-          owner_address: hexContract,
-        }),
-        cache: 'no-store',
-      });
-      if (onChainRes.ok) {
-        const onChainJson = await onChainRes.json();
-        const hexVal = onChainJson?.constant_result?.[0];
-        const isMemberOnChain = hexVal && hexVal.endsWith('1');
-        if (isMemberOnChain) {
-          let pos = 1;
-          try {
-            const posRes = await fetch(`${FULLNODE_RPC_URL}/wallet/triggersmartcontract`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contract_address: hexContract,
-                function_selector: 'memberPosition(address)',
-                parameter: param,
-                owner_address: hexContract,
-              }),
-              cache: 'no-store',
-            });
-            if (posRes.ok) {
-              const posJson = await posRes.json();
-              const posHex = posJson?.constant_result?.[0];
-              if (posHex) pos = parseInt(posHex, 16) || 1;
-            }
-          } catch {}
-
-          // Auto-sync into Neon database
-          try {
-            await queryNeon(
-              `INSERT INTO "DaoMember" (address, position, status, "pushedAmountBtt", "entryAmountBtt", "joinedAt", "updatedAt")
-               VALUES ($1, $2, 'active', 0, 5254.40, NOW(), NOW())
-               ON CONFLICT (address) DO UPDATE SET position = $2, status = 'active'`,
-              [address.trim(), pos]
-            );
-          } catch {}
-
-          return NextResponse.json({
-            success: true,
-            data: {
-              isMember: true,
-              position: pos,
-              nftTokenId: null,
-              status: 'active',
-              joinedAt: new Date().toISOString(),
-              pushedAmountBtt: 0,
-              pushedAmountTrob: 0,
-              pushedAmountUsdEstimate: 0,
-              earningsCapBtt: 26272,
-              earningsCapTrob: 26272,
-              earningsCapUsd: 1500,
-              capProgressPct: 0,
-              isCapped: false,
-              retopupDeadline: null,
-              retopupTimeRemainingSeconds: null,
-              entryAmountBtt: 5254.40,
-              entryAmountTrob: 5254.40,
-              entryAmountUsdEstimate: 300,
-              directReferralsCount: 0,
-              isQualified: true,
-              userId: null,
-            },
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[member route] On-chain check note:', err);
-  }
+  // 3. Database is the definitive source of truth for DAO membership and vacant seats.
+  // Stale on-chain storage from prior deployments is not used to resurrect ghost seats.
 
   // Non-member response
   const nonMember = {

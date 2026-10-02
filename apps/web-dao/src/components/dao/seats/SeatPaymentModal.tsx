@@ -282,7 +282,7 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
               </div>
               <div className="space-y-1">
                 <h3 className="text-lg font-bold text-[#14304A]">
-                  🎉 Council Seat #{seat.seatNumber} Claimed!
+                  Council Seat #{seat.seatNumber} Claimed!
                 </h3>
                 <p className="text-xs text-[#4F6D87] max-w-sm mx-auto">
                   Your seat has been recorded on-chain and registered with the Genesis Council.

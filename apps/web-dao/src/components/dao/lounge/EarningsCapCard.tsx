@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Info, AlertTriangle, Clock, Loader2, ArrowRight, Zap, TrendingUp } from 'lucide-react';
+import { Info, AlertTriangle, Clock, Loader2, ArrowRight, Zap, TrendingUp, X } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { RetopupModal } from './RetopupModal';
 
@@ -327,7 +327,9 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
               <h3 className="text-base font-bold text-[#071A4A] font-jakarta flex items-center gap-2">
                 <Info className="w-4 h-4 text-[#155EEF]" />5X Earnings Cap Policy (${effectiveCapUsd.toLocaleString()} Worth of TROB)
               </h3>
-              <button onClick={() => setModalOpen(false)} className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold">✕</button>
+              <button onClick={() => setModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-[#94A3B8] hover:text-[#071A4A] transition-colors" aria-label="Close">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <div className="space-y-3 text-xs text-[#4F6184] font-jakarta leading-relaxed">
               <p>Each Council Seat earns up to <strong>5X its initial entry cost in TROB</strong> ($300 entry fee × 5 = <strong>${effectiveCapUsd.toLocaleString()} max cap</strong> worth of TROB).</p>

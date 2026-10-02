@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CheckCircle2, ShieldCheck, Zap, Wallet, Layers, ArrowRight, Info, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Zap, Wallet, Layers, ArrowRight, Info, AlertTriangle, Check } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 
 interface TreasuryWithdrawCardProps {
@@ -106,8 +106,9 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
           <p className="text-xs text-[#60739A] font-jakarta leading-relaxed">
             Every $300 USD entry deposit is divided equally among members 1 to N and pushed directly to their wallets in the deposit transaction block.
           </p>
-          <div className="text-[11px] font-semibold text-[#10B981] font-jakarta pt-1">
-            ✓ Recipient Gas Fee: $0.00 (Zero Gas)
+          <div className="text-[11px] font-semibold text-[#10B981] font-jakarta pt-1 flex items-center gap-1">
+            <Check className="w-3.5 h-3.5 shrink-0" />
+            <span>Recipient Gas Fee: $0.00 (Zero Gas)</span>
           </div>
         </div>
 
@@ -128,8 +129,9 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
           <p className="text-xs text-[#60739A] font-jakarta leading-relaxed">
             35% of matrix slot inflows stream directly into eligible member wallets on-chain when matrix slots are activated.
           </p>
-          <div className="text-[11px] font-semibold text-[#10B981] font-jakarta pt-1">
-            ✓ Recipient Gas Fee: $0.00 (Zero Gas)
+          <div className="text-[11px] font-semibold text-[#10B981] font-jakarta pt-1 flex items-center gap-1">
+            <Check className="w-3.5 h-3.5 shrink-0" />
+            <span>Recipient Gas Fee: $0.00 (Zero Gas)</span>
           </div>
         </div>
       </div>

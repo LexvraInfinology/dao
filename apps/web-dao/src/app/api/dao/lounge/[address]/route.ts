@@ -37,7 +37,7 @@ export async function GET(
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
 
-      // If member has reached 500% cap and retopup deadline is not yet set, start 48h window now!
+      // If member has reached 5X Cap ($1,500 USD) and retopup deadline is not yet set, start 48h window now!
       if (isCapped && !retopupDeadline) {
         const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
         retopupDeadline = deadlineDate.toISOString();

@@ -23,8 +23,12 @@ import { AndroidIcon } from '@/components/ui/AndroidIcon';
 import {
   TROBSAFE_CHROME_STORE_URL,
   TROBSAFE_APK_URL,
+  TROBSAFE_APP_STORE_URL,
+  TROBSAFE_TESTFLIGHT_URL,
   triggerApkDownload,
   wakeUpExtension,
+  isMobileDevice,
+  openInTrobSafeApp,
 } from '@/utils/walletConnect';
 
 export interface WalletModalProps {
@@ -295,7 +299,7 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1.5">
                 <div className="font-bold text-slate-800">Quick Guide:</div>
-                <div>1. Click the 🧩 Extensions icon in your browser toolbar (top right).</div>
+                <div>1. Click the Extensions icon in your browser toolbar (top right).</div>
                 <div>2. Open <b>TrobSafe Wallet</b> and enter your passcode.</div>
                 <div>3. Click <b>Retry Connection</b> above.</div>
               </div>
@@ -305,6 +309,32 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
           {/* ── View: Professional Connection Options ───────────────────── */}
           {step === 'detect' && (
             <div className="space-y-4">
+              {/* ── Mobile Quick Launch Banner ────────────────────────────── */}
+              {isMobileDevice() && (
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] text-white shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                      <span className="text-xs font-bold">TrobSafe App Installed?</span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Auto-Connect
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-blue-100 leading-snug">
+                    Launch directly inside TrobSafe App DApp Browser for automatic wallet detection and native signature authorization.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openInTrobSafeApp()}
+                    className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-blue-50 text-[#0E62E4] font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open in TrobSafe App</span>
+                  </button>
+                </div>
+              )}
+
               {/* Option 1: Browser Extension (Recommended for PC/Laptop) */}
               <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-[#0E62E4]/40 transition-colors shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
@@ -350,32 +380,96 @@ export const WalletSidebar: React.FC<WalletModalProps> = ({ isOpen, onClose, onC
                 </div>
               </div>
 
-              {/* Option 2: Mobile App (.APK) */}
+              {/* Option 2: Android Application (.APK & App Launch) */}
               <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-colors shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
-                      <Smartphone className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shrink-0">
+                      <AndroidIcon className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900">Android Application</div>
                       <div className="text-[11px] text-slate-500">Official .APK Package</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-slate-400">Mobile</span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-full">
+                    Android
+                  </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleDownloadApkClick}
-                  className="w-full py-2 px-4 rounded-xl font-bold text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Android .APK</span>
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openInTrobSafeApp()}
+                    className="w-full py-2 px-3 rounded-xl font-bold text-xs text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open in App</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadApkClick}
+                    className="w-full py-2 px-3 rounded-xl font-bold text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download .APK</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Option 3: Manual address entry */}
+              {/* Option 3: iOS Application (Apple App Store & TestFlight) */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-colors shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 p-1.5">
+                      <img src="/icons/apple.svg" alt="Apple" className="w-4 h-4 object-contain fill-white" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">iOS Application</div>
+                      <div className="text-[11px] text-slate-500">App Store & TestFlight</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded-full">
+                    iOS / iPadOS
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openInTrobSafeApp()}
+                    className="w-full py-2 px-3 rounded-xl font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open in App</span>
+                  </button>
+
+                  <a
+                    href={TROBSAFE_APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2 px-3 rounded-xl font-bold text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer text-center"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>App Store</span>
+                  </a>
+                </div>
+
+                <div className="text-center pt-0.5">
+                  <a
+                    href={TROBSAFE_TESTFLIGHT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-slate-500 hover:text-[#0E62E4] hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>TestFlight Beta Access</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Option 4: Manual address entry */}
               <div className="pt-2">
                 {!showDirectInput ? (
                   <button

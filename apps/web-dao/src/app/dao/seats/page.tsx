@@ -157,7 +157,7 @@ export default function CouncilSeatsPage() {
 
       const assignedPosition = data.data?.position ?? seatNumber;
       const cashbackReceived = data.data?.instantCashbackUsd ?? (300 / assignedPosition).toFixed(2);
-      setNotification(`🎉 Council Seat #${assignedPosition} claimed! Instant cashback of +$${cashbackReceived} USD sent directly to your connected wallet on-chain (Zero Gas Fees). ${txId ? `(Tx: ${txId.slice(0, 10)}…)` : ''}`);
+      setNotification(`Council Seat #${assignedPosition} Claimed! Instant cashback of +$${cashbackReceived} USD sent directly to your connected wallet on-chain (Zero Gas Fees). ${txId ? `(Tx: ${txId.slice(0, 10)}…)` : ''}`);
       await Promise.all([refetchMembers(), refetchMember()]);
       setTimeout(() => setNotification(null), 8000);
 

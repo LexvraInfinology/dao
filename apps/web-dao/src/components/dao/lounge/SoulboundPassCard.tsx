@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Copy, Check, ExternalLink } from 'lucide-react';
+import { Share2, Copy, Check, ExternalLink, X } from 'lucide-react';
 import type { LoungeData } from '@/hooks/useApi';
 import { useWallet } from '@/context/WalletContext';
 
@@ -129,7 +129,9 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
               <h3 className="text-base font-bold text-[#071A4A] font-jakarta">
                 {activeModal === 'explorer' ? 'Explorer Verification' : 'On-Chain SBT Specification'}
               </h3>
-              <button onClick={() => setActiveModal(null)} className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold">✕</button>
+              <button onClick={() => setActiveModal(null)} className="p-1 rounded-lg hover:bg-slate-100 text-[#94A3B8] hover:text-[#071A4A] transition-colors" aria-label="Close">
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <div className="space-y-3 text-xs text-[#4F6184] font-jakarta">
               <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-1.5">

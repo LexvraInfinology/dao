@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Check } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember } from '@/hooks/useApi';
@@ -154,8 +155,8 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
         </svg>
 
         {/* Council verified status badge dot */}
-        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[8px] font-bold text-white shadow-xs">
-          ✓
+        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-xs">
+          <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
         </span>
       </a>
     </div>

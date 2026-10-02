@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Send, Twitter } from 'lucide-react';
+import { ArrowRight, Send, Twitter, Check } from 'lucide-react';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 
 export const LandingFooter: React.FC = () => {
@@ -202,8 +202,9 @@ export const LandingFooter: React.FC = () => {
                   </button>
                 </div>
                 {subscribed && (
-                  <div className="text-[10px] text-[#027A48] font-medium">
-                    ✓ You are subscribed!
+                  <div className="text-[10px] text-[#027A48] font-medium flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>You are subscribed!</span>
                   </div>
                 )}
               </form>

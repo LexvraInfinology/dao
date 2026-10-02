@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   LogOut,
   X,
+  Check,
   Download,
   Smartphone,
 } from 'lucide-react';
@@ -421,8 +422,9 @@ export const DaoOnboardingModal: React.FC = () => {
                       Step 2: Join WhatsApp DAO Group
                     </span>
                     {hasJoinedWhatsApp ? (
-                      <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        Joined ✓
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                        <span>Joined</span>
+                        <Check className="w-3 h-3 text-emerald-700" />
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   Users, CreditCard, Vote, Armchair, ChevronRight, Loader2,
   ArrowDownLeft, ArrowUpRight, Layers, Building2, Inbox, ArrowLeft,
-  ArrowRight, Globe, Wallet, Filter, Check, Copy, ExternalLink
+  ArrowRight, Globe, Wallet, Filter, Check, Copy, ExternalLink, X
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
@@ -293,8 +293,12 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
           >
             <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
               <h3 className="text-sm font-bold text-[#071A4A] font-jakarta">Transaction Details</h3>
-              <button onClick={() => setSelectedTx(null)} className="text-[#94A3B8] text-sm font-bold">
-                ✕
+              <button
+                onClick={() => setSelectedTx(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-[#94A3B8] hover:text-[#071A4A] transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-2 text-xs font-jakarta">

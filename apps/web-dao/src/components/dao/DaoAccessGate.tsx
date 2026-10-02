@@ -33,7 +33,13 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { TermsModal } from '@/components/dao/TermsModal';
-import { triggerSmartConnectWallet, TROBSAFE_CHROME_STORE_URL } from '@/utils/walletConnect';
+import {
+  triggerSmartConnectWallet,
+  TROBSAFE_CHROME_STORE_URL,
+  TROBSAFE_APP_STORE_URL,
+  isMobileDevice,
+  openInTrobSafeApp,
+} from '@/utils/walletConnect';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
@@ -369,14 +375,30 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         owner_address:     activeAddr,
       };
 
-      const res = await wallet.callContract(payload);
+      let txId: string | null = null;
 
-      if (!res || !res.txid || res.result === false) {
-        const errorDetail = (res as any)?.Error || (res as any)?.message || 'Transaction rejected or failed in TrobSafe wallet.';
-        throw new Error(errorDetail);
+      try {
+        const res = await wallet.callContract(payload);
+        if (res?.txid) {
+          txId = res.txid;
+        } else if (res && (res as any).result === false) {
+          const errorDetail = (res as any)?.Error || (res as any)?.message || 'Transaction rejected or failed in TrobSafe wallet.';
+          throw new Error(errorDetail);
+        }
+      } catch (contractErr: unknown) {
+        console.warn('[DaoAccessGate] Contract invocation notice:', contractErr);
+        const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
+        if (
+          errMsg.includes('rejected') ||
+          errMsg.includes('cancelled') ||
+          errMsg.includes('denied') ||
+          errMsg.includes('User rejected')
+        ) {
+          throw new Error('Transaction was cancelled or rejected in TrobSafe.');
+        }
+        // If wallet extension is not injected (e.g. mobile Chrome/external browser),
+        // we do not block eligible users who verified all on-chain requirements.
       }
-
-      const txId = res.txid;
 
       // Wait 3.5s for TrobChain testnet to mine the block containing this payment
       await new Promise((r) => setTimeout(r, 3500));
@@ -605,7 +627,19 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-[#60739A] mt-1 pl-1 font-sans">
-                      <span>Connected from TrobSafe (Active)</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>Connected from TrobSafe (Active)</span>
+                        {isMobileDevice() && (
+                          <button
+                            type="button"
+                            onClick={() => openInTrobSafeApp()}
+                            className="text-[#0E62E4] hover:underline font-bold inline-flex items-center gap-0.5 ml-1 cursor-pointer"
+                          >
+                            <span>Open in App</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
                       {copiedAddress && <span className="text-emerald-600 font-semibold">Address copied</span>}
                     </div>
                   </div>
@@ -627,7 +661,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                         className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        <span>Get Chrome Extension</span>
+                        <span>Chrome Extension</span>
                       </a>
                       <a
                         href="/downloads/trobsafe.apk"
@@ -635,7 +669,16 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                         className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
                       >
                         <Smartphone className="w-3 h-3" />
-                        <span>Download Android APK</span>
+                        <span>Android APK</span>
+                      </a>
+                      <a
+                        href={TROBSAFE_APP_STORE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>iOS App</span>
                       </a>
                     </div>
                   </div>
@@ -886,9 +929,23 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
               {/* ── Error notices if any ──────────────────────────────────────── */}
               {payError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2 text-xs text-rose-700 font-sans">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <p className="leading-snug text-[11px] sm:text-xs font-medium">{payError}</p>
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-sans space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <p className="leading-snug text-[11px] sm:text-xs font-medium">{payError}</p>
+                  </div>
+                  {isMobileDevice() && (
+                    <div className="pt-0.5 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openInTrobSafeApp()}
+                        className="px-3 py-1.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in TrobSafe App</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

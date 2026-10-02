@@ -11,6 +11,9 @@ export const TROBSAFE_CHROME_STORE_URL =
 
 export const TROBSAFE_APK_URL = '/downloads/trobsafe.apk';
 
+export const TROBSAFE_APP_STORE_URL = 'https://apps.apple.com/app/trobsafe/id0000000000';
+export const TROBSAFE_TESTFLIGHT_URL = 'https://testflight.apple.com/join/trobsafe';
+
 /**
  * Checks if the current client is on a mobile device (Android, iOS, etc.)
  */
@@ -31,7 +34,39 @@ export function isAndroidDevice(): boolean {
 }
 
 /**
- * Triggers automatic download of the TrobSafe Android APK
+ * Checks if the client is specifically on iOS (iPhone, iPad, iPod)
+ */
+export function isIOSDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Opens current DApp link directly inside the TrobSafe Mobile App DApp Browser
+ */
+export function openInTrobSafeApp(targetUrl?: string): void {
+  if (typeof window === 'undefined') return;
+  const current = targetUrl || window.location.href;
+  const encoded = encodeURIComponent(current);
+
+  const isAndroid = isAndroidDevice();
+  const deepLink = `trobsafe://browser?url=${encoded}`;
+
+  if (isAndroid) {
+    const intentUrl = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=trobsafe;package=com.trobium.trobsafe;S.browser_fallback_url=${encoded};end`;
+    try {
+      window.location.href = deepLink;
+    } catch {
+      window.location.href = intentUrl;
+    }
+  } else {
+    window.location.href = deepLink;
+  }
+}
+
+/**
+ * Triggers download of the TrobSafe Android APK
  */
 export function triggerApkDownload(): void {
   if (typeof window === 'undefined') return;
@@ -39,9 +74,14 @@ export function triggerApkDownload(): void {
     const a = document.createElement('a');
     a.href = TROBSAFE_APK_URL;
     a.download = 'trobsafe.apk';
+    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    setTimeout(() => {
+      try {
+        document.body.removeChild(a);
+      } catch {}
+    }, 200);
   } catch (err) {
     // Fallback: direct window location
     window.location.href = TROBSAFE_APK_URL;

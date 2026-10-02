@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   RefreshCw, Users, CreditCard, Vote, Armchair, ArrowDownLeft,
   ArrowUpRight, Layers, ExternalLink, ArrowLeft, ArrowRight, Loader2,
-  Search, ChevronsLeft, ChevronsRight, Globe, Wallet, Filter, Check, Copy
+  Search, ChevronsLeft, ChevronsRight, Globe, Wallet, Filter, Check, Copy, X
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
@@ -471,9 +471,10 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <h3 className="text-sm font-bold text-[#071A4A] font-jakarta">Transaction Details</h3>
               <button
                 onClick={() => setSelectedTx(null)}
-                className="text-[#94A3B8] hover:text-[#071A4A] text-sm font-bold"
+                className="p-1 rounded-lg hover:bg-slate-100 text-[#94A3B8] hover:text-[#071A4A] transition-colors"
+                aria-label="Close"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-2 text-xs font-jakarta">

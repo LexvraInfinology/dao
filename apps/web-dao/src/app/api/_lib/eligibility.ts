@@ -204,7 +204,7 @@ export async function checkServerlessEligibility(address: string) {
     },
     eligibleToDeposit,
     status: eligibleToDeposit
-      ? '✓ Eligible to Deposit'
+      ? 'Eligible to Deposit'
       : !condition1Passed
       ? `Deposit Blocked: ${condition1Reason}`
       : !condition2Passed

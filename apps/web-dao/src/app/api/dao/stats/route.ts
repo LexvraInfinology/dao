@@ -25,10 +25,8 @@ export async function GET() {
     return NextResponse.json(backendRes);
   }
 
-  // Sync latest on-chain transactions into DB
-  try {
-    await getOnChainDaoTransactions();
-  } catch {}
+  // Trigger on-chain sync in background without blocking stats payload
+  getOnChainDaoTransactions().catch(() => {});
 
   // Live market price with 30s cache
   if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {

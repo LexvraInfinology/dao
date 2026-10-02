@@ -323,4 +323,6 @@ async function main() {
   console.log(`Explore on: https://testnet.trobchain.com/contract/${DAO_BASE58}`);
 }
 
-main().catch(console.error);
+if (process.argv[1] && process.argv[1].endsWith('fulfill_100_onchain_dao_seats.mjs')) {
+  main().catch(console.error);
+}

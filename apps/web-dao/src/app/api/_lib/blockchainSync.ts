@@ -1,0 +1,329 @@
+import { getActiveDaoAddress, toTrobBase58 } from '@/utils/trobAddress';
+import { queryNeon } from './neonDb';
+import type { TransactionItem } from '@/hooks/useApi';
+
+const BACKEND_EXPLORER_API = 'https://testnet-backend.trobchain.com/v1';
+
+// In-memory cache for detailed transactions to avoid repeating HTTP requests for immutable confirmed blocks
+const txDetailCache = new Map<string, any>();
+let lastAccountFetchTime = 0;
+let cachedAccountTxs: any[] = [];
+let cachedParsedItems: TransactionItem[] = [];
+
+/**
+ * Fetches and decodes smart contract transactions directly from TrobChain on-chain ledger.
+ * Focuses on EquoraDAO.sol methods: joinDAO, retopup, claimPoolShare, claimFallback.
+ */
+export async function getOnChainDaoTransactions(
+  filterAddress?: string | null,
+  forceRefresh = false
+): Promise<TransactionItem[]> {
+  const now = Date.now();
+  const daoAddress = getActiveDaoAddress();
+
+  // Rate-limit account polling to once every 4 seconds unless forceRefresh is set
+  if (!forceRefresh && now - lastAccountFetchTime < 4000 && cachedParsedItems.length > 0) {
+    return filterItems(cachedParsedItems, filterAddress);
+  }
+
+  try {
+    const res = await fetch(
+      `${BACKEND_EXPLORER_API}/accounts/${daoAddress}/transactions?limit=100`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      console.warn(`[BlockchainSync] Failed to fetch account txs (${res.status})`);
+      return filterItems(cachedParsedItems, filterAddress);
+    }
+
+    const json = await res.json();
+    const txList = (json.data || []) as any[];
+    cachedAccountTxs = txList;
+    lastAccountFetchTime = now;
+
+    const parsedItems: TransactionItem[] = [];
+    const discoveredMembers: Array<{
+      user: string;
+      position: number;
+      tokenId: number;
+      txHash: string;
+      timestamp: string;
+      paidAmountTrob: number;
+    }> = [];
+
+    for (const tx of txList) {
+      if (tx.result !== 'SUCCESS') continue;
+
+      const hash = tx.hash;
+      const methodName = tx.method_name || '';
+      const selector = tx.function_selector || '';
+
+      // Check if this is a DAO interaction method
+      const isJoin = methodName === 'joinDAO' || selector === 'f63d13d7';
+      const isRetopup = methodName === 'retopup' || selector === 'd7b275bf';
+      const isClaimPool = methodName === 'claimPoolShare' || selector === '85b736b4';
+      const isClaimFallback = methodName === 'claimFallback' || selector === 'a04467c6';
+
+      if (!isJoin && !isRetopup && !isClaimPool && !isClaimFallback) {
+        continue;
+      }
+
+      // Fetch transaction details with events (cached if already confirmed)
+      let detail = txDetailCache.get(hash);
+      if (!detail) {
+        try {
+          const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${hash}`, {
+            cache: 'no-store',
+          });
+          if (detailRes.ok) {
+            const detailJson = await detailRes.json();
+            detail = detailJson.data || tx;
+            if (detail.confirmed) {
+              txDetailCache.set(hash, detail);
+            }
+          }
+        } catch {}
+      }
+
+      if (!detail) detail = tx;
+
+      const events: any[] = detail.events || [];
+      const caller = (detail.from_addr || tx.from_addr || '').trim();
+      const isoTime = detail.timestamp || tx.timestamp || new Date().toISOString();
+
+      if (isJoin) {
+        // Parse joinDAO
+        const joinEvt = events.find((e) => e.name === 'DAOPositionJoined');
+        const payoutEvts = events.filter((e) => e.name === 'DAOPayoutPushed');
+
+        const pos = joinEvt?.args?.position ? parseInt(joinEvt.args.position, 10) : 1;
+        const tokenId = joinEvt?.args?.tokenId ? parseInt(joinEvt.args.tokenId, 10) : pos;
+
+        // Paid amount in TROB
+        let paidAmountTrob = 5357.143;
+        if (detail.call_value) {
+          paidAmountTrob = Number(detail.call_value) / 1e6;
+        } else if (tx.call_value) {
+          paidAmountTrob = Number(tx.call_value) / 1e6;
+        } else if (tx.amount) {
+          paidAmountTrob = Number(tx.amount) / 1e6;
+        }
+
+        // 1. Council Seat Activated (Deposit transaction from user)
+        parsedItems.push({
+          id: `${hash}-joined`,
+          type: 'joined',
+          typeLabel: `Council Seat #${pos} Activated`,
+          amountBtt: paidAmountTrob,
+          amountTrob: paidAmountTrob,
+          amountUsd: 300,
+          isPositive: false,
+          from: caller,
+          to: daoAddress,
+          txHash: hash,
+          timestamp: isoTime,
+          status: 'Confirmed',
+        });
+
+        discoveredMembers.push({
+          user: caller,
+          position: pos,
+          tokenId,
+          txHash: hash,
+          timestamp: isoTime,
+          paidAmountTrob,
+        });
+
+        // 2. Decode DAOPayoutPushed events (Formula: 300/N)
+        if (payoutEvts.length > 0) {
+          for (const p of payoutEvts) {
+            const recipient = (p.args?.recipient || caller).trim();
+            const pAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : paidAmountTrob / pos;
+            const isCashback = recipient.toLowerCase() === caller.toLowerCase();
+            const pushFromPos = p.args?.fromPosition ? parseInt(p.args.fromPosition, 10) : pos;
+            const usdValue = parseFloat((300 / pushFromPos).toFixed(2));
+
+            parsedItems.push({
+              id: `${hash}-pushed-${recipient}`,
+              type: 'pushed',
+              typeLabel: isCashback
+                ? `Instant Cashback (Seat #${pushFromPos})`
+                : `Dividend Push from Seat #${pushFromPos}`,
+              amountBtt: pAmt,
+              amountTrob: pAmt,
+              amountUsd: usdValue,
+              isPositive: true,
+              from: daoAddress,
+              to: recipient,
+              txHash: hash,
+              timestamp: isoTime,
+              status: 'Confirmed',
+            });
+          }
+        } else {
+          // If event logs weren't parsed by explorer API, synthesize according to EquoraDAO.sol logic
+          const cashbackTrob = Math.round((paidAmountTrob / pos) * 1000) / 1000;
+          const cashbackUsd = parseFloat((300 / pos).toFixed(2));
+          parsedItems.push({
+            id: `${hash}-cashback`,
+            type: 'pushed',
+            typeLabel: `Instant Cashback (Seat #${pos})`,
+            amountBtt: cashbackTrob,
+            amountTrob: cashbackTrob,
+            amountUsd: cashbackUsd,
+            isPositive: true,
+            from: daoAddress,
+            to: caller,
+            txHash: hash,
+            timestamp: isoTime,
+            status: 'Confirmed',
+          });
+        }
+      } else if (isRetopup) {
+        // Parse retopup
+        const retopupEvt = events.find((e) => e.name === 'Retopup');
+        const payoutEvts = events.filter((e) => e.name === 'DAOPayoutPushed');
+        const pos = retopupEvt?.args?.position ? parseInt(retopupEvt.args.position, 10) : 1;
+        const amountTrob = detail.call_value ? Number(detail.call_value) / 1e6 : 5357.143;
+
+        parsedItems.push({
+          id: `${hash}-retopup`,
+          type: 'retopup',
+          typeLabel: `5X Cap Retopup (Seat #${pos})`,
+          amountBtt: amountTrob,
+          amountTrob: amountTrob,
+          amountUsd: 300,
+          isPositive: false,
+          from: caller,
+          to: daoAddress,
+          txHash: hash,
+          timestamp: isoTime,
+          status: 'Confirmed',
+        });
+
+        for (const p of payoutEvts) {
+          const recipient = (p.args?.recipient || caller).trim();
+          const pAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : amountTrob / pos;
+          const isCashback = recipient.toLowerCase() === caller.toLowerCase();
+          parsedItems.push({
+            id: `${hash}-retopup-push-${recipient}`,
+            type: 'pushed',
+            typeLabel: isCashback
+              ? `Instant Cashback on Retopup Loop (Seat #${pos})`
+              : `Dividend Push from Seat #${pos} (Retopup Loop)`,
+            amountBtt: pAmt,
+            amountTrob: pAmt,
+            amountUsd: parseFloat((300 / pos).toFixed(2)),
+            isPositive: true,
+            from: daoAddress,
+            to: recipient,
+            txHash: hash,
+            timestamp: isoTime,
+            status: 'Confirmed',
+          });
+        }
+      }
+    }
+
+    cachedParsedItems = parsedItems;
+
+    // Asynchronously reconcile discovered on-chain members into Neon DB without blocking response
+    syncOnChainMembersToDb(discoveredMembers).catch((err) => {
+      console.warn('[BlockchainSync] DB sync error:', err);
+    });
+
+    return filterItems(cachedParsedItems, filterAddress);
+  } catch (err) {
+    console.error('[BlockchainSync] Failed to process on-chain transactions:', err);
+    return filterItems(cachedParsedItems, filterAddress);
+  }
+}
+
+function filterItems(items: TransactionItem[], filterAddress?: string | null): TransactionItem[] {
+  if (!filterAddress || !filterAddress.trim()) {
+    return items;
+  }
+  const clean = filterAddress.trim().toLowerCase();
+  return items.filter((item) => {
+    return (
+      item.from.toLowerCase() === clean ||
+      item.to.toLowerCase() === clean
+    );
+  });
+}
+
+/**
+ * Idempotently reconciles discovered on-chain members from EquoraDAO.sol into the database.
+ */
+async function syncOnChainMembersToDb(
+  members: Array<{
+    user: string;
+    position: number;
+    tokenId: number;
+    txHash: string;
+    timestamp: string;
+    paidAmountTrob: number;
+  }>
+) {
+  if (members.length === 0) return;
+
+  for (const m of members) {
+    try {
+      // 1. Ensure User record exists
+      await queryNeon(
+        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+         ON CONFLICT (address) DO NOTHING`,
+        [m.user, m.position, m.timestamp]
+      );
+
+      // 2. Ensure DaoMember record exists
+      const existing = await queryNeon<any>(
+        `SELECT id, position FROM "DaoMember" WHERE position = $1 OR LOWER(address) = LOWER($2) LIMIT 1`,
+        [m.position, m.user]
+      );
+
+      const cashbackTrob = Math.round((m.paidAmountTrob / m.position) * 100) / 100;
+
+      if (existing.rows.length === 0) {
+        await queryNeon(
+          `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, 1, $5, 300, $6, 'blockchain-onchain', $7, 'active', NOW(), NOW())`,
+          [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
+        );
+      }
+
+      // 3. Ensure joined event exists
+      const existingEvt = await queryNeon<any>(
+        `SELECT id FROM "DaoEvent" WHERE "txHash" = $1 LIMIT 1`,
+        [m.txHash]
+      );
+
+      if (existingEvt.rows.length === 0) {
+        await queryNeon(
+          `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
+           VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, $4, NOW(), $5, 300, 'blockchain-onchain', $6)`,
+          [m.user, m.position, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${m.position} Activated`]
+        );
+
+        // Insert instant cashback event
+        await queryNeon(
+          `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
+           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
+          [
+            m.user,
+            m.position,
+            `${m.txHash}-cashback`,
+            m.timestamp,
+            cashbackTrob,
+            parseFloat((300 / m.position).toFixed(2)),
+            `Instant Cashback (Seat #${m.position})`,
+          ]
+        );
+      }
+    } catch (e) {
+      console.warn(`[BlockchainSync] Failed to sync member #${m.position} (${m.user}):`, e);
+    }
+  }
+}

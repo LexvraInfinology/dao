@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
+import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,11 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(backendRes);
   }
+
+  // Sync on-chain members if any occurred directly on contract
+  try {
+    await getOnChainDaoTransactions();
+  } catch {}
 
   // 2. Direct Serverless Fallback to Neon Database (Vercel native)
   try {

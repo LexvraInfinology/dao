@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
+import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,11 @@ export async function GET() {
     cachedStatsTime = now;
     return NextResponse.json(backendRes);
   }
+
+  // Sync latest on-chain transactions into DB
+  try {
+    await getOnChainDaoTransactions();
+  } catch {}
 
   // Live market price with 30s cache
   if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {

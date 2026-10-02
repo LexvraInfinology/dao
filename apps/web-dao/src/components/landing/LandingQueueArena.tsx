@@ -9,10 +9,10 @@ import { useDaoStats } from '@/hooks/useApi';
 export const LandingQueueArena: React.FC = () => {
   const { data: stats } = useDaoStats(30_000);
   const seatsClaimed = stats?.memberCount ?? 0;
-  const isFull = seatsClaimed >= 100;
-  const seatStatus = isFull
-    ? 'All 100 Seats Filled'
-    : `${seatsClaimed}/100 Seats Claimed (${Math.max(0, 100 - seatsClaimed)} Available)`;
+  const isFull =
+    Boolean(stats?.isClosed) ||
+    (stats?.remainingPositions !== undefined ? stats.remainingPositions <= 0 : seatsClaimed >= 100);
+  const seatStatus = isFull ? 'DAO seats are full' : 'DAO seats are available';
 
   const cards = [
     {

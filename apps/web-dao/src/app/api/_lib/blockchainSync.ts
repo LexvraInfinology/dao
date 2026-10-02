@@ -54,8 +54,26 @@ export async function getOnChainDaoTransactions(
       paidAmountTrob: number;
     }> = [];
 
+    const RESET_CUTOFF_MS = process.env.DAO_SYNC_START_TIMESTAMP
+      ? new Date(process.env.DAO_SYNC_START_TIMESTAMP).getTime()
+      : new Date('2026-10-02T19:00:00.000Z').getTime();
+
     for (const tx of txList) {
       if (tx.result !== 'SUCCESS') continue;
+
+      // Skip historical transactions from before the fresh database reset
+      let txTimeMs = 0;
+      if (tx.timestamp) {
+        const num = Number(tx.timestamp);
+        if (Number.isFinite(num) && num > 0) {
+          txTimeMs = num < 10000000000 ? num * 1000 : num;
+        } else {
+          txTimeMs = new Date(tx.timestamp).getTime();
+        }
+      }
+      if (txTimeMs > 0 && txTimeMs < RESET_CUTOFF_MS) {
+        continue;
+      }
 
       const hash = tx.hash;
       const methodName = tx.method_name || '';

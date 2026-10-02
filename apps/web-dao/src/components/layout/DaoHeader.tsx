@@ -35,6 +35,7 @@ import { getExplorerAddressUrl } from '@/utils/explorer';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle, WHATSAPP_DAO_GROUP_URL } from '@/components/dao/DaoWhatsAppCircle';
+import { joinWhatsApp } from '@/utils/whatsapp';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 import { DaoSearchBar } from '@/components/layout/DaoSearchBar';
@@ -399,10 +400,12 @@ export const DaoHeader: React.FC = () => {
                       {isSeatMember && (
                         <a
                           href={WHATSAPP_DAO_GROUP_URL}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => setWalletDropOpen(false)}
-                          className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors border border-emerald-200/80 group"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setWalletDropOpen(false);
+                            joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors border border-emerald-200/80 group cursor-pointer"
                         >
                           <div className="flex items-center gap-2.5">
                             <div className="w-5 h-5 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">

@@ -20,6 +20,7 @@ import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle } from '@/components/dao/DaoWhatsAppCircle';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
+import { joinWhatsApp } from '@/utils/whatsapp';
 
 function shortenAddress(addr: string | null, chars = 4): string {
   if (!addr) return '';
@@ -353,10 +354,12 @@ export const LandingNavbar: React.FC = () => {
 
               <a
                 href={WHATSAPP_DAO_GROUP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-semibold text-[#0F5132] bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100 transition-all mt-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+                }}
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-semibold text-[#0F5132] bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100 transition-all mt-2 cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-5 h-5 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">

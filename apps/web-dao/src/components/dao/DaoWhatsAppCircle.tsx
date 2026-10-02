@@ -6,6 +6,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember } from '@/hooks/useApi';
 import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
+import { joinWhatsApp } from '@/utils/whatsapp';
 export { WHATSAPP_DAO_GROUP_URL };
 
 interface DaoWhatsAppCircleProps {
@@ -63,15 +64,18 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
   }
 
   // 1. Header round circle variant
+  // 1. Header round circle variant
   if (variant === 'header') {
     return (
       <a
         href={WHATSAPP_DAO_GROUP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+        onClick={(e) => {
+          e.preventDefault();
+          joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+        }}
         aria-label="Equora_Fi DAO Council WhatsApp Group"
         title="Equora_Fi DAO WhatsApp Group (Seat Members Only)"
-        className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center shadow-[0_2px_10px_rgba(37,211,102,0.35)] hover:shadow-[0_4px_16px_rgba(37,211,102,0.5)] transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 group ${className}`}
+        className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center shadow-[0_2px_10px_rgba(37,211,102,0.35)] hover:shadow-[0_4px_16px_rgba(37,211,102,0.5)] transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 group cursor-pointer ${className}`}
       >
         <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white animate-pulse" />
         <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" viewBox="0 0 24 24">
@@ -87,9 +91,11 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
     return (
       <a
         href={WHATSAPP_DAO_GROUP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`flex items-center gap-2.5 p-2 rounded-xl transition-all duration-200 group ${
+        onClick={(e) => {
+          e.preventDefault();
+          joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+        }}
+        className={`flex items-center gap-2.5 p-2 rounded-xl transition-all duration-200 group cursor-pointer ${
           isDark
             ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 text-white shadow-xs'
             : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-[#0F5132] border border-emerald-500/30'
@@ -141,8 +147,10 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
       {/* Round Circle Button */}
       <a
         href={WHATSAPP_DAO_GROUP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+        onClick={(e) => {
+          e.preventDefault();
+          joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+        }}
         aria-label="Equora_Fi DAO Council WhatsApp Group"
         className="pointer-events-auto relative group w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center shadow-[0_6px_25px_rgba(37,211,102,0.45)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.65)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-white/80"
       >

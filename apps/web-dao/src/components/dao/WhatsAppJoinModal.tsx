@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
+import { joinWhatsApp } from '@/utils/whatsapp';
 
 interface WhatsAppJoinModalProps {
   isOpen: boolean;
@@ -56,39 +57,7 @@ export const WhatsAppJoinModal: React.FC<WhatsAppJoinModalProps> = ({
   };
 
   const handleOpenWhatsApp = () => {
-    if (typeof window === 'undefined') return;
-
-    const userAgent = navigator.userAgent || '';
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-
-    if (isAndroid) {
-      // Android Intent scheme specifically avoids "net::ERR_UNKNOWN_URL_SCHEME" in in-app WebViews
-      // It directs the OS to open WhatsApp natively, and falls back to standard HTTPS browser if not installed
-      const androidIntentUrl = inviteCode
-        ? `intent://chat.whatsapp.com/${inviteCode}#Intent;package=com.whatsapp;scheme=https;end`
-        : `intent://${groupUrl.replace(/^https?:\/\//, '')}#Intent;package=com.whatsapp;scheme=https;end`;
-
-      try {
-        window.location.href = androidIntentUrl;
-      } catch {
-        window.open(groupUrl, '_blank', 'noopener,noreferrer');
-      }
-    } else if (isIOS) {
-      // iOS direct deep link with fallback
-      const iosDeepLink = inviteCode ? `whatsapp://chat?code=${inviteCode}` : groupUrl;
-      try {
-        window.location.href = iosDeepLink;
-        setTimeout(() => {
-          window.open(groupUrl, '_blank', 'noopener,noreferrer');
-        }, 1200);
-      } catch {
-        window.open(groupUrl, '_blank', 'noopener,noreferrer');
-      }
-    } else {
-      // Desktop: Open clean in new tab
-      window.open(groupUrl, '_blank', 'noopener,noreferrer');
-    }
+    joinWhatsApp(groupUrl);
   };
 
   const handleVerify = async () => {

@@ -44,6 +44,7 @@ import {
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { joinWhatsApp } from '@/utils/whatsapp';
 
 import {
   WHATSAPP_DAO_GROUP_URL,
@@ -241,8 +242,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
   }, [activeAddress]);
 
-  // ── WhatsApp Community Safe Trigger (Opens modal to avoid mobile webview crash) ──
+  // ── WhatsApp Community Safe Trigger (Executes smart join & opens modal with verify button) ──
   const handleOpenWhatsAppModal = () => {
+    try {
+      joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
+    } catch {}
     setWhatsappModalOpen(true);
   };
 

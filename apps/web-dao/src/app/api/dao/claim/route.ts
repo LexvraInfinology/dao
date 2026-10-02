@@ -3,6 +3,7 @@ import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { broadcastNativePayout } from '../../_lib/payoutRelayer';
 import { getActiveDaoAddress, getActiveDaoHex, isDaoAddressDeprecated } from '@/utils/trobAddress';
+import { EXPLORER_API_URL, TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ async function verifyTransactionReceipt(txHash: string): Promise<{
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(`https://testnet-backend.trobchain.com/v1/transactions/${cleanTx}`, {
+      const res = await fetch(`${EXPLORER_API_URL}/transactions/${cleanTx}`, {
         cache: 'no-store',
       });
       if (res.ok) {
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
     // Fetch dynamic live market price for exact $300 USD calculation
     let trobPriceUsd = 0.0571;
     try {
-      const priceRes = await fetch('https://backend.trobchain.com/v1/market/price', { cache: 'no-store' });
+      const priceRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
       if (priceRes.ok) {
         const pj = await priceRes.json();
         const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);

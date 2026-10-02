@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
+import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     // Use cached TROB price or fetch with strict 1.2s timeout
     if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {
       try {
-        const pRes = await fetch(process.env.TROB_PRICE_API_URL || 'https://backend.trobchain.com/v1/market/price', {
+        const pRes = await fetch(TROB_PRICE_API_URL, {
           headers: { Accept: 'application/json' },
           signal: AbortSignal.timeout(1200),
         });

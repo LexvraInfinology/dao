@@ -44,11 +44,17 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 
+import {
+  WHATSAPP_DAO_GROUP_URL,
+  OFFICIAL_SR_TESTNET,
+  OFFICIAL_SR_MAINNET,
+} from '@/config/env';
+
 // ─── Constants & Addresses ───────────────────────────────────────────────────
 const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
-const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
-export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
-export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
+const OFFICIAL_WHATSAPP_URL = WHATSAPP_DAO_GROUP_URL;
+export const OFFICIAL_EQUORA_SR = OFFICIAL_SR_MAINNET;
+export const OFFICIAL_EQUORA_TESTNET_SR = OFFICIAL_SR_TESTNET;
 
 // ─── Eligibility Types (matches PDF) ──────────────────────────────────────────
 

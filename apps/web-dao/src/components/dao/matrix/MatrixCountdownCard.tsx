@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useTrobPrice } from '@/hooks/useApi';
 import { useWallet } from '@/context/WalletContext';
+import { MATRIX_URL } from '@/config/env';
 
 interface MatrixCountdownCardProps {
   onRegisterClick?: () => void;
@@ -260,7 +261,7 @@ export default function MatrixCountdownCard({ onRegisterClick }: MatrixCountdown
         </div>
 
         <a
-          href={process.env.NEXT_PUBLIC_MATRIX_URL || 'https://equorafi.com'}
+          href={MATRIX_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-semibold text-xs shadow-xs transition-colors"

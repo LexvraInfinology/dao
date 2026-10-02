@@ -5,8 +5,8 @@ import { Check } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember } from '@/hooks/useApi';
-
-export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
+import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
+export { WHATSAPP_DAO_GROUP_URL };
 
 interface DaoWhatsAppCircleProps {
   /** If provided, renders an inline round circle (e.g. for header). Otherwise renders the responsive floating widget. */

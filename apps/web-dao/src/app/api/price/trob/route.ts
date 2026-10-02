@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
+import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ function calculateTrobPegs(priceUsd: number) {
 
 export async function GET() {
   // 1. Fetch live TROB market price directly from official Trobchain API
-  const TROB_MARKET_API = process.env.TROB_PRICE_API_URL || 'https://backend.trobchain.com/v1/market/price';
+  const TROB_MARKET_API = TROB_PRICE_API_URL;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);

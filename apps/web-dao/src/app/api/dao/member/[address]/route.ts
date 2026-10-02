@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
 import { toTronHex } from '../../../_lib/eligibility';
+import { FULLNODE_RPC_URL, ACTIVE_DAO_CONTRACT_HEX } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,13 +105,13 @@ export async function GET(
 
   // 3. On-Chain Direct Verification Fallback (EquoraDAO.sol)
   try {
-    const hexContract = (process.env.NEXT_PUBLIC_DAO_HEX || '0x96cc34af00df982ef8260849f1d0747a0de3366e')
+    const hexContract = ACTIVE_DAO_CONTRACT_HEX
       .replace(/^0x/, '41')
       .toLowerCase();
     const userHex = toTronHex(address);
     if (userHex && userHex.length === 42) {
       const param = '000000000000000000000000' + userHex.slice(2);
-      const onChainRes = await fetch('https://fullnode-one-testnet.trobchain.com/wallet/triggersmartcontract', {
+      const onChainRes = await fetch(`${FULLNODE_RPC_URL}/wallet/triggersmartcontract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,7 +129,7 @@ export async function GET(
         if (isMemberOnChain) {
           let pos = 1;
           try {
-            const posRes = await fetch('https://fullnode-one-testnet.trobchain.com/wallet/triggersmartcontract', {
+            const posRes = await fetch(`${FULLNODE_RPC_URL}/wallet/triggersmartcontract`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

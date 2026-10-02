@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { ArrowUpRight, Zap, ShieldCheck, Eye, Layers } from 'lucide-react';
+import { EXPLORER_BASE_URL } from '@/config/env';
 
 export const LandingTrobChain: React.FC = () => {
   const features = [
@@ -99,7 +100,7 @@ export const LandingTrobChain: React.FC = () => {
               </div>
 
               <a
-                href="https://testnet.trobchain.com"
+                href={EXPLORER_BASE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-[#155EEF] hover:text-[#004EEB] transition-colors"

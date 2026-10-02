@@ -2,8 +2,9 @@ import { getActiveDaoAddress, toTrobBase58 } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import { broadcastNativePayout } from './payoutRelayer';
 import type { TransactionItem } from '@/hooks/useApi';
+import { EXPLORER_API_URL } from '@/config/env';
 
-const BACKEND_EXPLORER_API = 'https://testnet-backend.trobchain.com/v1';
+const BACKEND_EXPLORER_API = EXPLORER_API_URL;
 
 // In-memory cache for detailed transactions to avoid repeating HTTP requests for immutable confirmed blocks
 const txDetailCache = new Map<string, any>();

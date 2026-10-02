@@ -1,4 +1,10 @@
 import { queryNeon } from './neonDb';
+import {
+  FULLNODE_RPC_URL,
+  EXPLORER_API_URL,
+  OFFICIAL_SR_TESTNET,
+  OFFICIAL_SR_MAINNET,
+} from '@/config/env';
 
 const B58_CHARS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
@@ -37,10 +43,10 @@ export function toTronHex(address: string): string {
   return clean.toLowerCase();
 }
 
-const OFFICIAL_SR_MAINNET_HEX = '411779966a94d43d2c03ee4b15c4a86b599491f052'; // TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY
-const OFFICIAL_SR_TESTNET_HEX = '415cc58ba778a87ac1ea060d4aa116509691fb0ae0'; // TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5
-const OFFICIAL_SR_MAINNET_B58 = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
-const OFFICIAL_SR_TESTNET_B58 = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
+const OFFICIAL_SR_MAINNET_B58 = OFFICIAL_SR_MAINNET;
+const OFFICIAL_SR_TESTNET_B58 = OFFICIAL_SR_TESTNET;
+const OFFICIAL_SR_MAINNET_HEX = toTronHex(OFFICIAL_SR_MAINNET_B58);
+const OFFICIAL_SR_TESTNET_HEX = toTronHex(OFFICIAL_SR_TESTNET_B58);
 const MIN_WALLET_CREATION_TIMESTAMP = 1790812800000; // 01-10-2026
 
 export async function checkServerlessEligibility(address: string) {
@@ -57,7 +63,7 @@ export async function checkServerlessEligibility(address: string) {
 
   try {
     const hexAddress = toTronHex(rawAddress);
-    const acctRes = await fetch('https://fullnode-one-testnet.trobchain.com/wallet/getaccount', {
+    const acctRes = await fetch(`${FULLNODE_RPC_URL}/wallet/getaccount`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address: hexAddress }),
@@ -81,7 +87,7 @@ export async function checkServerlessEligibility(address: string) {
       // Fallback: check earliest on-chain transaction timestamp if create_time not returned
       if (!creationTimestamp) {
         try {
-          const txRes = await fetch(`https://testnet-backend.trobchain.com/v1/accounts/${rawAddress}/transactions?limit=100`, {
+          const txRes = await fetch(`${EXPLORER_API_URL}/accounts/${rawAddress}/transactions?limit=100`, {
             cache: 'no-store',
           });
           if (txRes.ok) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
+import { OFFICIAL_SR_MAINNET } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ const DEFAULT_RESOURCE_PARAMS = {
     bandwidthStakeTrob: 24,
     totalStakeTrob: 131,
   },
-  officialSrAddress: 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY',
+  officialSrAddress: OFFICIAL_SR_MAINNET,
   minWalletCreationDate: '2026-10-01T00:00:00.000Z',
 };
 

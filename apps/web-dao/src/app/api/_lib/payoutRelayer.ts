@@ -1,7 +1,8 @@
 import { ethers } from 'ethers';
 import crypto from 'crypto';
+import { FULLNODE_RPC_URL } from '@/config/env';
 
-const FULLNODE_URL = process.env.FULLNODE_URL || 'https://fullnode-one-testnet.trobchain.com';
+const FULLNODE_URL = FULLNODE_RPC_URL;
 
 function getDeployerWallet(): { key: string; hexAddress: string } | null {
   let rawKey = (process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY)?.trim();

@@ -4,6 +4,7 @@ import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     // 1. Fetch live market price for accurate USD calculations
     let trobPriceUsd = 0.0565;
     try {
-      const pRes = await fetch(process.env.TROB_PRICE_API_URL || 'https://backend.trobchain.com/v1/market/price', {
+      const pRes = await fetch(TROB_PRICE_API_URL, {
         signal: AbortSignal.timeout(1200),
       });
       if (pRes.ok) {

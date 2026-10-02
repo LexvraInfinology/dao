@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
+import { FULLNODE_RPC_URL, EXPLORER_BASE_URL } from '@/config/env';
 
 // ─── Base58Check Helpers ───────────────────────────────────────────────────────
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -45,7 +46,7 @@ function privateKeyToAddress(privKeyHex: string) {
   return { evmAddress, tronHex, tronBase58 };
 }
 
-const FULLNODE_URL = 'https://fullnode-one-testnet.trobchain.com';
+const FULLNODE_URL = FULLNODE_RPC_URL;
 
 const CONTRACT_CONFIGS: Record<
   string,
@@ -185,7 +186,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Broadcast failed: ${errMsg}` }, { status: 400 });
     }
 
-    const verifyUrl = `https://testnet.trobchain.com/contracts/verify?address=${contractAddressBase58}`;
+    const verifyUrl = `${EXPLORER_BASE_URL}/contracts/verify?address=${contractAddressBase58}`;
 
     return NextResponse.json({
       success: true,

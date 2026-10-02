@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
+import { TROBSAFE_APK_URL } from '@/config/env';
 
 // ---------------------------------------------------------------------------
 // GET /api/trobsafe/apk
@@ -17,10 +18,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/downloads/trobsafe.apk', req.url));
   }
 
-  const fallbackUrl =
-    process.env.TROBSAFE_APK_URL ||
-    process.env.NEXT_PUBLIC_TROBSAFE_APK_URL ||
-    'https://trobium.com/download/';
-  return NextResponse.redirect(fallbackUrl, { status: 302 });
+  return NextResponse.redirect(TROBSAFE_APK_URL, { status: 302 });
 }
 

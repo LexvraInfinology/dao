@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Send, Twitter, Check } from 'lucide-react';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
+import { EXPLORER_BASE_URL, WHATSAPP_DAO_GROUP_URL } from '@/config/env';
 
 export const LandingFooter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -38,7 +39,7 @@ export const LandingFooter: React.FC = () => {
   const resourceLinks = [
     { label: 'Docs', href: '#' },
     { label: 'Whitepaper', href: '#' },
-    { label: 'TrobiumScan', href: 'https://testnet.trobchain.com' },
+    { label: 'TrobiumScan', href: EXPLORER_BASE_URL },
     { label: 'Community', href: 'https://t.me/EquoraFi' },
     { label: 'Security Audit', href: '#' },
   ];
@@ -101,7 +102,7 @@ export const LandingFooter: React.FC = () => {
                 <Send className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
               </a>
               <a
-                href="https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng"
+                href={WHATSAPP_DAO_GROUP_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100/90 hover:bg-emerald-50 hover:text-[#25D366] text-[#475467] flex items-center justify-center transition-colors group"

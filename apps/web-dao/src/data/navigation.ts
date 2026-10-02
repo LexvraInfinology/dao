@@ -1,4 +1,5 @@
 import { NavItem } from '@/types';
+import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
 
 export const LANDING_NAV_ITEMS: NavItem[] = [
   { label: 'How It Works', href: '#about' },
@@ -45,6 +46,6 @@ export const FOOTER_LINKS = {
   socials: [
     { name: 'Twitter', href: 'https://x.com/EquoraFi', icon: 'Twitter' },
     { name: 'Telegram', href: 'https://t.me/EquoraFi', icon: 'Send' },
-    { name: 'WhatsApp', href: 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng', icon: 'MessageCircle' },
+    { name: 'WhatsApp', href: WHATSAPP_DAO_GROUP_URL, icon: 'MessageCircle' },
   ],
 };

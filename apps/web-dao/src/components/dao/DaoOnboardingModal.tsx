@@ -21,8 +21,10 @@ import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 
+import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
+
 const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
-export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
+export { WHATSAPP_DAO_GROUP_URL };
 
 export const DaoOnboardingModal: React.FC = () => {
   const wallet = useWallet();

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { OFFICIAL_SR_MAINNET } from '@/config/env';
 
 interface TermsModalProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
                 4. Resource Staking & Equora Super Representative (SR) Governance
               </h3>
               <p className="text-[#4F6D87] pl-5">
-                Participating members must maintain eligible network resource staking (Energy and Bandwidth calculated dynamically to cover 50 daily free transactions) and actively vote for the official Equora_Fi SR: <code className="bg-[#EFF6FF] text-[#0E62E4] border border-[#0E62E4]/20 px-1.5 py-0.5 rounded text-[10px] font-mono">TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY</code>.
+                Participating members must maintain eligible network resource staking (Energy and Bandwidth calculated dynamically to cover 50 daily free transactions) and actively vote for the official Equora_Fi SR: <code className="bg-[#EFF6FF] text-[#0E62E4] border border-[#0E62E4]/20 px-1.5 py-0.5 rounded text-[10px] font-mono">{OFFICIAL_SR_MAINNET}</code>.
               </p>
             </div>
 

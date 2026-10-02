@@ -19,6 +19,7 @@ import { WalletModal } from '@/components/ui/WalletModal';
 import { useDaoMember } from '@/hooks/useApi';
 import { DaoWhatsAppCircle } from '@/components/dao/DaoWhatsAppCircle';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
+import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
 
 function shortenAddress(addr: string | null, chars = 4): string {
   if (!addr) return '';
@@ -351,7 +352,7 @@ export const LandingNavbar: React.FC = () => {
               </nav>
 
               <a
-                href="https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng"
+                href={WHATSAPP_DAO_GROUP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setMobileMenuOpen(false)}

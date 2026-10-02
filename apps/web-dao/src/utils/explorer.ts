@@ -3,14 +3,12 @@
  * Default official explorer: https://testnet.trobchain.com
  */
 
-export const DEFAULT_EXPLORER_URL = 'https://testnet.trobchain.com';
+import { EXPLORER_BASE_URL } from '@/config/env';
+
+export const DEFAULT_EXPLORER_URL = EXPLORER_BASE_URL;
 
 export function getExplorerBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_EXPLORER_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    return envUrl.trim().replace(/\/+$/, '');
-  }
-  return DEFAULT_EXPLORER_URL;
+  return EXPLORER_BASE_URL.replace(/\/+$/, '');
 }
 
 /**

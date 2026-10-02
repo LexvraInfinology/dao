@@ -304,7 +304,7 @@ async function syncOnChainMembersToDb(
 
       // 2. Ensure DaoMember record exists and matches on-chain position
       const existing = await queryNeon<any>(
-        `SELECT id, position, address FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+        `SELECT id, position, address, status, "joinedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
         [m.position]
       );
 
@@ -316,7 +316,12 @@ async function syncOnChainMembersToDb(
            VALUES (gen_random_uuid(), $1, $2, $3, $4, 1, $5, 300, $6, 'blockchain-onchain', $7, 'active', NOW(), NOW())`,
           [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
         );
-      } else if (existing.rows[0].address.toLowerCase() !== m.user.toLowerCase()) {
+      } else if (
+        existing.rows[0].status !== 'vacant' &&
+        existing.rows[0].status !== 'capped' &&
+        existing.rows[0].address.toLowerCase() !== m.user.toLowerCase() &&
+        (!existing.rows[0].joinedAt || new Date(m.timestamp).getTime() > new Date(existing.rows[0].joinedAt).getTime())
+      ) {
         await queryNeon(
           `UPDATE "DaoMember"
            SET address = $1, "txHash" = $2, "nftTokenId" = $3, "updatedAt" = NOW()

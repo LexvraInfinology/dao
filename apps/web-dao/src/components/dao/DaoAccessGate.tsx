@@ -33,7 +33,6 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { TermsModal } from '@/components/dao/TermsModal';
-import { WhatsAppJoinModal } from '@/components/dao/WhatsAppJoinModal';
 import {
   triggerSmartConnectWallet,
   TROBSAFE_CHROME_STORE_URL,
@@ -121,9 +120,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityError, setEligibilityError]     = useState<string | null>(null);
 
-  // WhatsApp community join state
-  const [waJoining, setWaJoining]             = useState(false);
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  // WhatsApp community manual confirmation state
+  const [waManuallyTicked, setWaManuallyTicked] = useState(false);
   const [isLocalMember, setIsLocalMember]     = useState(false);
 
   // Resource staking & SR voting helper state
@@ -224,13 +222,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
   }, [activeAddress, wallet.isConnected, fetchEligibility]);
 
-  // Check if WhatsApp was already joined for this address in localStorage
+  // Check if WhatsApp was already confirmed for this address in localStorage
   useEffect(() => {
     if (!activeAddress || typeof window === 'undefined') return;
     const isWaJoined =
-      localStorage.getItem(`equora_wa_joined_${activeAddress}`) ||
-      localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
-    if (isWaJoined === 'true') {
+      localStorage.getItem(`equora_wa_joined_${activeAddress}`) === 'true' ||
+      localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`) === 'true';
+    if (isWaJoined || eligibility?.whatsapp?.joined) {
+      setWaManuallyTicked(true);
       setEligibility((prev) => {
         if (!prev) return prev;
         return {
@@ -240,32 +239,44 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         };
       });
     }
-  }, [activeAddress]);
+  }, [activeAddress, eligibility?.whatsapp?.joined]);
 
-  // ── WhatsApp Community Safe Trigger (Executes smart join & opens modal with verify button) ──
-  const handleOpenWhatsAppModal = () => {
-    try {
-      joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
-    } catch {}
-    setWhatsappModalOpen(true);
-  };
-
-  const handleWhatsAppVerified = () => {
-    if (activeAddress) {
+  // ── Manual WhatsApp Confirmation Handler ───────────────────────────────────
+  const handleToggleWaManual = (checked: boolean) => {
+    setWaManuallyTicked(checked);
+    if (activeAddress && typeof window !== 'undefined') {
       try {
-        localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
-        localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
+        if (checked) {
+          localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
+          localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
+          // Non-blocking sync with backend database
+          fetch('/api/dao/verify-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: activeAddress, passCode: 'MANUAL_JOIN', phone: 'manual' }),
+          }).catch(() => {});
+        } else {
+          localStorage.removeItem(`equora_wa_joined_${activeAddress}`);
+          localStorage.removeItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
+        }
       } catch {}
-      setEligibility((prev) =>
-        prev
-          ? {
-              ...prev,
-              whatsapp: { joined: true, verifiedAt: new Date().toISOString() },
-              eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed && !prev.deviceRestriction?.hasClaimed),
-            }
-          : prev
-      );
     }
+    setEligibility((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        whatsapp: {
+          joined: checked,
+          verifiedAt: checked ? (prev.whatsapp?.verifiedAt || new Date().toISOString()) : null,
+        },
+        eligibleToDeposit: Boolean(
+          checked &&
+          prev.condition1?.passed &&
+          prev.condition2?.passed &&
+          !prev.deviceRestriction?.hasClaimed
+        ),
+      };
+    });
   };
 
   // ── Live On-Chain Resource Staking & SR Voting via Injected Wallet ──────────
@@ -508,14 +519,24 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     );
   }
 
+  // Effective WhatsApp Confirmation
+  const isWaEffectiveJoined = Boolean(
+    waManuallyTicked ||
+    eligibility?.whatsapp?.joined ||
+    (activeAddress && typeof window !== 'undefined' && (
+      localStorage.getItem(`equora_wa_joined_${activeAddress}`) === 'true' ||
+      localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`) === 'true'
+    ))
+  );
+
   // Calculate blockers
   const isEligibleToPay = Boolean(
     wallet.isConnected &&
     termsAccepted &&
-    eligibility?.condition1.passed &&
-    eligibility?.condition2.passed &&
+    eligibility?.condition1?.passed &&
+    eligibility?.condition2?.passed &&
     !eligibility?.deviceRestriction?.hasClaimed &&
-    (eligibility?.whatsapp.joined || (activeAddress && typeof window !== 'undefined' && (localStorage.getItem(`equora_wa_joined_${activeAddress}`) === 'true' || localStorage.getItem(`equora_wa_joined_${activeAddress.toLowerCase()}`) === 'true'))) &&
+    isWaEffectiveJoined &&
     priceData &&
     priceData.seatEntryTrob > 0
   );
@@ -907,7 +928,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               </div>
 
               {/* ── 3. Official WhatsApp Channel ───────────────────────────────── */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A] p-3 sm:p-4 text-slate-950 shadow-xs border border-[#F59E0B]/30 flex items-center justify-between gap-2 sm:gap-3">
                   {/* WhatsApp Icon + Titles */}
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -919,58 +940,62 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-[#92400E] truncate">
-                          Verified Community
+                          Official Community
                         </span>
                         <ShieldCheck className="w-3 h-3 text-emerald-700 shrink-0" />
                       </div>
                       <div className="text-[11px] sm:text-xs font-black text-[#78350F] truncate tracking-tight uppercase font-inter">
-                        EQUORA DAO Official Channel
+                        EQUORA DAO Channel
                       </div>
                       <div className="text-[9px] sm:text-[10px] font-semibold text-[#92400E]/90 truncate">
-                        Mandatory Community Verification
+                        Mandatory Community Requirement
                       </div>
                     </div>
                   </div>
 
-                  {/* Single Clean WhatsApp Action Button - Opens Modal To Prevent Mobile WebView Crash */}
-                  {eligibility?.whatsapp.joined ? (
-                    <div className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] sm:text-xs flex items-center gap-1.5 shrink-0 shadow-xs">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Joined</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleOpenWhatsAppModal}
-                      className="px-4 py-2 rounded-xl bg-[#1FAF51] hover:bg-[#178C40] active:scale-95 text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-md shrink-0 transition-all cursor-pointer font-sans flex items-center gap-1.5"
-                    >
-                      {waJoining ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      ) : (
-                        <>
-                          <span>Join</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </>
-                      )}
-                    </button>
-                  )}
+                  {/* Direct Link to WhatsApp Group (Standard direct link, opens in new tab/app) */}
+                  <a
+                    href={OFFICIAL_WHATSAPP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#1FAF51] hover:bg-[#178C40] active:scale-95 text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider shadow-sm shrink-0 transition-all cursor-pointer font-sans flex items-center gap-1.5"
+                  >
+                    <span>Join Link</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
 
-                {/* WhatsApp Community Join & Verification Status Notice (No duplicate button) */}
-                <div className="px-0.5 sm:px-1 pt-1 space-y-2">
-                  {eligibility?.whatsapp.joined ? (
-                    <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl font-sans">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-[11px] sm:text-xs leading-snug">
-                        Channel Membership Verified • Access Authorized
+                {/* Manual Confirmation Checkbox */}
+                <div
+                  onClick={() => handleToggleWaManual(!isWaEffectiveJoined)}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                    isWaEffectiveJoined
+                      ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 shadow-2xs'
+                      : 'bg-[#F8FAFD] hover:bg-[#F1F5F9] border-[#E2ECF9] text-[#17334F]'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isWaEffectiveJoined}
+                      onChange={(e) => handleToggleWaManual(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-0.5 w-4 h-4 rounded border-[#CBD5E1] text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer shrink-0 accent-[#1FAF51]"
+                    />
+                    <div className="text-xs space-y-0.5 min-w-0">
+                      <span className="font-bold block leading-snug text-[#17334F]">
+                        I have joined the official EQUORA WhatsApp community
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-[#60739A] block leading-tight">
+                        Check this box to manually confirm you joined or are already a member of the WhatsApp group.
                       </span>
                     </div>
-                  ) : (
-                    <div className="p-2.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex items-center gap-2 text-xs font-sans">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                      <span className="text-[#92400E] text-[10px] sm:text-[11px] font-semibold leading-snug">
-                        Tap &quot;Join&quot; above to connect to the official WhatsApp community and authorize deposit.
-                      </span>
+                  </div>
+
+                  {isWaEffectiveJoined && (
+                    <div className="mt-2 pt-2 border-t border-emerald-200/60 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Community Membership Confirmed • Access Authorized</span>
                     </div>
                   )}
                 </div>
@@ -1059,8 +1084,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   <span className="leading-snug">Not Eligible: Wallet Must Be Activated On/After 1 Oct 2026</span>
                 ) : !eligibility?.condition2.passed ? (
                   <span className="leading-snug">Fulfill Resource Stake & SR Vote Requirements</span>
-                ) : !eligibility?.whatsapp.joined ? (
-                  <span className="leading-snug">Complete WhatsApp Channel Verification</span>
+                ) : !isWaEffectiveJoined ? (
+                  <span className="leading-snug">Confirm WhatsApp Channel Membership</span>
                 ) : !termsAccepted ? (
                   <span>Accept Terms & Conditions to Register</span>
                 ) : (
@@ -1090,12 +1115,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         isOpen={termsModalOpen}
         onClose={() => setTermsModalOpen(false)}
         onAccept={() => setTermsAccepted(true)}
-      />
-      <WhatsAppJoinModal
-        isOpen={whatsappModalOpen}
-        onClose={() => setWhatsappModalOpen(false)}
-        onVerified={handleWhatsAppVerified}
-        address={activeAddress}
       />
     </>
   );

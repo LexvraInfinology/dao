@@ -24,7 +24,7 @@ export const LandingHero: React.FC = () => {
   }, []);
 
   return (
-    <section className="relative pt-16 min-[360px]:pt-20 sm:pt-28 lg:pt-36 pb-6 min-[360px]:pb-8 sm:pb-16 lg:pb-20 overflow-hidden min-h-[560px] min-[360px]:min-h-[600px] sm:min-h-[640px] lg:min-h-[720px] flex flex-col justify-end lg:justify-center bg-[#EBF3FC] border-b border-slate-200/80">
+    <section className="relative pt-14 min-[360px]:pt-16 sm:pt-28 lg:pt-36 pb-6 min-[360px]:pb-8 sm:pb-16 lg:pb-20 overflow-hidden min-h-[640px] min-[360px]:min-h-[680px] min-[400px]:min-h-[720px] sm:min-h-[640px] lg:min-h-[720px] flex flex-col justify-start lg:justify-center bg-[#EBF3FC] border-b border-slate-200/80">
       {/* Background Media Container — Preserves scene composition without aggressive cropping or zooming */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden max-w-full">
         {/* Instant Fallback WebP Image (87 KB) — Instant display, zero blank state */}
@@ -34,7 +34,7 @@ export const LandingHero: React.FC = () => {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[center_18%] sm:object-[70%_center] lg:object-[78%_center] xl:object-right transition-opacity duration-700"
+          className="object-cover object-[84%_bottom] sm:object-[76%_center] lg:object-[78%_center] xl:object-right transition-opacity duration-700"
         />
 
         {/* Web-Optimized 1080p Video (1.91 MB) — Smooth fade-in ONLY once buffered and ready to play */}
@@ -47,7 +47,7 @@ export const LandingHero: React.FC = () => {
           preload="auto"
           onCanPlayThrough={handleVideoReady}
           onLoadedData={handleVideoReady}
-          className={`w-full h-full object-cover object-[center_18%] sm:object-[70%_center] lg:object-[78%_center] xl:object-right max-w-full transition-opacity duration-700 ${
+          className={`w-full h-full object-cover object-[84%_bottom] sm:object-[76%_center] lg:object-[78%_center] xl:object-right max-w-full transition-opacity duration-700 ${
             videoLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -60,8 +60,8 @@ export const LandingHero: React.FC = () => {
       </div>
 
       <div className="max-w-[1360px] mx-auto px-3.5 sm:px-8 lg:px-12 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-end lg:items-center">
-          {/* Left Column — Anchored towards bottom-left on mobile with 100% crystal-clear, unblurred background view */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start lg:items-center">
+          {/* Left Column — Top-aligned on mobile so background artwork (council, boy, dog) is 100% visible and unblocked */}
           <div className="lg:col-span-7 xl:col-span-6 text-left">
             <div className="max-w-[340px] min-[360px]:max-w-[380px] min-[400px]:max-w-[430px] sm:max-w-xl lg:max-w-2xl p-0 sm:p-6 lg:p-7 bg-transparent sm:bg-white/10 backdrop-blur-none sm:backdrop-blur-[2px] border-none shadow-none space-y-3.5 min-[360px]:space-y-4 sm:space-y-6 lg:space-y-7">
               {/* Pill Badge — Crisp without blur */}

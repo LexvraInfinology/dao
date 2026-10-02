@@ -44,7 +44,7 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 
 // ─── Constants & Addresses ───────────────────────────────────────────────────
-const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
+const DAO_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
 const OFFICIAL_WHATSAPP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 export const OFFICIAL_EQUORA_TESTNET_SR = 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5';
@@ -148,18 +148,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
 
-  // Synchronize local membership cache
+  // Synchronize local membership cache and purge stale keys
   useEffect(() => {
     if (!activeAddress || typeof window === 'undefined') return;
-    const localMember = localStorage.getItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
-    if (localMember === 'true') {
-      setIsLocalMember(true);
-    }
-  }, [activeAddress]);
-
-  useEffect(() => {
-    if (!activeAddress || typeof window === 'undefined') return;
-    if (memberData?.isMember || (Number(memberData?.position) > 0)) {
+    if (memberData?.isMember || Number(memberData?.position) > 0) {
       setIsLocalMember(true);
       try {
         localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
@@ -168,15 +160,17 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       setIsLocalMember(false);
       try {
         localStorage.removeItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
+        localStorage.removeItem(`equora_wa_joined_${activeAddress}`);
+        localStorage.removeItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
       } catch {}
     }
   }, [activeAddress, memberData, memberLoading]);
 
-  // Strict verified membership: MUST have connected wallet AND verified active seat
+  // Strict verified membership: MUST have connected wallet AND verified active seat from live backend/contract
   const isVerifiedMember = Boolean(
     wallet.isConnected &&
     activeAddress &&
-    (memberData?.isMember || (Number(memberData?.position) > 0) || (isLocalMember && (memberLoading || !memberData)))
+    (memberData?.isMember === true || Number(memberData?.position) > 0)
   );
 
   // If user is disconnected, redirect to landing page

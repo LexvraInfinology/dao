@@ -5,7 +5,7 @@ import type { TransactionItem } from '@/hooks/useApi';
 
 export const dynamic = 'force-dynamic';
 
-const PROTOCOL_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
+const PROTOCOL_ADDRESS = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
 
 export async function GET(req: NextRequest) {
   try {

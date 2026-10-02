@@ -104,7 +104,9 @@ export async function GET(
 
   // 3. On-Chain Direct Verification Fallback (EquoraDAO.sol)
   try {
-    const hexContract = '415ab39f5a64832d7efd0d59d3c84d6e13468d0534';
+    const hexContract = (process.env.NEXT_PUBLIC_DAO_HEX || '0x96cc34af00df982ef8260849f1d0747a0de3366e')
+      .replace(/^0x/, '41')
+      .toLowerCase();
     const userHex = toTronHex(address);
     if (userHex && userHex.length === 42) {
       const param = '000000000000000000000000' + userHex.slice(2);

@@ -24,7 +24,7 @@ const DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS &&
   process.env.NEXT_PUBLIC_DAO_ADDRESS !== '0x4b6aB5F819A515382B0dEB6935D793817bB4af28'
     ? process.env.NEXT_PUBLIC_DAO_ADDRESS
-    : 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
+    : 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
 export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
 
 export const DaoOnboardingModal: React.FC = () => {
@@ -63,33 +63,39 @@ export const DaoOnboardingModal: React.FC = () => {
     }
   }, [activeAddress]);
 
-  // Sync if memberData confirms membership
+  // Sync if memberData confirms membership or clear stale keys if not
   useEffect(() => {
-    if (memberData?.isMember || (Number(memberData?.position) > 0)) {
+    if (!activeAddress || typeof window === 'undefined') return;
+    if (memberData?.isMember || Number(memberData?.position) > 0) {
       setHasDeposited(true);
-      if (typeof window !== 'undefined' && activeAddress) {
-        try {
-          localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
-        } catch {}
-      }
+      try {
+        localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
+      } catch {}
+    } else if (!memberLoading && memberData && !memberData.isMember) {
+      setHasDeposited(false);
+      setCompleted(false);
+      try {
+        localStorage.removeItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
+        localStorage.removeItem(`equora_onboarded_${activeAddress}`);
+        localStorage.removeItem(`equora_wa_joined_${activeAddress}`);
+        localStorage.removeItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
+      } catch {}
     }
-  }, [memberData, activeAddress]);
+  }, [memberData, memberLoading, activeAddress]);
 
   // If already dismissed, do not show
   if (isDismissed) {
     return null;
   }
 
-  // If already completed onboarding, do not show
-  if (completed) {
+  // If already completed onboarding and verified as member, do not show
+  if (completed && (memberData?.isMember || Number(memberData?.position) > 0)) {
     return null;
   }
 
   // If user is already verified on-chain and registered as member, grant full access immediately
   const isAlreadyMember = Boolean(
-    memberData?.isMember ||
-    (Number(memberData?.position) > 0) ||
-    (activeAddress && typeof window !== 'undefined' && localStorage.getItem(`equora_dao_member_${activeAddress.toLowerCase()}`) === 'true')
+    memberData?.isMember === true || Number(memberData?.position) > 0
   );
   if (isAlreadyMember) {
     return null;

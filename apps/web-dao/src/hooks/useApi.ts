@@ -17,13 +17,72 @@ export interface UseApiResult<T> {
 /**
  * useApi<T> — fetches a GET endpoint and returns { data, loading, error, refetch }.
  * Automatically attaches JWT Bearer token from AuthContext when available.
- * Supports optional polling via `pollMs`.
  */
+export const EQUORA_CACHE_VERSION = 'v2026_10_02_clean_genesis';
+
+// Auto-purge stale client caches on version bump
+if (typeof window !== 'undefined') {
+  try {
+    const currentVer = localStorage.getItem('equora_cache_version');
+    if (currentVer !== EQUORA_CACHE_VERSION) {
+      sessionStorage.clear();
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (
+          k &&
+          (k.startsWith('equora_dao_member_') ||
+            k.startsWith('equora_wa_joined_') ||
+            k.startsWith('eq_cache_') ||
+            k.startsWith('trob_member_') ||
+            k.includes('member') ||
+            k.includes('claimed'))
+        ) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('equora_cache_version', EQUORA_CACHE_VERSION);
+    }
+  } catch {}
+}
+
+export function clearDaoClientCaches() {
+  if (typeof window === 'undefined') return;
+  try {
+    memoryApiCache.clear();
+    sessionStorage.clear();
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (
+        k &&
+        (k.startsWith('equora_dao_member_') ||
+          k.startsWith('equora_wa_joined_') ||
+          k.startsWith('eq_cache_') ||
+          k.startsWith('trob_member_'))
+      ) {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
 // Global in-memory cache for live dynamic API responses (persists across component mounts)
 const memoryApiCache = new Map<string, any>();
 
+function isDynamicUserPath(path: string): boolean {
+  return (
+    path.includes('/dao/member/') ||
+    path.includes('/dao/lounge/') ||
+    path.includes('/dao/profile/') ||
+    path.includes('/dao/eligibility/')
+  );
+}
+
 function getInitialCachedData<T>(path: string | null, fallback: T | null): T | null {
-  if (!path) return fallback;
+  if (!path || isDynamicUserPath(path)) return fallback;
   if (memoryApiCache.has(path)) {
     return memoryApiCache.get(path) as T;
   }
@@ -103,7 +162,7 @@ export function useApi<T>(
       const json = await res.json();
       const result = json.data !== undefined ? json.data : json;
       setData(result);
-      if (path) {
+      if (path && !isDynamicUserPath(path)) {
         memoryApiCache.set(path, result);
         if (typeof window !== 'undefined') {
           try {

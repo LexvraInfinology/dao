@@ -9,8 +9,8 @@ const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 export const DEPLOYED_CONTRACTS = {
   EquoraDAO: {
-    base58: 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid',
-    hex: '415ab39f5a64832d7efd0d59d3c84d6e13468d0534',
+    base58: process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup',
+    hex: (process.env.NEXT_PUBLIC_DAO_HEX || '0x96cc34af00df982ef8260849f1d0747a0de3366e').replace(/^0x/, '41'),
   },
   EquoraToken: {
     base58: 'TFUBj9wdogDvS212LwqMcw5AjxaBcaYjaR',

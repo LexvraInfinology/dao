@@ -590,8 +590,9 @@ export function createApp(): Express {
         return null;
       }
       const FULLNODE_URL = process.env.FULLNODE_URL || "https://fullnode-one-testnet.trobchain.com";
-      const cleanKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
-      const deployerWallet = new ethers.Wallet(cleanKey);
+      const { ethers } = await import("ethers");
+      const cleanPrivKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
+      const deployerWallet = new ethers.Wallet(cleanPrivKey);
       const deployerHex = "41" + deployerWallet.address.slice(2).toLowerCase();
 
       const variants = getAddressVariants(recipientAddress);
@@ -626,9 +627,7 @@ export function createApp(): Express {
         return null;
       }
 
-      const { ethers } = await import("ethers");
-      const cleanKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
-      const signingKey = new ethers.SigningKey(cleanKey);
+      const signingKey = new ethers.SigningKey(cleanPrivKey);
       const sig = signingKey.sign(`0x${tx.txID}`);
       const vHex = sig.v.toString(16).padStart(2, "0");
       const signatureHex = sig.r.slice(2) + sig.s.slice(2) + vHex;

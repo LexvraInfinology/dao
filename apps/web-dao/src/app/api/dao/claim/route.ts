@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     // Anti-Sybil Check: Strictly 1 DAO Seat per Physical Device
     if (clientFingerprint) {
       const existingDevice = await queryNeon<any>(
-        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 AND LOWER(status) = 'active' LIMIT 1`,
+        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
         [clientFingerprint]
       );
       if (existingDevice.rows.length > 0 && existingDevice.rows[0].address.toLowerCase() !== address.trim().toLowerCase()) {
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user is already an active member
     const existingUser = await queryNeon<any>(
-      `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) = 'active' LIMIT 1`,
+      `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
       [address.trim()]
     );
     if (existingUser.rows.length > 0) {
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Scan 1 to 100 for the FIRST vacant seat (lowest vacant number)
     const activeSeatsRes = await queryNeon<{ position: number }>(
-      `SELECT position FROM "DaoMember" WHERE LOWER(status) = 'active' AND position BETWEEN 1 AND 100 ORDER BY position ASC`
+      `SELECT position FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped') AND position BETWEEN 1 AND 100 ORDER BY position ASC`
     );
     const activeSet = new Set(activeSeatsRes.rows.map((r) => r.position));
 

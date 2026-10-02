@@ -302,10 +302,10 @@ async function syncOnChainMembersToDb(
         [m.user, m.position, m.timestamp]
       );
 
-      // 2. Ensure DaoMember record exists
+      // 2. Ensure DaoMember record exists and matches on-chain position
       const existing = await queryNeon<any>(
-        `SELECT id, position FROM "DaoMember" WHERE position = $1 OR LOWER(address) = LOWER($2) LIMIT 1`,
-        [m.position, m.user]
+        `SELECT id, position, address FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+        [m.position]
       );
 
       const cashbackTrob = Math.round((m.paidAmountTrob / m.position) * 100) / 100;
@@ -315,6 +315,13 @@ async function syncOnChainMembersToDb(
           `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
            VALUES (gen_random_uuid(), $1, $2, $3, $4, 1, $5, 300, $6, 'blockchain-onchain', $7, 'active', NOW(), NOW())`,
           [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
+        );
+      } else if (existing.rows[0].address.toLowerCase() !== m.user.toLowerCase()) {
+        await queryNeon(
+          `UPDATE "DaoMember"
+           SET address = $1, "txHash" = $2, "nftTokenId" = $3, "updatedAt" = NOW()
+           WHERE position = $4`,
+          [m.user, m.txHash, m.tokenId, m.position]
         );
       }
 

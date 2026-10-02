@@ -67,7 +67,7 @@ export async function GET() {
       total_distributed: string;
     }>(
       `SELECT 
-        COUNT(*) FILTER (WHERE LOWER(status) = 'active') as active_count,
+        COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'capped')) as active_count,
         COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
         COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
        FROM "DaoMember"`

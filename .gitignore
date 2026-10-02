@@ -1,6 +1,10 @@
 # Dependencies & Package Managers
 node_modules/
 **/node_modules/
+package-lock.json
+**/package-lock.json
+yarn.lock
+**/yarn.lock
 .pnp
 .pnp.js
 .pnpm-store/

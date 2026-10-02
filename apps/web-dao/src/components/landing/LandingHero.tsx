@@ -57,32 +57,30 @@ export const LandingHero: React.FC = () => {
           />
         </video>
 
-        {/* Soft Ambient Bottom Gradient Vignette on Mobile — Ensures strong text contrast without blocking the scene */}
-        <div className="absolute inset-x-0 bottom-0 h-72 sm:h-48 lg:hidden bg-gradient-to-t from-[#EBF3FC] via-[#EBF3FC]/75 to-transparent pointer-events-none" />
       </div>
 
       <div className="max-w-[1360px] mx-auto px-3.5 sm:px-8 lg:px-12 relative z-10 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-end lg:items-center">
-          {/* Left Column — Anchored towards bottom-left on mobile with unobstructed view of the background video */}
+          {/* Left Column — Anchored towards bottom-left on mobile with 100% crystal-clear, unblurred background view */}
           <div className="lg:col-span-7 xl:col-span-6 text-left">
-            <div className="max-w-[340px] min-[360px]:max-w-[380px] min-[400px]:max-w-[430px] sm:max-w-xl lg:max-w-2xl p-4 sm:p-6 lg:p-7 rounded-2xl sm:rounded-3xl bg-white/20 sm:bg-white/10 backdrop-blur-[3px] border-none shadow-none space-y-3.5 min-[360px]:space-y-4 sm:space-y-6 lg:space-y-7">
-              {/* Pill Badge — Transparent & Borderless */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/35 backdrop-blur-sm border-0 shadow-none">
+            <div className="max-w-[340px] min-[360px]:max-w-[380px] min-[400px]:max-w-[430px] sm:max-w-xl lg:max-w-2xl p-0 sm:p-6 lg:p-7 bg-transparent sm:bg-white/10 backdrop-blur-none sm:backdrop-blur-[2px] border-none shadow-none space-y-3.5 min-[360px]:space-y-4 sm:space-y-6 lg:space-y-7">
+              {/* Pill Badge — Crisp without blur */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/85 border border-blue-200/50 shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
                   Genesis DAO Council
                 </span>
               </div>
 
-              {/* Headline — High Contrast Razor Sharp with Elegant Line Separation */}
-              <h1 className="text-[23px] min-[360px]:text-[26px] sm:text-4xl lg:text-[50px] xl:text-[54px] font-black uppercase text-[#071437] text-left drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] sm:drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] flex flex-col gap-1.5 sm:gap-2.5 lg:gap-3 leading-[1.14] sm:leading-[1.12]">
+              {/* Headline — High Contrast Razor Sharp with Elegant Line Separation, Zero Background Blur */}
+              <h1 className="text-[23px] min-[360px]:text-[26px] sm:text-4xl lg:text-[50px] xl:text-[54px] font-black uppercase text-[#071437] text-left drop-shadow-[0_2px_8px_rgba(255,255,255,0.95)] sm:drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] flex flex-col gap-1.5 sm:gap-2.5 lg:gap-3 leading-[1.14] sm:leading-[1.12]">
                 <span className="block">100 Seats.</span>
                 <span className="block text-[#155EEF]">One Council.</span>
                 <span className="block">A Shared Future.</span>
               </h1>
 
               {/* Subtitle — Strong High-Contrast Typography with Generous Line Breathing Room */}
-              <p className="text-[12px] min-[360px]:text-[13px] sm:text-base lg:text-[17px] text-[#0F172A] font-semibold sm:font-medium leading-relaxed sm:leading-[1.65] text-left drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)] max-w-xl">
+              <p className="text-[12px] min-[360px]:text-[13px] sm:text-base lg:text-[17px] text-[#0F172A] font-semibold sm:font-medium leading-relaxed sm:leading-[1.65] text-left drop-shadow-[0_2px_6px_rgba(255,255,255,0.95)] max-w-xl">
                 Fixed sovereign positions with direct dividend distribution and governance rights.
                 Zero referrals, infinite protocol cash flow.
               </p>
@@ -99,7 +97,7 @@ export const LandingHero: React.FC = () => {
 
                 <button
                   onClick={() => setVideoOpen(true)}
-                  className="px-3.5 min-[360px]:px-4.5 sm:px-6 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#071437] hover:text-[#0B132B] bg-white/40 hover:bg-white/70 backdrop-blur-sm border-0 shadow-none transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                  className="px-3.5 min-[360px]:px-4.5 sm:px-6 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#071437] hover:text-[#0B132B] bg-white/85 hover:bg-white shadow-xs border border-slate-200/60 transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
                 >
                   <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-50/80 flex items-center justify-center text-[#155EEF] shrink-0">
                     <Play className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current ml-0.5" />

@@ -595,8 +595,8 @@ export default function DaoDashboardPage() {
                     </div>
                   </div>
                   <div className="text-right shrink-0 pl-2">
-                    <div className="text-xs font-bold text-[#1F8A5B] tabular-nums">
-                      +{event.amountBtt ? Number(event.amountBtt).toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} TROB
+                    <div className={`text-xs font-bold tabular-nums ${isJoined ? 'text-[#17334F]' : 'text-[#1F8A5B]'}`}>
+                      {isJoined ? '' : '+'}{event.amountBtt ? Number(event.amountBtt).toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} TROB
                     </div>
                     <div className="text-[10px] text-[#5E7B94] font-medium flex items-center justify-end gap-1">
                       {event.amountUsdEstimate > 0 && (

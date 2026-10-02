@@ -120,26 +120,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    if (elig.deviceRestriction?.hasClaimed) {
-      return NextResponse.json({
-        success: false,
-        error: `Device Restriction: This physical device has already claimed Council Seat #${elig.deviceRestriction.claimedSeat}. The Genesis DAO strictly enforces 1 seat per physical device.`,
-      }, { status: 403 });
-    }
-
-    // Anti-Sybil Check: Strictly 1 DAO Seat per Physical Device
-    if (clientFingerprint) {
-      const existingDevice = await queryNeon<any>(
-        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
-        [clientFingerprint]
-      );
-      if (existingDevice.rows.length > 0 && existingDevice.rows[0].address.toLowerCase() !== address.trim().toLowerCase()) {
-        return NextResponse.json({
-          success: false,
-          error: `Device Restriction: This device has already claimed Council Seat #${existingDevice.rows[0].position}. The Genesis DAO strictly enforces 1 seat per physical device to protect decentralized fairness.`,
-        }, { status: 403 });
-      }
-    }
+    // Device restriction check bypassed for testing per user request
 
     // Check if user is already an active member
     const existingUser = await queryNeon<any>(

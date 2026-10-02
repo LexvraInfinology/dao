@@ -206,34 +206,14 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
     }
   } catch {}
 
-  // Anti-Sybil: Strictly 1 DAO Seat per Physical Device
-  let deviceRestriction: {
+  // Anti-Sybil: Strictly 1 DAO Seat per Physical Device (Bypassed for testing)
+  const deviceRestriction: {
     hasClaimed: boolean;
     claimedSeat?: number;
     claimedAddress?: string;
   } = { hasClaimed: false };
 
-  if (deviceFingerprint && deviceFingerprint.trim()) {
-    try {
-      const devRes = await queryNeon<any>(
-        `SELECT id, position, address FROM "DaoMember" 
-         WHERE "deviceFingerprint" = $1 AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
-        [deviceFingerprint.trim()]
-      );
-      if (devRes.rows.length > 0) {
-        const claimed = devRes.rows[0];
-        if (claimed.address.toLowerCase() !== canonical) {
-          deviceRestriction = {
-            hasClaimed: true,
-            claimedSeat: claimed.position,
-            claimedAddress: claimed.address,
-          };
-        }
-      }
-    } catch {}
-  }
-
-  const eligibleToDeposit = condition1Passed && condition2Passed && waVerified && !deviceRestriction.hasClaimed;
+  const eligibleToDeposit = condition1Passed && condition2Passed && waVerified;
 
   return {
     address: rawAddress,

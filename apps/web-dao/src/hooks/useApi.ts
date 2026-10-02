@@ -342,6 +342,7 @@ export interface TransactionItem {
   txHash: string;
   timestamp: string;
   status: string;
+  incomingPosition?: number | null;
 }
 
 export interface TransactionsData {

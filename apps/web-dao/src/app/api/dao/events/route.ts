@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFromBackend } from '../../_lib/proxy';
-import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
 
 export const dynamic = 'force-dynamic';
@@ -15,44 +13,43 @@ function toIsoUtc(ts: any): string {
   return new Date(s.replace(' ', 'T') + 'Z').toISOString();
 }
 
+/**
+ * Pure On-Chain Real-Time Blockchain Activity Feed
+ * Fetches exclusively from the verified TrobChain smart contract on-chain ledger.
+ * Zero mocked data or duplicate database rows.
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
-    // 1. Try Express backend if configured
-    const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
-      `/api/dao/events?limit=${limit}`
-    );
-    if (backendRes && backendRes.success && Array.isArray(backendRes.data) && backendRes.data.length > 0) {
-      return NextResponse.json(backendRes);
-    }
+    // 1. Fetch direct on-chain smart contract transactions from TrobChain
+    const onChainTxList = await getOnChainDaoTransactions(null, true);
 
-    // 2. Fetch direct on-chain smart contract transactions
-    const onChainTxList = await getOnChainDaoTransactions();
+    const eventsList: any[] = [];
+    const seenKeys = new Set<string>();
 
-    // 3. Fetch from Neon Database
-    let dbRows: any[] = [];
-    try {
-      const res = await queryNeon<any>(
-        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst", "priceSource", reason
-         FROM "DaoEvent"
-         ORDER BY "timestamp" DESC, "createdAt" DESC
-         LIMIT ${limit}`
-      );
-      dbRows = res.rows;
-    } catch {}
-
-    const eventsMap = new Map<string, any>();
-
-    // Add on-chain items
     for (const item of onChainTxList) {
       const isPush = item.type === 'pushed';
-      eventsMap.set(item.id, {
+      const userAddress = isPush ? item.to : item.from;
+
+      // Deduplicate strictly by unique txHash + eventType + recipient/caller
+      const dedupeKey = `${item.txHash}_${item.type}_${userAddress}`;
+      if (seenKeys.has(dedupeKey)) continue;
+      seenKeys.add(dedupeKey);
+
+      // Extract seat position if not already explicitly assigned
+      let pos = item.incomingPosition;
+      if (!pos) {
+        const m = item.typeLabel.match(/Seat #(\d+)/i);
+        if (m && m[1]) pos = parseInt(m[1], 10);
+      }
+
+      eventsList.push({
         id: item.id,
         eventType: item.type,
-        userAddress: isPush ? item.to : item.from,
-        incomingPosition: null,
+        userAddress: userAddress,
+        incomingPosition: pos || null,
         recipientCount: null,
         txHash: item.txHash,
         blockNumber: 1,
@@ -60,39 +57,18 @@ export async function GET(req: NextRequest) {
         amountBtt: item.amountTrob || item.amountBtt,
         amountTrob: item.amountTrob || item.amountBtt,
         amountUsdEst: item.amountUsd,
-        priceSource: 'blockchain-onchain',
+        amountUsdEstimate: item.amountUsd,
+        priceSource: 'trobchain-blockchain',
         reason: item.typeLabel,
       });
     }
 
-    // Add DB items
-    for (const evt of dbRows) {
-      if (!eventsMap.has(evt.id) && !eventsMap.has(evt.txHash)) {
-        eventsMap.set(evt.id, {
-          ...evt,
-          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-          amountBtt: parseFloat(evt.amountBtt || '0'),
-          amountTrob: parseFloat(evt.amountBtt || '0'),
-          amountUsdEst: parseFloat(evt.amountUsdEst || '0'),
-          reason:
-            evt.reason ||
-            (evt.eventType === 'joined'
-              ? `Council Seat Activated${evt.incomingPosition ? ` (#${evt.incomingPosition})` : ''}`
-              : evt.eventType === 'pushed'
-              ? `Instant 300/N Cashback${evt.incomingPosition ? ` (Seat #${evt.incomingPosition})` : ''}`
-              : evt.eventType === 'retopup'
-              ? '5X Cap Retopup'
-              : evt.eventType),
-        });
-      }
-    }
-
-    const merged = Array.from(eventsMap.values());
-    merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // Sort strictly in reverse-chronological order (newest on-chain events first)
+    eventsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return NextResponse.json({
       success: true,
-      data: merged.slice(0, limit),
+      data: eventsList.slice(0, limit),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch dao events';

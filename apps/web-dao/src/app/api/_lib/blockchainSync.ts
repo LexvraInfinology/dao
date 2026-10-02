@@ -150,6 +150,7 @@ export async function getOnChainDaoTransactions(
           txHash: hash,
           timestamp: depositTime,
           status: 'Confirmed',
+          incomingPosition: pos,
         });
 
         discoveredMembers.push({
@@ -201,6 +202,7 @@ export async function getOnChainDaoTransactions(
               txHash: hash,
               timestamp: itemTime,
               status: 'Confirmed',
+              incomingPosition: pushFromPos,
             });
           }
         } else {
@@ -220,6 +222,7 @@ export async function getOnChainDaoTransactions(
             txHash: hash,
             timestamp: cashbackTime,
             status: 'Confirmed',
+            incomingPosition: pos,
           });
         }
       } else if (isRetopup) {
@@ -242,6 +245,7 @@ export async function getOnChainDaoTransactions(
           txHash: hash,
           timestamp: isoTime,
           status: 'Confirmed',
+          incomingPosition: pos,
         });
 
         for (const p of payoutEvts) {
@@ -263,6 +267,7 @@ export async function getOnChainDaoTransactions(
             txHash: hash,
             timestamp: isoTime,
             status: 'Confirmed',
+            incomingPosition: pos,
           });
         }
       }

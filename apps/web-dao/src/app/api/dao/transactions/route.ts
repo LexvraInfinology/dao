@@ -42,67 +42,70 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    // 2. Fetch transactions directly from DaoEvent in Neon DB
+    // 2. Fetch direct on-chain smart contract transactions from TrobChain
     let rawList: TransactionItem[] = [];
     try {
-      let whereClauses: string[] = [];
-      let params: any[] = [];
-
-      if (address && address.trim()) {
-        params.push(address.trim().toLowerCase());
-        whereClauses.push(`LOWER("userAddress") = $${params.length}`);
+      const onChainItems = await getOnChainDaoTransactions(address, true);
+      if (onChainItems && onChainItems.length > 0) {
+        rawList = onChainItems;
       }
-
-      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-      const rowsRes = await queryNeon<any>(
-        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
-         FROM "DaoEvent"
-         ${whereSql}
-         ORDER BY "timestamp" DESC, "createdAt" DESC
-         LIMIT 200`,
-        params
-      );
-
-      rawList = rowsRes.rows.map((evt) => {
-        const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-        const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
-        const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
-
-        return {
-          id: evt.id,
-          type: evt.eventType as any,
-          typeLabel:
-            evt.reason ||
-            (evt.eventType === 'joined'
-              ? `Council Seat #${evt.incomingPosition || ''} Activated`
-              : evt.eventType === 'pushed'
-              ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-              : evt.eventType === 'retopup'
-              ? '5X Cap Retopup'
-              : 'Dividend Reward Claimed'),
-          amountBtt: amtBtt,
-          amountTrob: amtBtt,
-          amountUsd: amtUsd,
-          isPositive,
-          from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-          to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-          txHash: evt.txHash || '',
-          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-          status: 'Confirmed',
-        };
-      });
-    } catch (dbErr) {
-      console.warn('[Transactions API] DB fetch warning:', dbErr);
+    } catch (chainErr) {
+      console.warn('[Transactions API] On-chain fetch warning:', chainErr);
     }
 
-    // 3. Fallback to on-chain explorer scraper only if explicitly enabled
-    if (rawList.length === 0 && process.env.ENABLE_LEGACY_EXPLORER_TXS === 'true') {
+    // 3. Fallback to Neon DB only if on-chain returned no transactions
+    if (rawList.length === 0) {
       try {
-        const onChainItems = await getOnChainDaoTransactions(address, true);
-        if (onChainItems && onChainItems.length > 0) {
-          rawList = onChainItems;
+        let whereClauses: string[] = [];
+        let params: any[] = [];
+
+        if (address && address.trim()) {
+          params.push(address.trim().toLowerCase());
+          whereClauses.push(`LOWER("userAddress") = $${params.length}`);
         }
-      } catch {}
+
+        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const rowsRes = await queryNeon<any>(
+          `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
+           FROM "DaoEvent"
+           ${whereSql}
+           ORDER BY "timestamp" DESC, "createdAt" DESC
+           LIMIT 200`,
+          params
+        );
+
+        rawList = rowsRes.rows.map((evt) => {
+          const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+          const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+          const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
+
+          return {
+            id: evt.id,
+            type: evt.eventType as any,
+            typeLabel:
+              evt.reason ||
+              (evt.eventType === 'joined'
+                ? `Council Seat #${evt.incomingPosition || ''} Activated`
+                : evt.eventType === 'pushed'
+                ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+                : evt.eventType === 'retopup'
+                ? '5X Cap Retopup'
+                : 'Dividend Reward Claimed'),
+            amountBtt: amtBtt,
+            amountTrob: amtBtt,
+            amountUsd: amtUsd,
+            isPositive,
+            from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+            to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+            txHash: evt.txHash || '',
+            timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+            status: 'Confirmed',
+            incomingPosition: evt.incomingPosition,
+          };
+        });
+      } catch (dbErr) {
+        console.warn('[Transactions API] DB fetch warning:', dbErr);
+      }
     }
 
     // 4. Apply search and type filtering

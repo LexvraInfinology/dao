@@ -400,12 +400,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       setPayError('You must accept the Terms & Conditions before registering.');
       return;
     }
-    if (eligibility?.deviceRestriction?.hasClaimed) {
-      setPayError(
-        `Device Restriction: This physical device has already registered Council Seat #${eligibility.deviceRestriction.claimedSeat}. Only 1 seat per physical device is permitted.`
-      );
-      return;
-    }
+
     if (!eligibility?.condition1.passed) {
       setPayError(eligibility?.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
       return;

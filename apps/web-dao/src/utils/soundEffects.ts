@@ -6,9 +6,28 @@
  */
 
 let sharedAudioCtx: AudioContext | null = null;
+let userHasInteracted = false;
+
+// Auto-unlock Web Audio context on the first user interaction anywhere on the document
+if (typeof window !== 'undefined') {
+  const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown'];
+  const handleUnlock = () => {
+    userHasInteracted = true;
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    unlockEvents.forEach((ev) => window.removeEventListener(ev, handleUnlock));
+  };
+  unlockEvents.forEach((ev) => {
+    window.addEventListener(ev, handleUnlock, { once: true, passive: true });
+  });
+}
 
 export function initOrUnlockAudio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
+  // Strictly guard against initial creation before user interaction to satisfy browser autoplay policies
+  if (!userHasInteracted) return null;
+
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return null;
@@ -22,18 +41,6 @@ export function initOrUnlockAudio(): AudioContext | null {
   } catch {
     return null;
   }
-}
-
-// Auto-unlock Web Audio context on the first user interaction anywhere on the document
-if (typeof window !== 'undefined') {
-  const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown'];
-  const handleUnlock = () => {
-    initOrUnlockAudio();
-    unlockEvents.forEach((ev) => window.removeEventListener(ev, handleUnlock));
-  };
-  unlockEvents.forEach((ev) => {
-    window.addEventListener(ev, handleUnlock, { once: true, passive: true });
-  });
 }
 
 function getAudioContext(): AudioContext | null {

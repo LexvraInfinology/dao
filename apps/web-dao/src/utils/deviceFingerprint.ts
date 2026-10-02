@@ -72,15 +72,15 @@ export async function getDeviceFingerprint(): Promise<string> {
       hardwareComponents.push('canvas:fallback');
     }
 
-    // 5. AudioContext Oscillator Characteristics (Physical Audio DAC)
+    // 5. OfflineAudioContext Hardware Characteristics (Zero-Playback Physical Audio DAC)
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const audioCtx = new AudioCtx();
-        hardwareComponents.push(`audio:${audioCtx.sampleRate}`);
-        if (audioCtx.state !== 'closed') {
-          audioCtx.close().catch(() => {});
-        }
+      const OfflineCtxClass =
+        window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+      if (OfflineCtxClass) {
+        const offlineCtx = new OfflineCtxClass(1, 44100, 44100);
+        hardwareComponents.push(`audio:${offlineCtx.sampleRate}`);
+      } else {
+        hardwareComponents.push('audio:unsupported');
       }
     } catch {
       hardwareComponents.push('audio:fallback');

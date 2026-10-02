@@ -27,8 +27,8 @@ export default function SettingsHero() {
         <div className="flex items-center gap-5 z-10 shrink-0">
           <div className="relative w-20 h-20 flex items-center justify-center">
             <img
-              src="/dao/trobiumdashboard.png"
-              alt="Trobium Emblem"
+              src="/dao/equoranewlogo.png"
+              alt="EQUORA Emblem"
               className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(14,98,228,0.2)]"
             />
           </div>
@@ -69,12 +69,12 @@ export default function SettingsHero() {
           </p>
         </div>
 
-        {/* Right Graphic: 3D Trobium Emblem with glow */}
+        {/* Right Graphic: 3D EQUORA Emblem with glow */}
         <div className="relative shrink-0 flex items-center justify-center w-16 h-16">
           <div className="absolute inset-0 bg-[#0E62E4]/10 rounded-full blur-md pointer-events-none" />
           <img
-            src="/dao/trobiumdashboard.png"
-            alt="3D Trobium Emblem"
+            src="/dao/equoranewlogo.png"
+            alt="3D EQUORA Emblem"
             className="w-14 h-14 object-contain relative z-10 drop-shadow-[0_2px_8px_rgba(14,98,228,0.2)]"
           />
         </div>

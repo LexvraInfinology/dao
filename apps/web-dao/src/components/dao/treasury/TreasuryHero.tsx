@@ -62,7 +62,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
               <img src="/dao/trobiumdashboard.png" alt="Trobium Accent" className="w-full h-full object-contain" />
             </div>
             <div className="relative w-28 h-28 xl:w-32 xl:h-32 animate-float flex items-center justify-center">
-              <img src="/dao/trobiumdashboard.png" alt="3D Treasury Emblem"
+              <img src="/dao/equoranewlogo.png" alt="3D Treasury EQUORA Emblem"
                 className="w-full h-full object-contain drop-shadow-[0_12px_24px_rgba(21,94,239,0.35)]" />
             </div>
           </div>
@@ -86,7 +86,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 animate-float">
-            <img src="/dao/trobiumdashboard.png" alt="3D Treasury Emblem"
+            <img src="/dao/equoranewlogo.png" alt="3D Treasury EQUORA Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
           </div>
         </div>

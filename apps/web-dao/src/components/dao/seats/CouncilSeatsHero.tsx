@@ -39,12 +39,12 @@ export const CouncilSeatsHero: React.FC = () => {
             </div>
           </div>
 
-          {/* 3D Trobium Graphic */}
+          {/* 3D EQUORA Graphic */}
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center shrink-0">
             <div className="absolute inset-0 rounded-full bg-[#EFF6FF] blur-md pointer-events-none" />
             <img
-              src="/dao/trobiumdashboard.png"
-              alt="Soulbound Council Seats Trobium Emblem"
+              src="/dao/equoranewlogo.png"
+              alt="Soulbound Council Seats EQUORA Emblem"
               className="w-full h-full object-contain drop-shadow-[0_6px_16px_rgba(14,98,228,0.25)] animate-float"
             />
           </div>
@@ -72,8 +72,8 @@ export const CouncilSeatsHero: React.FC = () => {
         <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-[#EFF6FF] blur-xs pointer-events-none" />
           <img
-            src="/dao/trobiumdashboard.png"
-            alt="Soulbound Council Seats Trobium Emblem"
+            src="/dao/equoranewlogo.png"
+            alt="Soulbound Council Seats EQUORA Emblem"
             className="w-full h-full object-contain drop-shadow-[0_4px_12px_rgba(14,98,228,0.2)] animate-float"
           />
         </div>

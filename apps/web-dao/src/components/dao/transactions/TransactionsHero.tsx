@@ -50,7 +50,7 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
           <div className="relative w-48 h-36 xl:w-52 xl:h-40 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
             <div className="relative w-full h-full flex items-center justify-center animate-float">
-              <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
+              <img src="/dao/equoranewlogo.png" alt="3D EQUORA Emblem"
                 className="w-full h-full object-contain drop-shadow-[0_10px_25px_rgba(21,94,239,0.3)]" />
             </div>
           </div>
@@ -87,7 +87,7 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
         <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
           <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
           <div className="relative w-24 h-24 animate-float">
-            <img src="/dao/trobiumdashboard.png" alt="3D Trobium Emblem"
+            <img src="/dao/equoranewlogo.png" alt="3D EQUORA Emblem"
               className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
           </div>
         </div>

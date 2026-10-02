@@ -14,6 +14,7 @@ import {
   Check,
   Download,
   Smartphone,
+  Copy,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
@@ -198,6 +199,47 @@ export const DaoOnboardingModal: React.FC = () => {
       setDepositError(msg);
     } finally {
       setIsDepositing(false);
+    }
+  };
+
+  const [copiedWa, setCopiedWa] = useState(false);
+
+  const handleCopyWa = async () => {
+    try {
+      await navigator.clipboard.writeText(WHATSAPP_DAO_GROUP_URL);
+      setCopiedWa(true);
+      setTimeout(() => setCopiedWa(false), 2500);
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = WHATSAPP_DAO_GROUP_URL;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopiedWa(true);
+      setTimeout(() => setCopiedWa(false), 2500);
+    }
+  };
+
+  const handleToggleWaCheckbox = (checked: boolean) => {
+    setHasJoinedWhatsApp(checked);
+    if (activeAddress && typeof window !== 'undefined') {
+      try {
+        if (checked) {
+          localStorage.setItem(`equora_wa_joined_${activeAddress}`, 'true');
+          localStorage.setItem(`equora_wa_joined_${activeAddress.toLowerCase()}`, 'true');
+          fetch('/api/dao/verify-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: activeAddress }),
+          }).catch(() => {});
+        } else {
+          localStorage.removeItem(`equora_wa_joined_${activeAddress}`);
+          localStorage.removeItem(`equora_wa_joined_${activeAddress.toLowerCase()}`);
+        }
+      } catch {
+        /* ignore */
+      }
     }
   };
 

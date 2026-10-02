@@ -145,6 +145,27 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     } catch { /* ignore */ }
   };
 
+  // WhatsApp Community Group URL copy state
+  const [copiedWaUrl, setCopiedWaUrl] = useState(false);
+
+  const handleCopyWaUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(OFFICIAL_WHATSAPP_URL);
+      setCopiedWaUrl(true);
+      setTimeout(() => setCopiedWaUrl(false), 2500);
+    } catch {
+      // Fallback for older WebViews / mobile browsers
+      const input = document.createElement('textarea');
+      input.value = OFFICIAL_WHATSAPP_URL;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopiedWaUrl(true);
+      setTimeout(() => setCopiedWaUrl(false), 2500);
+    }
+  };
+
   const [mounted, setMounted]                 = useState(false);
 
   // Quick fallback timeout for detection probe (800ms max) & client mount flag
@@ -929,7 +950,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
               {/* ── 3. Official WhatsApp Channel ───────────────────────────────── */}
               <div className="space-y-2">
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A] p-3 sm:p-4 text-slate-950 shadow-xs border border-[#F59E0B]/30 flex items-center justify-between gap-2 sm:gap-3">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A] p-3 sm:p-4 text-slate-950 shadow-xs border border-[#F59E0B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* WhatsApp Icon + Titles */}
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1FAF51] text-white flex items-center justify-center shrink-0 shadow-sm ring-2 ring-white/60">
@@ -948,21 +969,57 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                         EQUORA DAO Channel
                       </div>
                       <div className="text-[9px] sm:text-[10px] font-semibold text-[#92400E]/90 truncate">
-                        Mandatory Community Requirement
+                        Copy link to paste directly in WhatsApp or browser
                       </div>
                     </div>
                   </div>
 
-                  {/* Direct Link to WhatsApp Group (Standard direct link, opens in new tab/app) */}
-                  <a
-                    href={OFFICIAL_WHATSAPP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#1FAF51] hover:bg-[#178C40] active:scale-95 text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider shadow-sm shrink-0 transition-all cursor-pointer font-sans flex items-center gap-1.5"
+                  {/* Copy URL Link Button (Replaces join button so mobile phones can copy directly) */}
+                  <button
+                    type="button"
+                    onClick={handleCopyWaUrl}
+                    className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer active:scale-95 ${
+                      copiedWaUrl
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[#1FAF51] hover:bg-[#178C40] text-white'
+                    }`}
                   >
-                    <span>Join Link</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                    {copiedWaUrl ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Link Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy URL Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Direct Link Display & Quick Copy Box for Direct Pasting */}
+                <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-[#F8FAFD] border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] sm:text-xs font-mono text-slate-600 truncate flex-1 pl-1 select-all">
+                    {OFFICIAL_WHATSAPP_URL}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyWaUrl}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#155EEF] hover:text-[#004EEB] bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedWaUrl ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-700">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 {/* Manual Confirmation Checkbox */}
@@ -987,7 +1044,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                         I have joined the official EQUORA WhatsApp community
                       </span>
                       <span className="text-[10px] sm:text-[11px] text-[#60739A] block leading-tight">
-                        Check this box to manually confirm you joined or are already a member of the WhatsApp group.
+                        Check this box to confirm you joined or are already a member of the WhatsApp group.
                       </span>
                     </div>
                   </div>

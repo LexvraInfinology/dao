@@ -206,14 +206,26 @@ export default function DaoDashboardPage() {
               <div className="w-6 h-[2px] bg-[#0E62E4] ml-auto rounded-full mt-1" />
             </div>
 
-            <div className="relative w-48 h-48 flex items-center justify-center mr-2">
-              <div className="absolute w-40 h-40 rounded-full bg-[#0E62E4]/10 blur-xl pointer-events-none" />
-              <div className="relative w-36 h-36 animate-float flex items-center justify-center">
+            <div className="relative w-52 h-52 flex items-center justify-center mr-2">
+              <div className="absolute w-44 h-44 rounded-full bg-[#0E62E4]/15 blur-2xl pointer-events-none" />
+              {/* Floating Big Equora Logo */}
+              <div className="relative w-40 h-40 animate-float flex items-center justify-center">
                 <img
-                  src="/dao/trobiumdashboard.png"
-                  alt="Genesis DAO 3D Emblem"
-                  className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(14,98,228,0.22)]"
+                  src="/dao/equoranewlogo.png"
+                  alt="EQUORA DAO Official Emblem"
+                  className="w-full h-full object-contain drop-shadow-[0_12px_28px_rgba(14,98,228,0.28)]"
                 />
+                {/* Secondary Small Trobium Logo Badge */}
+                <div
+                  className="absolute -bottom-1 -right-1 w-11 h-11 rounded-2xl bg-white/95 backdrop-blur-md p-2 border border-blue-200/80 shadow-[0_4px_16px_rgba(14,98,228,0.18)] flex items-center justify-center"
+                  title="Powered by Trobchain"
+                >
+                  <img
+                    src="/dao/trobiumdashboard.png"
+                    alt="Trobchain Network"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               </div>
             </div>
 
@@ -237,16 +249,30 @@ export default function DaoDashboardPage() {
             100 sovereign seats. One protocol. A stronger tomorrow.
           </p>
 
-          <div className="relative py-1 flex flex-col items-center justify-center">
-            <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
-              <div className="absolute w-28 h-28 rounded-full bg-[#0E62E4]/10 blur-lg pointer-events-none" />
-              <img
-                src="/dao/trobiumdashboard.png"
-                alt="Genesis DAO 3D Emblem"
-                className="w-full h-full object-contain animate-float drop-shadow-[0_6px_16px_rgba(14,98,228,0.2)]"
-              />
+          <div className="relative py-2 flex flex-col items-center justify-center">
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
+              <div className="absolute w-32 h-32 rounded-full bg-[#0E62E4]/15 blur-xl pointer-events-none" />
+              {/* Floating Big Equora Logo */}
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 animate-float flex items-center justify-center">
+                <img
+                  src="/dao/equoranewlogo.png"
+                  alt="EQUORA DAO Official Emblem"
+                  className="w-full h-full object-contain drop-shadow-[0_10px_24px_rgba(14,98,228,0.25)]"
+                />
+                {/* Secondary Small Trobium Logo Badge */}
+                <div
+                  className="absolute -bottom-1 -right-1 w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white/95 backdrop-blur-md p-1.5 border border-blue-200/90 shadow-[0_4px_14px_rgba(14,98,228,0.18)] flex items-center justify-center"
+                  title="Powered by Trobchain"
+                >
+                  <img
+                    src="/dao/trobiumdashboard.png"
+                    alt="Trobchain Network"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase">
+            <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase">
               DECENTRALIZED &bull; TRANSPARENT
             </div>
           </div>

@@ -91,7 +91,7 @@ export const LandingTrobChain: React.FC = () => {
             <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-[#EFF8FF] border border-[#D1E9FF] flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
               <div className="flex items-center gap-2 sm:gap-3 text-center sm:text-left">
                 <span className="text-[11px] sm:text-xs font-bold text-[#155EEF] uppercase tracking-wider">
-                  50,000+ TPS Capacity
+                  10,000+ TPS Capacity
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="text-xs text-[#475467] font-medium hidden sm:inline">

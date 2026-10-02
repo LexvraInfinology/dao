@@ -123,9 +123,9 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center p-2 shrink-0">
                     <img
-                      src="/dao/trobiumdashboard.png"
-                      alt="Soulbound NFT"
-                      className="w-full h-full object-contain"
+                      src="/dao/equoranewlogo.png"
+                      alt="Soulbound NFT EQUORA Emblem"
+                      className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     />
                   </div>
                   <div>

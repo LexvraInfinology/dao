@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -215,10 +216,25 @@ export const DaoSearchBar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent background scrolling when mobile modal is open
+  useEffect(() => {
+    if (mobileModalOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [mobileModalOpen]);
 
   // Filter and score results
   const results = useMemo(() => {
@@ -396,13 +412,23 @@ export const DaoSearchBar: React.FC = () => {
         <Search className="w-3.5 h-3.5 text-[#17334F]" />
       </button>
 
-      {/* ── Mobile Search Modal Overlay (Accessible on all mobile devices) ── */}
-      {mobileModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex flex-col p-3 sm:p-6 font-sans animate-fadeIn">
-          <div className="bg-white w-full max-w-lg mx-auto rounded-2xl border border-[#E2ECF9] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      {/* ── Mobile Search Modal Overlay (Portaled to document.body to escape header backdrop-filter) ── */}
+      {mounted && mobileModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex flex-col p-3 sm:p-6 font-sans animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMobileModalOpen(false);
+          }}
+        >
+          <div
+            className="bg-white w-full max-w-lg mx-auto rounded-2xl border border-[#E2ECF9] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[80vh] my-auto cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Input Header */}
-            <div className="p-3 border-b border-[#E7EEF8] flex items-center gap-2">
-              <Search className="w-4 h-4 text-[#0E62E4] shrink-0" />
+            <div className="p-3.5 border-b border-[#E7EEF8] flex items-center gap-2.5 bg-[#FAFBFD]">
+              <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4" />
+              </div>
               <input
                 ref={mobileInputRef}
                 type="text"
@@ -413,64 +439,122 @@ export const DaoSearchBar: React.FC = () => {
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Search seats, pools, members, pages…"
-                className="flex-1 bg-transparent text-xs text-[#17334F] placeholder-[#4F6D87] focus:outline-none py-1"
+                className="flex-1 bg-transparent text-xs sm:text-sm text-[#17334F] placeholder-[#4F6D87] focus:outline-none py-1"
+                autoFocus
               />
               {query && (
-                <button onClick={() => setQuery('')} className="p-1 text-slate-400">
-                  <X className="w-3.5 h-3.5" />
+                <button
+                  onClick={() => {
+                    setQuery('');
+                    mobileInputRef.current?.focus();
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               )}
               <button
                 onClick={() => setMobileModalOpen(false)}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition-colors"
               >
                 Close
               </button>
             </div>
 
-            {/* Results List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1">
-                {query.trim() ? `Results for "${query}"` : 'Quick Navigation Suggestions'}
-              </div>
-              {results.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500">
-                  No matching results found.
-                </div>
-              ) : (
-                results.map((item, idx) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelect(item)}
-                    className="w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:bg-[#EFF6FF] transition-colors border border-transparent hover:border-[#0E62E4]/20"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
-                      {item.icon === 'seat' ? (
-                        <Users className="w-4 h-4" />
-                      ) : item.icon === 'pool' ? (
-                        <Coins className="w-4 h-4" />
-                      ) : item.icon === 'tx' ? (
-                        <ArrowLeftRight className="w-4 h-4" />
-                      ) : (
-                        <Layers className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-bold text-[#14304A] truncate">{item.title}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 font-medium">
-                          {item.category}
-                        </span>
+            {/* Results or Fallback Suggestions */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 overscroll-contain">
+              {results.length > 0 ? (
+                <>
+                  <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
+                    <span>{query.trim() ? `Results for "${query}"` : 'Quick Navigation'}</span>
+                    <span className="text-[10px] lowercase font-normal">{results.length} found</span>
+                  </div>
+                  {results.map((item, idx) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelect(item)}
+                      className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 transition-colors border ${
+                        idx === selectedIndex
+                          ? 'bg-[#EFF6FF] border-[#0E62E4]/30 text-[#0E62E4]'
+                          : 'hover:bg-slate-50 border-transparent text-[#14304A]'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
+                        {item.icon === 'seat' ? (
+                          <Users className="w-4 h-4" />
+                        ) : item.icon === 'pool' ? (
+                          <Coins className="w-4 h-4" />
+                        ) : item.icon === 'tx' ? (
+                          <ArrowLeftRight className="w-4 h-4" />
+                        ) : (
+                          <Layers className="w-4 h-4" />
+                        )}
                       </div>
-                      <p className="text-[11px] text-[#4F6D87] truncate">{item.subtitle}</p>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  </button>
-                ))
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-xs font-bold truncate">{item.title}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 font-medium">
+                            {item.category}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#4F6D87] truncate mt-0.5">{item.subtitle}</p>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    </button>
+                  ))}
+                </>
+              ) : (
+                /* Enhanced empty state when user types e.g. "jkk" */
+                <div className="py-6 px-3 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Search className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-[#14304A]">
+                      No matching results for &ldquo;{query}&rdquo;
+                    </p>
+                    <p className="text-[11px] text-[#4F6D87] max-w-xs mx-auto">
+                      Try searching with keywords like <strong>matrix</strong>, <strong>seat</strong>, <strong>pool</strong>, or jump directly below:
+                    </p>
+                  </div>
+                  {/* Quick fallback action tiles */}
+                  <div className="grid grid-cols-2 gap-2 text-left pt-2">
+                    <button
+                      onClick={() => handleSelect(SEARCH_INDEX[0])}
+                      className="p-2.5 rounded-xl border border-[#E2EEF9] bg-[#F8FAFC] hover:bg-[#EFF6FF] hover:border-[#0E62E4]/30 transition-all text-xs flex flex-col gap-0.5"
+                    >
+                      <span className="font-bold text-[#14304A]">Matrix Bridge</span>
+                      <span className="text-[10px] text-[#4F6D87]">Day 22 Retail Matrix & Tree</span>
+                    </button>
+                    <button
+                      onClick={() => handleSelect(SEARCH_INDEX[1])}
+                      className="p-2.5 rounded-xl border border-[#E2EEF9] bg-[#F8FAFC] hover:bg-[#EFF6FF] hover:border-[#0E62E4]/30 transition-all text-xs flex flex-col gap-0.5"
+                    >
+                      <span className="font-bold text-[#14304A]">Council Seats</span>
+                      <span className="text-[10px] text-[#4F6D87]">100 Genesis Seats Queue</span>
+                    </button>
+                    <button
+                      onClick={() => handleSelect(SEARCH_INDEX[3])}
+                      className="p-2.5 rounded-xl border border-[#E2EEF9] bg-[#F8FAFC] hover:bg-[#EFF6FF] hover:border-[#0E62E4]/30 transition-all text-xs flex flex-col gap-0.5"
+                    >
+                      <span className="font-bold text-[#14304A]">Treasury Pools</span>
+                      <span className="text-[10px] text-[#4F6D87]">35% Instant Push & Reserves</span>
+                    </button>
+                    <button
+                      onClick={() => handleSelect(SEARCH_INDEX[2])}
+                      className="p-2.5 rounded-xl border border-[#E2EEF9] bg-[#F8FAFC] hover:bg-[#EFF6FF] hover:border-[#0E62E4]/30 transition-all text-xs flex flex-col gap-0.5"
+                    >
+                      <span className="font-bold text-[#14304A]">Member Lounge</span>
+                      <span className="text-[10px] text-[#4F6D87]">SBT Proof & Governance</span>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

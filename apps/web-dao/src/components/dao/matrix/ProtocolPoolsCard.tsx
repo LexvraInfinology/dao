@@ -16,7 +16,7 @@ export const ProtocolPoolsCard: React.FC = () => {
       perSeatSharePct: number;
       distributionModel: string;
     };
-  }>('/api/dao/matrix', { refreshInterval: 15_000 });
+  }>('/api/dao/matrix', { pollMs: 15_000 });
 
   const pools = matrixData?.protocolPools;
   const activeCount = pools?.activeDaoMemberCount ?? 2;

@@ -42,7 +42,10 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
   onOpenMatrixModal,
 }) => {
   const [open, setOpen] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('equora_notification_sound') !== 'false';
+  });
   const [notifications, setNotifications] = useState<DaoNotification[]>([]);
   const [hasPlayedInitial, setHasPlayedInitial] = useState(false);
 
@@ -167,10 +170,73 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
     e.stopPropagation();
     const next = !soundEnabled;
     setSoundEnabled(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('equora_notification_sound', String(next));
+    }
     if (next) {
       playNotificationChime();
     }
   };
+
+  // Listen for global custom event: 'dao:new-notification'
+  useEffect(() => {
+    const handleExternalNotification = (e: Event) => {
+      const customEvent = e as CustomEvent<DaoNotification>;
+      if (!customEvent.detail) return;
+      const newNotif = customEvent.detail;
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotif.id)) return prev;
+        return [newNotif, ...prev];
+      });
+      if (soundEnabled) {
+        if (newNotif.priority) {
+          playPriorityAlertChime();
+        } else {
+          playNotificationChime();
+        }
+      }
+    };
+
+    window.addEventListener('dao:new-notification', handleExternalNotification);
+    return () => {
+      window.removeEventListener('dao:new-notification', handleExternalNotification);
+    };
+  }, [soundEnabled]);
+
+  // Periodic background check for protocol updates with audio alert
+  useEffect(() => {
+    const pollProtocolUpdates = async () => {
+      try {
+        const res = await fetch('/api/dao/stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.claimedCount && data.claimedCount > 2) {
+            const updateId = `claim_update_${data.claimedCount}`;
+            setNotifications((prev) => {
+              if (prev.some((n) => n.id === updateId)) return prev;
+              const updateItem: DaoNotification = {
+                id: updateId,
+                type: 'queue_update',
+                title: `New Genesis Council Claim! (${data.claimedCount}/100)`,
+                message: `Seat #${data.claimedCount} was claimed on TrobChain. Instant 300/N cashbacks dispatched.`,
+                timestamp: 'Just now',
+                read: false,
+                actionUrl: '/dao/seats',
+                actionLabel: 'View Seats Grid',
+              };
+              if (soundEnabled) playNotificationChime();
+              return [updateItem, ...prev];
+            });
+          }
+        }
+      } catch {
+        /* graceful network silent catch */
+      }
+    };
+
+    const interval = setInterval(pollProtocolUpdates, 30000);
+    return () => clearInterval(interval);
+  }, [soundEnabled]);
 
   const handlePassRootOffer = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();

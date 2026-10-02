@@ -10,11 +10,13 @@ export const WHATSAPP_DAO_GROUP_URL = 'https://chat.whatsapp.com/GR19373Pgq7LezB
 interface DaoWhatsAppCircleProps {
   /** If provided, renders an inline round circle (e.g. for header). Otherwise renders the responsive floating widget. */
   variant?: 'floating' | 'header' | 'badge';
+  theme?: 'light' | 'dark' | 'auto';
   className?: string;
 }
 
 export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
   variant = 'floating',
+  theme = 'light',
   className = '',
 }) => {
   const wallet = useWallet();
@@ -78,14 +80,19 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
     );
   }
 
-  // 2. Badge variant (e.g. for sidebar or dropdown)
+  // 2. Badge variant (e.g. for sidebar or dropdown or dark wallet cards)
   if (variant === 'badge') {
+    const isDark = theme === 'dark';
     return (
       <a
         href={WHATSAPP_DAO_GROUP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={`flex items-center gap-2.5 p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[#0F5132] border border-emerald-500/30 transition-all duration-200 group ${className}`}
+        className={`flex items-center gap-2.5 p-2 rounded-xl transition-all duration-200 group ${
+          isDark
+            ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 text-white shadow-xs'
+            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-[#0F5132] border border-emerald-500/30'
+        } ${className}`}
       >
         <div className="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -93,13 +100,22 @@ export const DaoWhatsAppCircle: React.FC<DaoWhatsAppCircleProps> = ({
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold font-jakarta text-[#071A4A] truncate">
+          <div className={`text-xs font-bold font-jakarta truncate ${isDark ? 'text-white' : 'text-[#071A4A]'}`}>
             DAO WhatsApp Group
           </div>
-          <div className="text-[10px] text-emerald-700 font-medium">
+          <div className={`text-[10px] font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
             Council Members Only
           </div>
         </div>
+        {isDark ? (
+          <span className="text-[10px] text-emerald-300 font-bold ml-auto shrink-0 group-hover:translate-x-0.5 transition-transform">
+            Join →
+          </span>
+        ) : (
+          <span className="text-[10px] text-emerald-700 font-bold ml-auto shrink-0 group-hover:translate-x-0.5 transition-transform">
+            Join →
+          </span>
+        )}
       </a>
     );
   }

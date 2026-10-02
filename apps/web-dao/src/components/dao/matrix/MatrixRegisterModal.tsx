@@ -41,7 +41,7 @@ export const MatrixRegisterModal: React.FC<MatrixRegisterModalProps> = ({
 
   const slotUsd = 30;
   const trobRequired = price && price.priceUsd > 0 ? Math.round(slotUsd / price.priceUsd) : 536;
-  const activeAddr = wallet.address || '';
+  const activeAddr = wallet.base58Address || wallet.hexAddress || (typeof wallet.address === 'string' ? wallet.address : wallet.address?.base58 || wallet.address?.hex || '');
 
   const handleRegister = async () => {
     if (!activeAddr) {

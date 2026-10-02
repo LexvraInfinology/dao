@@ -519,7 +519,7 @@ export const DaoHeader: React.FC = () => {
                   )}
                   {isSeatMember && (
                     <div className="mt-2.5">
-                      <DaoWhatsAppCircle variant="badge" />
+                      <DaoWhatsAppCircle variant="badge" theme="dark" />
                     </div>
                   )}
                 </div>

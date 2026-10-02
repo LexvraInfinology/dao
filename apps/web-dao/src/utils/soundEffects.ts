@@ -7,7 +7,7 @@
 
 let sharedAudioCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext | null {
+export function initOrUnlockAudio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -22,6 +22,22 @@ function getAudioContext(): AudioContext | null {
   } catch {
     return null;
   }
+}
+
+// Auto-unlock Web Audio context on the first user interaction anywhere on the document
+if (typeof window !== 'undefined') {
+  const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown'];
+  const handleUnlock = () => {
+    initOrUnlockAudio();
+    unlockEvents.forEach((ev) => window.removeEventListener(ev, handleUnlock));
+  };
+  unlockEvents.forEach((ev) => {
+    window.addEventListener(ev, handleUnlock, { once: true, passive: true });
+  });
+}
+
+function getAudioContext(): AudioContext | null {
+  return initOrUnlockAudio();
 }
 
 /**
@@ -94,4 +110,31 @@ export function playPriorityAlertChime(): void {
   } catch (err) {
     console.debug('[Audio] Priority alert chime fallback:', err);
   }
+}
+
+/**
+ * Dispatches a protocol update notification event to DaoNotificationCenter and plays chime.
+ */
+export function dispatchDaoNotification(notification: {
+  id?: string;
+  type?: 'matrix_leader_offer' | 'matrix_launch' | 'pool_dividend' | 'queue_update';
+  title: string;
+  message: string;
+  priority?: boolean;
+  actionUrl?: string;
+  actionLabel?: string;
+}): void {
+  if (typeof window === 'undefined') return;
+  const fullNotification = {
+    id: notification.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    type: notification.type || 'queue_update',
+    title: notification.title,
+    message: notification.message,
+    timestamp: 'Just now',
+    read: false,
+    priority: notification.priority || false,
+    actionUrl: notification.actionUrl,
+    actionLabel: notification.actionLabel,
+  };
+  window.dispatchEvent(new CustomEvent('dao:new-notification', { detail: fullNotification }));
 }

@@ -14,7 +14,8 @@ import { useDaoMember } from '@/hooks/useApi';
 export default function MatrixBridgePage() {
   const wallet = useWallet();
   const auth = useAuthContext();
-  const { data: memberData } = useDaoMember(wallet.address || auth.user?.address || null);
+  const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || null;
+  const { data: memberData } = useDaoMember(activeAddress);
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [isRootClaim, setIsRootClaim] = useState(false);
@@ -44,41 +45,38 @@ export default function MatrixBridgePage() {
         </p>
       </div>
 
-      {/* ── Apex Opportunity Showcase: Granted to Last Member with Least Cashback (Frontend Presentation) ── */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[#EFF6FF] to-emerald-500/10 border-2 border-amber-300/70 shadow-sm font-sans space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-              <Crown className="w-5 h-5" />
+      {/* ── Compact Apex Opportunity Bar (Sleek, low-profile banner) ── */}
+      <div className="p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-50/50 to-white border border-amber-300/80 shadow-xs font-sans">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider">
-                  Algorithmic Balance
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.2 rounded bg-amber-500 text-white text-[9px] font-black uppercase tracking-wider">
+                  Algorithmic Apex
                 </span>
-                <span className="text-xs font-bold text-amber-900">
-                  Last DAO Member Apex Root Allocation
+                <span className="text-[11px] font-bold text-amber-950 truncate">
+                  Final DAO Member Designated Matrix Apex Owner
                 </span>
               </div>
-              <h3 className="text-sm sm:text-base font-bold text-[#14304A]">
-                The Member with the Lowest Queue Cashback is Designated the Matrix Apex Owner!
-              </h3>
-              <p className="text-xs text-[#4F6D87] leading-relaxed max-w-2xl">
-                Because early council seats receive higher immediate cashbacks (300/N), the Genesis protocol algorithmically designates the <strong>final DAO member</strong> (who received the lowest queue cashback) with prime opportunity to become the top <strong>Apex Root Leader</strong> of the entire Retail Matrix!
+              <p className="text-[10.5px] sm:text-xs text-[#4F6D87] leading-tight line-clamp-2 sm:line-clamp-1 mt-0.5">
+                Balances early 300/N cashbacks by algorithmically designating the final council member as the Genesis Apex Root leader.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center pt-2 sm:pt-0">
+          <div className="shrink-0 flex items-center justify-end sm:justify-start">
             <button
               onClick={() => {
                 setIsRootClaim(true);
                 setRegisterModalOpen(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-xs transition-all flex items-center gap-1 hover:scale-[1.02] active:scale-[0.98]"
             >
               <span>Inspect Apex Eligibility</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>

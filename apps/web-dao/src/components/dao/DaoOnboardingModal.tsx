@@ -43,6 +43,7 @@ export const DaoOnboardingModal: React.FC = () => {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [completed, setCompleted] = useState<boolean>(false);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
+  const [copiedWa, setCopiedWa] = useState<boolean>(false);
 
   // Check stored onboarding state for this address
   useEffect(() => {
@@ -201,8 +202,6 @@ export const DaoOnboardingModal: React.FC = () => {
       setIsDepositing(false);
     }
   };
-
-  const [copiedWa, setCopiedWa] = useState(false);
 
   const handleCopyWa = async () => {
     try {

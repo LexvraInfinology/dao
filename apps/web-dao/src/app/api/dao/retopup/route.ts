@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
+import { broadcastNativePayout } from '../../_lib/payoutRelayer';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,11 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    // Broadcast instant cashback payout on-chain
+    broadcastNativePayout(m.address, cashbackTrob).catch((e) => {
+      console.error(`[Payout Relayer] Failed to broadcast retopup cashback to Seat #${pos}:`, e);
+    });
+
     // 6. Distribute dividend push to all prior active members (< pos)
     if (pos > 1) {
       const priorMembers = await queryNeon<any>(
@@ -114,6 +120,9 @@ export async function POST(req: NextRequest) {
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
           [prior.address, pos, `${cleanTx}-retopup-push-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${pos} (Retopup Loop)`]
         );
+        broadcastNativePayout(prior.address, cashbackTrob).catch((e) => {
+          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${prior.position}:`, e);
+        });
       }
     }
 
@@ -123,7 +132,7 @@ export async function POST(req: NextRequest) {
         address: m.address,
         position: pos,
         status: 'active',
-        pushedAmountBtt: 0,
+        pushedAmountBtt: cashbackTrob,
         instantCashbackUsd: cashbackUsd,
         instantCashbackTrob: cashbackTrob,
         retopupCount: (m.retopupCount || 0) + 1,

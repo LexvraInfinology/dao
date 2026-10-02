@@ -1157,13 +1157,18 @@ export function createApp(): Express {
       const retopupFeeTrob = Math.round((300 / priceUsd) * 100) / 100;
       const now = new Date();
 
-      // Reset member cap state in DB
+      const pos = member.position || 1;
+      const cashbackUsd = parseFloat((300 / pos).toFixed(2));
+      const cashbackTrob = Math.round((cashbackUsd / priceUsd) * 100) / 100;
+      const cleanTx = String(txHash || `retopup-${Date.now()}`);
+
+      // Reset member cap state in DB with new cycle instant cashback
       await prisma.$transaction([
         prisma.daoMember.update({
           where: { id: member.id },
           data: {
             status: "active",
-            pushedAmountBtt: 0, // Reset lifetime earnings counter on retopup
+            pushedAmountBtt: cashbackTrob, // Reset lifetime earnings counter to new cycle instant cashback
             entryAmountBtt: {
               increment: retopupFeeTrob,
             },
@@ -1178,13 +1183,68 @@ export function createApp(): Express {
             amountBtt: retopupFeeTrob,
             amountUsdEst: 300,
             priceSource: priceData.priceSource || "trobchain-api",
-            reason: `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupFeeTrob} TROB)`,
-            txHash: String(txHash || `retopup-${Date.now()}`),
+            reason: `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupFeeTrob} TROB) • Seat #${pos}`,
+            txHash: cleanTx,
             blockNumber: BigInt(1),
             timestamp: now,
           },
         }),
+        prisma.daoEvent.create({
+          data: {
+            eventType: "pushed",
+            userAddress: member.address,
+            incomingPosition: member.position,
+            amountBtt: cashbackTrob,
+            amountUsdEst: cashbackUsd,
+            priceSource: priceData.priceSource || "trobchain-api",
+            reason: `Instant Cashback on Retopup Loop (Seat #${pos})`,
+            txHash: `${cleanTx}-retopup-cashback`,
+            blockNumber: BigInt(1),
+            timestamp: new Date(now.getTime() + 100),
+          },
+        }),
       ]);
+
+      // Distribute to prior active members if pos > 1
+      if (pos > 1) {
+        const priorMembers = await prisma.daoMember.findMany({
+          where: {
+            position: { lt: pos },
+            status: "active",
+          },
+        });
+        for (const prior of priorMembers) {
+          await prisma.daoMember.update({
+            where: { id: prior.id },
+            data: {
+              pushedAmountBtt: { increment: cashbackTrob },
+              updatedAt: now,
+            },
+          });
+          await prisma.daoEvent.create({
+            data: {
+              eventType: "pushed",
+              userAddress: prior.address,
+              incomingPosition: pos,
+              amountBtt: cashbackTrob,
+              amountUsdEst: cashbackUsd,
+              priceSource: priceData.priceSource || "trobchain-api",
+              reason: `Dividend push from Seat #${pos} (Retopup Loop)`,
+              txHash: `${cleanTx}-retopup-push-${prior.position}`,
+              blockNumber: BigInt(1),
+              timestamp: new Date(now.getTime() + 200),
+            },
+          });
+          broadcastNativePayout(prior.address, cashbackTrob).catch((e) => {
+            console.error(`[Payout Relayer] Failed retopup dividend to Seat #${prior.position}:`, e);
+          });
+        }
+      }
+
+      // Broadcast instant cashback payout to retopup caller
+      broadcastNativePayout(member.address, cashbackTrob).catch((e) => {
+        console.error(`[Payout Relayer] Failed retopup instant cashback to Seat #${pos}:`, e);
+      });
 
       res.json({
         success: true,
@@ -1192,8 +1252,12 @@ export function createApp(): Express {
           position: member.position,
           address: member.address,
           status: "active",
-          pushedAmountBtt: 0,
+          pushedAmountBtt: cashbackTrob,
+          instantCashbackUsd: cashbackUsd,
+          instantCashbackTrob: cashbackTrob,
           retopupFeeTrob,
+          txHash: cleanTx,
+          message: `Retopup confirmed! Your 5X Cap ($1,500) has reset, and your instant cashback ($${cashbackUsd} USD) has been dispatched.`,
         },
       });
     } catch (err) {

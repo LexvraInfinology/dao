@@ -130,6 +130,11 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             topElement = (
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-200 ring-1 ring-white animate-pulse" />
             );
+          } else if (seat.statusBadge === '5X Capped') {
+            tileClasses = 'border-2 border-red-500 bg-gradient-to-b from-red-900 to-red-950 text-white shadow-sm ring-1 ring-red-400 animate-pulse';
+            topElement = (
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-400 ring-1 ring-white animate-ping" />
+            );
           } else if (seat.status === 'defaulted') {
             tileClasses = 'border-2 border-dashed border-rose-400 bg-rose-50 text-rose-700 hover:bg-rose-100';
             topElement = (
@@ -183,6 +188,11 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="text-[#14304A]">Claimed Seat</span>
           </div>
 
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200">
+            <span className="w-2.5 h-2.5 rounded bg-red-600 border border-red-400 animate-pulse" />
+            <span className="text-red-700 font-bold">5X Capped</span>
+          </div>
+
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200">
             <span className="w-2.5 h-2.5 rounded bg-emerald-600 border border-emerald-400" />
             <span className="text-emerald-800 font-bold">Your Seat</span>
@@ -209,6 +219,10 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">
             <span className="w-2 h-2 rounded bg-[#14304A]" />
             <span className="text-[#14304A]">Claimed</span>
+          </div>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 border border-red-200">
+            <span className="w-2 h-2 rounded bg-red-600 animate-pulse" />
+            <span className="text-red-700 font-bold">5X Cap</span>
           </div>
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
             <span className="w-2 h-2 rounded bg-emerald-600" />

@@ -8,7 +8,7 @@ export interface CouncilSeatDetail {
   capProgress: number; // percentage e.g. 85.3
   votingPower: string;
   statusText: string;
-  statusBadge: 'Active Member' | 'Defaulted Vacancy' | 'Next Available' | 'Locked Future';
+  statusBadge: 'Active Member' | '5X Capped' | 'Defaulted Vacancy' | 'Next Available' | 'Locked Future';
   soulboundId: string;
   entryAmount?: string;
   claimedDate?: string;
@@ -91,10 +91,12 @@ export function buildLiveCouncilSeats(
           : `$${earningsUsd.toFixed(2)} USD`,
         capProgress: capPct,
         votingPower: '1.0%',
-        statusText: liveMember.status === 'active'
+        statusText: liveMember.status === 'capped'
+          ? '5X Capped • 48h Retopup Window Active'
+          : liveMember.status === 'active'
           ? 'Active & In Good Standing'
           : liveMember.status ?? 'Active Member',
-        statusBadge: 'Active Member',
+        statusBadge: liveMember.status === 'capped' ? '5X Capped' : 'Active Member',
         soulboundId,
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {

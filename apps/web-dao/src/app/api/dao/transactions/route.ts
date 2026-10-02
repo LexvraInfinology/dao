@@ -28,15 +28,7 @@ export async function GET(req: NextRequest) {
     const filterType = searchParams.get('type') || 'all';
     const searchQuery = (searchParams.get('search') || '').trim().toLowerCase();
 
-    // 1. Try Express backend if configured
-    const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
-      `/api/dao/transactions?${searchParams.toString()}`
-    );
-    if (backendRes && backendRes.success && backendRes.data?.transactions?.length > 0) {
-      return NextResponse.json(backendRes);
-    }
-
-    // 2. Fetch live market price for accurate USD calculations
+    // 1. Fetch live market price for accurate USD calculations
     let trobPriceUsd = 0.0565;
     try {
       const pRes = await fetch(process.env.TROB_PRICE_API_URL || 'https://backend.trobchain.com/v1/market/price', {
@@ -49,86 +41,68 @@ export async function GET(req: NextRequest) {
       }
     } catch {}
 
-    // 3. Fetch direct on-chain smart contract transactions from EquoraDAO.sol
-    const onChainItems = await getOnChainDaoTransactions(address);
+    // 2. Fetch direct on-chain smart contract transactions from EquoraDAO.sol
+    const onChainItems = await getOnChainDaoTransactions(address, true);
 
-    // 4. Fetch transactions from Neon Database (DaoEvent)
-    let dbItems: TransactionItem[] = [];
-    try {
-      let whereClauses: string[] = [];
-      let params: any[] = [];
+    // 3. Primary source: Blockchain ledger. Fallback to DB only if blockchain explorer network error
+    let rawList: TransactionItem[] = [];
+    if (onChainItems && onChainItems.length > 0) {
+      rawList = onChainItems;
+    } else {
+      try {
+        let whereClauses: string[] = [];
+        let params: any[] = [];
 
-      if (address && address.trim()) {
-        params.push(address.trim().toLowerCase());
-        whereClauses.push(`LOWER("userAddress") = $${params.length}`);
-      }
+        if (address && address.trim()) {
+          params.push(address.trim().toLowerCase());
+          whereClauses.push(`LOWER("userAddress") = $${params.length}`);
+        }
 
-      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-      const rowsRes = await queryNeon<any>(
-        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst", "priceSource", reason
-         FROM "DaoEvent"
-         ${whereSql}
-         ORDER BY "timestamp" DESC, "createdAt" DESC
-         LIMIT 200`,
-        params
-      );
+        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const rowsRes = await queryNeon<any>(
+          `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst", "priceSource", reason
+           FROM "DaoEvent"
+           ${whereSql}
+           ORDER BY "timestamp" DESC, "createdAt" DESC
+           LIMIT 200`,
+          params
+        );
 
-      dbItems = rowsRes.rows.map((evt) => {
-        const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-        const amtBtt = parseFloat(evt.amountBtt || '0');
-        const amtUsd = parseFloat(evt.amountUsdEst || '0') || Math.round(amtBtt * trobPriceUsd * 100) / 100;
+        rawList = rowsRes.rows.map((evt) => {
+          const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+          const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+          const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
 
-        return {
-          id: evt.id,
-          type: evt.eventType as any,
-          typeLabel:
-            evt.reason ||
-            (evt.eventType === 'joined'
-              ? `Council Seat #${evt.incomingPosition || ''} Activated`
-              : evt.eventType === 'pushed'
-              ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-              : evt.eventType === 'retopup'
-              ? '5X Cap Retopup'
-              : 'Dividend Reward Claimed'),
-          amountBtt: amtBtt,
-          amountTrob: amtBtt,
-          amountUsd: amtUsd,
-          isPositive,
-          from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-          to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-          txHash: evt.txHash || '',
-          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-          status: 'Confirmed',
-        };
-      });
-    } catch (dbErr) {
-      console.warn('[Transactions API] DB fetch warning:', dbErr);
-    }
-
-    // 5. Merge and deduplicate by (txHash + type + recipient/from)
-    const seenKeys = new Set<string>();
-    const mergedList: TransactionItem[] = [];
-
-    // Prioritize direct on-chain verified transactions from EquoraDAO.sol
-    for (const item of onChainItems) {
-      const key = `${item.txHash?.toLowerCase()}-${item.type}-${item.to?.toLowerCase()}-${item.from?.toLowerCase()}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        mergedList.push(item);
+          return {
+            id: evt.id,
+            type: evt.eventType as any,
+            typeLabel:
+              evt.reason ||
+              (evt.eventType === 'joined'
+                ? `Council Seat #${evt.incomingPosition || ''} Activated`
+                : evt.eventType === 'pushed'
+                ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+                : evt.eventType === 'retopup'
+                ? '5X Cap Retopup'
+                : 'Dividend Reward Claimed'),
+            amountBtt: amtBtt,
+            amountTrob: amtBtt,
+            amountUsd: amtUsd,
+            isPositive,
+            from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+            to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+            txHash: evt.txHash || '',
+            timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+            status: 'Confirmed',
+          };
+        });
+      } catch (dbErr) {
+        console.warn('[Transactions API] DB fetch warning:', dbErr);
       }
     }
 
-    for (const item of dbItems) {
-      const cleanTx = (item.txHash || '').split('-')[0].toLowerCase();
-      const key = `${cleanTx}-${item.type}-${item.to?.toLowerCase()}-${item.from?.toLowerCase()}`;
-      if (!seenKeys.has(key) && !seenKeys.has(item.id)) {
-        seenKeys.add(key);
-        mergedList.push(item);
-      }
-    }
-
-    // 6. Apply search and type filtering
-    let filtered = mergedList;
+    // 4. Apply search and type filtering
+    let filtered = rawList;
 
     if (filterType !== 'all') {
       const cleanType = filterType.toLowerCase();

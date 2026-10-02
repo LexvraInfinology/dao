@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
+import { formatUsd, formatTrob } from '@/utils/formatAmount';
 
 interface TransactionsTableProps {
   transactions?: TransactionItem[];
@@ -334,11 +335,11 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                             : 'text-[#071A4A]'
                         }`}
                       >
-                        {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)}
+                        {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${formatUsd(tx.amountUsd)}
                       </div>
                       <div className="text-[#94A3B8] text-[10px]">
                         {tx.isPositive === false ? '-' : '+'}
-                        {trobAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                        {formatTrob(trobAmt)} TROB
                       </div>
                     </>
                   ) : (
@@ -496,7 +497,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 [
                   'Amount',
                   (selectedTx.amountTrob ?? selectedTx.amountBtt) > 0 || selectedTx.amountUsd > 0
-                    ? `$${selectedTx.amountUsd.toFixed(2)} / ${(selectedTx.amountTrob ?? selectedTx.amountBtt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB`
+                    ? `$${formatUsd(selectedTx.amountUsd)} / ${formatTrob(selectedTx.amountTrob ?? selectedTx.amountBtt)} TROB`
                     : '—',
                 ],
                 ['From', selectedTx.from],

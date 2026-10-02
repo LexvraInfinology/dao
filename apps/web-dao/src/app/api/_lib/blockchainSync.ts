@@ -102,7 +102,7 @@ export async function getOnChainDaoTransactions(
         const tokenId = joinEvt?.args?.tokenId ? parseInt(joinEvt.args.tokenId, 10) : pos;
 
         // Paid amount in TROB
-        let paidAmountTrob = 5357.143;
+        let paidAmountTrob = 5357.14;
         if (detail.call_value) {
           paidAmountTrob = Number(detail.call_value) / 1e6;
         } else if (tx.call_value) {
@@ -110,6 +110,12 @@ export async function getOnChainDaoTransactions(
         } else if (tx.amount) {
           paidAmountTrob = Number(tx.amount) / 1e6;
         }
+        paidAmountTrob = Math.round(paidAmountTrob * 100) / 100;
+
+        const baseMs = new Date(isoTime).getTime();
+        // Deposit happened first, so in a reverse-chronological feed it appears BELOW the distributions
+        const depositTime = new Date(baseMs - 2000).toISOString();
+        const cashbackTime = new Date(baseMs - 1000).toISOString();
 
         // 1. Council Seat Activated (Deposit transaction from user)
         parsedItems.push({
@@ -123,7 +129,7 @@ export async function getOnChainDaoTransactions(
           from: caller,
           to: daoAddress,
           txHash: hash,
-          timestamp: isoTime,
+          timestamp: depositTime,
           status: 'Confirmed',
         });
 
@@ -137,23 +143,29 @@ export async function getOnChainDaoTransactions(
         });
 
         // 2. Decode DAOPayoutPushed events (Formula: 300/N)
-        // Sort payout events so that the joiner's instant cashback is listed right after the deposit,
-        // followed by dividend pushes to prior active members.
+        // Distributions happen after the deposit: they appear ABOVE the deposit in the feed
         if (payoutEvts.length > 0) {
           const sortedPayouts = [...payoutEvts].sort((a, b) => {
             const isACashback = (a.args?.recipient || '').toLowerCase() === caller.toLowerCase();
             const isBCashback = (b.args?.recipient || '').toLowerCase() === caller.toLowerCase();
+            // Put instant cashback immediately above deposit, and dividend pushes above cashback
             if (isACashback && !isBCashback) return -1;
             if (!isACashback && isBCashback) return 1;
             return 0;
           });
 
+          let divIdx = 0;
           for (const p of sortedPayouts) {
             const recipient = (p.args?.recipient || caller).trim();
-            const pAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : paidAmountTrob / pos;
+            const rawAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : paidAmountTrob / pos;
+            const pAmt = Math.round(rawAmt * 100) / 100;
             const isCashback = recipient.toLowerCase() === caller.toLowerCase();
             const pushFromPos = p.args?.fromPosition ? parseInt(p.args.fromPosition, 10) : pos;
-            const usdValue = parseFloat((300 / pushFromPos).toFixed(2));
+            const usdValue = Math.round((300 / pushFromPos) * 100) / 100;
+
+            const itemTime = isCashback
+              ? cashbackTime
+              : new Date(baseMs + (++divIdx) * 100).toISOString();
 
             parsedItems.push({
               id: `${hash}-pushed-${recipient}`,
@@ -168,14 +180,14 @@ export async function getOnChainDaoTransactions(
               from: daoAddress,
               to: recipient,
               txHash: hash,
-              timestamp: isoTime,
+              timestamp: itemTime,
               status: 'Confirmed',
             });
           }
         } else {
           // If event logs weren't parsed by explorer API, synthesize according to EquoraDAO.sol logic
-          const cashbackTrob = Math.round((paidAmountTrob / pos) * 1000) / 1000;
-          const cashbackUsd = parseFloat((300 / pos).toFixed(2));
+          const cashbackTrob = Math.round((paidAmountTrob / pos) * 100) / 100;
+          const cashbackUsd = Math.round((300 / pos) * 100) / 100;
           parsedItems.push({
             id: `${hash}-cashback`,
             type: 'pushed',
@@ -187,7 +199,7 @@ export async function getOnChainDaoTransactions(
             from: daoAddress,
             to: caller,
             txHash: hash,
-            timestamp: isoTime,
+            timestamp: cashbackTime,
             status: 'Confirmed',
           });
         }

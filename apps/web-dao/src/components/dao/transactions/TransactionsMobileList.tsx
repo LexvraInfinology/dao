@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
+import { formatUsd, formatTrob } from '@/utils/formatAmount';
 
 interface TransactionsMobileListProps {
   transactions?: TransactionItem[];
@@ -203,7 +204,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
                           tx.isPositive === false ? 'text-[#DC2626]' : tx.isPositive ? 'text-[#059669]' : 'text-[#071A4A]'
                         }`}
                       >
-                        {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${tx.amountUsd.toFixed(2)} USD
+                        {tx.isPositive === false ? '-' : tx.isPositive ? '+' : ''}${formatUsd(tx.amountUsd)} USD
                       </div>
                       <div
                         className={`text-xs font-bold font-jakarta ${
@@ -211,7 +212,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
                         }`}
                       >
                         {tx.isPositive === false ? '-' : '+'}
-                        {trobAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                        {formatTrob(trobAmt)} TROB
                       </div>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
@@ -320,7 +321,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
                 [
                   'Amount',
                   (selectedTx.amountTrob ?? selectedTx.amountBtt) > 0 || selectedTx.amountUsd > 0
-                    ? `$${selectedTx.amountUsd.toFixed(2)} / ${(selectedTx.amountTrob ?? selectedTx.amountBtt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB`
+                    ? `$${formatUsd(selectedTx.amountUsd)} / ${formatTrob(selectedTx.amountTrob ?? selectedTx.amountBtt)} TROB`
                     : '—',
                 ],
                 ['From', selectedTx.from],

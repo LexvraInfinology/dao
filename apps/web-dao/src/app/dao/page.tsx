@@ -72,7 +72,7 @@ export default function DaoDashboardPage() {
         <div className="hidden lg:grid grid-cols-12 gap-6 items-center relative z-10">
           <div className="col-span-7 space-y-3">
             <span className="chip text-[10px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg">
-              Genesis DAO Phase 1
+              Genesis DAO Council
             </span>
 
             <h1 className="text-2xl xl:text-3xl font-bold text-[#17334F] tracking-tight leading-tight uppercase">
@@ -214,7 +214,7 @@ export default function DaoDashboardPage() {
         {/* --- MOBILE HERO --- */}
         <div className="lg:hidden text-center space-y-3 relative z-10">
           <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg inline-flex">
-            Genesis DAO Phase 1
+            Genesis DAO Council
           </span>
           <h1 className="text-xl sm:text-2xl font-bold text-[#17334F] tracking-tight uppercase">
             Genesis <span className="text-[#0E62E4]">DAO</span> Council
@@ -621,7 +621,7 @@ export default function DaoDashboardPage() {
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2">
                 <h4 className="text-xs sm:text-sm font-semibold text-[#17334F] leading-snug truncate">
-                  Phase 2: Retail Matrix Launch
+                  Retail Matrix Launch
                 </h4>
                 <span className="text-[9px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-1.5 py-0.5 rounded border border-[#0E62E4]/20 shrink-0">
                   Day 22

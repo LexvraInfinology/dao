@@ -57,7 +57,7 @@ export const CouncilSeatsHero: React.FC = () => {
         <div className="space-y-1 flex-1 min-w-0">
           <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EFF6FF] border border-[#0E62E4]/20">
             <span className="text-[10px] font-bold text-[#0E62E4] uppercase tracking-wider">
-              PHASE 1
+              GENESIS COUNCIL
             </span>
           </div>
           <h1 className="text-lg font-bold text-[#14304A] tracking-tight">

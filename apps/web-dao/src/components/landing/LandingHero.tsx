@@ -65,24 +65,24 @@ export const LandingHero: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-end lg:items-center">
           {/* Left Column — Anchored towards bottom-left on mobile with unobstructed view of the background video */}
           <div className="lg:col-span-7 xl:col-span-6 text-left">
-            <div className="max-w-[325px] min-[360px]:max-w-[360px] min-[400px]:max-w-[400px] sm:max-w-lg lg:max-w-xl p-0 rounded-none bg-transparent border-none shadow-none space-y-2.5 min-[360px]:space-y-3 sm:space-y-5">
-              {/* Pill Badge */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs border border-blue-200/90 shadow-2xs">
+            <div className="max-w-[325px] min-[360px]:max-w-[360px] min-[400px]:max-w-[400px] sm:max-w-lg lg:max-w-xl p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/20 sm:bg-white/10 backdrop-blur-[3px] border-none shadow-none space-y-2.5 min-[360px]:space-y-3 sm:space-y-5">
+              {/* Pill Badge — Transparent & Borderless */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/35 backdrop-blur-sm border-0 shadow-none">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
-                  Genesis DAO Phase 1
+                  Genesis DAO Council
                 </span>
               </div>
 
-              {/* Headline */}
-              <h1 className="text-[22px] min-[360px]:text-[25px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-black uppercase text-[#071437] leading-[1.12] tracking-tight text-left drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)] sm:drop-shadow-none">
+              {/* Headline — High Contrast Razor Sharp */}
+              <h1 className="text-[22px] min-[360px]:text-[25px] sm:text-4xl lg:text-[54px] xl:text-[58px] font-black uppercase text-[#071437] leading-[1.12] tracking-tight text-left drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] sm:drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]">
                 100 Seats.<br />
                 <span className="text-[#155EEF]">One Council.</span><br />
                 A Shared Future.
               </h1>
 
-              {/* Subtitle */}
-              <p className="text-[11.5px] min-[360px]:text-[12.5px] sm:text-base text-[#1E293B] font-semibold sm:font-medium leading-snug sm:leading-relaxed text-left drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] sm:drop-shadow-none">
+              {/* Subtitle — Strong High-Contrast Typography */}
+              <p className="text-[11.5px] min-[360px]:text-[12.5px] sm:text-base text-[#0F172A] font-semibold sm:font-medium leading-snug sm:leading-relaxed text-left drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)]">
                 Fixed sovereign positions with direct dividend distribution and governance rights.
                 Zero referrals, infinite protocol cash flow.
               </p>
@@ -99,9 +99,9 @@ export const LandingHero: React.FC = () => {
 
                 <button
                   onClick={() => setVideoOpen(true)}
-                  className="px-3 min-[360px]:px-4 sm:px-6 py-2 min-[360px]:py-2.5 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#071437] hover:text-[#0B132B] bg-white/95 hover:bg-white border border-slate-200/90 shadow-2xs transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                  className="px-3 min-[360px]:px-4 sm:px-6 py-2 min-[360px]:py-2.5 sm:py-3.5 rounded-full font-semibold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-[#071437] hover:text-[#0B132B] bg-white/40 hover:bg-white/70 backdrop-blur-sm border-0 shadow-none transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap active:scale-[0.98]"
                 >
-                  <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-50 flex items-center justify-center text-[#155EEF] shrink-0">
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-blue-50/80 flex items-center justify-center text-[#155EEF] shrink-0">
                     <Play className="w-2 h-2 sm:w-2.5 sm:h-2.5 fill-current ml-0.5" />
                   </span>
                   <span>Watch</span>

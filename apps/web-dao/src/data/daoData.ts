@@ -11,7 +11,7 @@ export const DAO_COUNCIL_STATS = {
   totalSeats: 100,
   capacity: 100,
   seatPrice: '$300 USD',
-  phase: 'PHASE 1',
+  phase: 'GENESIS COUNCIL',
 };
 
 export const INITIAL_SEATS: DaoSeat[] = [];

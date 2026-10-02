@@ -52,7 +52,7 @@ export const LoungeStatCards: React.FC<LoungeStatCardsProps> = ({ loungeData }) 
         <div className="space-y-0.5 min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-[#60739A]">MEMBER SINCE</div>
           <div className="text-lg font-black font-jakarta text-[#071A4A] tracking-tight leading-tight">{joinedAt}</div>
-          <div className="text-xs text-[#60739A] font-medium truncate">Genesis Phase 1</div>
+          <div className="text-xs text-[#60739A] font-medium truncate">Genesis Council</div>
         </div>
       </div>
 

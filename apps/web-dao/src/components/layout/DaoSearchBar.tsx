@@ -297,6 +297,13 @@ export const DaoSearchBar: React.FC = () => {
     }
   }, [mobileModalOpen]);
 
+  // Listen for open-mobile-search event from drawer
+  useEffect(() => {
+    const handleOpen = () => setMobileModalOpen(true);
+    window.addEventListener('open-mobile-search', handleOpen);
+    return () => window.removeEventListener('open-mobile-search', handleOpen);
+  }, []);
+
   const handleSelect = (item: SearchItem) => {
     setIsOpen(false);
     setMobileModalOpen(false);
@@ -403,10 +410,10 @@ export const DaoSearchBar: React.FC = () => {
         )}
       </div>
 
-      {/* ── Mobile Search Button (visible on small screens <lg) ─────── */}
+      {/* ── Mobile Search Button (visible on tablet screens sm..lg, hidden on tiny mobile to save navbar space) ─────── */}
       <button
         onClick={() => setMobileModalOpen(true)}
-        className="lg:hidden w-8 h-8 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] flex items-center justify-center transition-all shadow-xs"
+        className="hidden sm:flex lg:hidden w-8 h-8 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] items-center justify-center transition-all shadow-xs"
         aria-label="Open search"
       >
         <Search className="w-3.5 h-3.5 text-[#17334F]" />

@@ -232,13 +232,13 @@ export const DaoHeader: React.FC = () => {
 
   return (
     <>
-      <header className="h-14 sm:h-16 border-b border-[#E7EEF8] bg-white/95 backdrop-blur-xl px-3 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-14 sm:h-16 border-b border-[#E7EEF8] bg-white/95 backdrop-blur-xl px-2.5 min-[360px]:px-3 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30">
 
         {/* Left: Mobile brand + Desktop search */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Link href="/dao" className="lg:hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 flex items-center justify-center">
-              <EquoraLogo className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)]" />
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link href="/dao" className="lg:hidden flex items-center gap-1.5 shrink-0">
+            <div className="w-7 h-7 shrink-0 flex items-center justify-center">
+              <EquoraLogo className="w-7 h-7 drop-shadow-[0_2px_6px_rgba(21,94,239,0.25)]" />
             </div>
             <div className="flex flex-col justify-center leading-none">
               <div className="text-[12px] min-[360px]:text-[13px] sm:text-[14px] font-black font-inter tracking-tight text-[#17334F] leading-tight">
@@ -250,12 +250,12 @@ export const DaoHeader: React.FC = () => {
             </div>
           </Link>
 
-          {/* Fuzzy Search Bar (Desktop input + Mobile modal trigger) */}
+          {/* Fuzzy Search Bar (Desktop input + Tablet modal trigger) */}
           <DaoSearchBar />
         </div>
 
         {/* Right: Status + notification center + wallet pill + avatar */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 min-[360px]:gap-2 sm:gap-2.5 xl:gap-3 shrink-0">
 
           {/* Protocol status pill — desktop only */}
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-xs font-semibold text-[#047857] font-jakarta shadow-xs shrink-0">
@@ -275,20 +275,20 @@ export const DaoHeader: React.FC = () => {
               <button
                 ref={walletBtnRef}
                 onClick={() => setWalletDropOpen((v) => !v)}
-                className="flex items-center gap-1.5 sm:gap-2 px-2 min-[360px]:px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[10.5px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
+                className="flex items-center gap-1 sm:gap-2 px-2 min-[360px]:px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[10px] min-[360px]:text-[10.5px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
                 aria-label="Wallet menu"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-2 sm:ring-4 ring-emerald-400/20" />
                 <span className="hidden sm:inline font-mono tracking-tight text-slate-100">{shortDisplay}</span>
-                <span className="sm:hidden font-mono text-[10.5px]">
-                  {displayAddress ? displayAddress.slice(0, 5) + '…' : 'Wallet'}
+                <span className="sm:hidden font-mono text-[10px] min-[360px]:text-[10.5px] max-w-[55px] min-[360px]:max-w-[70px] truncate">
+                  {displayAddress ? displayAddress.slice(0, 4) + '…' : 'Wallet'}
                 </span>
                 {(memberData?.position || auth.user?.daoPosition) && (
                   <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     Seat #{memberData?.position ?? auth.user?.daoPosition}
                   </span>
                 )}
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${walletDropOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 ${walletDropOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown */}
@@ -494,24 +494,6 @@ export const DaoHeader: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile sub-banner */}
-      {(pathname === '/dao' || pathname === '/dao/seats') && (
-        <div className="lg:hidden w-full bg-white border-b border-[#0E62E4]/15 px-4 sm:px-6 py-1.5 flex items-center justify-between text-[10px] font-semibold font-sans select-none">
-          <div className="flex items-center gap-1.5 text-[#0E62E4]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0E62E4]" />
-            <span className="tracking-wider uppercase">GENESIS DAO PHASE 1</span>
-          </div>
-          <a
-            href="https://dao.equora.fi"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#0E62E4] hover:underline uppercase tracking-wider font-semibold"
-          >
-            DAO.EQUORA.FI
-          </a>
-        </div>
-      )}
-
       {/* Mobile Drawer */}
       {mobileNavOpen && (
         <div
@@ -533,6 +515,19 @@ export const DaoHeader: React.FC = () => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Mobile Drawer Search Trigger */}
+              <button
+                onClick={() => {
+                  setMobileNavOpen(false);
+                  window.dispatchEvent(new CustomEvent('open-mobile-search'));
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-[#EFF6FF] hover:bg-blue-100/70 border border-[#0E62E4]/20 text-[#17334F] transition-all text-xs font-medium text-left shadow-2xs"
+              >
+                <Search className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                <span className="text-[#4F6D87] text-[11px] font-sans">Search seats, pools, pages…</span>
+                <span className="ml-auto text-[9px] px-1 py-0.5 rounded bg-white border border-[#E2ECF9] text-slate-400 font-mono">/</span>
+              </button>
 
               {/* Wallet info in drawer */}
               {isConnected && (

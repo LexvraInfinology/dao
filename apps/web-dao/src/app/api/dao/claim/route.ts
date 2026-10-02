@@ -105,6 +105,31 @@ export async function POST(req: NextRequest) {
     const cashbackTrob = Math.round((cashbackUsd / bttPriceUsd) * 100) / 100;
     const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
 
+    const userAddr = address.trim();
+
+    // Ensure user exists in "User" table to satisfy DaoMember_address_fkey foreign key constraint
+    const existingUserRecord = await queryNeon<any>(
+      `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+      [userAddr]
+    );
+
+    let dbUserAddress = userAddr;
+    if (existingUserRecord.rows.length === 0) {
+      const nextUserIdRes = await queryNeon<{ max_id: string }>(
+        `SELECT COALESCE(MAX("userId"), 0) + 1 AS max_id FROM "User"`
+      );
+      const nextUserId = parseInt(String(nextUserIdRes.rows[0]?.max_id || '1'), 10) || 1;
+
+      await queryNeon(
+        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+         ON CONFLICT (address) DO NOTHING`,
+        [userAddr, nextUserId]
+      );
+    } else {
+      dbUserAddress = existingUserRecord.rows[0].address;
+    }
+
     // Check if slot row exists (e.g. from previously vacant/expired occupant)
     const slotRow = await queryNeon<any>(
       `SELECT id FROM "DaoMember" WHERE position = $1 LIMIT 1`,
@@ -130,13 +155,13 @@ export async function POST(req: NextRequest) {
              "cappedAt" = NULL,
              "retopupCount" = 0
          WHERE id = $7`,
-        [address.trim(), cleanTx, entryAmountTrob, finalPos, cashbackTrob, clientFingerprint, slotRow.rows[0].id]
+        [dbUserAddress, cleanTx, entryAmountTrob, finalPos, cashbackTrob, clientFingerprint, slotRow.rows[0].id]
       );
     } else {
       await queryNeon(
         `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt", "deviceFingerprint")
          VALUES (gen_random_uuid(), $1, $2, NOW(), $3, 1, $4, 300, $2, 'trobchain-api', $5, 'active', NOW(), NOW(), $6)`,
-        [address.trim(), finalPos, cleanTx, entryAmountTrob, cashbackTrob, clientFingerprint]
+        [dbUserAddress, finalPos, cleanTx, entryAmountTrob, cashbackTrob, clientFingerprint]
       );
     }
 
@@ -144,14 +169,14 @@ export async function POST(req: NextRequest) {
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)`,
-      [address.trim(), finalPos, cleanTx, entryAmountTrob, `Council Seat #${finalPos} Activated`]
+      [dbUserAddress, finalPos, cleanTx, entryAmountTrob, `Council Seat #${finalPos} Activated`]
     );
 
     // 3. Insert 'pushed' instant cashback event for new member (Formula: 300/N)
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-      [address.trim(), finalPos, `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${finalPos})`]
+      [dbUserAddress, finalPos, `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${finalPos})`]
     );
 
     // 4. Distribute dividends to all prior active members (< finalPos)
@@ -180,7 +205,7 @@ export async function POST(req: NextRequest) {
       success: true,
       data: {
         position: finalPos,
-        address: address.trim(),
+        address: dbUserAddress,
         instantCashbackBtt: cashbackTrob.toString(),
         instantCashbackUsd: cashbackUsd,
         txHash: cleanTx,

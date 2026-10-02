@@ -45,6 +45,6 @@ export const FOOTER_LINKS = {
   socials: [
     { name: 'Twitter', href: 'https://x.com/EquoraFi', icon: 'Twitter' },
     { name: 'Telegram', href: 'https://t.me/EquoraFi', icon: 'Send' },
-    { name: 'WhatsApp', href: 'https://whatsapp.com/channel/0029VbDGUIEDDmFXy3K7oR0E', icon: 'MessageCircle' },
+    { name: 'WhatsApp', href: 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng', icon: 'MessageCircle' },
   ],
 };

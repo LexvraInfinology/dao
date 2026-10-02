@@ -67,11 +67,44 @@ export async function checkServerlessEligibility(address: string) {
     if (acctRes.ok) {
       const acctData = (await acctRes.json()) as any;
       if (acctData && acctData.create_time) {
-        creationTimestamp = Number(acctData.create_time);
+        let ct = Number(acctData.create_time);
+        if (ct < 10000000000) ct *= 1000; // convert seconds to ms if needed
+        creationTimestamp = ct;
         if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
           condition1Passed = false;
-          condition1Reason = 'Eligible wallet must be created on or after 1 October 2026.';
+          condition1Reason = 'Wallet was activated before 1 October 2026. Only wallets created on or after 1 October 2026 are eligible.';
+        } else {
+          condition1Passed = true;
         }
+      }
+
+      // Fallback: check earliest on-chain transaction timestamp if create_time not returned
+      if (!creationTimestamp) {
+        try {
+          const txRes = await fetch(`https://testnet-backend.trobchain.com/v1/accounts/${rawAddress}/transactions?limit=100`, {
+            cache: 'no-store',
+          });
+          if (txRes.ok) {
+            const txData = await txRes.json();
+            const list = (txData.data || []) as any[];
+            if (list.length > 0) {
+              let earliest = Infinity;
+              for (const t of list) {
+                const ts = t.timestamp ? new Date(t.timestamp).getTime() : Infinity;
+                if (ts < earliest) earliest = ts;
+              }
+              if (earliest !== Infinity) {
+                creationTimestamp = earliest;
+                if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
+                  condition1Passed = false;
+                  condition1Reason = 'Wallet was activated before 1 October 2026. Only wallets created on or after 1 October 2026 are eligible.';
+                } else {
+                  condition1Passed = true;
+                }
+              }
+            }
+          }
+        } catch {}
       }
 
       // Live On-Chain Freeze V2 (Stake 2.0)

@@ -174,12 +174,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     (memberData?.isMember === true || Number(memberData?.position) > 0)
   );
 
-  // If user is disconnected, redirect to landing page
-  useEffect(() => {
-    if (detectTimeout && !wallet.isConnected && wallet.status !== 'connecting' && wallet.status !== 'detecting') {
-      window.location.href = '/';
-    }
-  }, [detectTimeout, wallet.isConnected, wallet.status]);
+  // Note: Do not kick disconnected mobile users back to landing page;
+  // allow them to view registration criteria and connect wallet directly on mobile.
 
   // ── Fetch protocol eligibility conditions from API ──────────────────────────
   const fetchEligibility = useCallback(async () => {
@@ -805,7 +801,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       </span>
                     ) : (
                       <span className="text-[10px] sm:text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-md shrink-0">
-                        Ineligible
+                        Not Eligible
                       </span>
                     )}
                   </div>
@@ -872,22 +868,33 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                     </div>
                   </div>
 
-                  {/* JOIN Button */}
-                  <button
-                    type="button"
-                    onClick={handleJoinWhatsApp}
-                    disabled={waJoining}
-                    className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#17334F] hover:bg-[#0B1A42] text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-sm shrink-0 transition-all active:scale-95 cursor-pointer font-sans flex items-center gap-1.5"
-                  >
-                    {waJoining ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                    ) : (
-                      <span>Join</span>
-                    )}
-                  </button>
+                  {/* Single Clean WhatsApp Action Button */}
+                  {eligibility?.whatsapp.joined ? (
+                    <div className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] sm:text-xs flex items-center gap-1.5 shrink-0 shadow-xs">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Joined</span>
+                    </div>
+                  ) : (
+                    <a
+                      href={OFFICIAL_WHATSAPP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleJoinWhatsApp}
+                      className="px-4 py-2 rounded-xl bg-[#1FAF51] hover:bg-[#178C40] active:scale-95 text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shadow-md shrink-0 transition-all cursor-pointer font-sans flex items-center gap-1.5"
+                    >
+                      {waJoining ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                      ) : (
+                        <>
+                          <span>Join</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </>
+                      )}
+                    </a>
+                  )}
                 </div>
 
-                {/* WhatsApp Community Join & Verification Status */}
+                {/* WhatsApp Community Join & Verification Status Notice (No duplicate button) */}
                 <div className="px-0.5 sm:px-1 pt-1 space-y-2">
                   {eligibility?.whatsapp.joined ? (
                     <div className="flex items-center gap-2 text-xs text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl font-sans">
@@ -897,19 +904,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       </span>
                     </div>
                   ) : (
-                    <div className="p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-sans">
-                      <div className="flex items-center gap-1.5 text-[#92400E] text-[10px] sm:text-[11px] font-semibold">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                        <span>Click &quot;Join&quot; to connect to the official WhatsApp community and unlock payment.</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleJoinWhatsApp}
-                        disabled={waJoining}
-                        className="px-3 py-1 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-xs shrink-0 transition-all cursor-pointer font-sans"
-                      >
-                        Join Now
-                      </button>
+                    <div className="p-2.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex items-center gap-2 text-xs font-sans">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                      <span className="text-[#92400E] text-[10px] sm:text-[11px] font-semibold leading-snug">
+                        Tap &quot;Join&quot; above to connect to the official WhatsApp community and authorize deposit.
+                      </span>
                     </div>
                   )}
                 </div>
@@ -991,7 +990,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 ) : !wallet.isConnected ? (
                   <span>Connect TrobSafe Wallet to Register</span>
                 ) : !eligibility?.condition1.passed ? (
-                  <span className="leading-snug">Ineligible: Wallet Must Be Created On/After 1 Oct 2026</span>
+                  <span className="leading-snug">Not Eligible: Wallet Must Be Activated On/After 1 Oct 2026</span>
                 ) : !eligibility?.condition2.passed ? (
                   <span className="leading-snug">Fulfill Resource Stake & SR Vote Requirements</span>
                 ) : !eligibility?.whatsapp.joined ? (

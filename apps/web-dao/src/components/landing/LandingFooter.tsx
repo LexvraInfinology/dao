@@ -101,7 +101,7 @@ export const LandingFooter: React.FC = () => {
                 <Send className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
               </a>
               <a
-                href="https://whatsapp.com/channel/0029VbDGUIEDDmFXy3K7oR0E"
+                href="https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng"
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100/90 hover:bg-emerald-50 hover:text-[#25D366] text-[#475467] flex items-center justify-center transition-colors group"

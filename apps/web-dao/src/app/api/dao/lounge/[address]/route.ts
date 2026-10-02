@@ -33,18 +33,54 @@ export async function GET(
       const capBtt = entryBtt * 5;
       const pushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
       const isCapped = pushedBtt >= capBtt;
+      let retopupDeadline = m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null;
+      let retopupTimeRemainingSeconds: number | null = null;
+      let isExpired = false;
+
+      // If member has reached 500% cap and retopup deadline is not yet set, start 48h window now!
+      if (isCapped && !retopupDeadline) {
+        const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
+        retopupDeadline = deadlineDate.toISOString();
+        await queryNeon(
+          `UPDATE "DaoMember"
+           SET "cappedAt" = NOW(),
+               "retopupDeadline" = $1,
+               status = 'capped',
+               "updatedAt" = NOW()
+           WHERE id = $2`,
+          [retopupDeadline, m.id]
+        );
+      }
+
+      if (retopupDeadline) {
+        const diffMs = new Date(retopupDeadline).getTime() - Date.now();
+        retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
+        if (retopupTimeRemainingSeconds === 0) {
+          isExpired = true;
+          if (m.status !== 'vacant') {
+            await queryNeon(
+              `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
+              [m.id]
+            );
+          }
+        }
+      }
+
       const capProgressPct = capBtt > 0 ? Math.min(100, Math.round((pushedBtt / capBtt) * 100)) : 0;
       const remainingCapBtt = Math.max(0, capBtt - pushedBtt);
       const remainingCapUsd = Math.max(0, earningsCapUsd - pushedUsd);
+      const retopupCashbackUsd = parseFloat((300 / (m.position || 1)).toFixed(2));
+      const retopupCashbackTrob = Math.round((retopupCashbackUsd / bttPriceUsd) * 100) / 100;
+      const currentStatus = isExpired ? 'vacant' : (m.status || (isCapped ? 'capped' : 'active'));
 
       return NextResponse.json({
         success: true,
         data: {
-          isMember: true,
+          isMember: !isExpired,
           address: m.address,
           position: m.position,
           nftTokenId: m.nftTokenId || m.position,
-          status: m.status || 'ACTIVE',
+          status: currentStatus,
           claimableDividendsBtt: 0,
           claimableDividendsUsd: 0,
           totalReceivedBtt: pushedBtt,
@@ -60,6 +96,11 @@ export async function GET(
           remainingCapTrob: remainingCapBtt,
           remainingCapUsd,
           isCapped,
+          retopupDeadline,
+          retopupTimeRemainingSeconds,
+          retopupCashbackUsd,
+          retopupCashbackTrob,
+          isExpired,
           bttPriceUsd,
           trobPriceUsd: bttPriceUsd,
           soulboundPass: {

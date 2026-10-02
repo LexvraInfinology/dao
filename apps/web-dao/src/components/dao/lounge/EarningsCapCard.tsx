@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Info, AlertTriangle, Clock, Loader2, ArrowRight } from 'lucide-react';
+import { Info, AlertTriangle, Clock, Loader2, ArrowRight, Zap, TrendingUp } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { RetopupModal } from './RetopupModal';
 
 interface EarningsCapCardProps {
   variant?: 'desktop' | 'mobile' | 'auto';
@@ -27,6 +28,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   position = 1,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [retopupModalOpen, setRetopupModalOpen] = useState(false);
   const [retopupLoading, setRetopupLoading] = useState(false);
   const wallet = useWallet();
 
@@ -241,27 +243,28 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
 
           <div className="text-[11px] sm:text-xs text-amber-950 font-medium leading-relaxed font-jakarta">
             {timeLeft.isExpired
-              ? `The 48-hour re-topup deadline has expired. Seat #${position} is flagged for slot blanking.`
-              : `Seat #${position} has reached the 5X earnings cap ($1,500 USD). Re-topup $300 USD within 48 hours to reset your cap and preserve continuous dividend payouts.`}
+              ? `The 48-hour re-topup deadline has expired. Seat #${position} is now vacant and open for queue takeover.`
+              : `Seat #${position} has reached the 5X earnings cap ($1,500 USD). Re-topup $300 USD within 48 hours to secure your seat, reset your cap to zero, and receive your instant blockchain cashback loop (+${(300 / (position || 1)).toFixed(2)} USD).`}
           </div>
 
           <button
-            onClick={handleRetopup}
-            disabled={retopupLoading || timeLeft.isExpired}
+            onClick={() => setRetopupModalOpen(true)}
+            disabled={timeLeft.isExpired}
             className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
-            {retopupLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Broadcasting Re-topup…</span>
-              </>
-            ) : (
-              <>
-                <span>Re-topup Seat #{position} ($300 USD / {retopupFeeTrob.toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB)</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
+            <Zap className="w-4 h-4 fill-white" />
+            <span>Re-topup Seat #{position} (+$${(300 / (position || 1)).toFixed(2)} Instant Cashback Loop)</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
+
+          {/* Dedicated Professional Retopup Modal */}
+          <RetopupModal
+            isOpen={retopupModalOpen}
+            onClose={() => setRetopupModalOpen(false)}
+            seatPosition={position}
+            retopupDeadline={retopupDeadline}
+            trobPriceUsd={trobPriceUsd}
+          />
         </div>
       )}
 

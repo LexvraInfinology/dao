@@ -46,17 +46,17 @@ export function buildLiveCouncilSeats(
     memberMap.set(m.position, m);
   }
 
-  // Sequential scan from Seat 1 to 100: identify lowest vacant/blank seat
+  // Sequential scan from Seat 1 to 100: identify lowest vacant/blank/expired seat
   let lowestVacantSeat: number | null = null;
   for (let s = 1; s <= 100; s++) {
     const m = memberMap.get(s);
-    if (m && (m.status === 'blank' || m.status === 'defaulted')) {
+    if (!m || m.status === 'blank' || m.status === 'defaulted' || m.status === 'vacant') {
       lowestVacantSeat = s;
       break;
     }
   }
 
-  const nextAvailableSeat = lowestVacantSeat !== null ? null : (members.length < 100 ? members.length + 1 : null);
+  const nextAvailableSeat = lowestVacantSeat;
   const canonicalMyAddress = activeAddress?.toLowerCase() ?? '';
 
   return Array.from({ length: 100 }, (_, index) => {
@@ -64,7 +64,9 @@ export function buildLiveCouncilSeats(
     const soulboundId = `#${String(seatNumber).padStart(4, '0')}`;
     const liveMember = memberMap.get(seatNumber);
 
-    if (liveMember) {
+    const isDefaulted = !!liveMember && (liveMember.status === 'blank' || liveMember.status === 'defaulted' || liveMember.status === 'vacant');
+
+    if (liveMember && !isDefaulted) {
       const isMine =
         !!canonicalMyAddress &&
         liveMember.address.toLowerCase() === canonicalMyAddress;
@@ -78,28 +80,22 @@ export function buildLiveCouncilSeats(
       const shortAddr =
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
-      const isDefaulted = liveMember.status === 'blank' || liveMember.status === 'defaulted';
-      const isPriorityTakeover = seatNumber === lowestVacantSeat;
-
       const liveTrob = pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0);
 
       return {
         seatNumber,
-        status: isDefaulted ? 'defaulted' : isMine ? 'mine' : 'claimed',
-        ownerAddress: isDefaulted ? 'Defaulted Vacancy (Open for Takeover)' : isMine ? `${shortAddr} (You)` : shortAddr,
+        status: isMine ? 'mine' : 'claimed',
+        ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
         lifetimeEarnings: liveTrob > 0
           ? `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
           : `$${earningsUsd.toFixed(2)} USD`,
         capProgress: capPct,
         votingPower: '1.0%',
-        statusText: isDefaulted
-          ? (isPriorityTakeover ? 'Defaulted Vacancy • Priority Queue Takeover' : 'Defaulted Vacancy • Open for Takeover')
-          : liveMember.status === 'active'
+        statusText: liveMember.status === 'active'
           ? 'Active & In Good Standing'
           : liveMember.status ?? 'Active Member',
-        statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Active Member',
+        statusBadge: 'Active Member',
         soulboundId,
-        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
               month: 'short',
@@ -114,12 +110,29 @@ export function buildLiveCouncilSeats(
       return {
         seatNumber,
         status: 'next',
-        ownerAddress: 'Available for Claim',
+        ownerAddress: isDefaulted ? 'Vacant Seat (Priority Takeover)' : 'Available for Claim',
         lifetimeEarnings: '$0.00 USD',
         capProgress: 0,
         votingPower: '1.0%',
-        statusText: 'Next in Queue • Ready for Instant Mint',
-        statusBadge: 'Next Available',
+        statusText: isDefaulted
+          ? 'Priority Vacant Seat • Ready for Instant Takeover'
+          : 'Next in Queue • Ready for Instant Mint',
+        statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Next Available',
+        soulboundId,
+        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
+      };
+    }
+
+    if (isDefaulted) {
+      return {
+        seatNumber,
+        status: 'defaulted',
+        ownerAddress: 'Vacant Seat (Open for Claim)',
+        lifetimeEarnings: '$0.00 USD',
+        capProgress: 0,
+        votingPower: '1.0%',
+        statusText: 'Vacant Seat • 48h Retopup Expired',
+        statusBadge: 'Defaulted Vacancy',
         soulboundId,
         entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
       };
@@ -133,7 +146,7 @@ export function buildLiveCouncilSeats(
       lifetimeEarnings: '$0.00 USD',
       capProgress: 0,
       votingPower: '1.0%',
-      statusText: `Locked • Unlocks after Seat #${seatNumber - 1} claimed`,
+      statusText: `Locked • Unlocks after Seat #${lowestVacantSeat || seatNumber - 1} claimed`,
       statusBadge: 'Locked Future',
       soulboundId,
     };

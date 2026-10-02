@@ -106,12 +106,26 @@ export default function DaoDashboardPage() {
                       Your seat has earned 5X ($1,500 USD). Re-topup $300 USD within 48 hours to preserve your active council seat.
                     </p>
                     <div className="flex items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('dao:open-retopup', {
+                              detail: { seatPosition: myPosition, deadline: memberData?.retopupDeadline },
+                            })
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-white" />
+                        <span>Quick Re-topup ($300)</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                       <Link
                         href="/dao/lounge"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition-all"
                       >
-                        <span>Open 48h Timer & Re-topup</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Open Lounge</span>
                       </Link>
                     </div>
                   </div>
@@ -236,10 +250,36 @@ export default function DaoDashboardPage() {
               </div>
             ) : isMember ? (
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
-                  <CheckCircle2 className="w-3 h-3 text-[#1F8A5B]" />
-                  <span>Seat #{myPosition} &bull; Active Member</span>
-                </div>
+                {memberData?.isCapped ? (
+                  <div className="rounded-xl bg-amber-50 border border-amber-300 p-3 space-y-2 text-left">
+                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                      <span>5X Cap Reached (Seat #{myPosition})</span>
+                    </div>
+                    <p className="text-[10.5px] text-amber-800 leading-snug">
+                      48h retopup window open. Re-topup $300 to claim instant cashback loop.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent('dao:open-retopup', {
+                            detail: { seatPosition: myPosition, deadline: memberData?.retopupDeadline },
+                          })
+                        )
+                      }
+                      className="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                      <span>Quick Re-topup ($300)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
+                    <CheckCircle2 className="w-3 h-3 text-[#1F8A5B]" />
+                    <span>Seat #{myPosition} &bull; Active Member</span>
+                  </div>
+                )}
                 <Link
                   href="/dao/lounge"
                   className="btn-primary w-full py-2.5 px-4 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1.5"

@@ -13,13 +13,16 @@ import {
   Volume2,
   VolumeX,
   X,
+  Zap,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { playNotificationChime, playPriorityAlertChime } from '@/utils/soundEffects';
 
 export interface DaoNotification {
   id: string;
-  type: 'matrix_leader_offer' | 'matrix_launch' | 'pool_dividend' | 'queue_update';
+  type: 'matrix_leader_offer' | 'matrix_launch' | 'pool_dividend' | 'queue_update' | 'retopup_alert';
   title: string;
   message: string;
   timestamp: string;
@@ -120,7 +123,49 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
     });
 
     setNotifications(list);
-  }, [userSeat]);
+
+    // 0. Check for 48h Retopup & 500% Cap Alert for active wallet
+    if (userAddress) {
+      fetch(`/api/dao/lounge/${encodeURIComponent(userAddress)}`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            const d = json.data;
+            if (d.isCapped || d.retopupDeadline) {
+              const seatPos = d.position || userSeat || 1;
+              const cashback = d.retopupCashbackUsd ?? (300 / seatPos).toFixed(2);
+              const isExpired = d.isExpired;
+
+              const retopupItem: DaoNotification = {
+                id: `retopup_alert_${userAddress}`,
+                type: 'retopup_alert',
+                title: isExpired
+                  ? `Seat #${seatPos} Vacated (48h Expired)`
+                  : `⚡ 500% Cap Reached — 48h Retopup Active (Seat #${seatPos})`,
+                message: isExpired
+                  ? `The 48-hour re-topup deadline has expired without payment. Seat #${seatPos} is now vacant and open for others to claim.`
+                  : `You've reached $1,500 USD (500% cap). Re-topup $300 USD within 48 hours to secure your seat, reset your cap to zero, and receive your instant blockchain cashback loop (+${cashback} USD).`,
+                timestamp: isExpired ? 'Expired' : 'URGENT (48h)',
+                read: false,
+                priority: !isExpired,
+                actionLabel: isExpired ? undefined : `Re-topup Seat #${seatPos} ($300)`,
+                seatTarget: seatPos,
+              };
+
+              setNotifications((prev) => {
+                const filtered = prev.filter((n) => n.id !== retopupItem.id);
+                return [retopupItem, ...filtered];
+              });
+
+              if (!isExpired && soundEnabled) {
+                playPriorityAlertChime();
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [userSeat, userAddress, soundEnabled]);
 
   // Outside click & escape listener
   useEffect(() => {
@@ -354,7 +399,9 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                     {/* Icon */}
                     <div
                       className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 ${
-                        item.priority
+                        item.type === 'retopup_alert'
+                          ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white animate-pulse'
+                          : item.priority
                           ? 'bg-amber-500 text-white'
                           : item.type === 'pool_dividend'
                           ? 'bg-emerald-500 text-white'
@@ -363,7 +410,9 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                           : 'bg-indigo-500 text-white'
                       }`}
                     >
-                      {item.priority ? (
+                      {item.type === 'retopup_alert' ? (
+                        <Zap className="w-4 h-4 fill-white" />
+                      ) : item.priority ? (
                         <Crown className="w-4 h-4" />
                       ) : item.type === 'pool_dividend' ? (
                         <ShieldCheck className="w-4 h-4" />
@@ -379,7 +428,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span
                           className={`font-bold text-[11px] truncate ${
-                            item.priority ? 'text-amber-900' : 'text-[#14304A]'
+                            item.priority || item.type === 'retopup_alert' ? 'text-amber-900' : 'text-[#14304A]'
                           }`}
                         >
                           {item.title}
@@ -394,7 +443,33 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                       </p>
 
                       {/* Action buttons */}
-                      {item.type === 'matrix_leader_offer' && item.actionLabel ? (
+                      {item.type === 'retopup_alert' && item.actionLabel ? (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpen(false);
+                              window.dispatchEvent(
+                                new CustomEvent('dao:open-retopup', {
+                                  detail: { seatPosition: item.seatTarget || userSeat },
+                                })
+                              );
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                          >
+                            <Zap className="w-3.5 h-3.5 fill-white" />
+                            <span>{item.actionLabel}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                          <Link
+                            href="/dao/lounge"
+                            onClick={() => setOpen(false)}
+                            className="text-[11px] font-semibold text-amber-800 hover:underline px-1.5"
+                          >
+                            View Lounge
+                          </Link>
+                        </div>
+                      ) : item.type === 'matrix_leader_offer' && item.actionLabel ? (
                         <div className="flex items-center gap-2 pt-1">
                           <Link
                             href="/dao/matrix-bridge"

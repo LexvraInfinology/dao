@@ -22,6 +22,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Sparkles,
+  ArrowRight,
+  Zap,
+  Clock,
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
 import { usePathname, useRouter } from 'next/navigation';
@@ -36,6 +39,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { triggerSmartConnectWallet } from '@/utils/walletConnect';
 import { DaoSearchBar } from '@/components/layout/DaoSearchBar';
 import { DaoNotificationCenter } from '@/components/layout/DaoNotificationCenter';
+import { RetopupModal } from '@/components/dao/lounge/RetopupModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -63,6 +67,10 @@ export const DaoHeader: React.FC = () => {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
+
+  const [retopupModalOpen, setRetopupModalOpen] = useState(false);
+  const [retopupTargetSeat, setRetopupTargetSeat] = useState<number>(1);
+  const [retopupDeadline, setRetopupDeadline] = useState<string | null>(null);
 
   const walletDropRef = useRef<HTMLDivElement>(null);
   const walletBtnRef  = useRef<HTMLButtonElement>(null);
@@ -167,7 +175,28 @@ export const DaoHeader: React.FC = () => {
   ) : '';
 
   const shortDisplay   = shortenAddress(displayAddress);
-  const { data: memberData } = useDaoMember(displayAddress);
+  const { data: memberData, refetch: refetchMember } = useDaoMember(displayAddress);
+
+  // Listen for global 'dao:open-retopup' event
+  useEffect(() => {
+    const handleOpenRetopup = (e: Event) => {
+      const customEvent = e as CustomEvent<{ seatPosition?: number; deadline?: string }>;
+      if (customEvent.detail?.seatPosition) {
+        setRetopupTargetSeat(customEvent.detail.seatPosition);
+      } else if (memberData?.position) {
+        setRetopupTargetSeat(memberData.position);
+      }
+      if (customEvent.detail?.deadline) {
+        setRetopupDeadline(customEvent.detail.deadline);
+      } else if (memberData?.retopupDeadline) {
+        setRetopupDeadline(memberData.retopupDeadline);
+      }
+      setRetopupModalOpen(true);
+    };
+
+    window.addEventListener('dao:open-retopup', handleOpenRetopup);
+    return () => window.removeEventListener('dao:open-retopup', handleOpenRetopup);
+  }, [memberData]);
 
   // Verified seat member flag
   const isSeatMember = Boolean(
@@ -440,6 +469,31 @@ export const DaoHeader: React.FC = () => {
         </div>
       </header>
 
+      {/* 5X Earnings Cap Reached Retopup Urgent Warning Banner */}
+      {memberData?.isCapped && (
+        <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-3 sm:px-6 py-2 shadow-md flex items-center justify-between text-xs sticky top-14 sm:top-16 z-20">
+          <div className="flex items-center gap-2 font-semibold">
+            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+            <span className="font-bold">5X Cap Reached (Seat #{memberData.position}):</span>
+            <span className="hidden md:inline text-amber-100">
+              48-hour retopup window active. Re-topup $300 within 48h to preserve your seat & receive your instant cashback loop.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setRetopupTargetSeat(memberData.position || 1);
+              setRetopupDeadline(memberData.retopupDeadline || null);
+              setRetopupModalOpen(true);
+            }}
+            className="px-3 py-1 rounded-lg bg-white text-amber-950 font-bold hover:bg-amber-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+            <span>Re-topup Seat #{memberData.position} ($300)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Mobile sub-banner */}
       {(pathname === '/dao' || pathname === '/dao/seats') && (
         <div className="lg:hidden w-full bg-white border-b border-[#0E62E4]/15 px-4 sm:px-6 py-1.5 flex items-center justify-between text-[10px] font-semibold font-sans select-none">
@@ -587,6 +641,17 @@ export const DaoHeader: React.FC = () => {
 
       {/* Wallet connect modal */}
       <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+
+      {/* Retopup Modal */}
+      <RetopupModal
+        isOpen={retopupModalOpen}
+        onClose={() => setRetopupModalOpen(false)}
+        seatPosition={retopupTargetSeat || memberData?.position || 1}
+        retopupDeadline={retopupDeadline || memberData?.retopupDeadline}
+        onSuccess={() => {
+          refetchMember();
+        }}
+      />
     </>
   );
 };

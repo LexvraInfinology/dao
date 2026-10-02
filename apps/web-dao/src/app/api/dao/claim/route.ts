@@ -24,16 +24,23 @@ export async function POST(req: NextRequest) {
     const { address, position, txHash, deviceFingerprint } = body;
     const clientFingerprint = deviceFingerprint || req.headers.get('x-device-fingerprint') || null;
 
-    if (!address || !position) {
-      return NextResponse.json({ success: false, error: 'Address and position are required' }, { status: 400 });
+    if (!address) {
+      return NextResponse.json({ success: false, error: 'Address is required' }, { status: 400 });
     }
 
-    const pos = parseInt(position, 10);
+    // 0. Auto-forfeit/vacate any seats whose 48h retopup deadline expired without payment
+    await queryNeon(
+      `UPDATE "DaoMember"
+       SET status = 'vacant', "updatedAt" = NOW()
+       WHERE LOWER(status) IN ('capped', 'expired')
+         AND "retopupDeadline" IS NOT NULL
+         AND "retopupDeadline" < NOW()`
+    );
 
     // Anti-Sybil Check: Strictly 1 DAO Seat per Physical Device
     if (clientFingerprint) {
       const existingDevice = await queryNeon<any>(
-        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 LIMIT 1`,
+        `SELECT id, position, address FROM "DaoMember" WHERE "deviceFingerprint" = $1 AND LOWER(status) = 'active' LIMIT 1`,
         [clientFingerprint]
       );
       if (existingDevice.rows.length > 0 && existingDevice.rows[0].address.toLowerCase() !== address.trim().toLowerCase()) {
@@ -44,57 +51,114 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const bttPriceUsd = 0.056;
-    const entryAmountUsd = 300;
-    const entryAmountTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
-    const cashbackUsd = parseFloat((entryAmountUsd / pos).toFixed(2));
-    const cashbackTrob = Math.round((cashbackUsd / bttPriceUsd) * 100) / 100;
-    const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
-
-    // Check existing
-    const existing = await queryNeon<any>(
-      `SELECT id, position, address FROM "DaoMember" WHERE position = $1 OR LOWER(address) = LOWER($2) LIMIT 1`,
-      [pos, address.trim()]
+    // Check if user is already an active member
+    const existingUser = await queryNeon<any>(
+      `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) = 'active' LIMIT 1`,
+      [address.trim()]
     );
-
-    if (existing.rows.length > 0) {
+    if (existingUser.rows.length > 0) {
       return NextResponse.json({
         success: true,
         data: {
-          position: existing.rows[0].position,
-          address: existing.rows[0].address,
-          instantCashbackBtt: cashbackTrob.toString(),
-          instantCashbackUsd: cashbackUsd,
+          position: existingUser.rows[0].position,
+          address: existingUser.rows[0].address,
+          alreadyMember: true,
         },
       });
     }
 
-    // 1. Insert new member with device fingerprint
-    await queryNeon(
-      `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt", "deviceFingerprint")
-       VALUES (gen_random_uuid(), $1, $2, NOW(), $3, 1, $4, 300, $2, 'trobchain-api', $5, 'active', NOW(), NOW(), $6)`,
-      [address.trim(), pos, cleanTx, entryAmountTrob, cashbackTrob, clientFingerprint]
+    // 1. Scan 1 to 100 for the FIRST vacant seat (lowest vacant number)
+    const activeSeatsRes = await queryNeon<{ position: number }>(
+      `SELECT position FROM "DaoMember" WHERE LOWER(status) = 'active' AND position BETWEEN 1 AND 100 ORDER BY position ASC`
     );
+    const activeSet = new Set(activeSeatsRes.rows.map((r) => r.position));
+
+    let firstVacant = 0;
+    for (let i = 1; i <= 100; i++) {
+      if (!activeSet.has(i)) {
+        firstVacant = i;
+        break;
+      }
+    }
+
+    if (firstVacant === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Genesis Council is currently fully allocated (All 100 Seats active). Please monitor for any expired 48h retopup vacancies.',
+      }, { status: 400 });
+    }
+
+    // If client requested an eligible vacant position, honor it; otherwise allocate the lowest vacant
+    let finalPos = firstVacant;
+    if (position) {
+      const requested = parseInt(position, 10);
+      if (requested >= 1 && requested <= 100 && !activeSet.has(requested)) {
+        finalPos = requested;
+      }
+    }
+
+    const bttPriceUsd = 0.056;
+    const entryAmountUsd = 300;
+    const entryAmountTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
+    // Formula works for any seat: 300 / N (e.g. Seat #2 gets 300/2 = $150 back instantly)
+    const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
+    const cashbackTrob = Math.round((cashbackUsd / bttPriceUsd) * 100) / 100;
+    const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
+
+    // Check if slot row exists (e.g. from previously vacant/expired occupant)
+    const slotRow = await queryNeon<any>(
+      `SELECT id FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+      [finalPos]
+    );
+
+    if (slotRow.rows.length > 0) {
+      await queryNeon(
+        `UPDATE "DaoMember"
+         SET address = $1,
+             "joinedAt" = NOW(),
+             "txHash" = $2,
+             "blockNumber" = 1,
+             "entryAmountBtt" = $3,
+             "entryAmountUsdAtJoin" = 300,
+             "nftTokenId" = $4,
+             "priceSource" = 'trobchain-api',
+             "pushedAmountBtt" = $5,
+             status = 'active',
+             "updatedAt" = NOW(),
+             "deviceFingerprint" = $6,
+             "retopupDeadline" = NULL,
+             "cappedAt" = NULL,
+             "retopupCount" = 0
+         WHERE id = $7`,
+        [address.trim(), cleanTx, entryAmountTrob, finalPos, cashbackTrob, clientFingerprint, slotRow.rows[0].id]
+      );
+    } else {
+      await queryNeon(
+        `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt", "deviceFingerprint")
+         VALUES (gen_random_uuid(), $1, $2, NOW(), $3, 1, $4, 300, $2, 'trobchain-api', $5, 'active', NOW(), NOW(), $6)`,
+        [address.trim(), finalPos, cleanTx, entryAmountTrob, cashbackTrob, clientFingerprint]
+      );
+    }
 
     // 2. Insert 'joined' event
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)`,
-      [address.trim(), pos, cleanTx, entryAmountTrob, `Council Seat #${pos} Activated`]
+      [address.trim(), finalPos, cleanTx, entryAmountTrob, `Council Seat #${finalPos} Activated`]
     );
 
-    // 3. Insert 'pushed' instant cashback event for new member
+    // 3. Insert 'pushed' instant cashback event for new member (Formula: 300/N)
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-      [address.trim(), pos, `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${pos})`]
+      [address.trim(), finalPos, `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${finalPos})`]
     );
 
-    // 4. Distribute dividends to all prior active members
-    if (pos > 1) {
+    // 4. Distribute dividends to all prior active members (< finalPos)
+    if (finalPos > 1) {
       const priorMembers = await queryNeon<any>(
         `SELECT id, address, position, "pushedAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
-        [pos]
+        [finalPos]
       );
 
       for (const prior of priorMembers.rows) {
@@ -107,7 +171,7 @@ export async function POST(req: NextRequest) {
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-          [prior.address, pos, `${cleanTx}-pushed-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${pos}`]
+          [prior.address, finalPos, `${cleanTx}-pushed-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${finalPos}`]
         );
       }
     }
@@ -115,7 +179,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        position: pos,
+        position: finalPos,
         address: address.trim(),
         instantCashbackBtt: cashbackTrob.toString(),
         instantCashbackUsd: cashbackUsd,

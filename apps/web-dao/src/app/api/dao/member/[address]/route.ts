@@ -39,13 +39,44 @@ export async function GET(
       const capBtt = entryBtt * 5;
       const isCapped = capBtt > 0 && pushedBtt >= capBtt;
 
+      let retopupDeadline = m.retopupDeadline;
+      let retopupTimeRemainingSeconds: number | null = null;
+      let isExpired = false;
+
+      if (isCapped && !retopupDeadline) {
+        // Start 48-hour retopup window on cap hit
+        retopupDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+        await queryNeon(
+          `UPDATE "DaoMember"
+           SET "retopupDeadline" = $1, "cappedAt" = NOW(), status = 'capped', "updatedAt" = NOW()
+           WHERE id = $2`,
+          [retopupDeadline, m.id]
+        );
+      }
+
+      if (retopupDeadline) {
+        const diffMs = new Date(retopupDeadline).getTime() - Date.now();
+        retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
+        if (retopupTimeRemainingSeconds === 0) {
+          isExpired = true;
+          if (m.status !== 'vacant') {
+            await queryNeon(
+              `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
+              [m.id]
+            );
+          }
+        }
+      }
+
+      const isMember = !isExpired && m.status !== 'vacant' && m.status !== 'defaulted';
+
       return NextResponse.json({
         success: true,
         data: {
-          isMember: true,
-          position: m.position,
+          isMember,
+          position: isMember ? m.position : null,
           nftTokenId: m.nftTokenId,
-          status: m.status || 'ACTIVE',
+          status: isExpired ? 'vacant' : (m.status || (isCapped ? 'capped' : 'ACTIVE')),
           joinedAt: m.joinedAt,
           pushedAmountBtt: pushedBtt,
           pushedAmountTrob: pushedBtt,
@@ -55,11 +86,13 @@ export async function GET(
           earningsCapUsd,
           capProgressPct: capBtt > 0 ? Math.min(100, Math.round((pushedBtt / capBtt) * 100)) : 0,
           isCapped,
+          retopupDeadline,
+          retopupTimeRemainingSeconds,
           entryAmountBtt: entryBtt,
           entryAmountTrob: entryBtt,
           entryAmountUsdEstimate: entryAmountUsd,
           directReferralsCount: 0,
-          isQualified: true,
+          isQualified: isMember,
           userId: m.id,
         },
       });

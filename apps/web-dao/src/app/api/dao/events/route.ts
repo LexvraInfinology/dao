@@ -25,8 +25,19 @@ export async function GET(req: NextRequest) {
        LIMIT ${limit}`
     );
 
+    function toIsoUtc(ts: any): string {
+      if (!ts) return new Date().toISOString();
+      if (ts instanceof Date) return ts.toISOString();
+      const s = String(ts).trim();
+      if (s.endsWith('Z') || s.includes('+') || (s.lastIndexOf('-') > 10)) {
+        return new Date(s).toISOString();
+      }
+      return new Date(s.replace(' ', 'T') + 'Z').toISOString();
+    }
+
     const enriched = rows.map((evt) => ({
       ...evt,
+      timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
       amountBtt: parseFloat(evt.amountBtt || '0'),
       amountTrob: parseFloat(evt.amountBtt || '0'),
       amountUsdEst: parseFloat(evt.amountUsdEst || '0'),

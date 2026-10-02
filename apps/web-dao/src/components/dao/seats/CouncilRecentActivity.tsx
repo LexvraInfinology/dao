@@ -5,8 +5,21 @@ import Link from 'next/link';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useDaoEvents } from '@/hooks/useApi';
 
+function parseUtcTimestamp(ts: string | number | Date | null | undefined): number {
+  if (!ts) return Date.now();
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts === 'number') return ts;
+  const s = String(ts).trim();
+  if (s.endsWith('Z') || s.includes('+') || (s.lastIndexOf('-') > 10)) {
+    return new Date(s).getTime();
+  }
+  return new Date(s.replace(' ', 'T') + 'Z').getTime();
+}
+
 function timeAgo(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  const ts = parseUtcTimestamp(iso);
+  const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diff < 10) return 'just now';
   if (diff < 60) return `${diff}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;

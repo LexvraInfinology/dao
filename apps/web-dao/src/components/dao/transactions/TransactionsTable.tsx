@@ -52,9 +52,21 @@ function shortAddr(addr: string) {
   return addr;
 }
 
+function parseUtcTimestamp(ts: string | number | Date | null | undefined): number {
+  if (!ts) return Date.now();
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts === 'number') return ts;
+  const s = String(ts).trim();
+  if (s.endsWith('Z') || s.includes('+') || (s.lastIndexOf('-') > 10)) {
+    return new Date(s).getTime();
+  }
+  return new Date(s.replace(' ', 'T') + 'Z').getTime();
+}
+
 function timeAgoLabel(ts: string): string {
-  const diff = Date.now() - new Date(ts).getTime();
-  const s = Math.floor(diff / 1000);
+  const diff = Date.now() - parseUtcTimestamp(ts);
+  const s = Math.max(0, Math.floor(diff / 1000));
+  if (s < 10) return 'just now';
   if (s < 60) return `${Math.max(1, s)}s ago`;
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;

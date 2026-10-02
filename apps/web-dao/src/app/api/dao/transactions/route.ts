@@ -55,6 +55,16 @@ export async function GET(req: NextRequest) {
       params
     );
 
+    function toIsoUtc(ts: any): string {
+      if (!ts) return new Date().toISOString();
+      if (ts instanceof Date) return ts.toISOString();
+      const s = String(ts).trim();
+      if (s.endsWith('Z') || s.includes('+') || (s.lastIndexOf('-') > 10)) {
+        return new Date(s).toISOString();
+      }
+      return new Date(s.replace(' ', 'T') + 'Z').toISOString();
+    }
+
     const transactions: TransactionItem[] = rowsRes.rows.map((evt) => {
       const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
       const amtBtt = parseFloat(evt.amountBtt || '0');
@@ -79,7 +89,7 @@ export async function GET(req: NextRequest) {
         from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
         to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
         txHash: evt.txHash || '',
-        timestamp: evt.timestamp ? new Date(evt.timestamp).toISOString() : new Date().toISOString(),
+        timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
         status: 'Confirmed',
       };
     });

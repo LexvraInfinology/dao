@@ -21,11 +21,11 @@ export default function WalletAccessCard() {
           </p>
         </div>
 
-        {/* Right Trobium Emblem Graphic */}
+        {/* Right EQUORA Emblem Graphic */}
         <div className="relative w-28 h-28 shrink-0 flex items-center justify-center opacity-90 -mr-2 pointer-events-none">
           <img
-            src="/dao/trobiumdashboard.png"
-            alt="Trobium Emblem"
+            src="/dao/equoranewlogo.png"
+            alt="EQUORA Emblem"
             className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(21,94,239,0.15)]"
           />
         </div>

@@ -59,7 +59,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData 
           <div className="relative w-40 h-40 xl:w-44 xl:h-44 flex items-center justify-center">
             <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
             <div className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none animate-pulse">
-              <img src="/dao/trobiumdashboard.png" alt="Trobium Accent" className="w-full h-full object-contain" />
+              <img src="/dao/equoranewlogo.png" alt="EQUORA Accent" className="w-full h-full object-contain" />
             </div>
             <div className="relative w-28 h-28 xl:w-32 xl:h-32 animate-float flex items-center justify-center">
               <img src="/dao/equoranewlogo.png" alt="3D Treasury EQUORA Emblem"

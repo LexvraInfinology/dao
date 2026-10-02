@@ -85,11 +85,11 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, loading }) =>
             Manage your profile and DAO activity.
           </p>
         </div>
-        <div className="relative w-20 h-24 shrink-0 flex items-center justify-center">
-          <div className="absolute inset-1 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
-          <div className="relative w-16 h-20 animate-float">
+        <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
+          <div className="relative w-16 h-16 sm:w-18 sm:h-18 animate-float flex items-center justify-center">
             <img src="/dao/equoranewlogo.png" alt="Profile EQUORA Emblem"
-              className="w-full h-full object-contain drop-shadow-[0_8px_18px_rgba(21,94,239,0.3)]" />
+              className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(21,94,239,0.3)]" />
           </div>
         </div>
       </div>

@@ -70,12 +70,12 @@ export default function SettingsHero() {
         </div>
 
         {/* Right Graphic: 3D EQUORA Emblem with glow */}
-        <div className="relative shrink-0 flex items-center justify-center w-16 h-16">
+        <div className="relative shrink-0 flex items-center justify-center w-18 h-18">
           <div className="absolute inset-0 bg-[#0E62E4]/10 rounded-full blur-md pointer-events-none" />
           <img
             src="/dao/equoranewlogo.png"
             alt="3D EQUORA Emblem"
-            className="w-14 h-14 object-contain relative z-10 drop-shadow-[0_2px_8px_rgba(14,98,228,0.2)]"
+            className="w-16 h-16 object-contain relative z-10 drop-shadow-[0_4px_14px_rgba(14,98,228,0.22)] animate-float"
           />
         </div>
       </div>

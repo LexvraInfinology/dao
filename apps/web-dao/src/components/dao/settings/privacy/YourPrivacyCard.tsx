@@ -19,11 +19,11 @@ export default function YourPrivacyCard() {
         </p>
       </div>
 
-      {/* Trobium Emblem Graphic on bottom-right */}
-      <div className="absolute -right-3 -bottom-6 w-32 h-32 shrink-0 pointer-events-none opacity-85 select-none">
+      {/* EQUORA Emblem Graphic on bottom-right */}
+      <div className="absolute -right-2 -bottom-4 w-28 h-28 shrink-0 pointer-events-none opacity-85 select-none flex items-center justify-center">
         <img
-          src="/dao/trobiumdashboard.png"
-          alt="Trobium Emblem"
+          src="/dao/equoranewlogo.png"
+          alt="EQUORA Emblem"
           className="w-full h-full object-contain drop-shadow-[0_4px_16px_rgba(21,94,239,0.15)]"
         />
       </div>

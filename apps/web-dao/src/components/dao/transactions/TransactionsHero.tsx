@@ -44,7 +44,7 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
 
         <div className="flex items-center gap-6 xl:gap-8 shrink-0">
           <div className="relative w-9 h-9 xl:w-10 xl:h-10 shrink-0 mb-8 animate-float">
-            <img src="/dao/trobiumdashboard.png" alt="Trobium Accent"
+            <img src="/dao/equoranewlogo.png" alt="EQUORA Accent"
               className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(21,94,239,0.35)]" />
           </div>
           <div className="relative w-48 h-36 xl:w-52 xl:h-40 flex items-center justify-center">

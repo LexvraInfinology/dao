@@ -7,8 +7,8 @@ import { sha256, getBytes } from 'ethers';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-export const ACTIVE_DAO_BASE58 = 'TQgQMoePL1cGpWZ2bkaQJUv7JuaGvdG3pe';
-export const ACTIVE_DAO_HEX = '41a15c4bdc30fdafc07e4a48b44fb159260fb8430b';
+export const ACTIVE_DAO_BASE58 = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+export const ACTIVE_DAO_HEX = '410a59d6a2dcd3b18687c1efe1625642ad85679377';
 
 export const DEPRECATED_DAO_ADDRESSES = new Set([
   'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf',
@@ -63,12 +63,12 @@ export const DEPLOYED_CONTRACTS = {
     hex: getActiveDaoHex(),
   },
   EquoraToken: {
-    base58: 'TFUBj9wdogDvS212LwqMcw5AjxaBcaYjaR',
-    hex: '413c53a0ced96d38906e5d8f4e6cd8c8c04b31e7a4',
+    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn',
+    hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9',
   },
   EquoraRegistry: {
-    base58: 'TVZjYU4M5qUmQMQpx59bNSaKzowUNXG8u5',
-    hex: '41d6f20701da8518fadc9d31f6dd9f1dd26cdb0e70',
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy',
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '41e182ad0c2aaec48202cd7b897820e5b058c502dd',
   },
   EquoraVault: {
     base58: 'TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB',

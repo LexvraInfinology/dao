@@ -12,20 +12,20 @@ export const WHATSAPP_DAO_GROUP_URL =
 // Trobium Explorer Web URL
 export const EXPLORER_BASE_URL =
   process.env.NEXT_PUBLIC_EXPLORER_URL ||
-  'https://testnet.trobchain.com';
+  'https://trobchain.com';
 
 // Trobium Explorer Backend REST API URL (account transactions, detail lookup)
 export const EXPLORER_API_URL =
   process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
   process.env.TROB_BACKEND_EXPLORER_API_URL ||
-  'https://testnet-backend.trobchain.com/v1';
+  'https://backend.trobchain.com/v1';
 
 // Fullnode RPC Node URL (wallet/getaccount, triggersmartcontract, createtransaction)
 export const FULLNODE_RPC_URL =
   process.env.FULLNODE_URL ||
   process.env.RPC_URL ||
   process.env.NEXT_PUBLIC_RPC_URL ||
-  'https://fullnode-one-testnet.trobchain.com';
+  'https://fullnode-one.trobchain.com';
 
 // Live TROB Market Price API URL
 export const TROB_PRICE_API_URL =
@@ -46,11 +46,11 @@ export const OFFICIAL_SR_MAINNET =
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
   process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-  'TQgQMoePL1cGpWZ2bkaQJUv7JuaGvdG3pe';
+  'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '0xa15c4bdc30fdafc07e4a48b44fb159260fb8430b';
+  '0x0a59d6a2dcd3b18687c1efe1625642ad85679377';
 
 // External Matrix URL (configurable via env only, no hardcoded live URL)
 export const MATRIX_URL = process.env.NEXT_PUBLIC_MATRIX_URL || '';

@@ -46,11 +46,11 @@ export const OFFICIAL_SR_MAINNET =
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
   process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-  'TKabZWeHCVyvVchBY6ESuqEULAj5ptpKJx';
+  'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf';
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '0x696a85c0583b94e4bec79228b12f726a74f781c3';
+  '0x95c81b704bcdb7a7196e3707a025265a196d25eb';
 
 // External Matrix URL
 export const MATRIX_URL =

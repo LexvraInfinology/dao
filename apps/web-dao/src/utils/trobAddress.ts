@@ -7,10 +7,13 @@ import { sha256, getBytes } from 'ethers';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-export const ACTIVE_DAO_BASE58 = 'TKabZWeHCVyvVchBY6ESuqEULAj5ptpKJx';
-export const ACTIVE_DAO_HEX = '41696a85c0583b94e4bec79228b12f726a74f781c3';
+export const ACTIVE_DAO_BASE58 = 'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf';
+export const ACTIVE_DAO_HEX = '4195c81b704bcdb7a7196e3707a025265a196d25eb';
 
 export const DEPRECATED_DAO_ADDRESSES = new Set([
+  'TKabZWeHCVyvVchBY6ESuqEULAj5ptpKJx',
+  '41696a85c0583b94e4bec79228b12f726a74f781c3',
+  '0x696a85c0583b94e4bec79228b12f726a74f781c3',
   'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup',
   '4196cc34af00df982ef8260849f1d0747a0de3366e',
   '0x96cc34af00df982ef8260849f1d0747a0de3366e',

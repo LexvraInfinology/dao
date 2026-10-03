@@ -52,26 +52,22 @@ export async function POST(req: NextRequest) {
     const entryAmountUsd = 300;
     const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
     const retopupTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
-
-    // 2. Calculate instant cashback return from blockchain according to seat number (Formula: 300/N)
     const pos = m.position || 1;
-    const cashbackUsd = parseFloat((entryAmountUsd / pos).toFixed(2));
-    const cashbackTrob = Math.round((cashbackUsd / bttPriceUsd) * 100) / 100;
 
-    // 3. Reset member's earnings counter with new cycle's instant cashback, clear cap/deadline, increment retopup loop count
+    // 2. Reset member's earnings counter to 0 (no self-cashback on retopup; initial join already gave cashback), clear cap/deadline, increment retopup loop count
     await queryNeon(
       `UPDATE "DaoMember"
-       SET "pushedAmountBtt" = $1,
+       SET "pushedAmountBtt" = 0,
            status = 'active',
            "retopupDeadline" = NULL,
            "cappedAt" = NULL,
            "retopupCount" = COALESCE("retopupCount", 0) + 1,
            "updatedAt" = NOW()
-       WHERE id = $2`,
-      [cashbackTrob, m.id]
+       WHERE id = $1`,
+      [m.id]
     );
 
-    // 4. Record retopup event in DaoEvent
+    // 3. Record retopup event in DaoEvent
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)`,
@@ -84,54 +80,105 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // Broadcast instant cashback payout on-chain
-    let cashbackTxId: string | null = null;
-    try {
-      cashbackTxId = await broadcastNativePayout(m.address, cashbackTrob);
-    } catch (e) {
-      console.error(`[Payout Relayer] Failed to broadcast retopup cashback to Seat #${pos}:`, e);
-    }
-
-    await queryNeon(
-      `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-       VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-      [
-        m.address,
-        pos,
-        cashbackTxId || `${cleanTx}-retopup-cashback`,
-        cashbackTrob,
-        cashbackUsd,
-        `Instant Cashback on Retopup Loop (Seat #${pos})`,
-      ]
+    // 4. Distribute the $300 retopup fee equally to all other active uncapped members
+    const otherMembersRes = await queryNeon<any>(
+      `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt"
+       FROM "DaoMember"
+       WHERE LOWER(address) != LOWER($1) AND LOWER(status) = 'active'
+       ORDER BY position ASC`,
+      [m.address]
     );
 
-    // 6. Distribute dividend push to all prior active members (< pos) with strict 5X cap enforcement
-    if (pos > 1) {
-      const priorMembers = await queryNeon<any>(
-        `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
-        [pos]
-      );
-      for (const prior of priorMembers.rows) {
-        const currentPushed = parseFloat(prior.pushedAmountBtt || '0');
-        const entryBtt = parseFloat(prior.entryAmountBtt || '5244.75');
-        const capBtt = entryBtt * 5; // Strict 5X Cap
+    const eligibleRecipients = otherMembersRes.rows.filter((row: any) => {
+      const currentPushed = parseFloat(row.pushedAmountBtt || '0');
+      const entryBtt = parseFloat(row.entryAmountBtt || '5357.14');
+      const capBtt = entryBtt * 5;
+      return currentPushed < capBtt;
+    });
 
-        // 1. If member has already reached or exceeded the 5X cap, STRICTLY skip
-        if (currentPushed >= capBtt) {
-          continue;
+    interface MemberPayout {
+      id: string;
+      address: string;
+      position: number;
+      entryBtt: number;
+      capBtt: number;
+      currentPushed: number;
+      payoutTrob: number;
+      newPushed: number;
+      isNowCapped: boolean;
+    }
+
+    const memberPayouts: MemberPayout[] = eligibleRecipients.map((r: any) => {
+      const currentPushed = parseFloat(r.pushedAmountBtt || '0');
+      const entryBtt = parseFloat(r.entryAmountBtt || '5357.14');
+      return {
+        id: r.id,
+        address: r.address,
+        position: r.position,
+        entryBtt,
+        capBtt: entryBtt * 5,
+        currentPushed,
+        payoutTrob: 0,
+        newPushed: currentPushed,
+        isNowCapped: false,
+      };
+    });
+
+    if (memberPayouts.length > 0) {
+      const baseShare = retopupTrob / memberPayouts.length;
+      let surplusTrob = 0;
+
+      for (const item of memberPayouts) {
+        const headroom = Math.max(0, item.capBtt - item.currentPushed);
+        if (baseShare <= headroom) {
+          item.payoutTrob = baseShare;
+          item.newPushed = item.currentPushed + baseShare;
+          item.isNowCapped = item.newPushed >= item.capBtt;
+        } else {
+          if (headroom > 0) {
+            item.payoutTrob = headroom;
+            item.newPushed = item.capBtt;
+          }
+          item.isNowCapped = true;
+          surplusTrob += (baseShare - headroom);
         }
+      }
 
-        // 2. Strict clamping: member can ONLY receive up to the exact remaining deficit to 5X cap
-        const maxPayable = Math.max(0, capBtt - currentPushed);
-        const actualPayoutTrob = Math.min(cashbackTrob, maxPayable);
+      // Iterative surplus redistribution: split surplus equally among remaining uncapped members
+      let surplusRemaining = surplusTrob;
+      for (let round = 0; round < 5 && surplusRemaining > 0.0001; round++) {
+        const remainingUncapped = memberPayouts.filter(p => !p.isNowCapped);
+        if (remainingUncapped.length === 0) break;
 
-        if (actualPayoutTrob <= 0) continue;
+        const extraShare = surplusRemaining / remainingUncapped.length;
+        let nextSurplus = 0;
 
-        const newPushed = currentPushed + actualPayoutTrob;
-        const isNowCapped = newPushed >= capBtt;
+        for (const item of remainingUncapped) {
+          const headroom = Math.max(0, item.capBtt - item.newPushed);
+          if (extraShare <= headroom) {
+            item.payoutTrob += extraShare;
+            item.newPushed += extraShare;
+            if (item.newPushed >= item.capBtt) {
+              item.isNowCapped = true;
+            }
+          } else {
+            if (headroom > 0) {
+              item.payoutTrob += headroom;
+              item.newPushed = item.capBtt;
+            }
+            item.isNowCapped = true;
+            nextSurplus += (extraShare - headroom);
+          }
+        }
+        surplusRemaining = nextSurplus;
+      }
+
+      // Apply updates and broadcast payouts
+      for (const item of memberPayouts) {
+        if (item.payoutTrob <= 0) continue;
 
         let retopupDeadline: string | null = null;
-        if (isNowCapped) {
+        if (item.isNowCapped) {
           const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
           retopupDeadline = deadlineDate.toISOString();
         }
@@ -144,21 +191,28 @@ export async function POST(req: NextRequest) {
                "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
                "updatedAt" = NOW()
            WHERE id = $4`,
-          [newPushed, isNowCapped, retopupDeadline, prior.id]
+          [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
         );
 
         let divTxId: string | null = null;
         try {
-          divTxId = await broadcastNativePayout(prior.address, actualPayoutTrob);
+          divTxId = await broadcastNativePayout(item.address, item.payoutTrob);
         } catch (e) {
-          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${prior.position}:`, e);
+          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${item.position}:`, e);
         }
 
-        const actualUsd = parseFloat((actualPayoutTrob * bttPriceUsd).toFixed(2));
+        const actualUsd = parseFloat((item.payoutTrob * bttPriceUsd).toFixed(2));
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-          [prior.address, pos, divTxId || `${cleanTx}-retopup-push-${prior.position}`, actualPayoutTrob, actualUsd, `Dividend push from Seat #${pos} (Retopup Loop)${isNowCapped ? ' (5X Cap Reached)' : ''}`]
+          [
+            item.address,
+            pos,
+            divTxId || `${cleanTx}-retopup-push-${item.position}`,
+            item.payoutTrob,
+            actualUsd,
+            `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`
+          ]
         );
       }
     }
@@ -169,12 +223,13 @@ export async function POST(req: NextRequest) {
         address: m.address,
         position: pos,
         status: 'active',
-        pushedAmountBtt: cashbackTrob,
-        instantCashbackUsd: cashbackUsd,
-        instantCashbackTrob: cashbackTrob,
+        pushedAmountBtt: 0,
+        retopupAmountUsd: entryAmountUsd,
+        retopupTrob,
+        distributedToMembers: memberPayouts.filter(p => p.payoutTrob > 0).length,
         retopupCount: (m.retopupCount || 0) + 1,
         txHash: cleanTx,
-        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset, and your instant cashback ($${cashbackUsd} USD) has been dispatched.`,
+        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset to zero, and your $300 fee has been distributed equally to other active council members.`,
       },
     });
   } catch (err: unknown) {

@@ -181,6 +181,7 @@ contract EquoraDAO is ReentrancyGuard {
     event QueueClosed(uint256 totalMembers, uint256 timestamp);
     event QueueExpiredEvent(uint256 seatsFilledSoFar, uint256 timestamp);
     event EarningsCapHit(address indexed member, uint256 lifetimeEarnings, uint256 retopupDeadline);
+    event EarningsCapSurplusRedistributed(uint256 surplusAmount, uint256 recipientCount, uint256 timestamp);
     event SlotBlanked(address indexed member, uint256 timestamp);
     event SlotReactivated(address indexed member, uint256 timestamp);
     event Retopup(address indexed member, uint256 position, uint256 timestamp);
@@ -559,72 +560,173 @@ contract EquoraDAO is ReentrancyGuard {
 
     /**
      * @dev Distribute $300 entry fee (in TROB) instantly following 300 / N formula:
-     *      - Incoming member N is INCLUDED in the distribution.
-     *      - Position 1 (N = 1): entryFee / 1 returned to Member 1 immediately.
-     *      - Position 2 (N = 2): entryFee / 2 to Member 2 (immediate return) & entryFee / 2 to Member 1.
-     *      - Position 3 (N = 3): entryFee / 3 to Member 3 (immediate return) & entryFee / 3 each to Members 1 & 2.
-     *      - Position N: entryFee / activeCount to all active members from 1 to N (including new joiner).
-     *      - Blanked slots are SKIPPED in distribution.
-     *      - After crediting, checks if recipient has hit 5X cap ($1,500 worth of TROB).
+     *      - Eligible recipients: active (non-blank) and uncapped (capHitTimestamp == 0).
+     *      - Strict 5X Capping: member receives only up to their remaining headroom (earningsCap - lifetimeEarnings).
+     *      - Surplus Redistribution: if a member only needs $1 to hit $1,500, the remaining $37 surplus
+     *        is split equally among all other active uncapped members in that transaction.
+     *      - If all active members in the pool are capped, surplus remains in the contract reserve.
      */
     function _distributeEntryFee(uint256 incomingPosition, uint256 amountToDistribute) internal {
-        // Count active (non-blank) recipients among all members up to incomingPosition (inclusive)
-        uint256 activeCount = 0;
+        uint256 eligibleCount = 0;
         for (uint256 i = 0; i < incomingPosition; i++) {
-            if (!slotBlank[daoMembers[i]]) {
-                activeCount++;
+            address m = daoMembers[i];
+            if (!slotBlank[m] && capHitTimestamp[m] == 0) {
+                eligibleCount++;
             }
         }
 
-        if (activeCount == 0) return;
+        if (eligibleCount == 0 || amountToDistribute == 0) return;
 
-        uint256 amountPerRecipient = amountToDistribute / activeCount;
+        uint256 amountPerRecipient = amountToDistribute / eligibleCount;
         if (amountPerRecipient == 0) return;
+
+        uint256 totalSurplus = 0;
 
         for (uint256 i = 0; i < incomingPosition; i++) {
             address recipient = daoMembers[i];
-            if (!slotBlank[recipient]) {
-                _pushTransfer(recipient, amountPerRecipient, incomingPosition);
+            if (!slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+                uint256 headroom = earningsCap > lifetimeEarnings[recipient]
+                    ? earningsCap - lifetimeEarnings[recipient]
+                    : 0;
+
+                if (amountPerRecipient <= headroom) {
+                    _pushTransfer(recipient, amountPerRecipient, incomingPosition);
+                    if (lifetimeEarnings[recipient] >= earningsCap) {
+                        _markCapHit(recipient);
+                    }
+                } else {
+                    if (headroom > 0) {
+                        _pushTransfer(recipient, headroom, incomingPosition);
+                    }
+                    _markCapHit(recipient);
+                    totalSurplus += (amountPerRecipient - headroom);
+                }
             }
+        }
+
+        // Surplus redistribution: split equally among all other active uncapped members
+        if (totalSurplus > 0) {
+            _redistributeSurplusToPool(incomingPosition, address(0), totalSurplus, incomingPosition);
         }
     }
 
     /**
-     * @dev Distribute re-topup fee to all active members EXCEPT the retopup caller.
+     * @dev Distribute re-topup fee to all other active uncapped members:
+     *      - The re-topup caller does NOT receive cashback on re-topup.
+     *      - The full fee is distributed equally among all other active uncapped members.
+     *      - Surplus from any member reaching their 5X cap is split equally among remaining uncapped members.
      */
     function _distributeRetopup(address caller, uint256 amount) internal {
-        uint256 activeCount = 0;
+        uint256 eligibleCount = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
-            if (daoMembers[i] != caller && !slotBlank[daoMembers[i]]) {
-                activeCount++;
+            address m = daoMembers[i];
+            if (m != caller && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                eligibleCount++;
             }
         }
 
-        if (activeCount == 0) {
-            // No active members to distribute to — credit caller back (safety)
-            _pushTransfer(caller, amount, memberPosition[caller]);
-            return;
-        }
+        if (eligibleCount == 0 || amount == 0) return;
 
-        uint256 amountPerRecipient = amount / activeCount;
+        uint256 amountPerRecipient = amount / eligibleCount;
         if (amountPerRecipient == 0) return;
+
+        uint256 totalSurplus = 0;
 
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address recipient = daoMembers[i];
-            if (recipient != caller && !slotBlank[recipient]) {
-                _pushTransfer(recipient, amountPerRecipient, memberPosition[caller]);
+            if (recipient != caller && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+                uint256 headroom = earningsCap > lifetimeEarnings[recipient]
+                    ? earningsCap - lifetimeEarnings[recipient]
+                    : 0;
+
+                if (amountPerRecipient <= headroom) {
+                    _pushTransfer(recipient, amountPerRecipient, memberPosition[caller]);
+                    if (lifetimeEarnings[recipient] >= earningsCap) {
+                        _markCapHit(recipient);
+                    }
+                } else {
+                    if (headroom > 0) {
+                        _pushTransfer(recipient, headroom, memberPosition[caller]);
+                    }
+                    _markCapHit(recipient);
+                    totalSurplus += (amountPerRecipient - headroom);
+                }
             }
+        }
+
+        // Surplus redistribution: split equally among all other active uncapped members
+        if (totalSurplus > 0) {
+            _redistributeSurplusToPool(daoMembers.length, caller, totalSurplus, memberPosition[caller]);
         }
     }
 
     /**
-     * @dev Push transfer helper with:
-     *      1. Anti-griefing fallback (failed push → pullFallbackBalance)
-     *      2. 5X cap enforcement (track lifetimeEarnings, set capHitTimestamp)
+     * @dev Helper to redistribute surplus from capped members equally among remaining uncapped members.
+     *      Iteratively sweeps surplus (up to 5 passes) so any secondary surplus from newly capped members
+     *      is also distributed equally to remaining active uncapped members.
+     */
+    function _redistributeSurplusToPool(
+        uint256 maxCount,
+        address excludeAddr,
+        uint256 surplus,
+        uint256 fromPosition
+    ) internal {
+        uint256 surplusRemaining = surplus;
+        uint256 totalRecipientsCount = 0;
+
+        for (uint256 round = 0; round < 5 && surplusRemaining > 0; round++) {
+            uint256 uncappedCount = 0;
+            for (uint256 i = 0; i < maxCount; i++) {
+                address m = daoMembers[i];
+                if (m != excludeAddr && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                    uncappedCount++;
+                }
+            }
+
+            if (uncappedCount == 0) break;
+
+            uint256 extraShare = surplusRemaining / uncappedCount;
+            if (extraShare == 0) break;
+
+            uint256 nextSurplus = surplusRemaining % uncappedCount;
+
+            for (uint256 i = 0; i < maxCount; i++) {
+                address recipient = daoMembers[i];
+                if (recipient != excludeAddr && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+                    uint256 headroom = earningsCap > lifetimeEarnings[recipient]
+                        ? earningsCap - lifetimeEarnings[recipient]
+                        : 0;
+
+                    if (extraShare <= headroom) {
+                        _pushTransfer(recipient, extraShare, fromPosition);
+                        totalRecipientsCount++;
+                        if (lifetimeEarnings[recipient] >= earningsCap) {
+                            _markCapHit(recipient);
+                        }
+                    } else {
+                        if (headroom > 0) {
+                            _pushTransfer(recipient, headroom, fromPosition);
+                            totalRecipientsCount++;
+                        }
+                        _markCapHit(recipient);
+                        nextSurplus += (extraShare - headroom);
+                    }
+                }
+            }
+
+            surplusRemaining = nextSurplus;
+        }
+
+        emit EarningsCapSurplusRedistributed(surplus, totalRecipientsCount, block.timestamp);
+    }
+
+    /**
+     * @dev Push transfer helper with anti-griefing fallback.
      */
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
+        if (amount == 0) return;
         bool ok = false;
-        if (address(this).balance >= amount && amount > 0) {
+        if (address(this).balance >= amount) {
             // Direct native TROB transfer to council member wallet on-chain
             (bool sent, ) = payable(recipient).call{value: amount}("");
             ok = sent;
@@ -645,23 +747,26 @@ contract EquoraDAO is ReentrancyGuard {
             totalDistributed               += amount;
             emit DAOPayoutFallback(recipient, amount, fromPosition, "Transfer failed", block.timestamp);
         }
+    }
 
-        // Check 5X cap after crediting
-        _checkCap(recipient);
+    /**
+     * @dev Internal helper to mark a member as 5X capped and initiate 48-hour retopup window.
+     */
+    function _markCapHit(address member) internal {
+        if (capHitTimestamp[member] == 0 && !slotBlank[member]) {
+            capHitTimestamp[member] = block.timestamp;
+            uint256 deadline = block.timestamp + RETOPUP_WINDOW;
+            emit EarningsCapHit(member, lifetimeEarnings[member], deadline);
+        }
     }
 
     /**
      * @dev Check if a member has hit their 5X earnings cap.
-     *      If so, record the timestamp — they have 48 hours to retopup.
      */
     function _checkCap(address member) internal {
-        if (capHitTimestamp[member] > 0) return; // Already capped
-        if (slotBlank[member]) return;
-
+        if (capHitTimestamp[member] > 0 || slotBlank[member]) return;
         if (lifetimeEarnings[member] >= earningsCap) {
-            capHitTimestamp[member] = block.timestamp;
-            uint256 deadline = block.timestamp + RETOPUP_WINDOW;
-            emit EarningsCapHit(member, lifetimeEarnings[member], deadline);
+            _markCapHit(member);
         }
     }
 

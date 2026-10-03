@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ExternalLink,
   TrendingUp,
+  Coins,
   Loader2,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
@@ -42,8 +43,9 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{
     txHash: string;
-    instantCashbackUsd: number;
-    instantCashbackTrob: number;
+    distributedToMembers: number;
+    retopupAmountUsd: number;
+    retopupTrob: number;
   } | null>(null);
 
   // 48h countdown state
@@ -166,8 +168,9 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         playPriorityAlertChime();
         setSuccessData({
           txHash: data.data?.txHash || txId || `tx_${Date.now()}`,
-          instantCashbackUsd: data.data?.instantCashbackUsd ?? cashbackUsd,
-          instantCashbackTrob: data.data?.instantCashbackTrob ?? cashbackTrob,
+          distributedToMembers: data.data?.distributedToMembers ?? 0,
+          retopupAmountUsd: data.data?.retopupAmountUsd ?? entryAmountUsd,
+          retopupTrob: data.data?.retopupTrob ?? retopupFeeTrob,
         });
         if (onSuccess) onSuccess();
       } else {
@@ -232,21 +235,21 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   Seat #{seatPosition} Successfully Retopuped!
                 </h4>
                 <p className="text-xs text-[#4F6D87] max-w-sm mx-auto">
-                  Your 5X Cap ($1,500 USD) has been reset to zero, and your seat remains permanently secured.
+                  Your 5X Cap ($1,500 USD) has been reset to zero ($0.00), and your seat remains permanently active.
                 </p>
               </div>
 
-              {/* Instant Cashback Badge */}
+              {/* Fee Distribution Badge */}
               <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1 text-xs">
                 <div className="font-semibold text-emerald-800 flex items-center justify-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span>Instant Blockchain Cashback Dispatched</span>
+                  <Coins className="w-4 h-4 text-emerald-600" />
+                  <span>Fee Distributed to Council Members</span>
                 </div>
                 <div className="text-xl font-black font-mono text-emerald-700">
-                  +${successData.instantCashbackUsd} USD
+                  ${successData.retopupAmountUsd}.00 USD
                 </div>
                 <div className="text-[11px] text-emerald-600 font-mono">
-                  (≈ {successData.instantCashbackTrob.toLocaleString()} TROB directly back to paying wallet)
+                  (≈ {successData.retopupTrob.toLocaleString()} TROB distributed equally across active council members)
                 </div>
               </div>
 
@@ -317,7 +320,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
                   {timeLeft.isExpired
                     ? `Your 48-hour retopup window has lapsed. Seat #${seatPosition} is now vacant and open to any queue claimant.`
-                    : `You have reached the 5X Cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat and receive your instant cashback loop.`}
+                    : `You have reached the 5X Cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat, distribute to active members, and reset your cap to zero.`}
                 </p>
               </div>
 
@@ -330,26 +333,19 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60">
+                <div className="flex items-center justify-between text-blue-700 bg-blue-50/70 p-2 rounded-lg border border-blue-200/60">
                   <span className="font-semibold flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Instant Cashback Loop (Seat #{seatPosition}):</span>
+                    <Coins className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Member Pool Distribution:</span>
                   </span>
-                  <span className="font-mono font-black text-emerald-700">
-                    +${cashbackUsd} USD
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-[#14304A] font-bold pt-1 border-t border-[#E7EEF8]">
-                  <span>Effective Net Out-of-Pocket:</span>
-                  <span className="font-mono text-sm text-[#0E62E4]">
-                    ${netUsd} USD
+                  <span className="font-mono font-bold text-blue-700">
+                    Split to other active members
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#4F6D87]">
+                <div className="flex items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8]">
                   <span>Restored Earning Capacity:</span>
-                  <span className="font-bold text-emerald-600">$1,500.00 USD (5X Fresh Cap)</span>
+                  <span className="font-bold text-emerald-600">$1,500.00 USD (Fresh 5X Cap)</span>
                 </div>
               </div>
 

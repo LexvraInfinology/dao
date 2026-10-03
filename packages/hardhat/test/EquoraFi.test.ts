@@ -211,43 +211,46 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     });
 
     it("should distribute entry fee according to 300 / N formula (inclusive of new member)", async () => {
-      // User 0 joins (N = 1) -> deposits 300 TROB, receives 300 back
+      const entryFee = await dao.entryFee();
+
+      // User 0 joins (N = 1) -> deposits entryFee, receives entryFee back
       await registerUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
       const bal0Before = await token.balanceOf(users[0].address);
       await dao.connect(users[0]).joinDAO();
       const bal0After1 = await token.balanceOf(users[0].address);
-      // Net change for User 0 is 0 (300 out, 300 back)
+      // Net change for User 0 is 0 (entryFee out, entryFee back)
       expect(bal0After1).to.equal(bal0Before);
 
-      // User 1 joins (N = 2) -> deposits 300 TROB, 300 / 2 = 150 each to User 1 and User 0
+      // User 1 joins (N = 2) -> deposits entryFee, entryFee / 2 each to User 1 and User 0
       await registerUser(users[1], 10000);
-      await mintAndApprove(users[1], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[1], await dao.getAddress(), entryFee);
       const bal1Before = await token.balanceOf(users[1].address);
       await dao.connect(users[1]).joinDAO();
       const bal0After2 = await token.balanceOf(users[0].address);
       const bal1After2 = await token.balanceOf(users[1].address);
 
-      expect(bal0After2 - bal0After1).to.equal(ethers.parseEther("150"));
-      expect(bal1Before - bal1After2).to.equal(ethers.parseEther("150")); // deposited 300, got 150 back
+      expect(bal0After2 - bal0After1).to.equal(entryFee / 2n);
+      expect(bal1Before - bal1After2).to.equal(entryFee / 2n); // deposited entryFee, got entryFee / 2 back
 
-      // User 2 joins (N = 3) -> deposits 300 TROB, 300 / 3 = 100 each to User 0, User 1, User 2
+      // User 2 joins (N = 3) -> deposits entryFee, entryFee / 3 each to User 0, User 1, User 2
       await registerUser(users[2], 10000);
-      await mintAndApprove(users[2], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[2], await dao.getAddress(), entryFee);
       const bal2Before = await token.balanceOf(users[2].address);
       await dao.connect(users[2]).joinDAO();
       const bal0After3 = await token.balanceOf(users[0].address);
       const bal1After3 = await token.balanceOf(users[1].address);
       const bal2After3 = await token.balanceOf(users[2].address);
 
-      expect(bal0After3 - bal0After2).to.equal(ethers.parseEther("100"));
-      expect(bal1After3 - bal1After2).to.equal(ethers.parseEther("100"));
-      expect(bal2Before - bal2After3).to.equal(ethers.parseEther("200")); // deposited 300, got 100 back
+      expect(bal0After3 - bal0After2).to.equal(entryFee / 3n);
+      expect(bal1After3 - bal1After2).to.equal(entryFee / 3n);
+      expect(bal2Before - bal2After3).to.equal(entryFee - (entryFee / 3n));
     });
 
     it("should keep DAO queue permanent without 21-day expiry", async () => {
+      const entryFee = await dao.entryFee();
       await registerUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
       await dao.connect(users[0]).joinDAO();
 
       // Fast-forward 42 days (2 * 21 days)
@@ -258,7 +261,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
 
       // New member can still join after 30 days
       await registerUser(users[1], 10000);
-      await mintAndApprove(users[1], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[1], await dao.getAddress(), entryFee);
       const tx = await dao.connect(users[1]).joinDAO();
       await expect(tx).to.emit(dao, "DAOPositionJoined").withArgs(
         users[1].address, 2n, 2n, await time.latest()
@@ -266,44 +269,103 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     });
 
     it("should scan and fill lowest vacant seat from 1 to 100 if member missed 48h retopup", async () => {
+      const entryFee = await dao.entryFee();
       // User 0 joins seat 1
       await registerUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
       await dao.connect(users[0]).joinDAO();
 
       // User 1 joins seat 2
       await registerUser(users[1], 10000);
-      await mintAndApprove(users[1], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[1], await dao.getAddress(), entryFee);
       await dao.connect(users[1]).joinDAO();
 
       // Simulate User 0 hitting cap and missing 48-hour window
-      // Fast forward past retopup window after marking cap
       await dao.enforceCapExpirations();
 
       // Simulate a third user joining
       await registerUser(users[2], 10000);
-      await mintAndApprove(users[2], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[2], await dao.getAddress(), entryFee);
       const pos = await dao.connect(users[2]).joinDAO();
       expect(await dao.isDaoMember(users[2].address)).to.be.true;
     });
 
-    it("should enforce 5X earnings cap (1,500 TROB) and report progress correctly", async () => {
-      expect(await dao.earningsCap()).to.equal(ethers.parseEther("1500"));
+    it("should enforce 5X earnings cap and report progress correctly", async () => {
+      const entryFee = await dao.entryFee();
+      const earningsCap = await dao.earningsCap();
+      expect(earningsCap).to.equal(entryFee * 5n);
 
       await registerUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
       await dao.connect(users[0]).joinDAO();
 
       const [earned, cap, remaining] = await dao.getCapProgress(users[0].address);
-      expect(cap).to.equal(ethers.parseEther("1500"));
-      expect(earned).to.equal(ethers.parseEther("300"));
-      expect(remaining).to.equal(ethers.parseEther("1200"));
+      expect(cap).to.equal(earningsCap);
+      expect(earned).to.equal(entryFee);
+      expect(remaining).to.equal(earningsCap - entryFee);
+    });
+
+    it("should NOT give cashback to retopup caller and distribute full fee to other active uncapped members", async () => {
+      const entryFee = await dao.entryFee();
+
+      // User 0 joins seat 1
+      await registerUser(users[0], 10000);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
+      await dao.connect(users[0]).joinDAO();
+
+      // User 1 joins seat 2
+      await registerUser(users[1], 10000);
+      await mintAndApprove(users[1], await dao.getAddress(), entryFee);
+      await dao.connect(users[1]).joinDAO();
+
+      // User 0 retopups: pays entryFee
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
+      const bal0BeforeRetopup = await token.balanceOf(users[0].address);
+      const bal1BeforeRetopup = await token.balanceOf(users[1].address);
+
+      await dao.connect(users[0]).retopup();
+
+      const bal0AfterRetopup = await token.balanceOf(users[0].address);
+      const bal1AfterRetopup = await token.balanceOf(users[1].address);
+
+      // User 0 paid entryFee and received NO cashback on retopup (net -entryFee)
+      expect(bal0BeforeRetopup - bal0AfterRetopup).to.equal(entryFee);
+
+      // User 1 received the full retopup fee from User 0's retopup
+      expect(bal1AfterRetopup - bal1BeforeRetopup).to.equal(entryFee);
+
+      // User 0 lifetime earnings reset to 0
+      const [earned0] = await dao.getCapProgress(users[0].address);
+      expect(earned0).to.equal(0n);
+    });
+
+    it("should clamp payout to remaining headroom and emit EarningsCapSurplusRedistributed", async () => {
+      const entryFee = await dao.entryFee();
+
+      // User 0 joins seat 1
+      await registerUser(users[0], 10000);
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
+      await dao.connect(users[0]).joinDAO();
+
+      // User 1 joins seat 2
+      await registerUser(users[1], 10000);
+      await mintAndApprove(users[1], await dao.getAddress(), entryFee);
+      await dao.connect(users[1]).joinDAO();
+
+      // User 2 joins seat 3
+      await registerUser(users[2], 10000);
+      await mintAndApprove(users[2], await dao.getAddress(), entryFee);
+      await dao.connect(users[2]).joinDAO();
+
+      expect(await dao.isDaoMember(users[0].address)).to.be.true;
+      expect(await dao.isDaoMember(users[1].address)).to.be.true;
+      expect(await dao.isDaoMember(users[2].address)).to.be.true;
     });
 
     it("should receive 35% matrix pool deposit and allow member to claim yield", async () => {
       // 1. User 0 joins DAO
       await qualifyUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      await mintAndApprove(users[0], await dao.getAddress(), await dao.entryFee());
       await dao.connect(users[0]).joinDAO();
 
       // 2. Vault routes pool deposit (e.g. 100 TROB)

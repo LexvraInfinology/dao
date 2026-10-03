@@ -289,62 +289,138 @@ export async function POST(req: NextRequest) {
       [dbUserAddress, finalPos, cashbackTxId || `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${finalPos})`]
     );
 
-    // 4. Distribute dividends to all prior active members (< finalPos) with strict 5X capping ($1,500 / 5x entry)
+    // 4. Distribute dividends to all prior active members (< finalPos) with strict 5X capping ($1,500 / 5x entry) and surplus redistribution
     if (finalPos > 1) {
       const priorMembers = await queryNeon<any>(
-        `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
+        `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active' ORDER BY position ASC`,
         [finalPos]
       );
 
-      for (const prior of priorMembers.rows) {
-        const currentPushed = parseFloat(prior.pushedAmountBtt || '0');
-        const entryBtt = parseFloat(prior.entryAmountBtt || '5244.75');
-        const capBtt = entryBtt * 5; // Strict 5X Cap
+      const eligibleRecipients = priorMembers.rows.filter((row: any) => {
+        const currentPushed = parseFloat(row.pushedAmountBtt || '0');
+        const entryBtt = parseFloat(row.entryAmountBtt || '5357.14');
+        const capBtt = entryBtt * 5;
+        return currentPushed < capBtt;
+      });
 
-        // 1. If member has already reached or exceeded the 5X cap, STRICTLY skip (0 payouts)
-        if (currentPushed >= capBtt) {
-          continue;
+      interface PriorPayout {
+        id: string;
+        address: string;
+        position: number;
+        entryBtt: number;
+        capBtt: number;
+        currentPushed: number;
+        payoutTrob: number;
+        newPushed: number;
+        isNowCapped: boolean;
+      }
+
+      const priorPayouts: PriorPayout[] = eligibleRecipients.map((r: any) => {
+        const currentPushed = parseFloat(r.pushedAmountBtt || '0');
+        const entryBtt = parseFloat(r.entryAmountBtt || '5357.14');
+        return {
+          id: r.id,
+          address: r.address,
+          position: r.position,
+          entryBtt,
+          capBtt: entryBtt * 5,
+          currentPushed,
+          payoutTrob: 0,
+          newPushed: currentPushed,
+          isNowCapped: false,
+        };
+      });
+
+      if (priorPayouts.length > 0) {
+        let surplusTrob = 0;
+
+        for (const item of priorPayouts) {
+          const headroom = Math.max(0, item.capBtt - item.currentPushed);
+          if (cashbackTrob <= headroom) {
+            item.payoutTrob = cashbackTrob;
+            item.newPushed = item.currentPushed + cashbackTrob;
+            item.isNowCapped = item.newPushed >= item.capBtt;
+          } else {
+            if (headroom > 0) {
+              item.payoutTrob = headroom;
+              item.newPushed = item.capBtt;
+            }
+            item.isNowCapped = true;
+            surplusTrob += (cashbackTrob - headroom);
+          }
         }
 
-        // 2. Strict clamping: member can ONLY receive up to the exact remaining deficit to 5X cap
-        const maxPayable = Math.max(0, capBtt - currentPushed);
-        const actualPayoutTrob = Math.min(cashbackTrob, maxPayable);
+        // Iterative surplus redistribution: split surplus equally among remaining uncapped members
+        let surplusRemaining = surplusTrob;
+        for (let round = 0; round < 5 && surplusRemaining > 0.0001; round++) {
+          const remainingUncapped = priorPayouts.filter(p => !p.isNowCapped);
+          if (remainingUncapped.length === 0) break;
 
-        if (actualPayoutTrob <= 0) continue;
+          const extraShare = surplusRemaining / remainingUncapped.length;
+          let nextSurplus = 0;
 
-        const newPushed = currentPushed + actualPayoutTrob;
-        const isNowCapped = newPushed >= capBtt;
-
-        let retopupDeadline: string | null = null;
-        if (isNowCapped) {
-          const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
-          retopupDeadline = deadlineDate.toISOString();
+          for (const item of remainingUncapped) {
+            const headroom = Math.max(0, item.capBtt - item.newPushed);
+            if (extraShare <= headroom) {
+              item.payoutTrob += extraShare;
+              item.newPushed += extraShare;
+              if (item.newPushed >= item.capBtt) {
+                item.isNowCapped = true;
+              }
+            } else {
+              if (headroom > 0) {
+                item.payoutTrob += headroom;
+                item.newPushed = item.capBtt;
+              }
+              item.isNowCapped = true;
+              nextSurplus += (extraShare - headroom);
+            }
+          }
+          surplusRemaining = nextSurplus;
         }
 
-        await queryNeon(
-          `UPDATE "DaoMember"
-           SET "pushedAmountBtt" = $1,
-               status = CASE WHEN $2 THEN 'capped' ELSE status END,
-               "cappedAt" = CASE WHEN $2 THEN NOW() ELSE "cappedAt" END,
-               "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
-               "updatedAt" = NOW()
-           WHERE id = $4`,
-          [newPushed, isNowCapped, retopupDeadline, prior.id]
-        );
+        // Apply database updates and broadcast on-chain payouts
+        for (const item of priorPayouts) {
+          if (item.payoutTrob <= 0) continue;
 
-        let divTxId: string | null = null;
-        try {
-          divTxId = await broadcastNativePayout(prior.address, actualPayoutTrob);
-        } catch (e) {
-          console.error(`[Payout Relayer] Failed to broadcast claim dividend to Seat #${prior.position}:`, e);
+          let retopupDeadline: string | null = null;
+          if (item.isNowCapped) {
+            const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
+            retopupDeadline = deadlineDate.toISOString();
+          }
+
+          await queryNeon(
+            `UPDATE "DaoMember"
+             SET "pushedAmountBtt" = $1,
+                 status = CASE WHEN $2 THEN 'capped' ELSE status END,
+                 "cappedAt" = CASE WHEN $2 THEN NOW() ELSE "cappedAt" END,
+                 "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
+                 "updatedAt" = NOW()
+             WHERE id = $4`,
+            [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
+          );
+
+          let divTxId: string | null = null;
+          try {
+            divTxId = await broadcastNativePayout(item.address, item.payoutTrob);
+          } catch (e) {
+            console.error(`[Payout Relayer] Failed to broadcast claim dividend to Seat #${item.position}:`, e);
+          }
+
+          const actualUsd = parseFloat((item.payoutTrob * trobPriceUsd).toFixed(2));
+          await queryNeon(
+            `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
+             VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
+            [
+              item.address,
+              finalPos,
+              divTxId || `${cleanTx}-pushed-${item.position}`,
+              item.payoutTrob,
+              actualUsd,
+              `Dividend push from Seat #${finalPos}${item.isNowCapped ? ' (5X Cap Reached)' : ''}`
+            ]
+          );
         }
-
-        const actualUsd = parseFloat((actualPayoutTrob * trobPriceUsd).toFixed(2));
-        await queryNeon(
-          `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-          [prior.address, finalPos, divTxId || `${cleanTx}-pushed-${prior.position}`, actualPayoutTrob, actualUsd, `Dividend push from Seat #${finalPos}${isNowCapped ? ' (5X Cap Reached)' : ''}`]
-        );
       }
     }
 

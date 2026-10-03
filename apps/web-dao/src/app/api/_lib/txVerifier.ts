@@ -1,6 +1,5 @@
 import { FULLNODE_RPC_URL, EXPLORER_API_URL } from '@/config/env';
-import { getActiveDaoAddress, getActiveDaoHex, isDaoAddressDeprecated } from '@/utils/trobAddress';
-import { base58ToHexAddress } from './payoutRelayer';
+import { getActiveDaoAddress, getActiveDaoHex, isDaoAddressDeprecated, toTronHex, toTrobBase58 } from '@/utils/trobAddress';
 
 export interface TxVerificationResult {
   valid: boolean;
@@ -83,7 +82,7 @@ export async function verifyOnChainTransaction(
                     error: `Transaction was sent to deprecated contract (${toAddress}). Must use active contract (${activeDaoBase58}).`,
                   };
                 }
-                const toHex = toAddress.startsWith('41') ? toAddress : base58ToHexAddress(toAddress) || toAddress;
+                const toHex = toTronHex(toAddress);
                 if (toHex !== activeDaoHex && toAddress !== activeDaoBase58) {
                   return {
                     valid: false,
@@ -94,9 +93,9 @@ export async function verifyOnChainTransaction(
 
               // Verify sender wallet if required
               if (options?.expectedSender && fromAddress) {
-                const expectedClean = options.expectedSender.trim().toLowerCase();
-                const expectedHex = (base58ToHexAddress(expectedClean) || expectedClean).toLowerCase();
-                if (fromAddress !== expectedClean && fromAddress !== expectedHex) {
+                const expectedHex = toTronHex(options.expectedSender);
+                const fromHex = toTronHex(fromAddress);
+                if (fromHex !== expectedHex) {
                   return {
                     valid: false,
                     error: `Transaction sender does not match connected wallet.`,
@@ -188,9 +187,9 @@ export async function getOnChainMemberPosition(
   const cleanAddr = (walletAddress || '').trim();
   if (!cleanAddr) return 0;
 
-  const hexOwner = cleanAddr.startsWith('41') ? cleanAddr : (base58ToHexAddress(cleanAddr) || cleanAddr);
+  const hexOwner = toTronHex(cleanAddr);
   const targetContract = contractAddress || getActiveDaoAddress();
-  const hexContract = targetContract.startsWith('41') ? targetContract : (base58ToHexAddress(targetContract) || getActiveDaoHex());
+  const hexContract = toTronHex(targetContract);
 
   try {
     const res = await fetch(`${FULLNODE_RPC_URL}/wallet/triggerconstantcontract`, {

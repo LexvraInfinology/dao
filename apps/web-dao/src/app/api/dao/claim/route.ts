@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { checkServerlessEligibility } from '../../_lib/eligibility';
-import { getActiveDaoAddress, getActiveDaoHex } from '@/utils/trobAddress';
+import { getActiveDaoAddress, getActiveDaoHex, toTronHex } from '@/utils/trobAddress';
 import { TROB_PRICE_API_URL } from '@/config/env';
 import { verifyOnChainTransaction, getOnChainMemberPosition } from '../../_lib/txVerifier';
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    if (txReceipt.fromAddr && txReceipt.fromAddr.toLowerCase() !== userAddr.toLowerCase()) {
+    if (txReceipt.fromAddr && toTronHex(txReceipt.fromAddr) !== toTronHex(userAddr)) {
       return NextResponse.json({
         success: false,
         error: `Transaction sender (${txReceipt.fromAddr}) does not match connected wallet (${userAddr}).`,

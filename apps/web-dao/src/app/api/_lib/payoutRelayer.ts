@@ -81,15 +81,14 @@ export function base58ToHexAddress(base58: string): string | null {
 }
 
 /**
- * DEPRECATED: Payout Relayer is permanently deactivated.
- * All peer payouts and cashbacks are autonomously executed directly on-chain
- * by the EquoraDAO smart contract (_pushTransfer in joinDAO / retopup).
- * Centralized deployer relayer is disabled to ensure zero double-payouts
- * and allow the protocol to operate with a renounced / null admin key.
+ * Disabled: Instant cashbacks and dividend pushes are executed autonomously
+ * on-chain by the EquoraDAO smart contract via internal _pushTransfer calls during joinDAO.
+ * The deployer wallet (TYCqPB...) must NOT broadcast separate transfers, preventing double payouts.
  */
 export async function broadcastNativePayout(
   recipientAddress: string,
   amountTrob: number
 ): Promise<string | null> {
+  // Pure no-op: Smart contract alone performs on-chain payouts
   return null;
 }

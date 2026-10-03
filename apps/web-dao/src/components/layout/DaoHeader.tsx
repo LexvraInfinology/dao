@@ -199,11 +199,9 @@ export const DaoHeader: React.FC = () => {
     return () => window.removeEventListener('dao:open-retopup', handleOpenRetopup);
   }, [memberData]);
 
-  // Verified seat member flag
+  // Verified seat member flag — strictly single source of truth from smart contract
   const isSeatMember = Boolean(
-    memberData?.isMember ||
-    (memberData?.position && memberData.position > 0) ||
-    (auth.user?.daoPosition && auth.user.daoPosition > 0)
+    memberData?.isMember && Number(memberData?.position) > 0
   );
 
   // ── handlers ──────────────────────────────────────────────────────────────
@@ -284,9 +282,9 @@ export const DaoHeader: React.FC = () => {
                 <span className="sm:hidden font-mono text-[10px] min-[360px]:text-[10.5px] max-w-[55px] min-[360px]:max-w-[70px] truncate">
                   {displayAddress ? displayAddress.slice(0, 4) + '…' : 'Wallet'}
                 </span>
-                {(memberData?.position || auth.user?.daoPosition) && (
+                {isSeatMember && (
                   <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Seat #{memberData?.position ?? auth.user?.daoPosition}
+                    Seat #{memberData!.position}
                   </span>
                 )}
                 <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 ${walletDropOpen ? 'rotate-180' : ''}`} />
@@ -347,9 +345,9 @@ export const DaoHeader: React.FC = () => {
                       {/* Council Tier indicator */}
                       <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
                         <span className="text-slate-400 text-[10px]">Membership Tier</span>
-                        {(memberData?.position || auth.user?.daoPosition) ? (
+                        {isSeatMember ? (
                           <span className="font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                            Council Seat #{memberData?.position ?? auth.user?.daoPosition}
+                            Council Seat #{memberData!.position}
                           </span>
                         ) : (
                           <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30">
@@ -561,11 +559,11 @@ export const DaoHeader: React.FC = () => {
                       {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {(memberData?.position || auth.user?.daoPosition) && (
+                  {isSeatMember && (
                     <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
                       <span className="text-slate-400 text-[10px]">Council Seat</span>
                       <span className="text-emerald-300 font-bold bg-emerald-500/20 px-2 py-0.5 rounded text-[10px]">
-                        Seat #{memberData?.position ?? auth.user?.daoPosition}
+                        Seat #{memberData!.position}
                       </span>
                     </div>
                   )}

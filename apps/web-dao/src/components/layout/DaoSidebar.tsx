@@ -203,13 +203,13 @@ export const DaoSidebar: React.FC = () => {
                         TrobSafe Active
                       </span>
                     </div>
-                    {(memberData?.position || auth.user?.daoPosition) ? (
+                    {(memberData?.isMember && Number(memberData?.position) > 0) ? (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
-                        Seat #{memberData?.position ?? auth.user?.daoPosition}
+                        Seat #{memberData.position}
                       </span>
                     ) : (
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-[#0E62E4] border border-[#0E62E4]/20">
-                        L1 Member
+                        Genesis Explorer
                       </span>
                     )}
                   </div>

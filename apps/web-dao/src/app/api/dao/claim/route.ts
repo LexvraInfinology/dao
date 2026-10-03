@@ -41,12 +41,36 @@ export async function POST(req: NextRequest) {
          AND "retopupDeadline" < NOW()`
     );
 
-    // Strictly validate server-side eligibility (Wallet Date >= 1 Oct 2026 & Device Restriction)
+    // Strictly validate server-side eligibility:
     const elig = await checkServerlessEligibility(address, clientFingerprint);
     if (!elig.condition1.passed) {
       return NextResponse.json({
         success: false,
         error: `Ineligible Wallet: ${elig.condition1.reason || 'Only wallets created on or after 1 October 2026 are eligible.'}`,
+      }, { status: 403 });
+    }
+
+    // 1. Anti-Sybil Device Check: Strictly 1 Seat per Physical Device
+    if (elig.deviceRestriction.hasClaimed) {
+      return NextResponse.json({
+        success: false,
+        error: `Anti-Sybil Block: ${elig.deviceRestriction.reason || 'This device has already claimed a Council Seat. Only 1 seat per physical device is permitted.'}`,
+      }, { status: 403 });
+    }
+
+    // 2. Anti-Sybil Wallet Check: Strictly 1 Seat per Wallet Address
+    if (elig.walletAlreadyHasSeat) {
+      return NextResponse.json({
+        success: false,
+        error: `Limit 1 Seat Per Wallet: This wallet already owns Council Seat #${elig.ownedSeatNumber}.`,
+      }, { status: 403 });
+    }
+
+    // 3. EquoraFi Super Representative (SR) Node Vote Check
+    if (!elig.condition2.srVote.passed) {
+      return NextResponse.json({
+        success: false,
+        error: `EquoraFi SR Vote Required: This wallet has not cast a vote for the official EquoraFi Super Representative node (${elig.condition2.srVote.officialSrAddress}). Please cast your on-chain vote in TrobSafe before claiming a council seat.`,
       }, { status: 403 });
     }
 
@@ -196,7 +220,7 @@ export async function POST(req: NextRequest) {
       [dbUserAddress, finalPos, cleanTx, entryAmountTrob, `Council Seat #${finalPos} Activated`]
     );
 
-    // 3. Record instant cashback event (autonomously executed on-chain by EquoraDAO contract)
+    // 3. Record instant cashback (transferred on-chain autonomously by smart contract)
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,

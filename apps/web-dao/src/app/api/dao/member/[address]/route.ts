@@ -13,12 +13,8 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
   }
 
-  const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
-    `/api/dao/member/${address}`
-  );
-  if (backendRes && backendRes.success) {
-    return NextResponse.json(backendRes);
-  }
+  // Blockchain smart contract is the absolute Single Source of Truth.
+  // We do not proxy through unverified backend caches.
 
   const bttPriceUsd = 0.0572;
   const entryAmountUsd = 300;
@@ -42,19 +38,15 @@ export async function GET(
       onChainPos = await getOnChainMemberPosition(hexAddr);
     }
 
-    const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" 
-       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR ($4 > 0 AND position = $4))
-         AND LOWER(status) IN ('active', 'capped')
-       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
-       LIMIT 1`,
-      [cleanAddr, base58Addr, hexAddr, onChainPos]
-    );
+    // Blockchain is the strict single source of truth:
+    // If the smart contract returns onChainPos === 0, the address is NOT a member!
+    if (onChainPos === 0) {
+      // Clean up any stale DB record that might have belonged to an old contract
+      await queryNeon(
+        `DELETE FROM "DaoMember" WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))`,
+        [cleanAddr, base58Addr, hexAddr]
+      );
 
-    let m = rows[0];
-
-    // If on-chain position is 0 and no active DB record exists, user is not a member
-    if (onChainPos === 0 && !m) {
       return NextResponse.json({
         success: true,
         data: {
@@ -80,6 +72,17 @@ export async function GET(
         },
       });
     }
+
+    const { rows } = await queryNeon<any>(
+      `SELECT * FROM "DaoMember" 
+       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR position = $4)
+         AND LOWER(status) IN ('active', 'capped')
+       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
+       LIMIT 1`,
+      [cleanAddr, base58Addr, hexAddr, onChainPos]
+    );
+
+    let m = rows[0];
 
     // If DB record missing but confirmed on-chain, auto-sync 1:1 using canonical Base58 address
     if (!m && onChainPos > 0) {

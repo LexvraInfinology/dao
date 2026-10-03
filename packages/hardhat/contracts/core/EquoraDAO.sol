@@ -80,10 +80,10 @@ contract EquoraDAO is ReentrancyGuard {
     /// @dev Target daily free transactions for Matrix members (Formula: 5 TX/day)
     uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
 
-    // ─── Admin ─────────────────────────────────────────────────────────────────
+    // ─── Admin (Null Key / Renounceable) ───────────────────────────────────────
 
-    /// @dev Deployer address — can update entryFee to match live USD peg
-    address public immutable admin;
+    /// @dev Admin address — can be permanently renounced to address(0) for 100% zero-admin sovereign autonomy
+    address public admin;
 
     // ─── Immutable Dependencies ────────────────────────────────────────────────
 
@@ -193,6 +193,8 @@ contract EquoraDAO is ReentrancyGuard {
     event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
     /// @dev Emitted when eligibility enforcement is toggled
     event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
+    /// @dev Emitted when administrative privileges are permanently renounced to address(0)
+    event AdminRenounced(address indexed previousAdmin, uint256 timestamp);
 
     // ─── Constructor ───────────────────────────────────────────────────────────
 
@@ -282,6 +284,18 @@ contract EquoraDAO is ReentrancyGuard {
         require(msg.sender == admin, "EquoraDAO: not admin");
         eligibilityEnforced = _enforced;
         emit EligibilityEnforcementUpdated(_enforced, block.timestamp);
+    }
+
+    /**
+     * @dev Renounce administrative control, permanently transferring admin rights
+     *      to the null address (0x0000000000000000000000000000000000000000).
+     *      Leaves the contract 100% autonomous, sovereign, and immutable with null admin key.
+     */
+    function renounceAdmin() external {
+        require(msg.sender == admin, "EquoraDAO: not admin");
+        address previousAdmin = admin;
+        admin = address(0);
+        emit AdminRenounced(previousAdmin, block.timestamp);
     }
 
     receive() external payable {}

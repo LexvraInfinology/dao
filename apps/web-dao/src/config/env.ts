@@ -46,16 +46,14 @@ export const OFFICIAL_SR_MAINNET =
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
   process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-  'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf';
+  'TQgQMoePL1cGpWZ2bkaQJUv7JuaGvdG3pe';
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '0x95c81b704bcdb7a7196e3707a025265a196d25eb';
+  '0xa15c4bdc30fdafc07e4a48b44fb159260fb8430b';
 
-// External Matrix URL
-export const MATRIX_URL =
-  process.env.NEXT_PUBLIC_MATRIX_URL ||
-  'https://equorafi.com';
+// External Matrix URL (configurable via env only, no hardcoded live URL)
+export const MATRIX_URL = process.env.NEXT_PUBLIC_MATRIX_URL || '';
 
 // TrobSafe APK Download URL
 export const TROBSAFE_APK_URL =

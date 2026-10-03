@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
           daoSeats: 'Strictly 1 Seat Per Physical Device (Anti-Sybil protected).',
           matrixSlots: 'Multiple Matrix IDs allowed per physical device, but each slot requires a distinct Web3 wallet address.',
           daoWalletAllowedOnMatrix: true,
-          matrixDomain: 'https://equorafi.com',
         },
       },
     });

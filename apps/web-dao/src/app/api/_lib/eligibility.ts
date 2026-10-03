@@ -206,14 +206,59 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
     }
   } catch {}
 
-  // Anti-Sybil: Strictly 1 DAO Seat per Physical Device (Bypassed for testing)
+  // Anti-Sybil: Strictly 1 DAO Seat per Physical Device & 1 DAO Seat per Wallet
   const deviceRestriction: {
     hasClaimed: boolean;
     claimedSeat?: number;
     claimedAddress?: string;
+    reason?: string;
   } = { hasClaimed: false };
 
-  const eligibleToDeposit = condition1Passed && condition2Passed && waVerified;
+  // 1. Device Hardware Fingerprint validation
+  if (deviceFingerprint && deviceFingerprint.trim().length > 3) {
+    try {
+      const devRes = await queryNeon<any>(
+        `SELECT position, address FROM "DaoMember"
+         WHERE "deviceFingerprint" = $1 AND LOWER(status) IN ('active', 'capped')
+         LIMIT 1`,
+        [deviceFingerprint.trim()]
+      );
+      if (devRes.rows.length > 0) {
+        const row = devRes.rows[0];
+        deviceRestriction.hasClaimed = true;
+        deviceRestriction.claimedSeat = row.position;
+        deviceRestriction.claimedAddress = row.address;
+        deviceRestriction.reason = `This physical device has already claimed Council Seat #${row.position} (${row.address}). Strictly 1 seat per physical device is permitted.`;
+      }
+    } catch (err) {
+      console.warn('[Eligibility] Device fingerprint check error:', err);
+    }
+  }
+
+  // 2. Wallet Address validation: Check if wallet already has an active or capped seat
+  let walletAlreadyHasSeat = false;
+  let ownedSeatNumber: number | null = null;
+  try {
+    const walletRes = await queryNeon<any>(
+      `SELECT position, address FROM "DaoMember"
+       WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped')
+       LIMIT 1`,
+      [canonical]
+    );
+    if (walletRes.rows.length > 0) {
+      walletAlreadyHasSeat = true;
+      ownedSeatNumber = walletRes.rows[0].position;
+    }
+  } catch (err) {
+    console.warn('[Eligibility] Wallet seat check error:', err);
+  }
+
+  const eligibleToDeposit =
+    condition1Passed &&
+    condition2Passed &&
+    waVerified &&
+    !deviceRestriction.hasClaimed &&
+    !walletAlreadyHasSeat;
 
   return {
     address: rawAddress,
@@ -249,11 +294,15 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
       verifiedAt: waVerifiedAt,
     },
     deviceRestriction,
+    walletAlreadyHasSeat,
+    ownedSeatNumber,
     eligibleToDeposit,
     status: eligibleToDeposit
       ? 'Eligible to Deposit'
+      : walletAlreadyHasSeat
+      ? `Deposit Blocked: This wallet already owns Council Seat #${ownedSeatNumber}. Strictly 1 seat per wallet is permitted.`
       : deviceRestriction.hasClaimed
-      ? `Deposit Blocked: This physical device has already claimed Council Seat #${deviceRestriction.claimedSeat}. Only 1 seat per physical device is permitted.`
+      ? `Deposit Blocked: ${deviceRestriction.reason}`
       : !condition1Passed
       ? `Deposit Blocked: ${condition1Reason}`
       : !condition2Passed

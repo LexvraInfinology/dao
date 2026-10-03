@@ -578,72 +578,8 @@ export function createApp(): Express {
   });
 
   async function broadcastNativePayout(recipientAddress: string, amountTrob: number): Promise<string | null> {
-    try {
-      const privKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
-      if (!privKey) {
-        console.warn("[Payout Relayer] DEPLOYER_PRIVATE_KEY not configured. Payout relayer skipped.");
-        return null;
-      }
-      const FULLNODE_URL = process.env.FULLNODE_URL || "https://fullnode-one-testnet.trobchain.com";
-      const { ethers } = await import("ethers");
-      const cleanPrivKey = privKey.startsWith("0x") ? privKey : `0x${privKey}`;
-      const deployerWallet = new ethers.Wallet(cleanPrivKey);
-      const deployerHex = "41" + deployerWallet.address.slice(2).toLowerCase();
-
-      const variants = getAddressVariants(recipientAddress);
-      let recipientHex = "";
-      if (Array.isArray(variants)) {
-        recipientHex = variants.find((v: string) => /^41[0-9a-fA-F]{40}$/.test(v)) || "";
-      } else if (typeof recipientAddress === "string" && recipientAddress.startsWith("41")) {
-        recipientHex = recipientAddress;
-      }
-      if (!recipientHex) {
-        console.error("[Payout Relayer] Could not resolve recipient hex for:", recipientAddress);
-        return null;
-      }
-
-      const amountSun = Math.round(amountTrob * 1_000_000);
-      if (amountSun <= 0) return null;
-
-      const payload = {
-        to_address: recipientHex,
-        owner_address: deployerHex,
-        amount: amountSun,
-      };
-
-      const res = await fetch(`${FULLNODE_URL}/wallet/createtransaction`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const tx = (await res.json()) as any;
-      if (!tx || !tx.txID) {
-        console.error("[Payout Relayer] createtransaction failed:", tx);
-        return null;
-      }
-
-      const signingKey = new ethers.SigningKey(cleanPrivKey);
-      const sig = signingKey.sign(`0x${tx.txID}`);
-      const vHex = sig.v.toString(16).padStart(2, "0");
-      const signatureHex = sig.r.slice(2) + sig.s.slice(2) + vHex;
-
-      const bRes = await fetch(`${FULLNODE_URL}/wallet/broadcasttransaction`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          txID: tx.txID,
-          raw_data: tx.raw_data,
-          raw_data_hex: tx.raw_data_hex,
-          signature: [signatureHex],
-        }),
-      });
-      const bData = (await bRes.json()) as any;
-      console.log(`[Payout Relayer] Standalone TransferContract payout broadcasted (${amountTrob} TROB -> ${recipientAddress}):`, bData);
-      return tx.txID as string;
-    } catch (err) {
-      console.error("[Payout Relayer] Failed to broadcast native payout:", (err as Error).message);
-      return null;
-    }
+    // Disabled: Payouts are handled strictly on-chain by the smart contract autonomously.
+    return null;
   }
 
   /** POST /api/dao/claim — claim or activate council seat membership with blockchain verification & 300/N distribution */

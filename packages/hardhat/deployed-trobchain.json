@@ -23,9 +23,9 @@
     },
     "EquoraDAO": {
       "name": "EquoraDAO",
-      "addressBase58": "TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf",
-      "addressHex": "4195c81b704bcdb7a7196e3707a025265a196d25eb",
-      "txHash": "0xef6d2fdeb625754573d85c488835e3739c6d731d1a2753435e5e6aee641e8611"
+      "addressBase58": "TQgQMoePL1cGpWZ2bkaQJUv7JuaGvdG3pe",
+      "addressHex": "41a15c4bdc30fdafc07e4a48b44fb159260fb8430b",
+      "txHash": "0xc5dce1b39658a87394cba065939d108302118c41a343caafd5c118d39ab5eadb"
     },
     "EquoraVault": {
       "name": "EquoraVault",

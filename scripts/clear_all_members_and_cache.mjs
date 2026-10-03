@@ -81,7 +81,6 @@ async function main() {
   console.log('\n7. Clearing Next.js caches (.next/cache)...');
   const nextCacheDirs = [
     path.resolve(process.cwd(), 'apps', 'web-dao', '.next', 'cache'),
-    path.resolve(process.cwd(), 'apps', 'web-dao', '.next', 'server'),
   ];
 
   for (const cacheDir of nextCacheDirs) {

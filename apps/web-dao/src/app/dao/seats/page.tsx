@@ -53,7 +53,9 @@ export default function CouncilSeatsPage() {
   }, [membersPayload, activeAddress, price?.priceUsd]);
 
   // Default selected seat: user's own seat → or next available → or first seat
-  const mySeatNumber = memberData?.position ?? auth.user?.daoPosition ?? null;
+  // Strictly verified on-chain: non-members NEVER receive a false seat allocation!
+  const isRealMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0);
+  const mySeatNumber = isRealMember ? Number(memberData!.position) : null;
 
   const defaultSeat = useMemo(() => {
     if (mySeatNumber) {
@@ -76,12 +78,33 @@ export default function CouncilSeatsPage() {
     });
   }, [seats, defaultSeat]);
 
-  // ── Initiate seat claim modal ─────────────────────────────────────────────
-  const handleOpenClaimModal = (seatNumber: number) => {
-    if (memberData?.isMember) {
-      setMintErr(`You already own Council Seat #${memberData.position}. Limit 1 seat per wallet.`);
+  // ── Initiate seat claim modal with Anti-Sybil & SR vote pre-checks ────────
+  const handleOpenClaimModal = async (seatNumber: number) => {
+    if (isRealMember) {
+      setMintErr(`You already own Council Seat #${memberData!.position}. Limit 1 seat per wallet.`);
       return;
     }
+
+    // Anti-Sybil & SR Vote pre-flight validation
+    try {
+      const fingerprint = await getDeviceFingerprint();
+      const eligRes = await fetch(`/api/dao/eligibility/${encodeURIComponent(activeAddress)}?deviceFingerprint=${encodeURIComponent(fingerprint)}`);
+      const eligData = await eligRes.json();
+
+      if (eligData?.deviceRestriction?.hasClaimed) {
+        setMintErr(`Anti-Sybil Device Restriction: ${eligData.deviceRestriction.reason || 'This device has already claimed a Council Seat. Strictly 1 seat per device is permitted.'}`);
+        return;
+      }
+      if (eligData?.walletAlreadyHasSeat) {
+        setMintErr(`Limit 1 Seat Per Wallet: This wallet already owns Council Seat #${eligData.ownedSeatNumber}.`);
+        return;
+      }
+      if (!eligData?.condition2?.srVote?.passed) {
+        setMintErr(`EquoraFi SR Vote Required: You must cast an on-chain vote for the official EquoraFi Super Representative node (${eligData?.condition2?.srVote?.officialSrAddress || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}) in TrobSafe before joining the council.`);
+        return;
+      }
+    } catch {}
+
     const targetSeat = seats.find((s) => s.seatNumber === seatNumber) ?? selectedSeat;
     setPaymentModalSeat(targetSeat);
   };
@@ -104,6 +127,19 @@ export default function CouncilSeatsPage() {
     const activeAddr = wallet.base58Address ?? wallet.hexAddress ?? '';
 
     try {
+      // 0. Smart Contract Pre-flight EVM dry-run simulation
+      const { simulateContractCall } = await import('@/utils/contractSimulation');
+      const sim = await simulateContractCall({
+        functionName: 'joinDAO()',
+        ownerAddress: activeAddr,
+        contractAddress: daoAddress,
+        callValueSun: callValueSun,
+      });
+
+      if (!sim.canProceed) {
+        throw new Error(sim.errorReason || 'Smart contract pre-flight simulation failed. Transaction would revert on-chain.');
+      }
+
       let txId: string | null = null;
 
       // 1. On-chain call via TrobSafe
@@ -181,6 +217,52 @@ export default function CouncilSeatsPage() {
       <CouncilSeatsHero />
 
       <CouncilStatCards />
+
+      {/* Connected Wallet Status Banner — 100% Direct Blockchain Sync Indicator */}
+      {wallet.isConnected && (
+        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
+          isRealMember
+            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+            : 'bg-[#F7FBFF] border-[#E2EEF9] text-[#14304A]'
+        }`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              isRealMember ? 'bg-emerald-500 text-white' : 'bg-[#0E62E4] text-white'
+            }`}>
+              {isRealMember ? <Check className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold font-sans">
+                  {isRealMember
+                    ? `Active Council Member (Seat #${memberData!.position})`
+                    : 'Non-Member · 0 Seats Claimed'}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white border border-current/20 font-semibold">
+                  Blockchain Synced
+                </span>
+              </div>
+              <p className="text-[11px] text-[#4F6D87] truncate">
+                {isRealMember
+                  ? `Wallet ${activeAddress} is verified on the smart contract for Seat #${memberData!.position}. Limit: 1 seat per wallet/device.`
+                  : `Connected: ${activeAddress}. You do not own a seat yet. You may claim 1 vacant seat below ($300 USD).`}
+              </p>
+            </div>
+          </div>
+          {isRealMember ? (
+            <a
+              href="/dao/lounge"
+              className="shrink-0 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all text-center"
+            >
+              Enter Member Lounge
+            </a>
+          ) : (
+            <div className="shrink-0 text-[11px] font-semibold text-[#0E62E4] bg-white px-3 py-1.5 rounded-xl border border-blue-200 text-center">
+              1 Seat Per Device & Wallet Limit
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Loading overlay */}
       {membersLoading && (

@@ -103,7 +103,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       id: 'matrix_bridge_status',
       type: 'matrix_launch',
       title: 'Day 22 Retail Matrix Ready',
-      message: 'Retail Matrix registration and spillover tree graphs go live at countdown expiry on equorafi.com.',
+      message: 'Retail Matrix registration and spillover tree graphs go live at countdown expiry.',
       timestamp: '2h ago',
       read: true,
       actionUrl: '/dao/matrix-bridge',

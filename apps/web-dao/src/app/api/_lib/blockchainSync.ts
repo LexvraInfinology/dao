@@ -109,17 +109,16 @@ export async function getOnChainDaoTransactions(
       if (!detail) detail = tx;
 
       const events: any[] = detail.events || [];
-      const caller = (detail.from_addr || tx.from_addr || '').trim();
+      const joinEvt = events.find((e) => e.name === 'DAOPositionJoined');
+      const payoutEvts = events.filter((e) => e.name === 'DAOPayoutPushed');
+      const caller = (joinEvt?.args?.user || detail.from_addr || tx.from_addr || detail.ownerAddress || tx.ownerAddress || '').trim();
       const isoTime = detail.timestamp || tx.timestamp || new Date().toISOString();
 
       if (isJoin) {
         // Parse joinDAO
-        const joinEvt = events.find((e) => e.name === 'DAOPositionJoined');
-        const payoutEvts = events.filter((e) => e.name === 'DAOPayoutPushed');
-
         let pos = joinEvt?.args?.position ? parseInt(joinEvt.args.position, 10) : 0;
         if (!pos || pos < 1 || pos > 100) {
-          pos = await getOnChainMemberPosition(caller, daoAddress);
+          pos = caller ? await getOnChainMemberPosition(caller, daoAddress) : 0;
         }
         if (!pos || pos < 1 || pos > 100) {
           continue;
@@ -374,7 +373,7 @@ async function syncOnChainMembersToDb(
           [m.user, m.position, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${m.position} Activated`]
         );
 
-        // Insert instant cashback event (contract already pushed on-chain)
+        // Insert instant cashback event (autonomously transferred by smart contract)
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
@@ -389,13 +388,17 @@ async function syncOnChainMembersToDb(
           ]
         );
 
-        // If Seat > 1, record dividend push to prior active members (contract pushed on-chain)
+        // If Seat > 1, record autonomous on-chain dividend push to prior active members
         if (m.position > 1) {
           const priors = await queryNeon<any>(
             `SELECT id, address, position, "pushedAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
             [m.position]
           );
           for (const pr of priors.rows) {
+            await queryNeon(
+              `UPDATE "DaoMember" SET "pushedAmountBtt" = "pushedAmountBtt" + $1, "updatedAt" = NOW() WHERE id = $2`,
+              [cashbackTrob, pr.id]
+            );
             await queryNeon(
               `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
                VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,

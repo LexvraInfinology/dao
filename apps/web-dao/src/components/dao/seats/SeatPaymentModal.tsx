@@ -62,9 +62,33 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
     setErrorMessage(null);
     setStep('processing');
-    setProcessingStatus('Awaiting TrobSafe wallet confirmation…');
+    setProcessingStatus('Verifying device hardware & on-chain SR vote…');
 
     try {
+      // Pre-flight check on Anti-Sybil and SR vote
+      const { getDeviceFingerprint } = await import('@/utils/deviceFingerprint');
+      const fingerprint = await getDeviceFingerprint();
+      const userAddr = wallet.base58Address || wallet.hexAddress || '';
+      const eligRes = await fetch(`/api/dao/eligibility/${encodeURIComponent(userAddr)}?deviceFingerprint=${encodeURIComponent(fingerprint)}`);
+      const eligData = await eligRes.json();
+
+      if (eligData?.deviceRestriction?.hasClaimed) {
+        setErrorMessage(`Anti-Sybil Device Restriction: ${eligData.deviceRestriction.reason || 'This device has already claimed a Council Seat. Strictly 1 seat per device is permitted.'}`);
+        setStep('error');
+        return;
+      }
+      if (eligData?.walletAlreadyHasSeat) {
+        setErrorMessage(`Limit 1 Seat Per Wallet: This wallet already owns Council Seat #${eligData.ownedSeatNumber}.`);
+        setStep('error');
+        return;
+      }
+      if (!eligData?.condition2?.srVote?.passed) {
+        setErrorMessage(`EquoraFi SR Vote Required: You must cast an on-chain vote for the official EquoraFi Super Representative node (${eligData?.condition2?.srVote?.officialSrAddress || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}) before joining.`);
+        setStep('error');
+        return;
+      }
+
+      setProcessingStatus('Simulating smart contract execution…');
       const result = await onConfirmPayment(seat.seatNumber);
 
       if (result.success) {

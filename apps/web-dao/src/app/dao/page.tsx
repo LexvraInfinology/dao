@@ -668,16 +668,7 @@ export default function DaoDashboardPage() {
                 </span>
               </div>
               <p className="text-[11px] text-[#4F6D87] leading-relaxed max-w-md line-clamp-2">
-                Global $30 matrix launches on{' '}
-                <a
-                  href="https://equorafi.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#0E62E4] hover:underline font-semibold"
-                >
-                  equorafi.com
-                </a>{' '}
-                with 35% of all matrix volume distributed to DAO members.
+                Global $30 retail matrix launches on Day 22 with 35% of all protocol matrix volume distributed directly to DAO members.
               </p>
             </div>
           </div>

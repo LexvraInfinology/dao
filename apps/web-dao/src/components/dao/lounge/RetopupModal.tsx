@@ -123,6 +123,19 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       const contractAddress = getActiveDaoAddress();
       const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
 
+      // Pre-flight EVM dry-run simulation
+      const { simulateContractCall } = await import('@/utils/contractSimulation');
+      const sim = await simulateContractCall({
+        functionName: 'retopup()',
+        ownerAddress: activeAddr,
+        contractAddress,
+        callValueSun,
+      });
+
+      if (!sim.canProceed) {
+        throw new Error(sim.errorReason || 'Smart contract pre-flight simulation failed. Re-topup cannot be accepted at this time.');
+      }
+
       let txId: string | null = null;
       try {
         const result = await wallet.callContract({

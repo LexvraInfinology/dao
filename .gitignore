@@ -14,6 +14,7 @@ yarn.lock
 **/.turbo/
 scratch/
 scripts/*.json
+scripts/*.mjs
 
 # Hardhat & Contracts
 packages/hardhat/artifacts/

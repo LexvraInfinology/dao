@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 APP_DIR=/opt/dao
-DEPLOY_BRANCH=devops
+DEPLOY_BRANCH=main
 EXPECTED_SERVICES=(frontend api indexer queue postgres redis)
 
 cd "$APP_DIR"

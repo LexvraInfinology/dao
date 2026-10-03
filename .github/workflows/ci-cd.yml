@@ -3,10 +3,10 @@ name: CI/CD
 on:
   push:
     branches:
-      - devops
+      - main
   pull_request:
     branches:
-      - devops
+      - main
   workflow_dispatch:
 
 permissions:
@@ -56,7 +56,7 @@ jobs:
     name: Deploy to Utho VM
     needs: ci
     if: >-
-      github.ref == 'refs/heads/devops' &&
+      github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 45

@@ -26,16 +26,69 @@ export async function GET(
   const entryAmountBtt = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
   const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
 
-  // 2. Direct Serverless Neon Lookup (Vercel native)
+  // 2. Direct Serverless Neon Lookup & On-Chain Verification
   try {
+    const cleanAddr = address.trim();
+    const { getOnChainMemberPosition } = await import('../../../_lib/txVerifier');
+    const onChainPos = await getOnChainMemberPosition(cleanAddr);
+
     const { rows } = await queryNeon<any>(
       `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-      [address.trim()]
+      [cleanAddr]
     );
-    if (rows.length > 0) {
-      const m = rows[0];
+
+    // If on-chain position is 0, the wallet has NOT joined or deposited on the smart contract
+    if (onChainPos === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          isMember: false,
+          position: null,
+          nftTokenId: null,
+          status: 'unclaimed',
+          joinedAt: undefined,
+          pushedAmountBtt: 0,
+          pushedAmountTrob: 0,
+          pushedAmountUsdEstimate: 0,
+          earningsCapBtt,
+          earningsCapTrob: earningsCapBtt,
+          earningsCapUsd,
+          capProgressPct: 0,
+          isCapped: false,
+          entryAmountBtt,
+          entryAmountTrob: entryAmountBtt,
+          entryAmountUsdEstimate: entryAmountUsd,
+          directReferralsCount: 0,
+          isQualified: false,
+          userId: null,
+        },
+      });
+    }
+
+    // User is confirmed on-chain (onChainPos >= 1 && onChainPos <= 100)
+    let m = rows[0];
+
+    // If DB record missing but confirmed on-chain, auto-sync 1:1
+    if (!m) {
+      await queryNeon(
+        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+         ON CONFLICT (address) DO NOTHING`,
+        [cleanAddr, onChainPos]
+      );
+      const inserted = await queryNeon<any>(
+        `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, NOW(), 'onchain-verified', 1, $3, 300, $2, 'blockchain-onchain', $4, 'active', NOW(), NOW())
+         ON CONFLICT (position) DO UPDATE SET address = $1, status = 'active', "updatedAt" = NOW()
+         RETURNING *`,
+        [cleanAddr, onChainPos, entryAmountBtt, Math.round((entryAmountBtt / onChainPos) * 100) / 100]
+      );
+      m = inserted.rows[0];
+    }
+
+    if (m) {
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
-      const entryBtt = parseFloat(m.entryAmountBtt || '5244.75');
+      const entryBtt = parseFloat(m.entryAmountBtt || String(entryAmountBtt));
       const capBtt = entryBtt * 5;
       const isCapped = capBtt > 0 && pushedBtt >= capBtt;
 
@@ -74,8 +127,8 @@ export async function GET(
         success: true,
         data: {
           isMember,
-          position: isMember ? m.position : null,
-          nftTokenId: m.nftTokenId,
+          position: isMember ? onChainPos : null,
+          nftTokenId: m.nftTokenId || onChainPos,
           status: isExpired ? 'vacant' : (m.status || (isCapped ? 'capped' : 'ACTIVE')),
           joinedAt: m.joinedAt,
           pushedAmountBtt: pushedBtt,
@@ -98,37 +151,32 @@ export async function GET(
       });
     }
   } catch (dbErr) {
-    console.warn('[member route] Neon lookup error:', dbErr);
+    console.warn('[member route] Error:', dbErr);
   }
 
-  // 3. Database is the definitive source of truth for DAO membership and vacant seats.
-  // Stale on-chain storage from prior deployments is not used to resurrect ghost seats.
-
   // Non-member response
-  const nonMember = {
-    isMember: false,
-    position: null,
-    nftTokenId: null,
-    status: 'unclaimed',
-    joinedAt: undefined,
-    pushedAmountBtt: 0,
-    pushedAmountTrob: 0,
-    pushedAmountUsdEstimate: 0,
-    earningsCapBtt,
-    earningsCapTrob: earningsCapBtt,
-    earningsCapUsd,
-    capProgressPct: 0,
-    isCapped: false,
-    entryAmountBtt,
-    entryAmountTrob: entryAmountBtt,
-    entryAmountUsdEstimate: entryAmountUsd,
-    directReferralsCount: 0,
-    isQualified: false,
-    userId: null,
-  };
-
   return NextResponse.json({
     success: true,
-    data: nonMember,
+    data: {
+      isMember: false,
+      position: null,
+      nftTokenId: null,
+      status: 'unclaimed',
+      joinedAt: undefined,
+      pushedAmountBtt: 0,
+      pushedAmountTrob: 0,
+      pushedAmountUsdEstimate: 0,
+      earningsCapBtt,
+      earningsCapTrob: earningsCapBtt,
+      earningsCapUsd,
+      capProgressPct: 0,
+      isCapped: false,
+      entryAmountBtt,
+      entryAmountTrob: entryAmountBtt,
+      entryAmountUsdEstimate: entryAmountUsd,
+      directReferralsCount: 0,
+      isQualified: false,
+      userId: null,
+    },
   });
 }

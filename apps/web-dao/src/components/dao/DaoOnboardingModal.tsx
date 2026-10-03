@@ -21,6 +21,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
 
@@ -137,39 +138,43 @@ export const DaoOnboardingModal: React.FC = () => {
     try {
       let broadcastTxId: string | null = null;
 
-      // 1. Attempt on-chain contract call if TrobSafe is active and DAO address is set
-      if (
-        wallet.isInstalled &&
-        DAO_CONTRACT_ADDRESS &&
-        DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
-        DAO_CONTRACT_ADDRESS.length > 10
-      ) {
-        try {
-          const seatEntryTrob = priceData.seatEntryTrob;
-          const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
-          const payload = {
-            contract_address: DAO_CONTRACT_ADDRESS,
-            function_selector: 'joinDAO()',
-            parameter: '',
-            call_value: callValueSun,
-            fee_limit: 100_000_000,
-            owner_address: activeAddress,
-          };
-          const res = await wallet.callContract(payload);
-          if (res?.result && res.txid) {
-            broadcastTxId = res.txid;
-          } else if (res?.txid) {
-            broadcastTxId = res.txid;
-          }
-        } catch (onChainErr: unknown) {
-          console.warn('[DaoOnboardingModal] On-chain call note:', onChainErr);
-          const msg = onChainErr instanceof Error ? onChainErr.message : String(onChainErr);
-          throw new Error(msg || 'Transaction failed in TrobSafe.');
-        }
+      // 1. Mandatory on-chain contract call to EquoraDAO.sol joinDAO()
+      const targetContract = getActiveDaoAddress();
+      const seatEntryTrob = priceData.seatEntryTrob;
+      const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
+      const payload = {
+        contract_address: targetContract,
+        function_selector: 'joinDAO()',
+        parameter: '',
+        call_value: callValueSun,
+        fee_limit: 100_000_000,
+        owner_address: activeAddress,
+      };
 
-        if (!broadcastTxId) {
-          throw new Error('On-chain deposit transaction was not confirmed. Please approve the transaction in TrobSafe.');
+      try {
+        const res = await wallet.callContract(payload);
+        if (res?.txid) {
+          broadcastTxId = res.txid;
+        } else if (res?.result && res.txid) {
+          broadcastTxId = res.txid;
+        } else {
+          const errorDetail = (res as any)?.Error || (res as any)?.message || 'Transaction rejected in TrobSafe wallet.';
+          throw new Error(errorDetail);
         }
+      } catch (onChainErr: unknown) {
+        console.warn('[DaoOnboardingModal] On-chain call note:', onChainErr);
+        const msg = onChainErr instanceof Error ? onChainErr.message : String(onChainErr);
+        throw new Error(msg || 'Transaction failed in TrobSafe.');
+      }
+
+      if (!broadcastTxId) {
+        throw new Error('On-chain deposit transaction was not confirmed. Please approve the transaction in TrobSafe.');
+      }
+
+      // Strictly verify execution receipt from TrobChain FullNode
+      const confirmCheck = await pollOnChainTxSuccess(broadcastTxId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
       }
 
       // 2. Register membership in database via backend API & Anti-Sybil device fingerprint

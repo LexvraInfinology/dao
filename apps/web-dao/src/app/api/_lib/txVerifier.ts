@@ -176,3 +176,59 @@ export async function verifyOnChainTransaction(
     error: 'Transaction hash could not be verified on the TrobChain blockchain. Please verify the transaction succeeded in TrobSafe.',
   };
 }
+
+/**
+ * Queries memberPosition(address) directly from the EquoraDAO smart contract on TrobChain.
+ * Returns 1 to 100 if the wallet is a verified member on-chain, or 0 if not a member.
+ */
+export async function getOnChainMemberPosition(
+  walletAddress: string,
+  contractAddress?: string
+): Promise<number> {
+  const cleanAddr = (walletAddress || '').trim();
+  if (!cleanAddr) return 0;
+
+  const hexOwner = cleanAddr.startsWith('41') ? cleanAddr : (base58ToHexAddress(cleanAddr) || cleanAddr);
+  const targetContract = contractAddress || getActiveDaoAddress();
+  const hexContract = targetContract.startsWith('41') ? targetContract : (base58ToHexAddress(targetContract) || getActiveDaoHex());
+
+  try {
+    const res = await fetch(`${FULLNODE_RPC_URL}/wallet/triggerconstantcontract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        owner_address: hexOwner,
+        contract_address: hexContract,
+        function_selector: 'memberPosition(address)',
+        parameter: hexOwner.replace(/^41/, '').padStart(64, '0'),
+      }),
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.constant_result?.[0]) {
+        const pos = parseInt(data.constant_result[0], 16);
+        if (Number.isFinite(pos) && pos > 0 && pos <= 100) {
+          return pos;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[txVerifier] Failed to query on-chain memberPosition:', err);
+  }
+
+  return 0;
+}
+
+/**
+ * Checks whether an address has joined the DAO contract on-chain.
+ */
+export async function isMemberOnChain(
+  walletAddress: string,
+  contractAddress?: string
+): Promise<boolean> {
+  const pos = await getOnChainMemberPosition(walletAddress, contractAddress);
+  return pos > 0;
+}
+

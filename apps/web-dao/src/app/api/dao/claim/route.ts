@@ -4,7 +4,7 @@ import { queryNeon } from '../../_lib/neonDb';
 import { checkServerlessEligibility } from '../../_lib/eligibility';
 import { getActiveDaoAddress, getActiveDaoHex } from '@/utils/trobAddress';
 import { TROB_PRICE_API_URL } from '@/config/env';
-import { verifyOnChainTransaction } from '../../_lib/txVerifier';
+import { verifyOnChainTransaction, getOnChainMemberPosition } from '../../_lib/txVerifier';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,14 +50,60 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Device restriction check bypassed for testing per user request
+    const userAddr = address.trim();
 
-    // Check if user is already an active member
+    // 1. Transaction hash is strictly required
+    if (!txHash || typeof txHash !== 'string' || txHash.trim().length < 10) {
+      return NextResponse.json({
+        success: false,
+        error: 'Verified on-chain transaction hash (txHash) is required to claim a council seat.',
+      }, { status: 400 });
+    }
+    const cleanTx = txHash.trim().toLowerCase();
+
+    // 2. Verify on-chain execution receipt strictly via TrobChain FullNode
+    const txReceipt = await verifyOnChainTransaction(cleanTx, {
+      expectedSender: userAddr,
+      expectedContract: getActiveDaoAddress(),
+    });
+    if (!txReceipt.valid) {
+      return NextResponse.json({
+        success: false,
+        error: txReceipt.error || 'Transaction verification failed on-chain.',
+      }, { status: 400 });
+    }
+
+    if (txReceipt.fromAddr && txReceipt.fromAddr.toLowerCase() !== userAddr.toLowerCase()) {
+      return NextResponse.json({
+        success: false,
+        error: `Transaction sender (${txReceipt.fromAddr}) does not match connected wallet (${userAddr}).`,
+      }, { status: 400 });
+    }
+
+    // 3. Query the smart contract directly for verified on-chain seat assignment
+    let finalPos = await getOnChainMemberPosition(userAddr, getActiveDaoAddress());
+    if (finalPos === 0) {
+      // Allow block indexing propagation retry (up to 3 attempts, 1.2s delay)
+      for (let retries = 0; retries < 3; retries++) {
+        await new Promise((r) => setTimeout(r, 1200));
+        finalPos = await getOnChainMemberPosition(userAddr, getActiveDaoAddress());
+        if (finalPos > 0) break;
+      }
+    }
+
+    if (finalPos <= 0 || finalPos > 100) {
+      return NextResponse.json({
+        success: false,
+        error: 'No active Genesis Council seat was assigned to this wallet on the blockchain contract. Ensure your deposit transaction was confirmed and completed on-chain.',
+      }, { status: 400 });
+    }
+
+    // Check if user is already an active member in DB for this exact position
     const existingUser = await queryNeon<any>(
       `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
-      [address.trim()]
+      [userAddr]
     );
-    if (existingUser.rows.length > 0) {
+    if (existingUser.rows.length > 0 && existingUser.rows[0].position === finalPos) {
       return NextResponse.json({
         success: true,
         data: {
@@ -66,36 +112,6 @@ export async function POST(req: NextRequest) {
           alreadyMember: true,
         },
       });
-    }
-
-    // 1. Scan 1 to 100 for the FIRST vacant seat (lowest vacant number)
-    const activeSeatsRes = await queryNeon<{ position: number }>(
-      `SELECT position FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped') AND position BETWEEN 1 AND 100 ORDER BY position ASC`
-    );
-    const activeSet = new Set(activeSeatsRes.rows.map((r) => r.position));
-
-    let firstVacant = 0;
-    for (let i = 1; i <= 100; i++) {
-      if (!activeSet.has(i)) {
-        firstVacant = i;
-        break;
-      }
-    }
-
-    if (firstVacant === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Genesis Council is currently fully allocated (All 100 Seats active). Please monitor for any expired 48h retopup vacancies.',
-      }, { status: 400 });
-    }
-
-    // If client requested an eligible vacant position, honor it; otherwise allocate the lowest vacant
-    let finalPos = firstVacant;
-    if (position) {
-      const requested = parseInt(position, 10);
-      if (requested >= 1 && requested <= 100 && !activeSet.has(requested)) {
-        finalPos = requested;
-      }
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
@@ -114,34 +130,6 @@ export async function POST(req: NextRequest) {
     // Formula works for any seat: 300 / N (e.g. Seat #2 gets 300/2 = $150 back instantly)
     const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
     const cashbackTrob = Math.round((cashbackUsd / trobPriceUsd) * 100) / 100;
-    if (!txHash || typeof txHash !== 'string' || txHash.trim().length < 10) {
-      return NextResponse.json({
-        success: false,
-        error: 'Verified on-chain transaction hash (txHash) is required to claim a council seat.',
-      }, { status: 400 });
-    }
-    const cleanTx = txHash.trim().toLowerCase();
-
-    // Verify on-chain execution receipt strictly via TrobChain FullNode
-    const txReceipt = await verifyOnChainTransaction(cleanTx, {
-      expectedSender: address,
-      expectedContract: getActiveDaoAddress(),
-    });
-    if (!txReceipt.valid) {
-      return NextResponse.json({
-        success: false,
-        error: txReceipt.error || 'Transaction verification failed on-chain.',
-      }, { status: 400 });
-    }
-
-    if (txReceipt.fromAddr && txReceipt.fromAddr.toLowerCase() !== address.trim().toLowerCase()) {
-      return NextResponse.json({
-        success: false,
-        error: `Transaction sender (${txReceipt.fromAddr}) does not match connected wallet (${address.trim()}).`,
-      }, { status: 400 });
-    }
-
-    const userAddr = address.trim();
 
     // Ensure user exists in "User" table to satisfy DaoMember_address_fkey foreign key constraint
     const existingUserRecord = await queryNeon<any>(

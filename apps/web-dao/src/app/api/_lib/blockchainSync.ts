@@ -2,6 +2,7 @@ import { getActiveDaoAddress, toTrobBase58 } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
 import { EXPLORER_API_URL } from '@/config/env';
+import { getOnChainMemberPosition } from './txVerifier';
 
 const BACKEND_EXPLORER_API = EXPLORER_API_URL;
 
@@ -116,7 +117,13 @@ export async function getOnChainDaoTransactions(
         const joinEvt = events.find((e) => e.name === 'DAOPositionJoined');
         const payoutEvts = events.filter((e) => e.name === 'DAOPayoutPushed');
 
-        const pos = joinEvt?.args?.position ? parseInt(joinEvt.args.position, 10) : 1;
+        let pos = joinEvt?.args?.position ? parseInt(joinEvt.args.position, 10) : 0;
+        if (!pos || pos < 1 || pos > 100) {
+          pos = await getOnChainMemberPosition(caller, daoAddress);
+        }
+        if (!pos || pos < 1 || pos > 100) {
+          continue;
+        }
         const tokenId = joinEvt?.args?.tokenId ? parseInt(joinEvt.args.tokenId, 10) : pos;
 
         // Paid amount in TROB

@@ -20,6 +20,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
 import { DEPLOYED_CONTRACTS, getActiveDaoAddress } from '@/utils/trobAddress';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 interface ApiMembersPayload {
   members: RawMemberData[];
@@ -129,6 +130,12 @@ export default function CouncilSeatsPage() {
 
       if (!txId) {
         throw new Error('On-chain payment was not confirmed by TrobSafe. Please approve the transaction in the wallet popup.');
+      }
+
+      // Verify on-chain execution receipt from TrobChain FullNode
+      const confirmCheck = await pollOnChainTxSuccess(txId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
       }
 
       // 2. Synchronize database via API with Anti-Sybil device fingerprint

@@ -20,11 +20,27 @@ export async function GET(
   const earningsCapUsd = 1500;
   const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
 
-  // 2. Direct Serverless Neon Lookup (Vercel native)
+  // 2. Direct Serverless Neon Lookup & On-Chain Verification
   try {
+    const cleanAddr = address.trim();
+    const { getOnChainMemberPosition } = await import('../../../_lib/txVerifier');
+    const onChainPos = await getOnChainMemberPosition(cleanAddr);
+    if (onChainPos === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          isMember: false,
+          status: 'unclaimed',
+          position: null,
+          totalReceivedUsd: 0,
+          totalReceivedBtt: 0,
+        },
+      });
+    }
+
     const { rows } = await queryNeon<any>(
       `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-      [address.trim()]
+      [cleanAddr]
     );
     if (rows.length > 0) {
       const m = rows[0];

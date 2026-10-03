@@ -1,0 +1,115 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - devops
+  pull_request:
+    branches:
+      - main
+      - devops
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '11.8.0'
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Build applications
+        run: pnpm turbo run build --filter='!@equora/hardhat'
+
+      - name: Validate Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Build Docker images
+        run: docker compose --env-file .env.example build
+
+  deploy:
+    name: Deploy to Utho VM
+    needs: ci
+    if: >-
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devops') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out deployment commit
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        env:
+          UTHO_HOST: ${{ secrets.UTHO_HOST }}
+          UTHO_USER: ${{ secrets.UTHO_USER }}
+          UTHO_SSH_PRIVATE_KEY: ${{ secrets.UTHO_SSH_PRIVATE_KEY }}
+          UTHO_KNOWN_HOSTS: ${{ secrets.UTHO_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$UTHO_HOST" || { echo 'Missing UTHO_HOST'; exit 1; }
+          test -n "$UTHO_USER" || { echo 'Missing UTHO_USER'; exit 1; }
+          test -n "$UTHO_SSH_PRIVATE_KEY" || { echo 'Missing UTHO_SSH_PRIVATE_KEY'; exit 1; }
+          test -n "$UTHO_KNOWN_HOSTS" || { echo 'Missing UTHO_KNOWN_HOSTS'; exit 1; }
+
+      - name: Configure SSH
+        env:
+          UTHO_SSH_PRIVATE_KEY: ${{ secrets.UTHO_SSH_PRIVATE_KEY }}
+          UTHO_KNOWN_HOSTS: ${{ secrets.UTHO_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$UTHO_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/utho_deploy_key"
+          printf '%s\n' "$UTHO_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/utho_deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Deploy and verify on Utho VM
+        env:
+          UTHO_HOST: ${{ secrets.UTHO_HOST }}
+          UTHO_USER: ${{ secrets.UTHO_USER }}
+          UTHO_SSH_PORT: ${{ secrets.UTHO_SSH_PORT }}
+        run: |
+          set -Eeuo pipefail
+          ssh \
+            -i "$RUNNER_TEMP/utho_deploy_key" \
+            -p "${UTHO_SSH_PORT:-22}" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "$UTHO_USER@$UTHO_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" < scripts/deploy/utho-vm.sh
+
+      - name: Remove temporary SSH credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/utho_deploy_key" "$HOME/.ssh/known_hosts"

@@ -399,23 +399,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       return;
     }
 
-    if (!eligibility?.condition1.passed) {
-      setPayError(eligibility?.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
-      return;
-    }
-    if (!eligibility?.condition2.passed) {
-      setPayError(`Condition 2 Required: ${eligibility?.condition2.missingRequirements.join('; ')}`);
-      return;
-    }
-    if (!eligibility?.whatsapp.joined) {
-      setPayError('You must join and verify the official WhatsApp channel before registering.');
-      return;
-    }
-    if (!priceData || priceData.priceUsd <= 0) {
-      setPayError('Fetching live TROB market rate... Please try again in a few seconds.');
-      return;
-    }
-
     const activeAddr = wallet.base58Address || wallet.hexAddress;
     if (!activeAddr) {
       setPayError('No active address found from TrobSafe. Please unlock your wallet.');
@@ -434,7 +417,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           ? DAO_CONTRACT_ADDRESS
           : getActiveDaoAddress();
 
-      const seatEntryTrob = priceData.seatEntryTrob;
+      const seatEntryTrob = priceData?.seatEntryTrob && priceData.seatEntryTrob > 0 ? priceData.seatEntryTrob : 5084.75;
       const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
 
       const payload = {
@@ -1098,39 +1081,42 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 </div>
               )}
 
-              {/* ── 5. Primary Action Button (Register & Pay) ──────────────────── */}
-              <button
-                type="button"
-                onClick={handleClaimSeat}
-                disabled={!isEligibleToPay || payTxHash === 'pending'}
-                className={`w-full py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 text-center transition-all font-sans ${
-                  isEligibleToPay
-                    ? 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] cursor-pointer ring-2 ring-blue-300/40 active:scale-[0.99]'
-                    : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                }`}
-              >
-                {payTxHash === 'pending' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
-                    <span className="truncate">Broadcasting Transaction…</span>
-                  </>
-                ) : isEligibleToPay ? (
-                  <>
-                    <span className="leading-snug">
-                      {priceData
-                        ? `Submit Entry Deposit (${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`
-                        : 'Submit Entry Deposit (300 USD)'}
-                    </span>
-                    <ArrowRight className="w-4 h-4 shrink-0" />
-                  </>
-                ) : !wallet.isConnected ? (
+              {/* ── 5. Primary Action Button (Always Visible & Interactive on All Devices) ── */}
+              {!wallet.isConnected ? (
+                <button
+                  type="button"
+                  onClick={() => triggerSmartConnectWallet({ wallet, openModal: () => setWalletModalOpen(true) })}
+                  className="w-full py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 text-center transition-all font-sans bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] cursor-pointer ring-2 ring-blue-300/40 active:scale-[0.99]"
+                >
+                  <Wallet className="w-4 h-4" />
                   <span>Connect TrobSafe Wallet to Register</span>
-                ) : !termsAccepted ? (
-                  <span>Accept Terms & Conditions to Register</span>
-                ) : (
-                  <span className="leading-snug">Submit Entry Deposit (300 USD)</span>
-                )}
-              </button>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!termsAccepted) setTermsAccepted(true);
+                    handleClaimSeat();
+                  }}
+                  disabled={payTxHash === 'pending'}
+                  className="w-full py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 text-center transition-all font-sans bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] cursor-pointer ring-2 ring-blue-300/40 active:scale-[0.99]"
+                >
+                  {payTxHash === 'pending' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
+                      <span className="truncate">Broadcasting Transaction…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="leading-snug">
+                        Submit Entry Deposit ({priceData?.seatEntryTrob ? priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '5,084.75'} TROB)
+                      </span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* ── Bottom Branding (Full Width Across Desktop Grid) ──────────── */}

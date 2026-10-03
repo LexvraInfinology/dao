@@ -88,6 +88,16 @@ const CONTRACT_CONFIGS: Record<
       return coder.encode(['address', 'address'], [token, registry]).replace(/^0x/, '');
     },
   },
+  EquoraMatrix: {
+    artifactSubpath: 'core/EquoraMatrix.sol/EquoraMatrix.json',
+    flattenedPath: 'EquoraMatrix.sol',
+    buildParams: (coder, _, extra) => {
+      const token = extra.tokenAddress?.startsWith('0x') ? extra.tokenAddress : '0x' + extra.tokenAddress?.slice(2);
+      const registry = extra.registryAddress?.startsWith('0x') ? extra.registryAddress : '0x' + extra.registryAddress?.slice(2);
+      const dao = extra.daoAddress?.startsWith('0x') ? extra.daoAddress : '0x' + extra.daoAddress?.slice(2);
+      return coder.encode(['address', 'address', 'address'], [token, registry, dao]).replace(/^0x/, '');
+    },
+  },
 };
 
 export async function POST(req: NextRequest) {
@@ -171,8 +181,13 @@ export async function POST(req: NextRequest) {
       signature: [signatureHex],
     };
 
-    // 3. Broadcast to Trobchain testnet
-    const broadcastRes = await fetch(`${FULLNODE_URL}/wallet/broadcasttransaction`, {
+    // 3. Broadcast to Trobchain node
+    const isMainnet = body.network === 'mainnet' || process.env.NEXT_PUBLIC_TARGET_NETWORK === 'mainnet';
+    const targetRpc = isMainnet ? 'https://fullnode-one.trobchain.com' : FULLNODE_URL;
+    const targetBackend = isMainnet ? 'https://backend.trobchain.com' : 'https://testnet-backend.trobchain.com';
+    const targetExplorer = isMainnet ? 'https://trobchain.com' : EXPLORER_BASE_URL;
+
+    const broadcastRes = await fetch(`${targetRpc}/wallet/broadcasttransaction`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(broadcastPayload),
@@ -186,7 +201,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Broadcast failed: ${errMsg}` }, { status: 400 });
     }
 
-    const verifyUrl = `${EXPLORER_BASE_URL}/contracts/verify?address=${contractAddressBase58}`;
+    // 4. Automatic Verification on Trobium Explorer
+    let isVerified = false;
+    try {
+      const flattenedPath = path.resolve(
+        process.cwd(),
+        '..',
+        '..',
+        'packages',
+        'hardhat',
+        'contracts-flattened',
+        config.flattenedPath
+      );
+      if (fs.existsSync(flattenedPath)) {
+        const sourceCode = fs.readFileSync(flattenedPath, 'utf8');
+        const verifyRes = await fetch(`${targetBackend}/v1/contracts/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: contractAddressBase58,
+            sourceCode: sourceCode,
+            contractName: contractName,
+            compilerVersion: 'v0.8.26+commit.8a97fa7a',
+            optimizer: {
+              enabled: true,
+              runs: 200,
+            },
+          }),
+        });
+        const vData = await verifyRes.json();
+        isVerified = !!(vData?.data?.verified);
+      }
+    } catch (vErr) {
+      console.warn('Auto-verify error:', vErr);
+    }
+
+    const verifyUrl = `${targetExplorer}/contracts/verify?address=${contractAddressBase58}`;
 
     return NextResponse.json({
       success: true,
@@ -196,8 +246,9 @@ export async function POST(req: NextRequest) {
       txHash: '0x' + txID,
       deployer: tronBase58,
       verifyUrl,
+      verified: isVerified,
       flattenedSolFile: config.flattenedPath,
-      solcVersion: '0.8.25',
+      solcVersion: 'v0.8.26+commit.8a97fa7a',
       optimizationRuns: 200,
       license: 'MIT',
     });

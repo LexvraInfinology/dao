@@ -1,0 +1,25 @@
+{
+  "network": "trobchain-mainnet",
+  "deployer": "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8",
+  "deployedAt": "2026-10-03T14:05:14.883Z",
+  "contracts": {
+    "EquoraRegistry": {
+      "contractName": "EquoraRegistry",
+      "contractAddressBase58": "TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy",
+      "contractAddressHex": "41e182ad0c2aaec48202cd7b897820e5b058c502dd",
+      "txHash": "0x2d856fc4d2bae6ba6aae80ef43c5d2442e115cd8dd88ce78d2689fb76e2b5b6f"
+    },
+    "EquoraToken": {
+      "contractName": "EquoraToken",
+      "contractAddressBase58": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
+      "contractAddressHex": "4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9",
+      "txHash": "0x49cf3932bf061aac727d36b655dac1c0066596a1b460c2dd812101cb3e82e150"
+    },
+    "EquoraDAO": {
+      "contractName": "EquoraDAO",
+      "contractAddressBase58": "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
+      "contractAddressHex": "410a59d6a2dcd3b18687c1efe1625642ad85679377",
+      "txHash": "0x09504a612e6640982b475b0a455a05669f5804c6e094cc4061b6faee5f7ce6f5"
+    }
+  }
+}

@@ -55,6 +55,7 @@ export default function DeployPage() {
         body: JSON.stringify({
           contractName: name,
           privateKey: privateKey.trim(),
+          network: 'mainnet',
           extraParams,
         }),
       });
@@ -88,7 +89,7 @@ export default function DeployPage() {
       const res1 = await fetch('/api/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractName: 'EquoraToken', privateKey: privateKey.trim() }),
+        body: JSON.stringify({ contractName: 'EquoraToken', privateKey: privateKey.trim(), network: 'mainnet' }),
       });
       const data1 = await res1.json();
       if (!res1.ok || data1.error) throw new Error(`EquoraToken failed: ${data1.error}`);
@@ -99,7 +100,7 @@ export default function DeployPage() {
       const res2 = await fetch('/api/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractName: 'EquoraRegistry', privateKey: privateKey.trim() }),
+        body: JSON.stringify({ contractName: 'EquoraRegistry', privateKey: privateKey.trim(), network: 'mainnet' }),
       });
       const data2 = await res2.json();
       if (!res2.ok || data2.error) throw new Error(`EquoraRegistry failed: ${data2.error}`);
@@ -113,6 +114,7 @@ export default function DeployPage() {
         body: JSON.stringify({
           contractName: 'EquoraDAO',
           privateKey: privateKey.trim(),
+          network: 'mainnet',
           extraParams: {
             tokenAddress: data1.contractAddressHex,
             registryAddress: data2.contractAddressHex,
@@ -131,6 +133,7 @@ export default function DeployPage() {
         body: JSON.stringify({
           contractName: 'EquoraVault',
           privateKey: privateKey.trim(),
+          network: 'mainnet',
           extraParams: {
             tokenAddress: data1.contractAddressHex,
             registryAddress: data2.contractAddressHex,

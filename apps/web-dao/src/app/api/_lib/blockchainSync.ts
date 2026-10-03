@@ -1,6 +1,5 @@
 import { getActiveDaoAddress, toTrobBase58 } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
-import { broadcastNativePayout } from './payoutRelayer';
 import type { TransactionItem } from '@/hooks/useApi';
 import { EXPLORER_API_URL } from '@/config/env';
 
@@ -368,22 +367,14 @@ async function syncOnChainMembersToDb(
           [m.user, m.position, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${m.position} Activated`]
         );
 
-        // Broadcast top-level visible native cashback transfer
-        let cashbackTxId: string | null = null;
-        try {
-          cashbackTxId = await broadcastNativePayout(m.user, cashbackTrob);
-        } catch (e) {
-          console.warn(`[BlockchainSync] Payout broadcast note for Seat #${m.position}:`, e);
-        }
-
-        // Insert instant cashback event
+        // Insert instant cashback event (contract already pushed on-chain)
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
           [
             m.user,
             m.position,
-            cashbackTxId || `${m.txHash}-cashback`,
+            `${m.txHash}-cashback`,
             m.timestamp,
             cashbackTrob,
             parseFloat((300 / m.position).toFixed(2)),
@@ -391,24 +382,20 @@ async function syncOnChainMembersToDb(
           ]
         );
 
-        // If Seat > 1, broadcast dividend push to prior active members
+        // If Seat > 1, record dividend push to prior active members (contract pushed on-chain)
         if (m.position > 1) {
           const priors = await queryNeon<any>(
             `SELECT id, address, position, "pushedAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
             [m.position]
           );
           for (const pr of priors.rows) {
-            let divTxId: string | null = null;
-            try {
-              divTxId = await broadcastNativePayout(pr.address, cashbackTrob);
-            } catch {}
             await queryNeon(
               `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
                VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
               [
                 pr.address,
                 m.position,
-                divTxId || `${m.txHash}-pushed-${pr.position}`,
+                `${m.txHash}-pushed-${pr.position}`,
                 m.timestamp,
                 cashbackTrob,
                 parseFloat((300 / m.position).toFixed(2)),

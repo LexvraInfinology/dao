@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
-import { broadcastNativePayout } from '../../_lib/payoutRelayer';
+import { verifyOnChainTransaction } from '../../_lib/txVerifier';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,27 @@ export async function POST(req: NextRequest) {
     const { address, txHash } = body;
     if (!address) {
       return NextResponse.json({ success: false, error: 'Member address is required' }, { status: 400 });
+    }
+
+    if (!txHash || typeof txHash !== 'string' || txHash.trim().length < 10) {
+      return NextResponse.json({
+        success: false,
+        error: 'Verified on-chain transaction hash (txHash) is required for retopup.',
+      }, { status: 400 });
+    }
+    const cleanTx = txHash.trim().replace(/^0x/, '').toLowerCase();
+
+    // Strictly verify on-chain transaction receipt from TrobChain FullNode
+    const txReceipt = await verifyOnChainTransaction(cleanTx, {
+      expectedSender: address,
+      expectedContract: getActiveDaoAddress(),
+    });
+
+    if (!txReceipt.valid) {
+      return NextResponse.json({
+        success: false,
+        error: txReceipt.error || 'Transaction verification failed on blockchain.',
+      }, { status: 400 });
     }
 
     const memberRes = await queryNeon<any>(
@@ -50,7 +72,6 @@ export async function POST(req: NextRequest) {
 
     const bttPriceUsd = 0.056;
     const entryAmountUsd = 300;
-    const cleanTx = (txHash || '0x' + Math.random().toString(16).slice(2)).toLowerCase();
     const retopupTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
     const pos = m.position || 1;
 
@@ -80,16 +101,15 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // 4. Distribute the $300 retopup fee equally to all other active uncapped members
-    const otherMembersRes = await queryNeon<any>(
+    // 4. Distribute the $300 retopup fee equally to ALL active uncapped members (including retopup caller)
+    const allMembersRes = await queryNeon<any>(
       `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt"
        FROM "DaoMember"
-       WHERE LOWER(address) != LOWER($1) AND LOWER(status) = 'active'
-       ORDER BY position ASC`,
-      [m.address]
+       WHERE LOWER(status) = 'active'
+       ORDER BY position ASC`
     );
 
-    const eligibleRecipients = otherMembersRes.rows.filter((row: any) => {
+    const eligibleRecipients = allMembersRes.rows.filter((row: any) => {
       const currentPushed = parseFloat(row.pushedAmountBtt || '0');
       const entryBtt = parseFloat(row.entryAmountBtt || '5357.14');
       const capBtt = entryBtt * 5;
@@ -194,21 +214,14 @@ export async function POST(req: NextRequest) {
           [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
         );
 
-        let divTxId: string | null = null;
-        try {
-          divTxId = await broadcastNativePayout(item.address, item.payoutTrob);
-        } catch (e) {
-          console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${item.position}:`, e);
-        }
-
         const actualUsd = parseFloat((item.payoutTrob * bttPriceUsd).toFixed(2));
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
+           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,
           [
             item.address,
             pos,
-            divTxId || `${cleanTx}-retopup-push-${item.position}`,
+            `${cleanTx}-retopup-push-${item.position}`,
             item.payoutTrob,
             actualUsd,
             `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`
@@ -229,7 +242,7 @@ export async function POST(req: NextRequest) {
         distributedToMembers: memberPayouts.filter(p => p.payoutTrob > 0).length,
         retopupCount: (m.retopupCount || 0) + 1,
         txHash: cleanTx,
-        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset to zero, and your $300 fee has been distributed equally to other active council members.`,
+        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset to zero, and your $300 fee has been distributed equally to all active council members.`,
       },
     });
   } catch (err: unknown) {

@@ -44,6 +44,7 @@ import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 import { joinWhatsApp } from '@/utils/whatsapp';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 import {
   WHATSAPP_DAO_GROUP_URL,
@@ -434,7 +435,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
         DAO_CONTRACT_ADDRESS.length > 10
           ? DAO_CONTRACT_ADDRESS
-          : 'TJEnziFHUDhoeds5Yecv4a2XYRzbeJ8eid';
+          : getActiveDaoAddress();
 
       const seatEntryTrob = priceData.seatEntryTrob;
       const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
@@ -468,8 +469,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         throw new Error('On-chain deposit was not confirmed by TrobSafe. Please approve the payment in your wallet.');
       }
 
-      // Wait 3.5s for TrobChain testnet to mine the block containing this payment
-      await new Promise((r) => setTimeout(r, 3500));
+      // Verify on-chain execution receipt from TrobChain FullNode
+      const confirmCheck = await pollOnChainTxSuccess(txId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
+      }
 
       // 2. Register membership in database via backend API with verified on-chain tx & Anti-Sybil device fingerprint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';

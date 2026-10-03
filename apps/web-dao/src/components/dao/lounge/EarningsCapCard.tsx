@@ -5,6 +5,7 @@ import { Info, AlertTriangle, Clock, Loader2, ArrowRight, Zap, TrendingUp, X } f
 import { useWallet } from '@/context/WalletContext';
 import { RetopupModal } from './RetopupModal';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 interface EarningsCapCardProps {
   variant?: 'desktop' | 'mobile' | 'auto';
@@ -117,18 +118,23 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
           txId = result.txid;
         } else if (typeof result === 'string') {
           txId = result;
+        } else if (result?.txid) {
+          txId = result.txid;
+        } else {
+          const errDetail = (result as any)?.Error || (result as any)?.message || 'Transaction was rejected in TrobSafe wallet.';
+          throw new Error(errDetail);
         }
       } catch (callErr: any) {
-        console.warn('Wallet callContract note, attempting fallback:', callErr);
-        const trob = (window as any).trobWeb || (window as any).tronWeb;
-        if (trob && typeof trob.trx?.sendTransaction === 'function') {
-          try {
-            const transferRes = await trob.trx.sendTransaction(contractAddress, callValueSun);
-            txId = transferRes.txid || transferRes.transaction?.txID || null;
-          } catch (tErr) {
-            console.warn('Native transfer fallback note:', tErr);
-          }
-        }
+        throw new Error(callErr.message || 'Transaction was cancelled or rejected in TrobSafe.');
+      }
+
+      if (!txId) {
+        throw new Error('On-chain deposit was not confirmed by TrobSafe.');
+      }
+
+      const confirmCheck = await pollOnChainTxSuccess(txId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain.');
       }
 
       // Synchronize database via API
@@ -138,7 +144,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: activeAddr,
-          txHash: txId || `retopup-${Date.now()}`,
+          txHash: txId,
           retopupFeeTrob,
         }),
       });
@@ -147,8 +153,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
         alert('Re-topup successful! Your 5X Cap has been reset.');
         window.location.reload();
       } else {
-        alert(data.error || 'Re-topup broadcast complete. Syncing status…');
-        window.location.reload();
+        alert(data.error || 'Failed to complete re-topup.');
       }
     } catch (err: any) {
       console.error('Retopup error:', err);

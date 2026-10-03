@@ -81,70 +81,15 @@ export function base58ToHexAddress(base58: string): string | null {
 }
 
 /**
- * Broadcasts a native TROB transfer on TrobChain testnet from deployer treasury
+ * DEPRECATED: Payout Relayer is permanently deactivated.
+ * All peer payouts and cashbacks are autonomously executed directly on-chain
+ * by the EquoraDAO smart contract (_pushTransfer in joinDAO / retopup).
+ * Centralized deployer relayer is disabled to ensure zero double-payouts
+ * and allow the protocol to operate with a renounced / null admin key.
  */
 export async function broadcastNativePayout(
   recipientAddress: string,
   amountTrob: number
 ): Promise<string | null> {
-  try {
-    if (!amountTrob || amountTrob <= 0) return null;
-
-    const recipientHex = base58ToHexAddress(recipientAddress);
-    if (!recipientHex) {
-      console.error('[Payout Relayer] Failed to convert recipient to hex:', recipientAddress);
-      return null;
-    }
-
-    const amountSun = Math.round(amountTrob * 1_000_000);
-    if (amountSun <= 0) return null;
-
-    const deployer = getDeployerWallet();
-    if (!deployer) {
-      console.warn('[Payout Relayer] DEPLOYER_PRIVATE_KEY not configured. Payout relayer inactive.');
-      return null;
-    }
-
-    const payload = {
-      to_address: recipientHex,
-      owner_address: deployer.hexAddress,
-      amount: amountSun,
-    };
-
-    const res = await fetch(`${FULLNODE_URL}/wallet/createtransaction`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const tx = (await res.json()) as any;
-    if (!tx || !tx.txID) {
-      console.error('[Payout Relayer] Createtransaction failed:', tx);
-      return null;
-    }
-
-    const signingKey = new ethers.SigningKey(deployer.key);
-    const sig = signingKey.sign(`0x${tx.txID}`);
-    const vHex = sig.v.toString(16).padStart(2, '0');
-    const signatureHex = sig.r.slice(2) + sig.s.slice(2) + vHex;
-
-    const bRes = await fetch(`${FULLNODE_URL}/wallet/broadcasttransaction`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        txID: tx.txID,
-        raw_data: tx.raw_data,
-        raw_data_hex: tx.raw_data_hex,
-        signature: [signatureHex],
-      }),
-    });
-    const bData = (await bRes.json()) as any;
-    console.log(
-      `[Payout Relayer] Transfer payout broadcasted (${amountTrob} TROB -> ${recipientAddress}):`,
-      bData
-    );
-    return tx.txID as string;
-  } catch (err: unknown) {
-    console.error('[Payout Relayer] Failed to broadcast native payout:', err);
-    return null;
-  }
+  return null;
 }

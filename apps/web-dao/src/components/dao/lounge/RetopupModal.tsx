@@ -19,6 +19,7 @@ import { useWallet } from '@/context/WalletContext';
 import { playPriorityAlertChime } from '@/utils/soundEffects';
 import { getExplorerTxUrl } from '@/utils/explorer';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 interface RetopupModalProps {
   isOpen: boolean;
@@ -137,18 +138,24 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
           txId = result.txid;
         } else if (typeof result === 'string') {
           txId = result;
+        } else if (result?.txid) {
+          txId = result.txid;
+        } else {
+          const errDetail = (result as any)?.Error || (result as any)?.message || 'Transaction was rejected or failed in TrobSafe wallet.';
+          throw new Error(errDetail);
         }
       } catch (callErr: any) {
-        console.warn('callContract note, using direct transfer fallback:', callErr);
-        const trob = (window as any).trobWeb || (window as any).tronWeb;
-        if (trob && typeof trob.trx?.sendTransaction === 'function') {
-          try {
-            const transferRes = await trob.trx.sendTransaction(contractAddress, callValueSun);
-            txId = transferRes.txid || transferRes.transaction?.txID || null;
-          } catch (tErr) {
-            console.warn('Native transfer fallback note:', tErr);
-          }
-        }
+        throw new Error(callErr.message || 'Transaction was cancelled or rejected in TrobSafe.');
+      }
+
+      if (!txId) {
+        throw new Error('On-chain deposit was not confirmed by TrobSafe. Please approve the payment in your wallet.');
+      }
+
+      // Strictly verify execution receipt from TrobChain FullNode
+      const confirmCheck = await pollOnChainTxSuccess(txId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain.');
       }
 
       // Synchronize database via serverless retopup endpoint
@@ -158,7 +165,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: activeAddr,
-          txHash: txId || `retopup-${Date.now()}`,
+          txHash: txId,
           retopupFeeTrob,
         }),
       });
@@ -167,7 +174,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       if (data.success) {
         playPriorityAlertChime();
         setSuccessData({
-          txHash: data.data?.txHash || txId || `tx_${Date.now()}`,
+          txHash: data.data?.txHash || txId,
           distributedToMembers: data.data?.distributedToMembers ?? 0,
           retopupAmountUsd: data.data?.retopupAmountUsd ?? entryAmountUsd,
           retopupTrob: data.data?.retopupTrob ?? retopupFeeTrob,

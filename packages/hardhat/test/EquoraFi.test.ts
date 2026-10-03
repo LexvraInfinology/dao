@@ -305,7 +305,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
       expect(remaining).to.equal(earningsCap - entryFee);
     });
 
-    it("should NOT give cashback to retopup caller and distribute full fee to other active uncapped members", async () => {
+    it("should distribute retopup fee equally to all active uncapped members (inclusive of retopup caller)", async () => {
       const entryFee = await dao.entryFee();
 
       // User 0 joins seat 1
@@ -328,15 +328,18 @@ describe("Equora.Fi — Full Protocol Suite", function () {
       const bal0AfterRetopup = await token.balanceOf(users[0].address);
       const bal1AfterRetopup = await token.balanceOf(users[1].address);
 
-      // User 0 paid entryFee and received NO cashback on retopup (net -entryFee)
-      expect(bal0BeforeRetopup - bal0AfterRetopup).to.equal(entryFee);
+      // Fee is distributed equally among all 2 active uncapped members: entryFee / 2 each
+      const expectedShare = entryFee / 2n;
 
-      // User 1 received the full retopup fee from User 0's retopup
-      expect(bal1AfterRetopup - bal1BeforeRetopup).to.equal(entryFee);
+      // User 0 deposited entryFee, received expectedShare back (net change: entryFee - expectedShare)
+      expect(bal0BeforeRetopup - bal0AfterRetopup).to.equal(entryFee - expectedShare);
 
-      // User 0 lifetime earnings reset to 0
+      // User 1 received their equal share
+      expect(bal1AfterRetopup - bal1BeforeRetopup).to.equal(expectedShare);
+
+      // User 0 lifetime earnings reset to 0, then received expectedShare
       const [earned0] = await dao.getCapProgress(users[0].address);
-      expect(earned0).to.equal(0n);
+      expect(earned0).to.equal(expectedShare);
     });
 
     it("should clamp payout to remaining headroom and emit EarningsCapSurplusRedistributed", async () => {

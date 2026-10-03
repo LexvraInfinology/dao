@@ -2419,16 +2419,16 @@ contract EquoraDAO is ReentrancyGuard {
     }
 
     /**
-     * @dev Distribute re-topup fee to all other active uncapped members:
-     *      - The re-topup caller does NOT receive cashback on re-topup.
-     *      - The full fee is distributed equally among all other active uncapped members.
+     * @dev Distribute re-topup fee equally among all active uncapped members:
+     *      - Retopup caller's cap is reset, so caller is active and uncapped.
+     *      - The full fee is distributed equally among all active uncapped members (e.g. 300 / N).
      *      - Surplus from any member reaching their 5X cap is split equally among remaining uncapped members.
      */
     function _distributeRetopup(address caller, uint256 amount) internal {
         uint256 eligibleCount = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address m = daoMembers[i];
-            if (m != caller && !slotBlank[m] && capHitTimestamp[m] == 0) {
+            if (!slotBlank[m] && capHitTimestamp[m] == 0) {
                 eligibleCount++;
             }
         }
@@ -2442,7 +2442,7 @@ contract EquoraDAO is ReentrancyGuard {
 
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address recipient = daoMembers[i];
-            if (recipient != caller && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+            if (!slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
                 uint256 headroom = earningsCap > lifetimeEarnings[recipient]
                     ? earningsCap - lifetimeEarnings[recipient]
                     : 0;
@@ -2462,9 +2462,9 @@ contract EquoraDAO is ReentrancyGuard {
             }
         }
 
-        // Surplus redistribution: split equally among all other active uncapped members
+        // Surplus redistribution: split equally among all active uncapped members
         if (totalSurplus > 0) {
-            _redistributeSurplusToPool(daoMembers.length, caller, totalSurplus, memberPosition[caller]);
+            _redistributeSurplusToPool(daoMembers.length, address(0), totalSurplus, memberPosition[caller]);
         }
     }
 

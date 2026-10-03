@@ -1,6 +1,7 @@
 name: CI/CD
 
 on:
+  #on push to main or devops branch, on pull request to main or devops branch, and on manual workflow dispatch
   push:
     branches:
       - main
@@ -16,7 +17,6 @@ permissions:
 
 env:
   NODE_VERSION: '22'
-  PNPM_VERSION: '11.8.0'
 
 jobs:
   ci:
@@ -30,8 +30,6 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

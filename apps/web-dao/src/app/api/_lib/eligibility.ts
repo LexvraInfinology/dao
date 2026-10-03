@@ -284,7 +284,7 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
       },
       srVote: {
         voted: currentSrVoted,
-        officialSrAddress: OFFICIAL_SR_TESTNET_B58,
+        officialSrAddress: FULLNODE_RPC_URL.includes('fullnode-one.trobchain.com') ? OFFICIAL_SR_MAINNET_B58 : OFFICIAL_SR_TESTNET_B58,
         passed: srVotePassed,
       },
       missingRequirements: missingReqs,

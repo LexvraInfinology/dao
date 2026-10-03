@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - devops
   pull_request:
     branches:
       - main
+      - devops
   workflow_dispatch:
 
 permissions:
@@ -56,7 +58,7 @@ jobs:
     name: Deploy to Utho VM
     needs: ci
     if: >-
-      github.ref == 'refs/heads/main' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devops') &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -106,7 +108,7 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            "$UTHO_USER@$UTHO_HOST" 'bash -s' < scripts/deploy/utho-vm.sh
+            "$UTHO_USER@$UTHO_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" < scripts/deploy/utho-vm.sh
 
       - name: Remove temporary SSH credentials
         if: always()

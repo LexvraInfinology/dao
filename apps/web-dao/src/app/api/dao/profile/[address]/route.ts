@@ -34,10 +34,11 @@ export async function GET(
       const m = memberRes.rows[0];
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5357.15');
-      const pushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
+      const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
       const earningsCapUsd = 1500;
+      const pushedUsd = Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
       const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
-      const capProgressPct = earningsCapBtt > 0 ? Math.min(100, Math.round((pushedBtt / earningsCapBtt) * 100)) : 0;
+      const capProgressPct = Math.min(100, Math.round((pushedUsd / earningsCapUsd) * 100));
 
       const nftBadges = [
         {
@@ -88,7 +89,7 @@ export async function GET(
           earningsCapBtt,
           earningsCapUsd,
           capProgressPct,
-          isCapped: pushedBtt >= earningsCapBtt,
+          isCapped: pushedBtt >= earningsCapBtt || rawPushedUsd >= earningsCapUsd,
           bttPriceUsd,
           trobPriceUsd: bttPriceUsd,
           priceSource: 'trobchain-live',

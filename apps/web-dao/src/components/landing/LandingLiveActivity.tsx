@@ -208,15 +208,15 @@ export const LandingLiveActivity: React.FC = () => {
               <div className="divide-y divide-slate-100/80">
                 {loading && rows.length === 0 ? (
                   Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="py-3 sm:py-3.5 flex items-center justify-between gap-3 animate-pulse px-1 sm:px-2">
-                      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 shrink-0" />
+                    <div key={i} className="py-2.5 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-3 animate-pulse px-1 sm:px-2">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 shrink-0" />
                         <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="w-32 sm:w-48 h-3.5 bg-slate-200 rounded" />
-                          <div className="w-24 sm:w-36 h-2.5 bg-slate-100 rounded" />
+                          <div className="w-28 sm:w-48 h-3.5 bg-slate-200 rounded" />
+                          <div className="w-20 sm:w-36 h-2.5 bg-slate-100 rounded" />
                         </div>
                       </div>
-                      <div className="w-16 sm:w-24 h-4 bg-slate-100 rounded shrink-0" />
+                      <div className="w-14 sm:w-24 h-4 bg-slate-100 rounded shrink-0" />
                     </div>
                   ))
                 ) : rows.length === 0 ? (
@@ -230,25 +230,25 @@ export const LandingLiveActivity: React.FC = () => {
                   rows.slice(0, 5).map((item) => (
                     <div
                       key={item.id}
-                      className="py-2.5 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-5 hover:bg-white/60 px-1 sm:px-2 rounded-xl sm:rounded-2xl transition-colors"
+                      className="py-2 min-[360px]:py-2.5 sm:py-3.5 flex items-center justify-between gap-2 min-[360px]:gap-3 sm:gap-5 hover:bg-white/60 px-0.5 sm:px-2 rounded-xl sm:rounded-2xl transition-colors"
                     >
-                      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${item.iconBg}`}>
+                      <div className="flex items-center gap-2 min-[360px]:gap-2.5 sm:gap-4 min-w-0 flex-1">
+                        <div className={`w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${item.iconBg}`}>
                           {item.iconEl}
                         </div>
                         <div className="min-w-0 space-y-0.5 flex-1">
-                          <div className="text-xs sm:text-sm md:text-base font-bold text-[#0B132B] whitespace-normal sm:whitespace-nowrap">
+                          <div className="text-xs sm:text-sm md:text-base font-bold text-[#0B132B] truncate tracking-tight">
                             {item.title}
                           </div>
-                          <div className="text-[10px] sm:text-xs text-[#64748B] whitespace-normal sm:whitespace-nowrap font-mono sm:font-sans">
+                          <div className="text-[10px] sm:text-xs text-[#64748B] truncate font-mono sm:font-sans">
                             {item.subtitle}
                           </div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0 pl-3">
+                      <div className="text-right shrink-0 min-w-[62px] min-[360px]:min-w-[72px] sm:min-w-[85px] pl-1.5 sm:pl-3">
                         {item.highlight ? (
                           <div className="flex flex-col items-end">
-                            <span className={`text-xs sm:text-sm md:text-base font-extrabold tabular-nums whitespace-nowrap ${item.highlightColor}`}>
+                            <span className={`text-xs sm:text-sm md:text-base font-black tabular-nums tracking-tight whitespace-nowrap ${item.highlightColor}`}>
                               {item.highlight}
                             </span>
                             <span className="text-[9px] sm:text-[10px] text-[#94A3B8] tabular-nums whitespace-nowrap">

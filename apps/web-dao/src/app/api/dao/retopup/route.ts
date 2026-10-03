@@ -105,28 +105,60 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // 6. Distribute dividend push to all prior active members (< pos)
+    // 6. Distribute dividend push to all prior active members (< pos) with strict 5X cap enforcement
     if (pos > 1) {
       const priorMembers = await queryNeon<any>(
-        `SELECT id, address, position, "pushedAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
+        `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
         [pos]
       );
       for (const prior of priorMembers.rows) {
-        const newPushed = parseFloat(prior.pushedAmountBtt || '0') + cashbackTrob;
+        const currentPushed = parseFloat(prior.pushedAmountBtt || '0');
+        const entryBtt = parseFloat(prior.entryAmountBtt || '5244.75');
+        const capBtt = entryBtt * 5; // Strict 5X Cap
+
+        // 1. If member has already reached or exceeded the 5X cap, STRICTLY skip
+        if (currentPushed >= capBtt) {
+          continue;
+        }
+
+        // 2. Strict clamping: member can ONLY receive up to the exact remaining deficit to 5X cap
+        const maxPayable = Math.max(0, capBtt - currentPushed);
+        const actualPayoutTrob = Math.min(cashbackTrob, maxPayable);
+
+        if (actualPayoutTrob <= 0) continue;
+
+        const newPushed = currentPushed + actualPayoutTrob;
+        const isNowCapped = newPushed >= capBtt;
+
+        let retopupDeadline: string | null = null;
+        if (isNowCapped) {
+          const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
+          retopupDeadline = deadlineDate.toISOString();
+        }
+
         await queryNeon(
-          `UPDATE "DaoMember" SET "pushedAmountBtt" = $1, "updatedAt" = NOW() WHERE id = $2`,
-          [newPushed, prior.id]
+          `UPDATE "DaoMember"
+           SET "pushedAmountBtt" = $1,
+               status = CASE WHEN $2 THEN 'capped' ELSE status END,
+               "cappedAt" = CASE WHEN $2 THEN NOW() ELSE "cappedAt" END,
+               "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
+               "updatedAt" = NOW()
+           WHERE id = $4`,
+          [newPushed, isNowCapped, retopupDeadline, prior.id]
         );
+
         let divTxId: string | null = null;
         try {
-          divTxId = await broadcastNativePayout(prior.address, cashbackTrob);
+          divTxId = await broadcastNativePayout(prior.address, actualPayoutTrob);
         } catch (e) {
           console.error(`[Payout Relayer] Failed to broadcast retopup dividend to Seat #${prior.position}:`, e);
         }
+
+        const actualUsd = parseFloat((actualPayoutTrob * bttPriceUsd).toFixed(2));
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'trobchain-api', $6)`,
-          [prior.address, pos, divTxId || `${cleanTx}-retopup-push-${prior.position}`, cashbackTrob, cashbackUsd, `Dividend push from Seat #${pos} (Retopup Loop)`]
+          [prior.address, pos, divTxId || `${cleanTx}-retopup-push-${prior.position}`, actualPayoutTrob, actualUsd, `Dividend push from Seat #${pos} (Retopup Loop)${isNowCapped ? ' (5X Cap Reached)' : ''}`]
         );
       }
     }

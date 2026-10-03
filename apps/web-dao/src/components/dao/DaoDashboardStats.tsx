@@ -65,10 +65,16 @@ export function DaoDashboardStats() {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    if (!el) return;
-    const slideWidth = el.scrollWidth / 3;
-    const idx = Math.round(el.scrollLeft / slideWidth);
+    if (!el || el.clientWidth === 0) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
     setActiveSlide(Math.min(2, Math.max(0, idx)));
+  };
+
+  const scrollToSlide = (idx: number) => {
+    if (!sliderRef.current) return;
+    const el = sliderRef.current;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
+    setActiveSlide(idx);
   };
 
   const isStatsLoaded = stats !== null && stats !== undefined;
@@ -86,14 +92,51 @@ export function DaoDashboardStats() {
   const myNetCost = myPosition ? (300 - 300 / myPosition).toFixed(2) : null;
 
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-2.5">
+      {/* Mobile Tab Selector (Visible on small screens, hidden on sm+) */}
+      <div className="flex sm:hidden p-1 bg-[#EFF6FF] border border-[#0E62E4]/15 rounded-xl text-xs font-semibold font-jakarta shadow-2xs">
+        <button
+          type="button"
+          onClick={() => scrollToSlide(0)}
+          className={`flex-1 py-1.5 px-1.5 rounded-lg text-center transition-all truncate text-[11px] min-[360px]:text-xs ${
+            activeSlide === 0
+              ? 'bg-[#0E62E4] text-white font-bold shadow-xs'
+              : 'text-[#4F6D87] hover:text-[#0E62E4]'
+          }`}
+        >
+          Genesis Council
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToSlide(1)}
+          className={`flex-1 py-1.5 px-1.5 rounded-lg text-center transition-all truncate text-[11px] min-[360px]:text-xs ${
+            activeSlide === 1
+              ? 'bg-[#0E62E4] text-white font-bold shadow-xs'
+              : 'text-[#4F6D87] hover:text-[#0E62E4]'
+          }`}
+        >
+          Genesis Window
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToSlide(2)}
+          className={`flex-1 py-1.5 px-1.5 rounded-lg text-center transition-all truncate text-[11px] min-[360px]:text-xs ${
+            activeSlide === 2
+              ? 'bg-[#0E62E4] text-white font-bold shadow-xs'
+              : 'text-[#4F6D87] hover:text-[#0E62E4]'
+          }`}
+        >
+          {isMember ? 'Council Seat' : 'Membership'}
+        </button>
+      </div>
+
       <div
         ref={sliderRef}
         onScroll={handleScroll}
-        className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto sm:overflow-x-visible pb-1 sm:pb-0 snap-x snap-mandatory scroll-smooth no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0 w-full"
+        className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto sm:overflow-x-visible pb-1 sm:pb-0 snap-x snap-mandatory scroll-smooth no-scrollbar w-full"
       >
         {/* ── Card 1: Seats Vacant & Queue Status ────────────────────── */}
-        <div className="w-[84vw] min-[360px]:w-[82vw] min-[400px]:w-[320px] sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all">
+        <div className="w-full sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] shrink-0">
@@ -154,7 +197,7 @@ export function DaoDashboardStats() {
         </div>
 
         {/* ── Card 2: Countdown Timer ──────────────────────────────────── */}
-        <div className="w-[84vw] min-[360px]:w-[82vw] min-[400px]:w-[320px] sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all">
+        <div className="w-full sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] shrink-0">
@@ -199,7 +242,7 @@ export function DaoDashboardStats() {
         </div>
 
         {/* ── Card 3: User's Council Position & Personal Data ───────────── */}
-        <div className="w-[84vw] min-[360px]:w-[82vw] min-[400px]:w-[320px] sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all sm:col-span-2 lg:col-span-1">
+        <div className="w-full sm:w-auto shrink-0 snap-center p-3.5 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-2.5 sm:space-y-3.5 transition-all sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg shrink-0 ${
@@ -297,12 +340,7 @@ export function DaoDashboardStats() {
         {[0, 1, 2].map((idx) => (
           <button
             key={idx}
-            onClick={() => {
-              if (sliderRef.current) {
-                const card = sliderRef.current.children[idx] as HTMLElement;
-                card?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-              }
-            }}
+            onClick={() => scrollToSlide(idx)}
             className={`h-1.5 rounded-full transition-all duration-300 ${
               activeSlide === idx ? 'w-5 bg-[#0E62E4]' : 'w-1.5 bg-[#CBD5E1]'
             }`}

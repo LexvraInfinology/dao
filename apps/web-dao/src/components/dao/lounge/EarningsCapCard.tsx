@@ -35,10 +35,11 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
 
   // Normalize effective cap: fixed $300 deposit with 5X earnings cap ($1,500 USD)
   const effectiveCapUsd = earningsCapUsd && earningsCapUsd >= 300 ? earningsCapUsd : 1500;
-  // Calculate progress strictly based on USD earnings against the $1,500 cap
-  const pct         = Math.min(100, Math.max(0, effectiveCapUsd > 0 ? (pushedUsd / effectiveCapUsd) * 100 : capProgressPct));
+  // Strict 5X cap clamping: never display or compute above $1,500.00
+  const effectivePushedUsd = Math.min(effectiveCapUsd, pushedUsd);
+  const pct         = Math.min(100, Math.max(0, effectiveCapUsd > 0 ? (effectivePushedUsd / effectiveCapUsd) * 100 : capProgressPct));
   const isCapReached = isCapped || pct >= 100 || pushedUsd >= effectiveCapUsd;
-  const remaining   = Math.max(0, effectiveCapUsd - pushedUsd);
+  const remaining   = Math.max(0, effectiveCapUsd - effectivePushedUsd);
   const zone        = isCapReached ? '5X Capped' : pct >= 90 ? 'Danger Zone' : pct >= 70 ? 'Caution' : 'Safe Zone';
   const zoneColor   = isCapReached
     ? 'text-[#B91C1C] bg-red-100 border-red-300'
@@ -189,7 +190,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
         <div className="space-y-1 min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-xl sm:text-2xl font-black font-jakarta text-[#071A4A] tracking-tight">
-              ${pushedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              ${effectivePushedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
             <span className="text-xs sm:text-sm font-semibold font-jakarta text-[#60739A]">
               / ${effectiveCapUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD

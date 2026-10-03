@@ -36,7 +36,7 @@ export default function DaoTreasuryPage() {
       <div className="hidden lg:block space-y-6 sm:space-y-8">
         <TreasuryBalanceCard
           balance={balance}
-          totalVaultAssets={lounge?.totalReceivedUsd}
+          totalVaultAssets={Math.min(1500, lounge?.totalReceivedUsd ?? 0)}
           contractAddress={getActiveDaoAddress()}
         />
         <TreasuryWithdrawCard
@@ -57,7 +57,7 @@ export default function DaoTreasuryPage() {
         />
         <TreasuryBalanceCard
           balance={balance}
-          totalVaultAssets={lounge?.totalReceivedUsd}
+          totalVaultAssets={Math.min(1500, lounge?.totalReceivedUsd ?? 0)}
           contractAddress={getActiveDaoAddress()}
         />
       </div>

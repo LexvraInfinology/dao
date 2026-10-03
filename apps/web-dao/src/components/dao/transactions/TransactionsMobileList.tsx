@@ -179,14 +179,14 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
               className="bg-white border border-[#E2ECF9] rounded-2xl p-4 shadow-[0_2px_10px_rgba(15,23,42,0.02)] space-y-3 hover:border-blue-200 transition-all cursor-pointer"
             >
               {/* Top row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   {getTypeIcon(tx.type)}
-                  <span className="text-sm font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</span>
+                  <span className="text-xs sm:text-sm font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-[#60739A] font-medium font-jakarta">{timeAgoLabel(tx.timestamp)}</span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#059669]">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <span className="text-[11px] sm:text-xs text-[#60739A] font-medium font-jakarta whitespace-nowrap">{timeAgoLabel(tx.timestamp)}</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[9.5px] sm:text-[10px] font-bold text-[#059669] whitespace-nowrap">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
                     {tx.status}
                   </span>
@@ -197,7 +197,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
               {(() => {
                 const trobAmt = tx.amountTrob ?? tx.amountBtt;
                 return trobAmt > 0 || tx.amountUsd > 0 ? (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="space-y-0.5">
                       <div
                         className={`text-lg font-black font-jakarta tracking-tight ${

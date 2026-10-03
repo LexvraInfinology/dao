@@ -31,8 +31,9 @@ export async function GET(
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5244.75');
       const capBtt = entryBtt * 5;
-      const pushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
-      const isCapped = pushedBtt >= capBtt;
+      const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
+      const pushedUsd = Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
+      const isCapped = pushedBtt >= capBtt || rawPushedUsd >= earningsCapUsd;
       let retopupDeadline = m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null;
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
@@ -83,13 +84,13 @@ export async function GET(
           status: currentStatus,
           claimableDividendsBtt: 0,
           claimableDividendsUsd: 0,
-          totalReceivedBtt: pushedBtt,
+          totalReceivedBtt: Math.min(capBtt, pushedBtt),
           totalReceivedUsd: pushedUsd,
           earningsCapBtt: capBtt,
           earningsCapTrob: capBtt,
           earningsCapUsd,
-          pushedBtt,
-          pushedTrob: pushedBtt,
+          pushedBtt: Math.min(capBtt, pushedBtt),
+          pushedTrob: Math.min(capBtt, pushedBtt),
           pushedUsd,
           capProgressPct,
           remainingCapBtt,

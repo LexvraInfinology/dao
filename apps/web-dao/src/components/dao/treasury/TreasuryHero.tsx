@@ -9,7 +9,7 @@ interface TreasuryHeroProps {
 }
 
 export const TreasuryHero: React.FC<TreasuryHeroProps> = ({ balance, loungeData }) => {
-  const totalVault = loungeData?.totalReceivedUsd;
+  const totalVault = loungeData?.totalReceivedUsd !== undefined ? Math.min(1500, loungeData.totalReceivedUsd) : undefined;
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-white border border-[#E2ECF9] shadow-[0_4px_25px_rgba(15,23,42,0.03)]">

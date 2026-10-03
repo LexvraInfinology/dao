@@ -48,7 +48,9 @@ export function createApp(): Express {
         if (
           origin.startsWith("http://localhost:") ||
           origin.startsWith("http://127.0.0.1:") ||
-          configuredOrigins.includes(origin)
+          configuredOrigins.includes(origin) ||
+          origin.endsWith("equorafidao.com") ||
+          origin.endsWith("equorafi.com")
         ) {
           return callback(null, true);
         }

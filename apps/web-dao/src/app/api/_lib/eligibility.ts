@@ -174,8 +174,9 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
       `Stake ${REQUIRED_BANDWIDTH_TROB.toLocaleString()} TROB for Bandwidth (currently: ${currentBandwidthStakeTrob.toLocaleString()} TROB)`
     );
   }
+  const activeSrB58 = FULLNODE_RPC_URL.includes('fullnode-one.trobchain.com') ? OFFICIAL_SR_MAINNET_B58 : OFFICIAL_SR_TESTNET_B58;
   if (!srVotePassed) {
-    missingReqs.push(`Cast vote for Official Equora_Fi SR: ${OFFICIAL_SR_TESTNET_B58}`);
+    missingReqs.push(`Cast vote for Official Equora_Fi SR: ${activeSrB58}`);
   }
 
   const condition2Passed = energyPassed && bandwidthPassed && srVotePassed;
@@ -253,12 +254,8 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
     console.warn('[Eligibility] Wallet seat check error:', err);
   }
 
-  const eligibleToDeposit =
-    condition1Passed &&
-    condition2Passed &&
-    waVerified &&
-    !deviceRestriction.hasClaimed &&
-    !walletAlreadyHasSeat;
+  // Protocol condition gating bypassed as requested: allow any wallet without an active seat to deposit
+  const eligibleToDeposit = !walletAlreadyHasSeat;
 
   return {
     address: rawAddress,
@@ -301,14 +298,6 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
       ? 'Eligible to Deposit'
       : walletAlreadyHasSeat
       ? `Deposit Blocked: This wallet already owns Council Seat #${ownedSeatNumber}. Strictly 1 seat per wallet is permitted.`
-      : deviceRestriction.hasClaimed
-      ? `Deposit Blocked: ${deviceRestriction.reason}`
-      : !condition1Passed
-      ? `Deposit Blocked: ${condition1Reason}`
-      : !condition2Passed
-      ? `Deposit Blocked: Condition 2 (${missingReqs.join('; ')})`
-      : !waVerified
-      ? 'Deposit Blocked: Official WhatsApp channel must be joined and verified.'
       : 'Deposit Criteria Met',
   };
 }

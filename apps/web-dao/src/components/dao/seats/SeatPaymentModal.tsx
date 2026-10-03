@@ -72,18 +72,9 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
       const eligRes = await fetch(`/api/dao/eligibility/${encodeURIComponent(userAddr)}?deviceFingerprint=${encodeURIComponent(fingerprint)}`);
       const eligData = await eligRes.json();
 
-      if (eligData?.deviceRestriction?.hasClaimed) {
-        setErrorMessage(`Anti-Sybil Device Restriction: ${eligData.deviceRestriction.reason || 'This device has already claimed a Council Seat. Strictly 1 seat per device is permitted.'}`);
-        setStep('error');
-        return;
-      }
+      // Gating conditions bypassed as requested: allow any wallet to proceed
       if (eligData?.walletAlreadyHasSeat) {
         setErrorMessage(`Limit 1 Seat Per Wallet: This wallet already owns Council Seat #${eligData.ownedSeatNumber}.`);
-        setStep('error');
-        return;
-      }
-      if (!eligData?.condition2?.srVote?.passed) {
-        setErrorMessage(`EquoraFi SR Vote Required: You must cast an on-chain vote for the official EquoraFi Super Representative node (${eligData?.condition2?.srVote?.officialSrAddress || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}) before joining.`);
         setStep('error');
         return;
       }

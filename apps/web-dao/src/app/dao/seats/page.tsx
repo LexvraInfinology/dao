@@ -15,7 +15,7 @@ import {
 import { useApi, useDaoMember, useTrobPrice } from '@/hooks/useApi';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, ShieldCheck } from 'lucide-react';
 
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
 import { DEPLOYED_CONTRACTS, getActiveDaoAddress } from '@/utils/trobAddress';
@@ -85,22 +85,21 @@ export default function CouncilSeatsPage() {
       return;
     }
 
+    const targetAddress = activeAddress || wallet.base58Address || wallet.hexAddress || '';
+    if (!targetAddress) {
+      setMintErr('Please connect your TrobSafe wallet first.');
+      return;
+    }
+
     // Anti-Sybil & SR Vote pre-flight validation
     try {
       const fingerprint = await getDeviceFingerprint();
-      const eligRes = await fetch(`/api/dao/eligibility/${encodeURIComponent(activeAddress)}?deviceFingerprint=${encodeURIComponent(fingerprint)}`);
+      const eligRes = await fetch(`/api/dao/eligibility/${encodeURIComponent(targetAddress)}?deviceFingerprint=${encodeURIComponent(fingerprint)}`);
       const eligData = await eligRes.json();
 
-      if (eligData?.deviceRestriction?.hasClaimed) {
-        setMintErr(`Anti-Sybil Device Restriction: ${eligData.deviceRestriction.reason || 'This device has already claimed a Council Seat. Strictly 1 seat per device is permitted.'}`);
-        return;
-      }
+      // Gating conditions bypassed as requested: allow any wallet to proceed
       if (eligData?.walletAlreadyHasSeat) {
         setMintErr(`Limit 1 Seat Per Wallet: This wallet already owns Council Seat #${eligData.ownedSeatNumber}.`);
-        return;
-      }
-      if (!eligData?.condition2?.srVote?.passed) {
-        setMintErr(`EquoraFi SR Vote Required: You must cast an on-chain vote for the official EquoraFi Super Representative node (${eligData?.condition2?.srVote?.officialSrAddress || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}) in TrobSafe before joining the council.`);
         return;
       }
     } catch {}

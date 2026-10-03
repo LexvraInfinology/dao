@@ -98,6 +98,8 @@ interface EligibilityData {
     claimedSeat?: number;
     claimedAddress?: string;
   };
+  walletAlreadyHasSeat?: boolean;
+  ownedSeatNumber?: number | null;
   eligibleToDeposit: boolean;
   status: string;
   formula?: any;
@@ -257,7 +259,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         return {
           ...prev,
           whatsapp: { joined: true, verifiedAt: prev.whatsapp?.verifiedAt || new Date().toISOString() },
-          eligibleToDeposit: Boolean(prev.condition1?.passed && prev.condition2?.passed && !prev.deviceRestriction?.hasClaimed),
+          eligibleToDeposit: !prev.walletAlreadyHasSeat,
         };
       });
     }
@@ -291,12 +293,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           joined: checked,
           verifiedAt: checked ? (prev.whatsapp?.verifiedAt || new Date().toISOString()) : null,
         },
-        eligibleToDeposit: Boolean(
-          checked &&
-          prev.condition1?.passed &&
-          prev.condition2?.passed &&
-          !prev.deviceRestriction?.hasClaimed
-        ),
+        eligibleToDeposit: !prev.walletAlreadyHasSeat,
       };
     });
   };
@@ -549,14 +546,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     ))
   );
 
-  // Calculate blockers
+  // Calculate blockers (Protocol conditions bypassed as requested: cards remain visible on UI, but deposit is unlocked for all connected wallets)
   const isEligibleToPay = Boolean(
     wallet.isConnected &&
     termsAccepted &&
-    eligibility?.condition1?.passed &&
-    eligibility?.condition2?.passed &&
-    !eligibility?.deviceRestriction?.hasClaimed &&
-    isWaEffectiveJoined &&
     priceData &&
     priceData.seatEntryTrob > 0
   );
@@ -1132,20 +1125,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   </>
                 ) : !wallet.isConnected ? (
                   <span>Connect TrobSafe Wallet to Register</span>
-                ) : eligibility?.deviceRestriction?.hasClaimed ? (
-                  <span className="leading-snug">
-                    Blocked: Device Already Claimed Seat #{eligibility.deviceRestriction.claimedSeat}
-                  </span>
-                ) : !eligibility?.condition1.passed ? (
-                  <span className="leading-snug">Not Eligible: Wallet Must Be Activated On/After 1 Oct 2026</span>
-                ) : !eligibility?.condition2.passed ? (
-                  <span className="leading-snug">Fulfill Resource Stake & SR Vote Requirements</span>
-                ) : !isWaEffectiveJoined ? (
-                  <span className="leading-snug">Confirm WhatsApp Channel Membership</span>
                 ) : !termsAccepted ? (
                   <span>Accept Terms & Conditions to Register</span>
                 ) : (
-                  <span className="leading-snug">Complete Protocol Verification Requirements</span>
+                  <span className="leading-snug">Submit Entry Deposit (300 USD)</span>
                 )}
               </button>
             </div>

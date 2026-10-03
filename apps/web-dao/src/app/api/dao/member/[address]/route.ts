@@ -30,15 +30,31 @@ export async function GET(
   try {
     const cleanAddr = address.trim();
     const { getOnChainMemberPosition } = await import('../../../_lib/txVerifier');
-    const onChainPos = await getOnChainMemberPosition(cleanAddr);
+    const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
+    const base58Addr = toTrobBase58(cleanAddr);
+    const hexAddr = toTronHex(cleanAddr);
+
+    let onChainPos = await getOnChainMemberPosition(cleanAddr);
+    if (onChainPos === 0 && base58Addr !== cleanAddr) {
+      onChainPos = await getOnChainMemberPosition(base58Addr);
+    }
+    if (onChainPos === 0 && hexAddr !== cleanAddr) {
+      onChainPos = await getOnChainMemberPosition(hexAddr);
+    }
 
     const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-      [cleanAddr]
+      `SELECT * FROM "DaoMember" 
+       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR ($4 > 0 AND position = $4))
+         AND LOWER(status) IN ('active', 'capped')
+       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
+       LIMIT 1`,
+      [cleanAddr, base58Addr, hexAddr, onChainPos]
     );
 
-    // If on-chain position is 0, the wallet has NOT joined or deposited on the smart contract
-    if (onChainPos === 0) {
+    let m = rows[0];
+
+    // If on-chain position is 0 and no active DB record exists, user is not a member
+    if (onChainPos === 0 && !m) {
       return NextResponse.json({
         success: true,
         data: {
@@ -65,23 +81,21 @@ export async function GET(
       });
     }
 
-    // User is confirmed on-chain (onChainPos >= 1 && onChainPos <= 100)
-    let m = rows[0];
-
-    // If DB record missing but confirmed on-chain, auto-sync 1:1
-    if (!m) {
+    // If DB record missing but confirmed on-chain, auto-sync 1:1 using canonical Base58 address
+    if (!m && onChainPos > 0) {
+      const canonicalAddr = base58Addr || cleanAddr;
       await queryNeon(
         `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
          ON CONFLICT (address) DO NOTHING`,
-        [cleanAddr, onChainPos]
+        [canonicalAddr, onChainPos]
       );
       const inserted = await queryNeon<any>(
         `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, NOW(), 'onchain-verified', 1, $3, 300, $2, 'blockchain-onchain', $4, 'active', NOW(), NOW())
          ON CONFLICT (position) DO UPDATE SET address = $1, status = 'active', "updatedAt" = NOW()
          RETURNING *`,
-        [cleanAddr, onChainPos, entryAmountBtt, Math.round((entryAmountBtt / onChainPos) * 100) / 100]
+        [canonicalAddr, onChainPos, entryAmountBtt, Math.round((entryAmountBtt / onChainPos) * 100) / 100]
       );
       m = inserted.rows[0];
     }

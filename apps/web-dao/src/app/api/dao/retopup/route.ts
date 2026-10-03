@@ -47,9 +47,17 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    const cleanAddr = address.trim();
+    const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
+    const base58Addr = toTrobBase58(cleanAddr);
+    const hexAddr = toTronHex(cleanAddr);
+
     const memberRes = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-      [address.trim()]
+      `SELECT * FROM "DaoMember" 
+       WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
+         AND LOWER(status) IN ('active', 'capped')
+       LIMIT 1`,
+      [cleanAddr, base58Addr, hexAddr]
     );
 
     if (memberRes.rows.length === 0) {

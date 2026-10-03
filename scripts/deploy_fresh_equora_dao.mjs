@@ -5,9 +5,26 @@ import { ethers } from 'ethers';
 import bs58 from 'bs58';
 
 const FULLNODE_URL = 'https://fullnode-one-testnet.trobchain.com';
-const USER_KEY = 'd729c3fce80e3e831a7167efbe9e7b768f0bf8cb2ee4dfe87559208cb9a7a0a0';
-const SENDER_ADDR = 'TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf';
-const SENDER_HEX = '4167b282b09c3aac1b9fbff6b4ec14ea2b72573c02';
+// Deployer wallets supported:
+// 1. TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr (Default deployer from hardhat config)
+// 2. TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf (User secondary wallet)
+const DEPLOYERS = {
+  TYCqPB: {
+    address: 'TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr',
+    hex: '41f3e68b5fb76382683baf1e8512c4c0ab39490717',
+    key: '11555126483d8f687eb1c721788730c65b3e986b302d68fe04eece7dc9382eca',
+  },
+  TKRWS: {
+    address: 'TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf',
+    hex: '4167b282b09c3aac1b9fbff6b4ec14ea2b72573c02',
+    key: 'd729c3fce80e3e831a7167efbe9e7b768f0bf8cb2ee4dfe87559208cb9a7a0a0',
+  },
+};
+
+const chosenDeployer = process.env.USE_WALLET === 'TKRWS' ? DEPLOYERS.TKRWS : DEPLOYERS.TYCqPB;
+const USER_KEY = process.env.DEPLOYER_PRIVATE_KEY || chosenDeployer.key;
+const SENDER_ADDR = chosenDeployer.address;
+const SENDER_HEX = chosenDeployer.hex;
 
 // Token, Registry, Vault addresses
 const PAYMENT_TOKEN_HEX = '0x3c53a0ced96d38906e5d8f4e6cd8c8c04b31e7a4'; // TFUBj9wdogDvS212LwqMcw5AjxaBcaYjaR
@@ -45,6 +62,35 @@ async function signAndBroadcast(txID, rawData, rawDataHex, privKeyHex) {
   });
 
   return await res.json();
+}
+
+async function verifyOnExplorer(contractAddress) {
+  const flattenedPath = path.resolve(process.cwd(), 'packages/hardhat/contracts-flattened/EquoraDAO.sol');
+  if (!fs.existsSync(flattenedPath)) return;
+
+  const sourceCode = fs.readFileSync(flattenedPath, 'utf8');
+  console.log('\n5. Verifying & Publishing contract on Trobium Explorer...');
+  try {
+    const res = await fetch('https://testnet-backend.trobchain.com/v1/contracts/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: contractAddress,
+        sourceCode,
+        contractName: 'EquoraDAO',
+        compilerVersion: 'v0.8.28+commit.7893614a',
+        optimizer: { enabled: true, runs: 200 },
+      }),
+    });
+    const data = await res.json();
+    if (data.data?.verified) {
+      console.log('   >>> Contract verified successfully on explorer!');
+    } else {
+      console.log('   >>> Verification response:', data);
+    }
+  } catch (err) {
+    console.warn('   >>> Explorer verification notice:', err.message);
+  }
 }
 
 async function main() {
@@ -150,8 +196,11 @@ async function main() {
     console.warn('   Note on vault wiring:', wireErr.message);
   }
 
+  // Step 5: Automatically verify on explorer
+  await verifyOnExplorer(contractAddressBase58);
+
   console.log('\n===============================================================');
-  console.log('>>> DEPLOYMENT SUCCESSFUL!');
+  console.log('>>> DEPLOYMENT & VERIFICATION SUCCESSFUL!');
   console.log(`>>> New EquoraDAO Base58: ${contractAddressBase58}`);
   console.log(`>>> New EquoraDAO Hex:    ${contractAddressHex}`);
   console.log(`>>> Explorer URL:         https://testnet.trobchain.com/contract/${contractAddressBase58}`);

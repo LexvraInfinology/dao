@@ -306,7 +306,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     try {
       if (typeof window === 'undefined') return;
       const w = window as any;
-      const tw = w?.trobWeb || w?.tronWeb || w?.trobSafe;
+      const tw = w?.trobSafe || w?.trobWeb || w?.trob || w?.trobium || w?.tronWeb;
       if (!tw || !tw.transactionBuilder || !tw.trx?.sign) {
         throw new Error('TrobSafe wallet extension is not detected or locked. Please unlock your wallet.');
       }

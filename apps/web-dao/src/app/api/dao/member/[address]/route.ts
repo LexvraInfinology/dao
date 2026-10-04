@@ -76,13 +76,35 @@ export async function GET(
     const { rows } = await queryNeon<any>(
       `SELECT * FROM "DaoMember" 
        WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR position = $4)
-         AND LOWER(status) IN ('active', 'capped')
        ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
        LIMIT 1`,
       [cleanAddr, base58Addr, hexAddr, onChainPos]
     );
 
     let m = rows[0];
+
+    // If member has underfunded/provisional deposit status, lock governance & rewards
+    if (m && (m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000)) {
+      const entryTrob = parseFloat(m.entryAmountBtt || '0');
+      const entryUsd = parseFloat(m.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
+      return NextResponse.json({
+        success: true,
+        data: {
+          isMember: true,
+          position: m.position,
+          nftTokenId: m.nftTokenId || onChainPos,
+          status: 'underfunded',
+          joinedAt: m.joinedAt,
+          entryAmountBtt: entryTrob,
+          entryAmountTrob: entryTrob,
+          entryAmountUsdEstimate: entryUsd,
+          isQualified: false,
+          underfunded: true,
+          notice: `Incomplete Deposit: Council Seat #${m.position} was activated with only ${entryTrob} TROB (~$${entryUsd}). A minimum of $300 USD is strictly required to unlock Council Governance, Matrix Pools & VIP Lounge.`,
+          userId: m.id,
+        },
+      });
+    }
 
     // If DB record missing but confirmed on-chain, auto-sync 1:1 using canonical Base58 address
     if (!m && onChainPos > 0) {

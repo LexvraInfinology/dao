@@ -141,6 +141,10 @@ export const DaoOnboardingModal: React.FC = () => {
       // 1. Mandatory on-chain contract call to EquoraDAO.sol joinDAO()
       const targetContract = getActiveDaoAddress();
       const seatEntryTrob = priceData.seatEntryTrob;
+      // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
+      if (seatEntryTrob < 4500) {
+        throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
+      }
       const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
       const payload = {
         contract_address: targetContract,

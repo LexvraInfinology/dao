@@ -121,6 +121,10 @@ export default function CouncilSeatsPage() {
     setMinting(true);
 
     const seatEntryTrob = price?.seatEntryTrob ?? Math.round((300 / (price?.priceUsd || 0.056)) * 100) / 100;
+    // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
+    if (seatEntryTrob < 4500) {
+      throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
+    }
     const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
     const daoAddress = getActiveDaoAddress();
     const activeAddr = wallet.base58Address ?? wallet.hexAddress ?? '';

@@ -39,13 +39,30 @@ export async function GET(
     const { rows } = await queryNeon<any>(
       `SELECT * FROM "DaoMember" 
        WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR ($4 > 0 AND position = $4))
-         AND LOWER(status) IN ('active', 'capped')
        ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
        LIMIT 1`,
       [cleanAddr, base58Addr, hexAddr, onChainPos]
     );
 
     let m = rows[0];
+
+    // Block VIP Lounge access for underfunded seats
+    if (m && (m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000)) {
+      const entryTrob = parseFloat(m.entryAmountBtt || '0');
+      const entryUsd = parseFloat(m.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
+      return NextResponse.json({
+        success: true,
+        data: {
+          isMember: true,
+          status: 'underfunded',
+          position: m.position,
+          accessGranted: false,
+          totalReceivedUsd: 0,
+          totalReceivedBtt: 0,
+          notice: `Incomplete Entry Deposit: Council Seat #${m.position} was activated with only ${entryTrob} TROB (~$${entryUsd}). A full $300 USD deposit is required to unlock Council Governance, Matrix Pools & VIP Lounge access.`,
+        },
+      });
+    }
 
     // If on-chain position is 0 and no active DB record exists, user is not a member
     if (onChainPos === 0 && !m) {

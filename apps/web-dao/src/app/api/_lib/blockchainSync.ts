@@ -547,31 +547,30 @@ async function syncOnChainMembersToDb(
           ]
         );
 
-        // If Seat > 1, record autonomous on-chain dividend push to prior active members
+        // If Seat > 1, batch record autonomous on-chain dividend push to prior active members atomically
         if (m.position > 1) {
-          const priors = await queryNeon<any>(
-            `SELECT id, address, position, "pushedAmountBtt" FROM "DaoMember" WHERE position < $1 AND LOWER(status) = 'active'`,
-            [m.position]
+          const pushUsd = parseFloat((300 / m.position).toFixed(2));
+          await queryNeon(
+            `UPDATE "DaoMember"
+             SET "pushedAmountBtt" = "pushedAmountBtt" + $1, "updatedAt" = NOW()
+             WHERE position < $2 AND LOWER(status) = 'active'`,
+            [cashbackTrob, m.position]
           );
-          for (const pr of priors.rows) {
-            await queryNeon(
-              `UPDATE "DaoMember" SET "pushedAmountBtt" = "pushedAmountBtt" + $1, "updatedAt" = NOW() WHERE id = $2`,
-              [cashbackTrob, pr.id]
-            );
-            await queryNeon(
-              `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-               VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
-              [
-                pr.address,
-                m.position,
-                `${m.txHash}-pushed-${pr.position}`,
-                m.timestamp,
-                cashbackTrob,
-                parseFloat((300 / m.position).toFixed(2)),
-                `Dividend push from Seat #${m.position}`,
-              ]
-            );
-          }
+          await queryNeon(
+            `INSERT INTO "DaoEvent" (
+               id, "eventType", "userAddress", "incomingPosition", "recipientCount",
+               "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt",
+               "amountUsdEst", "priceSource", reason
+             )
+             SELECT
+               gen_random_uuid(), 'pushed', address, $1, NULL,
+               $2 || '-pushed-' || position, 1, $3, NOW(), $4, $5, 'blockchain-onchain',
+               'Dividend push from Seat #' || $1
+             FROM "DaoMember"
+             WHERE position < $1 AND LOWER(status) = 'active'
+             ON CONFLICT DO NOTHING`,
+            [m.position, m.txHash, m.timestamp, cashbackTrob, pushUsd]
+          );
         }
       }
     } catch (e) {

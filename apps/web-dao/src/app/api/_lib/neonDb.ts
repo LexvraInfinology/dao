@@ -26,27 +26,46 @@ export async function queryNeon<T = any>(
     throw new Error('Unable to resolve Neon SQL endpoint from DATABASE_URL');
   }
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Neon-Connection-String': dbUrl,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: sql,
-      params,
-    }),
-    cache: 'no-store',
-  });
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Neon SQL HTTP error (${res.status}): ${errText}`);
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Neon-Connection-String': dbUrl,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: sql,
+          params,
+        }),
+        cache: 'no-store',
+        keepalive: true,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Neon SQL HTTP error (${res.status}): ${errText}`);
+      }
+
+      const json = await res.json();
+      return {
+        rows: (json.rows || []) as T[],
+        rowCount: json.rowCount || (json.rows ? json.rows.length : 0),
+      };
+    } catch (err: any) {
+      lastError = err;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
   }
 
-  const json = await res.json();
-  return {
-    rows: (json.rows || []) as T[],
-    rowCount: json.rowCount || (json.rows ? json.rows.length : 0),
-  };
+  throw lastError;
 }

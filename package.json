@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=!@equora/hardhat",
+    "dev:all": "turbo run dev",
     "dev:apps": "turbo run dev --filter=!@equora/hardhat",
     "dev:web": "pnpm --filter equora-app dev",
     "dev:dao": "pnpm --filter equora-app dev",

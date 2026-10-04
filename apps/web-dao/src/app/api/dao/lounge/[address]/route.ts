@@ -65,12 +65,20 @@ export async function GET(
     if (!m && onChainPos > 0) {
       const canonicalAddr = base58Addr || cleanAddr;
       const entryAmountBtt = Math.round((300 / bttPriceUsd) * 100) / 100;
-      await queryNeon(
-        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
-         ON CONFLICT (address) DO NOTHING`,
-        [canonicalAddr, onChainPos]
+      const userCheck = await queryNeon<any>(
+        `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+        [canonicalAddr]
       );
+      if (userCheck.rows.length === 0) {
+        const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
+        const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
+        await queryNeon(
+          `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+           ON CONFLICT (address) DO NOTHING`,
+          [canonicalAddr, nextId]
+        );
+      }
       const inserted = await queryNeon<any>(
         `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, NOW(), 'onchain-verified', 1, $3, 300, $2, 'blockchain-onchain', $4, 'active', NOW(), NOW())

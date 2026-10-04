@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
-import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
+import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,8 @@ export async function GET() {
     return NextResponse.json(backendRes);
   }
 
-  // Trigger on-chain sync in background without blocking stats payload
+  // Trigger real-time on-chain state sync in background
+  syncOnChainMembersState().catch(() => {});
   getOnChainDaoTransactions().catch(() => {});
 
   // Live market price with 30s cache

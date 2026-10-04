@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
-import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
+import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
   if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 3000) {
     return NextResponse.json({ success: true, data: cachedMembersPayload });
   }
+
+  // Trigger real-time on-chain state sync in background
+  syncOnChainMembersState().catch(() => {});
 
   // 1. Try local/remote Express backend if configured
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(

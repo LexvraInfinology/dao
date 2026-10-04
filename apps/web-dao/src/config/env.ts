@@ -50,7 +50,10 @@ export const ACTIVE_DAO_CONTRACT_ADDRESS =
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '0x0a59d6a2dcd3b18687c1efe1625642ad85679377';
+  '410a59d6a2dcd3b18687c1efe1625642ad85679377';
+
+// Chain ID (TrobChain Mainnet is 1000)
+export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1000', 10);
 
 // External Matrix URL (configurable via env only, no hardcoded live URL)
 export const MATRIX_URL = process.env.NEXT_PUBLIC_MATRIX_URL || '';

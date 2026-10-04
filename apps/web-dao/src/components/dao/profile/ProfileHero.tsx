@@ -9,8 +9,8 @@ interface ProfileHeroProps {
 }
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, loading }) => {
-  const chainId   = process.env.NEXT_PUBLIC_CHAIN_ID ?? '8812';
-  const chainName = chainId === '8812' ? 'TROBIUM L1' : `Chain ${chainId}`;
+  const chainId   = process.env.NEXT_PUBLIC_CHAIN_ID ?? '1000';
+  const chainName = chainId === '1000' ? 'TROBCHAIN MAINNET' : `Chain ${chainId}`;
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-white border border-[#E2ECF9] shadow-[0_4px_25px_rgba(15,23,42,0.03)]">

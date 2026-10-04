@@ -27,7 +27,7 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
   const status     = loungeData?.status ?? (loungeData?.isMember ? 'active' : 'inactive');
   const ownerAddr  = wallet.base58Address ?? wallet.hexAddress ?? '0x—';
   const shortOwner = ownerAddr.length > 12 ? `${ownerAddr.slice(0, 6)}…${ownerAddr.slice(-4)}` : ownerAddr;
-  const nftContractAddress = process.env.NEXT_PUBLIC_NFT_ADDRESS ?? '0x—';
+  const nftContractAddress = process.env.NEXT_PUBLIC_NFT_ADDRESS ?? 'TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz';
 
   const copyToClipboard = (text: string, type: 'token' | 'owner') => {
     navigator.clipboard?.writeText(text).catch(() => {});

@@ -1,4 +1,4 @@
-import { getActiveDaoAddress, toTrobBase58 } from '@/utils/trobAddress';
+import { getActiveDaoAddress, getActiveDaoHex, toTrobBase58 } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
 import { EXPLORER_API_URL } from '@/config/env';
@@ -280,17 +280,168 @@ export async function getOnChainDaoTransactions(
 
     cachedParsedItems = parsedItems;
 
-    // Reconcile discovered on-chain members into Neon DB only if explicitly enabled
-    if (process.env.ENABLE_HISTORICAL_EXPLORER_SYNC === 'true') {
-      syncOnChainMembersToDb(discoveredMembers).catch((err) => {
-        console.warn('[BlockchainSync] DB sync error:', err);
-      });
-    }
+    // Reconcile discovered on-chain members into Neon DB
+    syncOnChainMembersToDb(discoveredMembers).catch((err) => {
+      console.warn('[BlockchainSync] DB sync error:', err);
+    });
+
+    // Also trigger direct on-chain state sync
+    syncOnChainMembersState().catch((err) => {
+      console.warn('[BlockchainSync] Direct on-chain sync error:', err);
+    });
 
     return filterItems(cachedParsedItems, filterAddress);
   } catch (err) {
     console.error('[BlockchainSync] Failed to process on-chain transactions:', err);
     return filterItems(cachedParsedItems, filterAddress);
+  }
+}
+
+let lastOnChainSyncTime = 0;
+let isSyncingOnChain = false;
+
+/**
+ * Directly queries the live EquoraDAO smart contract on TrobChain Mainnet
+ * and automatically synchronizes any new members or earnings into Neon DB.
+ */
+export async function syncOnChainMembersState(force = false): Promise<{
+  onChainCount: number;
+  dbCount: number;
+  newMembersAdded: number;
+}> {
+  const now = Date.now();
+  if (!force && (now - lastOnChainSyncTime < 4000 || isSyncingOnChain)) {
+    return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
+  }
+
+  isSyncingOnChain = true;
+  lastOnChainSyncTime = now;
+
+  try {
+    const daoHex = getActiveDaoHex();
+    const fullNode = process.env.FULLNODE_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://fullnode-one.trobchain.com';
+
+    const res = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        owner_address: daoHex,
+        contract_address: daoHex,
+        function_selector: 'getAllMembers()',
+        parameter: '',
+      }),
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
+    }
+
+    const json = await res.json();
+    if (!json.constant_result || !json.constant_result[0]) {
+      return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
+    }
+
+    const { Interface, formatUnits } = await import('ethers');
+    const iface = new Interface([
+      'function getAllMembers() view returns (address[])',
+      'function getMemberDetails(address) view returns (bool isMember, uint256 position, uint256 nftTokenId, uint256 fallbackClaimable, uint256 totalEarned, bool isCapped, uint256 retopupDeadline, bool isBlank, uint256 poolClaimable)',
+    ]);
+
+    const memberHexes: string[] = iface.decodeFunctionResult('getAllMembers', '0x' + json.constant_result[0])[0];
+    const onChainCount = memberHexes.length;
+
+    const dbCountRes = await queryNeon<{ count: string; max_pos: string }>(
+      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped')`
+    );
+    const dbCount = parseInt(dbCountRes.rows[0]?.count || '0', 10);
+    const maxDbPos = parseInt(dbCountRes.rows[0]?.max_pos || '0', 10);
+
+    let newMembersAdded = 0;
+
+    if (onChainCount > dbCount || onChainCount > maxDbPos) {
+      console.log(`[OnChainSync] Found ${onChainCount} on-chain members vs ${dbCount} in DB. Syncing...`);
+
+      for (let i = 0; i < memberHexes.length; i++) {
+        const rawHex = memberHexes[i];
+        const b58Addr = toTrobBase58(rawHex);
+        const position = i + 1;
+
+        const existing = await queryNeon<any>(
+          `SELECT id, address, position FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+          [position]
+        );
+
+        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase()) {
+          let totalEarnedTrob = 0;
+          try {
+            const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                owner_address: daoHex,
+                contract_address: daoHex,
+                function_selector: 'getMemberDetails(address)',
+                parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
+              }),
+              cache: 'no-store',
+            });
+            if (detailRes.ok) {
+              const detailJson = await detailRes.json();
+              if (detailJson.constant_result?.[0]) {
+                const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detailJson.constant_result[0]);
+                totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
+              }
+            }
+          } catch {}
+
+          const userCheck = await queryNeon<any>(
+            `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+            [b58Addr]
+          );
+
+          if (userCheck.rows.length === 0) {
+            const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
+            const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
+            await queryNeon(
+              `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+               VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+               ON CONFLICT (address) DO NOTHING`,
+              [b58Addr, nextId]
+            );
+          }
+
+          await queryNeon(
+            `INSERT INTO "DaoMember" (
+               id, address, position, "joinedAt", "txHash", "blockNumber",
+               "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId",
+               "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt"
+             )
+             VALUES (
+               gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
+               5084.75, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
+             )
+             ON CONFLICT (position) DO UPDATE
+             SET address = $1, "pushedAmountBtt" = $3, status = 'active', "updatedAt" = NOW()`,
+            [b58Addr, position, totalEarnedTrob]
+          );
+
+          newMembersAdded++;
+        }
+      }
+
+      await queryNeon(
+        `UPDATE "DaoInstance" SET capacity = 100, "isClosed" = $1, "updatedAt" = NOW() WHERE id = 1`,
+        [onChainCount >= 100]
+      );
+    }
+
+    return { onChainCount, dbCount: Math.max(dbCount, onChainCount), newMembersAdded };
+  } catch (err) {
+    console.error('[OnChainSync] Error in syncOnChainMembersState:', err);
+    return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
+  } finally {
+    isSyncingOnChain = false;
   }
 }
 
@@ -324,13 +475,21 @@ async function syncOnChainMembersToDb(
 
   for (const m of members) {
     try {
-      // 1. Ensure User record exists
-      await queryNeon(
-        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
-         ON CONFLICT (address) DO NOTHING`,
-        [m.user, m.position, m.timestamp]
+      // 1. Ensure User record exists safely without unique userId collision
+      const existingUser = await queryNeon<any>(
+        `SELECT id FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+        [m.user]
       );
+      if (existingUser.rows.length === 0) {
+        const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
+        const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
+        await queryNeon(
+          `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+           ON CONFLICT (address) DO NOTHING`,
+          [m.user, nextId, m.timestamp]
+        );
+      }
 
       // 2. Ensure DaoMember record exists and matches on-chain position
       const existing = await queryNeon<any>(

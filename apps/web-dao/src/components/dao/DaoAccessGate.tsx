@@ -349,14 +349,19 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         let txVote: any = null;
         const voteMethod = (tw.transactionBuilder?.voteWitnessAccount || tw.transactionBuilder?.vote)?.bind(tw.transactionBuilder);
         if (voteMethod) {
-          // Prioritize Testnet SR on testnet environments
-          try {
-            txVote = await voteMethod({ [OFFICIAL_EQUORA_TESTNET_SR]: votesToCast }, activeAddress);
-          } catch { /* ignore */ }
+          const isTestnet = process.env.NEXT_PUBLIC_TARGET_NETWORK === 'testnet';
+          const primarySr = isTestnet ? (OFFICIAL_EQUORA_TESTNET_SR || OFFICIAL_EQUORA_SR) : (OFFICIAL_EQUORA_SR || OFFICIAL_EQUORA_TESTNET_SR);
+          const fallbackSr = primarySr === OFFICIAL_EQUORA_SR ? OFFICIAL_EQUORA_TESTNET_SR : OFFICIAL_EQUORA_SR;
 
-          if (!txVote || txVote.Error) {
+          if (primarySr) {
             try {
-              txVote = await voteMethod({ [OFFICIAL_EQUORA_SR]: votesToCast }, activeAddress);
+              txVote = await voteMethod({ [primarySr]: votesToCast }, activeAddress);
+            } catch { /* ignore */ }
+          }
+
+          if ((!txVote || txVote.Error) && fallbackSr) {
+            try {
+              txVote = await voteMethod({ [fallbackSr]: votesToCast }, activeAddress);
             } catch { /* ignore */ }
           }
 
@@ -444,6 +449,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         call_value:        callValueSun,
         fee_limit:         100_000_000,
         owner_address:     activeAddr,
+        network:           process.env.NEXT_PUBLIC_TARGET_NETWORK || 'mainnet',
       };
 
       let txId: string | null = null;

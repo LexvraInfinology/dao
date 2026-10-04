@@ -630,7 +630,7 @@ export function useTrobWallet(): TrobWalletState {
         callValue: callValueSun,
         fee_limit: feeLimitSun,
         feeLimit: feeLimitSun,
-        network: p.network || 'testnet',
+        network: p.network || (process.env.NEXT_PUBLIC_TARGET_NETWORK === 'testnet' ? 'testnet' : 'mainnet'),
       };
 
       // 1. TrobSafe native triggersmartcontract

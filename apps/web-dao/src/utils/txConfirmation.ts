@@ -4,6 +4,8 @@
  * Ensures transactions that revert or run out of energy are immediately caught and flagged.
  */
 
+import { FULLNODE_RPC_URL } from '@/config/env';
+
 export async function pollOnChainTxSuccess(
   txId: string,
   timeoutMs = 15000
@@ -13,9 +15,7 @@ export async function pollOnChainTxSuccess(
     return { success: false, error: 'Invalid transaction hash received from wallet.' };
   }
 
-  const fullnodeUrl =
-    process.env.NEXT_PUBLIC_RPC_URL ||
-    'https://fullnode-one-testnet.trobchain.com';
+  const fullnodeUrl = FULLNODE_RPC_URL;
 
   const startTime = Date.now();
 

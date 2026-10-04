@@ -326,7 +326,8 @@ export function createApp(): Express {
 
     try {
       const hexAddress = toTronHex(rawAddress);
-      const acctRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/getaccount", {
+      const fullnode = process.env.FULLNODE_URL || process.env.RPC_URL || "https://fullnode-one.trobchain.com";
+      const acctRes = await fetch(`${fullnode}/wallet/getaccount`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: hexAddress }),
@@ -645,7 +646,8 @@ export function createApp(): Express {
             await new Promise((r) => setTimeout(r, 1200));
           }
           try {
-            const trobRes = await fetch("https://fullnode-one-testnet.trobchain.com/wallet/gettransactionbyid", {
+            const fullnode = process.env.FULLNODE_URL || process.env.RPC_URL || "https://fullnode-one.trobchain.com";
+            const trobRes = await fetch(`${fullnode}/wallet/gettransactionbyid`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ value: cleanTx }),

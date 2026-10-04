@@ -24,3 +24,12 @@ packages/hardhat/cache
 packages/hardhat/typechain-types
 apps/web-dao/figma_reference
 docs
+scratch
+**/scratch
+*.pem
+*.key
+*.p8
+*.p12
+*.sql
+tmp
+**/tmp

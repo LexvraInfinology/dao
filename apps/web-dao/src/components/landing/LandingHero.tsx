@@ -3,13 +3,23 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Play, ShieldCheck, Lock } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
+import { useWallet } from '@/context/WalletContext';
+import { useDaoMember } from '@/hooks/useApi';
 
 export const LandingHero: React.FC = () => {
   const [videoOpen, setVideoOpen] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  const wallet = useWallet();
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
+  const { data: memberData } = useDaoMember(activeAddress);
+
+  const isUnderfunded = Boolean(memberData?.status === 'underfunded' || memberData?.underfunded);
+  const isMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0 && !isUnderfunded);
+  const seatPos = memberData?.position ?? null;
 
   const handleVideoReady = () => {
     setVideoLoaded(true);
@@ -66,9 +76,13 @@ export const LandingHero: React.FC = () => {
             <div className="max-w-[340px] min-[360px]:max-w-[380px] min-[400px]:max-w-[430px] sm:max-w-xl lg:max-w-2xl p-0 sm:p-6 lg:p-7 bg-transparent sm:bg-white/10 backdrop-blur-none sm:backdrop-blur-[2px] border-none shadow-none space-y-3.5 min-[360px]:space-y-4 sm:space-y-6 lg:space-y-7">
               {/* Pill Badge — Crisp without blur */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/85 border border-blue-200/50 shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
-                <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
-                  Genesis DAO Council
+                <span className={`w-1.5 h-1.5 rounded-full ${isUnderfunded ? 'bg-red-500' : isMember ? 'bg-emerald-500' : 'bg-[#155EEF]'} animate-pulse`} />
+                <span className={`text-[10px] sm:text-[11px] font-bold tracking-wider uppercase font-inter ${isUnderfunded ? 'text-red-600' : isMember ? 'text-emerald-700' : 'text-[#155EEF]'}`}>
+                  {isUnderfunded
+                    ? `Council Seat #${seatPos} • Incomplete Deposit`
+                    : isMember
+                    ? `Genesis Council Member #${seatPos}`
+                    : 'Genesis DAO Council'}
                 </span>
               </div>
 
@@ -87,13 +101,38 @@ export const LandingHero: React.FC = () => {
 
               {/* CTAs */}
               <div className="flex flex-row items-center justify-start gap-2.5 min-[360px]:gap-3 sm:gap-4 pt-1.5 min-[360px]:pt-2 sm:pt-3 lg:pt-4 w-full max-w-sm sm:max-w-md">
-                <Link
-                  href="/dao"
-                  className="px-4 min-[360px]:px-5 sm:px-8 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-bold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_4px_14px_rgba(21,94,239,0.35)] hover:shadow-[0_8px_20px_rgba(21,94,239,0.45)] transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer text-center whitespace-nowrap active:scale-[0.98]"
-                >
-                  <span>Claim Seat</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-                </Link>
+                {isUnderfunded ? (
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent('dao:open-retopup', {
+                          detail: { seatPosition: seatPos },
+                        })
+                      )
+                    }
+                    className="px-4 min-[360px]:px-5 sm:px-8 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-bold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-white bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 shadow-[0_4px_14px_rgba(239,68,68,0.35)] transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer text-center whitespace-nowrap active:scale-[0.98]"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Re-topup Seat #{seatPos}</span>
+                  </button>
+                ) : isMember ? (
+                  <Link
+                    href="/dao"
+                    className="px-4 min-[360px]:px-5 sm:px-8 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-bold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-white bg-emerald-600 hover:bg-emerald-700 shadow-[0_4px_14px_rgba(16,185,129,0.35)] transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer text-center whitespace-nowrap active:scale-[0.98]"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Enter Council (#{seatPos})</span>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform shrink-0" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dao/seats"
+                    className="px-4 min-[360px]:px-5 sm:px-8 py-2.5 min-[360px]:py-3 sm:py-3.5 rounded-full font-bold uppercase text-[10px] min-[360px]:text-[11px] sm:text-xs tracking-[0.05em] text-white bg-[#155EEF] hover:bg-[#004EEB] shadow-[0_4px_14px_rgba(21,94,239,0.35)] hover:shadow-[0_8px_20px_rgba(21,94,239,0.45)] transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer text-center whitespace-nowrap active:scale-[0.98]"
+                  >
+                    <span>Claim Seat</span>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform shrink-0" />
+                  </Link>
+                )}
 
                 <button
                   onClick={() => setVideoOpen(true)}

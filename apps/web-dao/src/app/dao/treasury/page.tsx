@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { TreasuryHero } from '@/components/dao/treasury/TreasuryHero';
 import { TreasuryBalanceCard } from '@/components/dao/treasury/TreasuryBalanceCard';
 import { TreasuryWithdrawCard } from '@/components/dao/treasury/TreasuryWithdrawCard';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
@@ -30,6 +31,7 @@ export default function DaoTreasuryPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
+      <UnderfundedAlertBanner />
       <TreasuryHero balance={balance} loungeData={lounge} />
 
       {/* Desktop */}

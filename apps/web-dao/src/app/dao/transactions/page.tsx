@@ -5,6 +5,7 @@ import { TransactionsHero } from '@/components/dao/transactions/TransactionsHero
 import { TransactionsTable } from '@/components/dao/transactions/TransactionsTable';
 import { TransactionsMobileMetrics } from '@/components/dao/transactions/TransactionsMobileMetrics';
 import { TransactionsMobileList } from '@/components/dao/transactions/TransactionsMobileList';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
 import { useTransactions } from '@/hooks/useApi';
 
@@ -55,6 +56,7 @@ export default function DaoTransactionsPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden pb-16 sm:pb-24">
+      <UnderfundedAlertBanner />
       <TransactionsHero
         totalTransactions={totalRecords}
         bttPriceUsd={trobPrice > 0 ? trobPrice : undefined}

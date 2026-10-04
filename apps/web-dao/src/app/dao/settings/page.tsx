@@ -27,12 +27,14 @@ import WalletAccessCard from '@/components/dao/settings/wallet/WalletAccessCard'
 import ProfileVisibilityCard from '@/components/dao/settings/privacy/ProfileVisibilityCard';
 import DaoActivityPrivacyCard from '@/components/dao/settings/privacy/DaoActivityPrivacyCard';
 import DataPrivacyCard from '@/components/dao/settings/privacy/DataPrivacyCard';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 
 export default function DaoSettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTabType>('account');
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-fadeIn font-sans pb-12 max-w-5xl mx-auto w-full">
+      <UnderfundedAlertBanner />
       {/* 1. Hero Banner */}
       <SettingsHero />
 

@@ -1,4 +1,4 @@
-import { getActiveDaoAddress, getActiveDaoHex, toTrobBase58 } from '@/utils/trobAddress';
+import { getActiveDaoAddress, getActiveDaoHex, toTrobBase58, toTronHex } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
 import { EXPLORER_API_URL } from '@/config/env';
@@ -450,10 +450,14 @@ function filterItems(items: TransactionItem[], filterAddress?: string | null): T
     return items;
   }
   const clean = filterAddress.trim().toLowerCase();
+  const b58 = toTrobBase58(clean).toLowerCase();
+  const hex = toTronHex(clean).toLowerCase();
   return items.filter((item) => {
+    const from = (item.from || '').toLowerCase();
+    const to = (item.to || '').toLowerCase();
     return (
-      item.from.toLowerCase() === clean ||
-      item.to.toLowerCase() === clean
+      from === clean || from === b58 || from === hex ||
+      to === clean || to === b58 || to === hex
     );
   });
 }

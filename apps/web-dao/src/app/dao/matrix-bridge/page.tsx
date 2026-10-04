@@ -7,6 +7,7 @@ import MatrixFeatureCards from '@/components/dao/matrix/MatrixFeatureCards';
 import MatrixTreeGraph from '@/components/dao/matrix/MatrixTreeGraph';
 import { ProtocolPoolsCard } from '@/components/dao/matrix/ProtocolPoolsCard';
 import { MatrixRegisterModal } from '@/components/dao/matrix/MatrixRegisterModal';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember } from '@/hooks/useApi';
@@ -24,6 +25,7 @@ export default function MatrixBridgePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6 lg:space-y-8 animate-fadeIn font-sans py-2 sm:py-6 lg:py-8 max-w-5xl mx-auto w-full px-1">
+      <UnderfundedAlertBanner />
       {/* Header Section (Centered) */}
       <div className="text-center flex flex-col items-center">
         {/* Status Pill Badge: COMING SOON / LIVE READY */}

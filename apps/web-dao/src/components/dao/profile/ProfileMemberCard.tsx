@@ -24,7 +24,8 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
 
   const memberId  = profile?.userId  ? `#${profile.userId}`  : '—';
   const seatNum   = profile?.position ? `#${profile.position}` : '—';
-  const isActive  = profile?.status === 'active';
+  const isUnderfunded = Boolean(profile?.status === 'underfunded' || profile?.underfunded);
+  const isActive  = profile?.status === 'active' && !isUnderfunded;
   const joinedAt  = profile?.joinedAt
     ? new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
@@ -40,6 +41,14 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
     navigator.clipboard.writeText(displayAddr).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleRetopupClick = () => {
+    window.dispatchEvent(
+      new CustomEvent('dao:open-retopup', {
+        detail: { seatPosition: profile?.position },
+      })
+    );
   };
 
   if (loading && !profile) {
@@ -70,12 +79,14 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
                 Member {memberId}
               </h2>
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                isActive
+                isUnderfunded
+                  ? 'bg-red-50 border border-red-200 text-red-600'
+                  : isActive
                   ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#047857]'
                   : 'bg-slate-100 border border-slate-200 text-slate-500'
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-[#10B981]' : 'bg-slate-400'}`} />
-                {isActive ? 'Active Member' : (profile?.status ?? 'Unknown')}
+                <span className={`w-1.5 h-1.5 rounded-full ${isUnderfunded ? 'bg-red-500' : isActive ? 'bg-[#10B981]' : 'bg-slate-400'}`} />
+                {isUnderfunded ? 'Underfunded (Locked)' : isActive ? 'Active Member' : (profile?.status ?? 'Unknown')}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -103,8 +114,9 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
         <div className="bg-[#F7FBFF] border border-[#E2ECF9] rounded-2xl p-4 sm:p-5 w-72 xl:w-80 space-y-3 shrink-0 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold font-sans text-[#4F6D87] uppercase tracking-wider">COUNCIL SEAT</span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#059669]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />Good Standing
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${isUnderfunded ? 'text-red-600' : 'text-[#059669]'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isUnderfunded ? 'bg-red-500' : 'bg-[#10B981]'}`} />
+              {isUnderfunded ? 'Deposit Incomplete' : 'Good Standing'}
             </span>
           </div>
           <div>
@@ -113,10 +125,20 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
               {joinedAt !== '—' ? `CLAIMED: ${joinedAt}` : 'GENESIS COUNCIL'}
             </div>
           </div>
-          <Link href="/dao/seats"
-            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
-            <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {isUnderfunded ? (
+            <button
+              onClick={handleRetopupClick}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <span>Complete Re-topup ($300)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <Link href="/dao/seats"
+              className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
+              <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -135,9 +157,15 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
           <div className="space-y-1.5">
             <div className="flex items-center justify-center gap-2">
               <h2 className="text-xl font-black font-sans text-[#14304A] tracking-tight">Member {memberId}</h2>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-[#EFF6FF] text-[#0E62E4]' : 'bg-slate-100 text-slate-500'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-[#0E62E4]' : 'bg-slate-400'}`} />
-                {isActive ? 'Active' : (profile?.status ?? 'Unknown')}
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                isUnderfunded
+                  ? 'bg-red-50 text-red-600 border border-red-200'
+                  : isActive
+                  ? 'bg-[#EFF6FF] text-[#0E62E4]'
+                  : 'bg-slate-100 text-slate-500'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isUnderfunded ? 'bg-red-500' : isActive ? 'bg-[#0E62E4]' : 'bg-slate-400'}`} />
+                {isUnderfunded ? 'Underfunded (Locked)' : isActive ? 'Active' : (profile?.status ?? 'Unknown')}
               </span>
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFF6FF] text-xs font-mono font-semibold text-[#14304A]">
@@ -153,7 +181,9 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
         <div className="bg-[#F7FBFF] border border-[#E2ECF9] rounded-2xl p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold font-sans text-[#4F6D87] uppercase tracking-wider">ASSIGNED POSITION</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0E62E4] text-[9px] font-bold">Tier 1 Genesis</span>
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${isUnderfunded ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-[#EFF6FF] text-[#0E62E4]'}`}>
+              {isUnderfunded ? 'Incomplete Deposit' : 'Tier 1 Genesis'}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white border border-[#E2ECF9] text-[#0E62E4] flex items-center justify-center shrink-0 shadow-2xs">
@@ -161,13 +191,25 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
             </div>
             <div className="min-w-0">
               <div className="text-sm font-bold font-sans text-[#14304A] truncate">Genesis Council Seat {seatNum}</div>
-              <div className="text-[10px] text-[#4F6D87] font-sans truncate">Immutable Voting Key · Valid Epoch 2026–2028</div>
+              <div className="text-[10px] text-[#4F6D87] font-sans truncate">
+                {isUnderfunded ? 'Seat Locked • Re-topup $300 Required' : 'Immutable Voting Key · Valid Epoch 2026–2028'}
+              </div>
             </div>
           </div>
-          <Link href="/dao/seats"
-            className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
-            <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {isUnderfunded ? (
+            <button
+              onClick={handleRetopupClick}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <span>Complete Re-topup ($300)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <Link href="/dao/seats"
+              className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs">
+              <span>View Seat</span><ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </div>
       </div>
     </>

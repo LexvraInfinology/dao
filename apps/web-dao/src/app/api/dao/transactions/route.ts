@@ -60,8 +60,12 @@ export async function GET(req: NextRequest) {
         let params: any[] = [];
 
         if (address && address.trim()) {
-          params.push(address.trim().toLowerCase());
-          whereClauses.push(`LOWER("userAddress") = $${params.length}`);
+          const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
+          const clean = address.trim();
+          const b58 = toTrobBase58(clean);
+          const hex = toTronHex(clean);
+          params.push(clean.toLowerCase(), b58.toLowerCase(), hex.toLowerCase());
+          whereClauses.push(`LOWER("userAddress") IN ($${params.length - 2}, $${params.length - 1}, $${params.length})`);
         }
 
         const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';

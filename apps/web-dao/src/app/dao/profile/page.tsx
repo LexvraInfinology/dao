@@ -6,6 +6,7 @@ import { ProfileMemberCard } from '@/components/dao/profile/ProfileMemberCard';
 import { ProfileMetricsGrid } from '@/components/dao/profile/ProfileMetricsGrid';
 import { ProfileDaoDetails } from '@/components/dao/profile/ProfileDaoDetails';
 import { ProfileRecentActivity } from '@/components/dao/profile/ProfileRecentActivity';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
 import { useDaoProfile, useTransactions } from '@/hooks/useApi';
 
@@ -25,6 +26,8 @@ export default function DaoProfilePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6 lg:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
+      <UnderfundedAlertBanner />
+
       <ProfileHero profile={profile} loading={profileLoading} />
 
       <ProfileMemberCard profile={profile} loading={profileLoading} />

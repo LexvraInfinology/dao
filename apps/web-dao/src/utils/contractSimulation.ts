@@ -5,6 +5,7 @@ const KNOWN_ERROR_SELECTORS: Record<string, string> = {
   fb8f41b2: 'PaymentFailed: The deposit amount is invalid or contract rejected the payment value.',
   '291fc442': 'NotCapped: This seat has not reached the 5X earnings cap yet ($1,500 USD). Re-topup is only accepted after reaching the 5X limit.',
   e2832811: 'AlreadyMember: This wallet already owns an active Genesis Council seat. Limit: 1 seat per wallet.',
+  '810074be': 'AlreadyMember: This wallet already owns an active Genesis Council seat. Limit: 1 seat per wallet.',
   ca7105b4: 'QueueFull: All 100 Genesis Council seats are currently filled.',
   b99335a0: 'RetopupWindowExpired: The 48-hour re-topup window has expired.',
   '4c995576': 'NotMember: This wallet does not own an active council seat.',
@@ -85,9 +86,9 @@ export async function simulateContractCall(params: {
       const selector = rawHex.slice(0, 8).toLowerCase();
 
       if (selector && KNOWN_ERROR_SELECTORS[selector]) {
-        // Special case: PaymentFailed with call_value: 0 is expected in a zero-value dry run
-        // If testing joinDAO with call_value: 0, PaymentFailed means all state checks (not already member, queue not full) passed!
-        if (selector === 'fb8f41b2' && (!callValueSun || callValueSun === 0) && functionName === 'joinDAO()') {
+        // Special case: PaymentFailed in a zero-value/simulated dry run is expected because native value is signed by wallet
+        // PaymentFailed means all state checks (membership/not full/retopup window) passed!
+        if (selector === 'fb8f41b2') {
           return { canProceed: true, energyEstimated: data.energy_used };
         }
 

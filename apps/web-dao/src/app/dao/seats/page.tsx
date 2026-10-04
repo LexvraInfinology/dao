@@ -18,6 +18,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { Check, Loader2, ShieldCheck } from 'lucide-react';
 
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { DEPLOYED_CONTRACTS, getActiveDaoAddress } from '@/utils/trobAddress';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
@@ -54,8 +55,9 @@ export default function CouncilSeatsPage() {
 
   // Default selected seat: user's own seat → or next available → or first seat
   // Strictly verified on-chain: non-members NEVER receive a false seat allocation!
-  const isRealMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0);
-  const mySeatNumber = isRealMember ? Number(memberData!.position) : null;
+  const isUnderfundedMember = Boolean(memberData?.status === 'underfunded' || memberData?.underfunded);
+  const isRealMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0 && !isUnderfundedMember);
+  const mySeatNumber = (isRealMember || isUnderfundedMember) ? Number(memberData!.position) : null;
 
   const defaultSeat = useMemo(() => {
     if (mySeatNumber) {
@@ -80,6 +82,10 @@ export default function CouncilSeatsPage() {
 
   // ── Initiate seat claim modal with Anti-Sybil & SR vote pre-checks ────────
   const handleOpenClaimModal = async (seatNumber: number) => {
+    if (isUnderfundedMember) {
+      setMintErr(`Council Seat #${memberData!.position} is registered to this wallet but underfunded. You cannot mint a second seat. Please complete Re-topup to unlock your seat.`);
+      return;
+    }
     if (isRealMember) {
       setMintErr(`You already own Council Seat #${memberData!.position}. Limit 1 seat per wallet.`);
       return;
@@ -221,8 +227,11 @@ export default function CouncilSeatsPage() {
 
       <CouncilStatCards />
 
+      {/* Underfunded Locked Seat Banner */}
+      <UnderfundedAlertBanner />
+
       {/* Connected Wallet Status Banner — 100% Direct Blockchain Sync Indicator */}
-      {wallet.isConnected && (
+      {wallet.isConnected && !isUnderfundedMember && (
         <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
           isRealMember
             ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'

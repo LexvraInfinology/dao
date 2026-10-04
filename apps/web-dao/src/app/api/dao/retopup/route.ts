@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const memberRes = await queryNeon<any>(
       `SELECT * FROM "DaoMember" 
        WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
-         AND LOWER(status) IN ('active', 'capped')
+         AND LOWER(status) IN ('active', 'capped', 'underfunded')
        LIMIT 1`,
       [cleanAddr, base58Addr, hexAddr]
     );
@@ -65,9 +65,10 @@ export async function POST(req: NextRequest) {
     }
 
     const m = memberRes.rows[0];
+    const isUnderfunded = m.status === 'underfunded';
 
-    // 1. Check if 48-Hour retopup window has expired
-    if (m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
+    // 1. Check if 48-Hour retopup window has expired (only for capped members)
+    if (!isUnderfunded && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
       await queryNeon(
         `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
         [m.id]
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     const retopupTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
     const pos = m.position || 1;
 
-    // 2. Reset member's earnings counter to 0 (no self-cashback on retopup; initial join already gave cashback), clear cap/deadline, increment retopup loop count
+    // 2. Reset member's earnings counter to 0, unlock underfunded status to 'active', update entry amounts if underfunded
     await queryNeon(
       `UPDATE "DaoMember"
        SET "pushedAmountBtt" = 0,
@@ -91,12 +92,18 @@ export async function POST(req: NextRequest) {
            "retopupDeadline" = NULL,
            "cappedAt" = NULL,
            "retopupCount" = COALESCE("retopupCount", 0) + 1,
+           "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN $2 ELSE "entryAmountBtt" END,
+           "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300 ELSE "entryAmountUsdAtJoin" END,
            "updatedAt" = NOW()
        WHERE id = $1`,
-      [m.id]
+      [m.id, retopupTrob]
     );
 
     // 3. Record retopup event in DaoEvent
+    const eventReason = isUnderfunded
+      ? `Underfunded Council Seat Activated: Full $300 Entry Retopup completed (${retopupTrob} TROB) • Seat #${pos}`
+      : `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupTrob} TROB) • Seat #${pos}`;
+
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
        VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)`,
@@ -105,7 +112,7 @@ export async function POST(req: NextRequest) {
         pos,
         cleanTx,
         retopupTrob,
-        `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupTrob} TROB) • Seat #${pos}`,
+        eventReason,
       ]
     );
 

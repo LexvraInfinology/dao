@@ -11,11 +11,41 @@ import { EarningsCapCard } from '@/components/dao/lounge/EarningsCapCard';
 import { IncomeChannelsCard } from '@/components/dao/lounge/IncomeChannelsCard';
 import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { Lock, ShieldAlert } from 'lucide-react';
 
 export default function MemberLoungePage() {
   const wallet     = useWallet();
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: lounge, loading } = useLounge(activeAddress);
+
+  const isUnderfunded = Boolean(
+    lounge?.status === 'underfunded' ||
+    lounge?.accessGranted === false ||
+    (lounge?.isMember && lounge?.entryAmountBtt && lounge.entryAmountBtt < 1000)
+  );
+
+  // If member is underfunded, display dedicated locked portal view
+  if (!loading && isUnderfunded) {
+    return (
+      <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
+        <UnderfundedAlertBanner />
+        <div className="rounded-3xl border-2 border-red-500/20 bg-white p-8 sm:p-12 text-center shadow-lg space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-8 h-8 text-red-600 animate-pulse" />
+          </div>
+          <div className="space-y-2 max-w-lg mx-auto">
+            <h2 className="text-xl sm:text-2xl font-black text-[#17334F] tracking-tight uppercase">
+              VIP Lounge Restricted
+            </h2>
+            <p className="text-sm text-[#4F6D87] leading-relaxed">
+              Council Seat #{lounge?.position || '—'} is currently locked due to incomplete on-chain seat funding. VIP dividend distributions, matrix tracking, and governance proposals require completing the standard $300 USD re-topup.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Pass live values down as props where components accept them
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;

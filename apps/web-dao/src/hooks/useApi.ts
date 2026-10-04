@@ -268,6 +268,9 @@ export interface MemberDetailsData {
   isQualified: boolean;
   userId: number | null;
   txHash?: string;
+  underfunded?: boolean;
+  entryAmountTrob?: number;
+  notice?: string;
 }
 
 export interface ProfileData extends MemberDetailsData {

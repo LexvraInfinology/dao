@@ -16,9 +16,11 @@ import {
   Wallet,
   Zap,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
 import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
 import {
   useDaoMember,
@@ -75,6 +77,7 @@ export default function DaoDashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6 animate-fadeIn w-full max-w-full overflow-x-hidden font-sans">
+      <UnderfundedAlertBanner />
 
       {/* =======================================================================
           1. HERO SECTION — Member-Aware, Trobium Styled & Tightly Packed
@@ -140,6 +143,25 @@ export default function DaoDashboardPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition-all"
                       >
                         <span>Open Lounge</span>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (memberData?.status === 'underfunded' || memberData?.underfunded) ? (
+                  <div className="space-y-2.5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-600 text-xs font-semibold">
+                      <Lock className="w-3.5 h-3.5 text-red-600" />
+                      <span>Council Seat #{myPosition} Underfunded (Dashboard & Lounge Locked)</span>
+                    </div>
+                    <p className="text-[11.5px] text-red-700 font-medium">
+                      Incomplete deposit detected. Re-topup the required $300 USD entry fee to activate council privileges.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Link
+                        href="/dao/seats"
+                        className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <span>View Council Grid</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </div>
@@ -314,19 +336,42 @@ export default function DaoDashboardPage() {
                       <span>Quick Re-topup ($300)</span>
                     </button>
                   </div>
-                ) : (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
-                    <CheckCircle2 className="w-3 h-3 text-[#1F8A5B]" />
-                    <span>Seat #{myPosition} &bull; Active Member</span>
+                ) : (memberData?.status === 'underfunded' || memberData?.underfunded) ? (
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-500/10 border border-red-500/25 text-red-600 text-xs font-semibold">
+                      <Lock className="w-3 h-3 text-red-600" />
+                      <span>Seat #{myPosition} Underfunded (Locked)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent('dao:open-retopup', {
+                            detail: { seatPosition: myPosition },
+                          })
+                        )
+                      }
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                      <span>Complete Re-topup ($300)</span>
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
+                      <CheckCircle2 className="w-3 h-3 text-[#1F8A5B]" />
+                      <span>Seat #{myPosition} &bull; Active Member</span>
+                    </div>
+                    <Link
+                      href="/dao/lounge"
+                      className="btn-primary w-full py-2.5 px-4 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Open Member Lounge</span>
+                    </Link>
+                  </>
                 )}
-                <Link
-                  href="/dao/lounge"
-                  className="btn-primary w-full py-2.5 px-4 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1.5"
-                >
-                  <Wallet className="w-3.5 h-3.5" />
-                  <span>Open Member Lounge</span>
-                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">

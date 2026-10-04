@@ -10,6 +10,7 @@ import { LandingTrobChain } from '@/components/landing/LandingTrobChain';
 import { LandingTrobSafeDownload } from '@/components/landing/LandingTrobSafeDownload';
 import { LandingFaq } from '@/components/landing/LandingFaq';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -23,6 +24,11 @@ export default function HomePage() {
     <main className={`${poppins.variable} font-poppins landing-page-root min-h-screen bg-[#F0F4F8] text-[#0B132B] selection:bg-[#155EEF] selection:text-white overflow-x-clip`}>
       {/* 1. Header / Navbar */}
       <LandingNavbar />
+
+      {/* Underfunded Status Banner (Prominently alerts council members if their seat is locked) */}
+      <div className="pt-20 sm:pt-24 px-4 sm:px-6 max-w-7xl mx-auto w-full z-20 relative">
+        <UnderfundedAlertBanner />
+      </div>
 
       {/* 2. Hero Section: 100 Seats. One Council A Shared Future. */}
       <LandingHero />

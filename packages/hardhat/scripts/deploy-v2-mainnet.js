@@ -204,35 +204,36 @@ async function verifyContractOnExplorer(contractName, addressBase58, flattenedFi
     return false;
   }
   const sourceCode = fs.readFileSync(flattenedPath, 'utf8');
+  const versions = ['v0.8.25+commit.b61c2a91', 'v0.8.26+commit.8a97fa7a', 'v0.8.20+commit.a1b79de6'];
 
-  try {
-    const res = await fetch(`${MAINNET_BACKEND_URL}/v1/contracts/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: addressBase58,
-        sourceCode: sourceCode,
-        contractName: contractName,
-        compilerVersion: SOLC_VERSION,
-        optimizer: {
-          enabled: true,
-          runs: OPTIMIZER_RUNS,
-        },
-      }),
-    });
+  for (const solcVer of versions) {
+    try {
+      const res = await fetch(`${MAINNET_BACKEND_URL}/v1/contracts/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: addressBase58,
+          sourceCode: sourceCode,
+          contractName: contractName,
+          compilerVersion: solcVer,
+          optimizer: {
+            enabled: true,
+            runs: OPTIMIZER_RUNS,
+          },
+        }),
+      });
 
-    const data = await res.json();
-    if (res.ok && data.data && data.data.verified) {
-      console.log(`   ✅ VERIFIED & PUBLISHED on Explorer: https://trobchain.com/contracts/verify?address=${addressBase58}`);
-      return true;
-    } else {
-      console.log(`   Explorer verification status:`, data?.error?.message || data?.message || data);
-      return false;
+      const data = await res.json();
+      if (res.ok && data.data && data.data.verified) {
+        console.log(`   ✅ VERIFIED & PUBLISHED on Explorer (${solcVer}): https://trobchain.com/contracts/verify?address=${addressBase58}`);
+        return true;
+      }
+    } catch (err) {
+      // Continue to next compiler version candidate
     }
-  } catch (err) {
-    console.error(`   Verification request error:`, err.message);
-    return false;
   }
+  console.log(`   Explorer verification status: Pending or manual indexing`);
+  return false;
 }
 
 async function main() {
@@ -297,7 +298,17 @@ async function main() {
   );
   await verifyContractOnExplorer('EquoraDAOv2', deployed.EquoraDAOv2.contractAddressBase58, 'EquoraDAOv2.sol');
 
-  // ─── 3. Execute Migration ────────────────────────────────────────────────────
+  // ─── 3. Set Vault Contract to Treasury ───────────────────────────────────────
+  const vaultParam = coder.encode(['address'], [coinTreasury]);
+  await triggerContractMethod(
+    deployer,
+    deployed.EquoraDAOv2.contractAddressHex,
+    'setVaultContract(address)',
+    vaultParam,
+    'Configuring Treasury Vault on EquoraDAOv2'
+  );
+
+  // ─── 4. Execute Migration ────────────────────────────────────────────────────
   console.log('\n======================================================================');
   console.log('📦 EXECUTING ON-CHAIN MIGRATION FOR 85 GENUINE MEMBERS');
   console.log('======================================================================');
@@ -333,7 +344,7 @@ async function main() {
     );
   }
 
-  // ─── 4. Set Underfunded Reservations ─────────────────────────────────────────
+  // ─── 5. Set Underfunded Reservations ─────────────────────────────────────────
   if (underfunded.length > 0) {
     console.log(`\nConfiguring ${underfunded.length} underfunded reservations & debt garnishments...`);
     const uAddrs = underfunded.map((u) => '0x' + toTronHex(u.address).replace(/^41/, ''));
@@ -355,7 +366,7 @@ async function main() {
     );
   }
 
-  // ─── 5. Finalize Migration ───────────────────────────────────────────────────
+  // ─── 6. Finalize Migration ───────────────────────────────────────────────────
   await triggerContractMethod(
     deployer,
     deployed.EquoraDAOv2.contractAddressHex,
@@ -364,7 +375,46 @@ async function main() {
     'Finalizing Migration (Permanently Locking Migration Functions)'
   );
 
-  // ─── 6. Save Deployment Summary ──────────────────────────────────────────────
+  // ─── 7. Authorize EquoraDAOv2 in EquoraRegistry ──────────────────────────────
+  console.log('\nAuthorizing new DAO contract in EquoraRegistry...');
+  const newDaoEvm = '0x' + deployed.EquoraDAOv2.contractAddressHex.replace(/^41/, '');
+  const regParamHex = coder.encode(
+    ['address', 'address', 'address'],
+    ['0x0000000000000000000000000000000000000000', newDaoEvm, '0x0000000000000000000000000000000000000000']
+  );
+  try {
+    await triggerContractMethod(
+      deployer,
+      registryHex,
+      'setAuthorizedContracts(address,address,address)',
+      regParamHex,
+      'Authorizing EquoraDAOv2 in EquoraRegistry'
+    );
+  } catch (err) {
+    console.warn(`   Warning: Registry authorization note: ${err.message}`);
+  }
+
+  // ─── 8. Renounce Admin on EquoraDAOv2 (Null Key / No Admin) ───────────────────
+  console.log('\nRenouncing DAO Admin Privileges to address(0)...');
+  await triggerContractMethod(
+    deployer,
+    deployed.EquoraDAOv2.contractAddressHex,
+    'renounceAdmin()',
+    '',
+    'Renouncing DAO Admin -> Setting Admin to NULL (0x0000000000000000000000000000000000000000)'
+  );
+
+  // ─── 9. Renounce Ownership on EquoraCoin (Null Key / No Owner) ─────────────────
+  console.log('\nRenouncing EquoraCoin Ownership to address(0)...');
+  await triggerContractMethod(
+    deployer,
+    deployed.EquoraCoin.contractAddressHex,
+    'renounceOwnership()',
+    '',
+    'Renouncing EquoraCoin Ownership -> Setting Owner to NULL (0x0000000000000000000000000000000000000000)'
+  );
+
+  // ─── 10. Save Deployment Summary ─────────────────────────────────────────────
   const outPath = path.resolve(__dirname, '../deployed-v2-mainnet.json');
   const summary = {
     network: 'trobchain-mainnet',
@@ -418,6 +468,8 @@ async function main() {
     let content = fs.readFileSync(trobAddressPath, 'utf8');
     content = content.replace(/export const ACTIVE_DAO_BASE58 = '[^']*';/, `export const ACTIVE_DAO_BASE58 = '${deployed.EquoraDAOv2.contractAddressBase58}';`);
     content = content.replace(/export const ACTIVE_DAO_HEX = '[^']*';/, `export const ACTIVE_DAO_HEX = '${deployed.EquoraDAOv2.contractAddressHex}';`);
+    content = content.replace(/'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn'/, `'${deployed.EquoraCoin.contractAddressBase58}'`);
+    content = content.replace(/'4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9'/, `'${deployed.EquoraCoin.contractAddressHex}'`);
     fs.writeFileSync(trobAddressPath, content, 'utf8');
     console.log(`✅ Updated apps/web-dao/src/utils/trobAddress.ts fallback addresses!`);
   }

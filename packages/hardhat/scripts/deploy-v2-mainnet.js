@@ -389,7 +389,7 @@ async function main() {
   fs.writeFileSync(outPath, JSON.stringify(summary, null, 2), 'utf8');
   console.log(`\nDeployment summary saved to ${outPath}`);
 
-  // ─── 7. Auto-Update apps/web-dao/.env.local ──────────────────────────────────
+  // ─── 7. Auto-Update apps/web-dao/.env.local & Code Configs ───────────────────
   const envLocalPath = path.resolve(__dirname, '../../../apps/web-dao/.env.local');
   if (fs.existsSync(envLocalPath)) {
     let envContent = fs.readFileSync(envLocalPath, 'utf8');
@@ -411,6 +411,24 @@ async function main() {
     );
     fs.writeFileSync(envLocalPath, envContent, 'utf8');
     console.log(`\n✅ Updated apps/web-dao/.env.local with new contract addresses!`);
+  }
+
+  const trobAddressPath = path.resolve(__dirname, '../../../apps/web-dao/src/utils/trobAddress.ts');
+  if (fs.existsSync(trobAddressPath)) {
+    let content = fs.readFileSync(trobAddressPath, 'utf8');
+    content = content.replace(/export const ACTIVE_DAO_BASE58 = '[^']*';/, `export const ACTIVE_DAO_BASE58 = '${deployed.EquoraDAOv2.contractAddressBase58}';`);
+    content = content.replace(/export const ACTIVE_DAO_HEX = '[^']*';/, `export const ACTIVE_DAO_HEX = '${deployed.EquoraDAOv2.contractAddressHex}';`);
+    fs.writeFileSync(trobAddressPath, content, 'utf8');
+    console.log(`✅ Updated apps/web-dao/src/utils/trobAddress.ts fallback addresses!`);
+  }
+
+  const envTsPath = path.resolve(__dirname, '../../../apps/web-dao/src/config/env.ts');
+  if (fs.existsSync(envTsPath)) {
+    let content = fs.readFileSync(envTsPath, 'utf8');
+    content = content.replace(/'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto'/, `'${deployed.EquoraDAOv2.contractAddressBase58}'`);
+    content = content.replace(/'410a59d6a2dcd3b18687c1efe1625642ad85679377'/, `'${deployed.EquoraDAOv2.contractAddressHex}'`);
+    fs.writeFileSync(envTsPath, content, 'utf8');
+    console.log(`✅ Updated apps/web-dao/src/config/env.ts fallback addresses!`);
   }
 
   console.log('\n======================================================================');

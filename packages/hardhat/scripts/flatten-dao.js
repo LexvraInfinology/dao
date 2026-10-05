@@ -8,6 +8,7 @@ const contracts = [
   { name: 'EquoraRegistry', src: 'contracts/core/EquoraRegistry.sol' },
   { name: 'EquoraNFT', src: 'contracts/rewards/EquoraNFT.sol' },
   { name: 'EquoraDAO', src: 'contracts/core/EquoraDAO.sol' },
+  { name: 'EquoraDAOv2', src: 'contracts/core/EquoraDAOv2.sol' },
   { name: 'EquoraVault', src: 'contracts/core/EquoraVault.sol' },
   { name: 'EquoraMatrix', src: 'contracts/core/EquoraMatrix.sol' },
 ];

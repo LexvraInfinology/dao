@@ -57,11 +57,18 @@ async function main() {
       const btt = parseFloat(u.entryAmountBtt || '1.5');
       return Math.round(btt * 1e6); // 1.5 TROB = 1,500,000 Sun
     });
+    const uDebts = underfunded.map((u: any) => {
+      const debt = parseFloat(u.unearnedDebtBtt || '0');
+      return Math.round(debt * 1e6); // Sun
+    });
 
-    const resTx = await daoV2.setUnderfundedReservations(uAddrs, uSeats, uDeposits);
+    console.log('Unearned debts to be recovered:');
+    underfunded.forEach((u: any) => console.log(`  Seat #${u.position} (${u.address}): ${u.unearnedDebtBtt || 0} TROB debt`));
+
+    const resTx = await daoV2.setUnderfundedReservations(uAddrs, uSeats, uDeposits, uDebts);
     console.log(`  Tx broadcast: ${resTx.hash}. Waiting confirmation...`);
     await resTx.wait(1);
-    console.log(`  ✅ All 8 reservations successfully configured on-chain!`);
+    console.log(`  ✅ All 8 reservations & debt garnishments successfully configured on-chain!`);
   }
 
   // 3. Finalize migration

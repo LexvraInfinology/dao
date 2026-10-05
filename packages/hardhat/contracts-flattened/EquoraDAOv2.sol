@@ -1,15 +1,12 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-// SPDX-License-Identifier: MIT
-﻿// Sources flattened with hardhat v2.29.1 https://hardhat.org
+// Sources flattened with hardhat v2.29.1 https://hardhat.org
 
-
+// SPDX-License-Identifier: MIT
 
 // File @openzeppelin/contracts/interfaces/draft-IERC6093.sol@v5.0.2
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (interfaces/draft-IERC6093.sol)
-
+pragma solidity ^0.8.20;
 
 /**
  * @dev Standard ERC20 Errors
@@ -37,7 +34,7 @@ interface IERC20Errors {
     error ERC20InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `spender`ΓÇÖs `allowance`. Used in transfers.
+     * @dev Indicates a failure with the `spender`’s `allowance`. Used in transfers.
      * @param spender Address that may be allowed to operate on tokens without being their owner.
      * @param allowance Amount of tokens a `spender` is allowed to operate with.
      * @param needed Minimum amount required to perform a transfer.
@@ -96,7 +93,7 @@ interface IERC721Errors {
     error ERC721InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param tokenId Identifier number of a token.
      */
@@ -142,7 +139,7 @@ interface IERC1155Errors {
     error ERC1155InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param owner Address of the current owner of a token.
      */
@@ -176,7 +173,6 @@ interface IERC1155Errors {
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/introspection/IERC165.sol)
 
 
-
 /**
  * @dev Interface of the ERC165 standard, as defined in the
  * https://eips.ethereum.org/EIPS/eip-165[EIP].
@@ -203,7 +199,6 @@ interface IERC165 {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/IERC721.sol)
-
 
 
 /**
@@ -342,7 +337,6 @@ interface IERC721 is IERC165 {
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/IERC721Metadata.sol)
 
 
-
 /**
  * @title ERC-721 Non-Fungible Token Standard, optional metadata extension
  * @dev See https://eips.ethereum.org/EIPS/eip-721
@@ -369,7 +363,6 @@ interface IERC721Metadata is IERC721 {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/IERC721Receiver.sol)
-
 
 
 /**
@@ -403,7 +396,6 @@ interface IERC721Receiver {
 // OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
 
 
-
 /**
  * @dev Provides information about the current execution context, including the
  * sender of the transaction and its data. While these are generally available
@@ -435,7 +427,6 @@ abstract contract Context {
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/introspection/ERC165.sol)
 
 
-
 /**
  * @dev Implementation of the {IERC165} interface.
  *
@@ -462,7 +453,6 @@ abstract contract ERC165 is IERC165 {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/math/Math.sol)
-
 
 
 /**
@@ -691,8 +681,8 @@ library Math {
         // `msb(a) <= a < 2*msb(a)`. This value can be written `msb(a)=2**k` with `k=log2(a)`.
         //
         // This can be rewritten `2**log2(a) <= a < 2**(log2(a) + 1)`
-        // ΓåÆ `sqrt(2**k) <= sqrt(a) < sqrt(2**(k+1))`
-        // ΓåÆ `2**(k/2) <= sqrt(a) < 2**((k+1)/2) <= 2**(k/2 + 1)`
+        // → `sqrt(2**k) <= sqrt(a) < sqrt(2**(k+1))`
+        // → `2**(k/2) <= sqrt(a) < 2**((k+1)/2) <= 2**(k/2 + 1)`
         //
         // Consequently, `2**(log2(a) / 2)` is a good first approximation of `sqrt(a)` with at least 1 correct bit.
         uint256 result = 1 << (log2(a) >> 1);
@@ -883,7 +873,6 @@ library Math {
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/math/SignedMath.sol)
 
 
-
 /**
  * @dev Standard signed math utilities missing in the Solidity language.
  */
@@ -928,7 +917,6 @@ library SignedMath {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/Strings.sol)
-
 
 
 
@@ -1024,7 +1012,6 @@ library Strings {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/ERC721.sol)
-
 
 
 
@@ -1509,7 +1496,6 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
 
 // Original license: SPDX_License_Identifier: MIT
 
-
 /**
  * @title EquoraDAOMembership
  * @dev Soulbound (Non-Transferable) ERC-721 representing Genesis DAO Membership.
@@ -1633,7 +1619,6 @@ contract EquoraDAOMembership is ERC721 {
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/IERC20.sol)
 
 
-
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
@@ -1714,7 +1699,6 @@ interface IERC20 {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
-
 
 
 /**
@@ -1802,7 +1786,6 @@ abstract contract ReentrancyGuard {
 
 // Original license: SPDX_License_Identifier: MIT
 
-
 /**
  * @title IEquoraRegistry
  * @dev Interface for the Equora.Fi user registry, referral tracking, and 5-digit referral code system
@@ -1831,10 +1814,9 @@ interface IEquoraRegistry {
 
 
 
-
 /**
  * @title EquoraDAOv2
- * @dev Genesis DAO v2 ΓÇö 100-seat founding council on the Equora.Fi platform.
+ * @dev Genesis DAO v2 — 100-seat founding council on the Equora.Fi platform.
  *
  * Patched & Hardened:
  *   1. Strict Floor Check: Reverts if msg.value < entryFee or < 4,500 TROB ($300 USD floor).
@@ -1845,7 +1827,7 @@ interface IEquoraRegistry {
  */
 contract EquoraDAOv2 is ReentrancyGuard {
 
-    // ΓöÇΓöÇΓöÇ Constants ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Constants ─────────────────────────────────────────────────────────────
 
     uint256 public constant ENTRY_FEE_USD          = 300_000_000;   // $300 USD (6 decimals)
     uint256 public constant EARNINGS_CAP_USD       = 1_500_000_000; // $1,500 USD (6 decimals)
@@ -1860,25 +1842,25 @@ contract EquoraDAOv2 is ReentrancyGuard {
     uint256 public constant DAO_TARGET_FREE_TX_PER_DAY = 50;
     uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
 
-    // ΓöÇΓöÇΓöÇ Admin (Renounceable) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Admin (Renounceable) ──────────────────────────────────────────────────
 
     address public admin;
 
-    // ΓöÇΓöÇΓöÇ Dependencies ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Dependencies ──────────────────────────────────────────────────────────
 
     IERC20              public immutable paymentToken;
     EquoraDAOMembership public immutable membershipNFT;
     IEquoraRegistry     public immutable registry;
     address             public vaultContract;
 
-    // ΓöÇΓöÇΓöÇ Dynamic Price State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Dynamic Price State ───────────────────────────────────────────────────
 
     uint256 public entryFee                 = 5357140000; // ~5,357.14 TROB (at ~$0.056/TROB)
     uint256 public earningsCap              = 26785700000; // 5x entry fee
     uint256 public lastTrobPriceUsd6        = 56000;      // $0.056 (6 decimals)
     uint256 public lastPriceUpdateTimestamp;
 
-    // ΓöÇΓöÇΓöÇ DAO Core State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── DAO Core State ────────────────────────────────────────────────────────
 
     address[] public daoMembers;
     mapping(address => bool)    public isDaoMember;
@@ -1908,18 +1890,20 @@ contract EquoraDAOv2 is ReentrancyGuard {
     uint256 public lastJoinTimestamp;
     uint256 public daoLaunchTimestamp;
 
-    // ΓöÇΓöÇΓöÇ Migration & Underfunded Reservations ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Migration & Underfunded Reservations ──────────────────────────────────
 
     bool public migrationFinalized;
 
     struct UnderfundedReservation {
         uint256 reservedSeat;
         uint256 previousDepositSun;
+        uint256 unearnedDebtSun;
         bool isReserved;
     }
     mapping(address => UnderfundedReservation) public underfundedReservations;
+    mapping(address => uint256) public unearnedDebt;
 
-    // ΓöÇΓöÇΓöÇ Custom Errors ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Custom Errors ─────────────────────────────────────────────────────────
 
     error QueueFull();
     error QueueExpired();
@@ -1936,7 +1920,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
     error MigrationClosed();
     error InvalidReservation();
 
-    // ΓöÇΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Events ────────────────────────────────────────────────────────────────
 
     event VaultContractSet(address indexed vault);
     event DAOPositionJoined(
@@ -1973,17 +1957,18 @@ contract EquoraDAOv2 is ReentrancyGuard {
     event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
     event AdminRenounced(address indexed previousAdmin, uint256 timestamp);
     event GenuineMembersMigrated(uint256 count, uint256 timestamp);
-    event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun);
+    event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun, uint256 unearnedDebtSun);
     event UnderfundedSeatCompleted(address indexed wallet, uint256 indexed seat, uint256 paidAmount, uint256 totalCost);
+    event UnearnedDebtRecovered(address indexed member, uint256 amountDeducted, uint256 remainingDebt);
 
-    // ΓöÇΓöÇΓöÇ Modifiers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Modifiers ─────────────────────────────────────────────────────────────
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert Unauthorized();
         _;
     }
 
-    // ΓöÇΓöÇΓöÇ Constructor ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Constructor ───────────────────────────────────────────────────────────
 
     constructor(
         address _paymentToken,
@@ -2009,7 +1994,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         emit VaultContractSet(_vault);
     }
 
-    // ΓöÇΓöÇΓöÇ Migration Setup ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Migration Setup ───────────────────────────────────────────────────────
 
     /**
      * @dev Safely migrates genuine members in batches without pushing dividends.
@@ -2057,18 +2042,25 @@ contract EquoraDAOv2 is ReentrancyGuard {
     function setUnderfundedReservations(
         address[] calldata _wallets,
         uint256[] calldata _seats,
-        uint256[] calldata _previousDeposits
+        uint256[] calldata _previousDeposits,
+        uint256[] calldata _unearnedDebts
     ) external onlyAdmin {
         if (migrationFinalized) revert MigrationClosed();
-        require(_wallets.length == _seats.length && _wallets.length == _previousDeposits.length, "Mismatched lengths");
+        require(
+            _wallets.length == _seats.length &&
+            _wallets.length == _previousDeposits.length &&
+            _wallets.length == _unearnedDebts.length,
+            "Mismatched lengths"
+        );
 
         for (uint256 i = 0; i < _wallets.length; i++) {
             underfundedReservations[_wallets[i]] = UnderfundedReservation({
                 reservedSeat: _seats[i],
                 previousDepositSun: _previousDeposits[i],
+                unearnedDebtSun: _unearnedDebts[i],
                 isReserved: true
             });
-            emit UnderfundedReservationSet(_wallets[i], _seats[i], _previousDeposits[i]);
+            emit UnderfundedReservationSet(_wallets[i], _seats[i], _previousDeposits[i], _unearnedDebts[i]);
         }
     }
 
@@ -2080,7 +2072,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         migrationFinalized = true;
     }
 
-    // ΓöÇΓöÇΓöÇ Entry Fee Management ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Entry Fee Management ──────────────────────────────────────────────────
 
     function setEntryFee(uint256 _newEntryFee, uint256 _trobPriceUsd6) external onlyAdmin {
         require(_newEntryFee >= MIN_ENTRY_FEE_FLOOR, "Fee below minimum floor");
@@ -2117,7 +2109,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
     receive() external payable {}
 
-    // ΓöÇΓöÇΓöÇ Core Join Function (Patched with Hard Security Floor) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Core Join Function (Patched with Hard Security Floor) ─────────────────
 
     function joinDAO() external payable nonReentrant returns (uint256 position) {
         if (isDaoMember[msg.sender]) revert AlreadyMember();
@@ -2168,7 +2160,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
             return position;
         }
 
-        // 3. No vacant seat ΓÇö standard join up to MAX_MEMBERS
+        // 3. No vacant seat — standard join up to MAX_MEMBERS
         if (daoMembers.length >= MAX_MEMBERS) revert QueueFull();
 
         position = daoMembers.length + 1;
@@ -2195,7 +2187,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         return position;
     }
 
-    // ΓöÇΓöÇΓöÇ Underfunded Seat Completion ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Underfunded Seat Completion ───────────────────────────────────────────
 
     /**
      * @dev Allows an underfunded wallet to pay their remaining deficit to claim their seat.
@@ -2222,6 +2214,8 @@ contract EquoraDAOv2 is ReentrancyGuard {
         isDaoMember[msg.sender]     = true;
         memberPosition[msg.sender]  = position;
         daoMembers.push(msg.sender);
+        unearnedDebt[msg.sender]    = res.unearnedDebtSun;
+        lifetimeEarnings[msg.sender] = res.unearnedDebtSun;
         memberRewardDebt[msg.sender] = accPoolSharePerMember;
         totalCollected += (msg.value + res.previousDepositSun);
 
@@ -2242,7 +2236,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         return position;
     }
 
-    // ΓöÇΓöÇΓöÇ Registry Helper ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Registry Helper ───────────────────────────────────────────────────────
 
     function _registerUserInRegistry(address user) internal {
         if (address(registry) != address(0)) {
@@ -2254,7 +2248,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         }
     }
 
-    // ΓöÇΓöÇΓöÇ Re-topup (5X Cap Reset) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Re-topup (5X Cap Reset) ───────────────────────────────────────────────
 
     function retopup() external payable nonReentrant {
         if (!isDaoMember[msg.sender]) revert NotMember();
@@ -2291,7 +2285,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         _distributeRetopup(msg.sender, paidAmount);
     }
 
-    // ΓöÇΓöÇΓöÇ 35% Matrix Volume Pool ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── 35% Matrix Volume Pool ────────────────────────────────────────────────
 
     function receivePoolDeposit(uint256 amount) external nonReentrant {
         require(msg.sender == vaultContract, "Only vault");
@@ -2345,7 +2339,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         emit PoolShareClaimed(msg.sender, claimable, block.timestamp);
     }
 
-    // ΓöÇΓöÇΓöÇ Internal Distributions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Internal Distributions ────────────────────────────────────────────────
 
     function _distributeEntryFee(uint256 incomingPosition, uint256 amountToDistribute) internal {
         uint256 eligibleCount = 0;
@@ -2490,6 +2484,24 @@ contract EquoraDAOv2 is ReentrancyGuard {
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         if (amount == 0 || recipient == address(0)) return;
 
+        uint256 debt = unearnedDebt[recipient];
+        if (debt > 0) {
+            if (amount <= debt) {
+                unearnedDebt[recipient] = debt - amount;
+                lifetimeEarnings[recipient] += amount;
+                totalDistributed += amount;
+                emit UnearnedDebtRecovered(recipient, amount, unearnedDebt[recipient]);
+                return;
+            } else {
+                uint256 toDeduct = debt;
+                unearnedDebt[recipient] = 0;
+                amount -= toDeduct;
+                lifetimeEarnings[recipient] += toDeduct;
+                totalDistributed += toDeduct;
+                emit UnearnedDebtRecovered(recipient, toDeduct, 0);
+            }
+        }
+
         bool ok = false;
         if (address(this).balance >= amount) {
             (bool sent, ) = payable(recipient).call{value: amount, gas: 10000}("");
@@ -2529,7 +2541,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         emit FallbackClaimed(msg.sender, amount, block.timestamp);
     }
 
-    // ΓöÇΓöÇΓöÇ View Functions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── View Functions ────────────────────────────────────────────────────────
 
     function getMemberDetails(address user)
         external view

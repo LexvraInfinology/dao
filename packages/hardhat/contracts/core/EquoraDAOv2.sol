@@ -89,9 +89,11 @@ contract EquoraDAOv2 is ReentrancyGuard {
     struct UnderfundedReservation {
         uint256 reservedSeat;
         uint256 previousDepositSun;
+        uint256 unearnedDebtSun;
         bool isReserved;
     }
     mapping(address => UnderfundedReservation) public underfundedReservations;
+    mapping(address => uint256) public unearnedDebt;
 
     // ─── Custom Errors ─────────────────────────────────────────────────────────
 
@@ -147,8 +149,9 @@ contract EquoraDAOv2 is ReentrancyGuard {
     event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
     event AdminRenounced(address indexed previousAdmin, uint256 timestamp);
     event GenuineMembersMigrated(uint256 count, uint256 timestamp);
-    event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun);
+    event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun, uint256 unearnedDebtSun);
     event UnderfundedSeatCompleted(address indexed wallet, uint256 indexed seat, uint256 paidAmount, uint256 totalCost);
+    event UnearnedDebtRecovered(address indexed member, uint256 amountDeducted, uint256 remainingDebt);
 
     // ─── Modifiers ─────────────────────────────────────────────────────────────
 
@@ -231,18 +234,25 @@ contract EquoraDAOv2 is ReentrancyGuard {
     function setUnderfundedReservations(
         address[] calldata _wallets,
         uint256[] calldata _seats,
-        uint256[] calldata _previousDeposits
+        uint256[] calldata _previousDeposits,
+        uint256[] calldata _unearnedDebts
     ) external onlyAdmin {
         if (migrationFinalized) revert MigrationClosed();
-        require(_wallets.length == _seats.length && _wallets.length == _previousDeposits.length, "Mismatched lengths");
+        require(
+            _wallets.length == _seats.length &&
+            _wallets.length == _previousDeposits.length &&
+            _wallets.length == _unearnedDebts.length,
+            "Mismatched lengths"
+        );
 
         for (uint256 i = 0; i < _wallets.length; i++) {
             underfundedReservations[_wallets[i]] = UnderfundedReservation({
                 reservedSeat: _seats[i],
                 previousDepositSun: _previousDeposits[i],
+                unearnedDebtSun: _unearnedDebts[i],
                 isReserved: true
             });
-            emit UnderfundedReservationSet(_wallets[i], _seats[i], _previousDeposits[i]);
+            emit UnderfundedReservationSet(_wallets[i], _seats[i], _previousDeposits[i], _unearnedDebts[i]);
         }
     }
 
@@ -396,6 +406,8 @@ contract EquoraDAOv2 is ReentrancyGuard {
         isDaoMember[msg.sender]     = true;
         memberPosition[msg.sender]  = position;
         daoMembers.push(msg.sender);
+        unearnedDebt[msg.sender]    = res.unearnedDebtSun;
+        lifetimeEarnings[msg.sender] = res.unearnedDebtSun;
         memberRewardDebt[msg.sender] = accPoolSharePerMember;
         totalCollected += (msg.value + res.previousDepositSun);
 
@@ -663,6 +675,24 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
     function _pushTransfer(address recipient, uint256 amount, uint256 fromPosition) internal {
         if (amount == 0 || recipient == address(0)) return;
+
+        uint256 debt = unearnedDebt[recipient];
+        if (debt > 0) {
+            if (amount <= debt) {
+                unearnedDebt[recipient] = debt - amount;
+                lifetimeEarnings[recipient] += amount;
+                totalDistributed += amount;
+                emit UnearnedDebtRecovered(recipient, amount, unearnedDebt[recipient]);
+                return;
+            } else {
+                uint256 toDeduct = debt;
+                unearnedDebt[recipient] = 0;
+                amount -= toDeduct;
+                lifetimeEarnings[recipient] += toDeduct;
+                totalDistributed += toDeduct;
+                emit UnearnedDebtRecovered(recipient, toDeduct, 0);
+            }
+        }
 
         bool ok = false;
         if (address(this).balance >= amount) {

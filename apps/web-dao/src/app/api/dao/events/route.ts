@@ -19,10 +19,18 @@ function toIsoUtc(ts: any): string {
  * Queries indexed events from Neon DB first (sub-50ms) and merges with
  * live on-chain cached ledger events without blocking or timing out.
  */
+let cachedEventsMap = new Map<number, { data: any[]; time: number }>();
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+
+    const now = Date.now();
+    const cached = cachedEventsMap.get(limit);
+    if (cached && now - cached.time < 5000) {
+      return NextResponse.json({ success: true, data: cached.data });
+    }
 
     const eventsList: any[] = [];
     const seenKeys = new Set<string>();
@@ -112,10 +120,12 @@ export async function GET(req: NextRequest) {
 
     // Sort strictly in reverse-chronological order (newest first)
     eventsList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const finalData = eventsList.slice(0, limit);
+    cachedEventsMap.set(limit, { data: finalData, time: Date.now() });
 
     return NextResponse.json({
       success: true,
-      data: eventsList.slice(0, limit),
+      data: finalData,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch dao events';

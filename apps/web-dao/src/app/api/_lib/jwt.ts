@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_btitan_jwt_key_min_32_chars_long';
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'equora_dao_mainnet_jwt_auth_secret_256_bit_vault';
 
 function base64UrlEncode(str: string): string {
   return Buffer.from(str)

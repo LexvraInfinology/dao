@@ -27,10 +27,16 @@ import {
   Lock,
   TrendingUp,
   Layers,
+  Clock,
+  ShieldAlert,
+  Coins,
+  RefreshCw,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
+import { RetopupModal } from '@/components/dao/lounge/RetopupModal';
+import { getExplorerAddressUrl } from '@/utils/explorer';
 import { WalletModal } from '@/components/ui/WalletModal';
 import { TermsModal } from '@/components/dao/TermsModal';
 import {
@@ -134,6 +140,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const [payError, setPayError]               = useState<string | null>(null);
   const [payTxHash, setPayTxHash]             = useState<string | null>(null);
   const [detectTimeout, setDetectTimeout]     = useState(false);
+  const [underfundedRetopupOpen, setUnderfundedRetopupOpen] = useState(false);
 
   // Wallet address resolution
   const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || '';
@@ -188,7 +195,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   // Synchronize local membership cache and purge stale keys
   useEffect(() => {
     if (!activeAddress || typeof window === 'undefined') return;
-    if (memberData?.isMember || Number(memberData?.position) > 0) {
+    if (memberData?.underfunded || memberData?.status === 'underfunded') {
+      setIsLocalMember(false);
+      try {
+        localStorage.removeItem(`equora_dao_member_${activeAddress.toLowerCase()}`);
+      } catch {}
+    } else if (memberData?.isMember || Number(memberData?.position) > 0) {
       setIsLocalMember(true);
       try {
         localStorage.setItem(`equora_dao_member_${activeAddress.toLowerCase()}`, 'true');
@@ -203,12 +215,56 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     }
   }, [activeAddress, memberData, memberLoading]);
 
-  // Strict verified membership: MUST have connected wallet AND verified active seat from live backend/contract
+  // Check if member is underfunded (held under temporary 48h reservation)
+  const isUnderfunded = Boolean(
+    wallet.isConnected &&
+    activeAddress &&
+    (memberData?.underfunded === true || memberData?.status === 'underfunded')
+  );
+
+  // Strict verified membership: MUST have connected wallet, verified active seat from live backend/contract, AND NOT be underfunded
   const isVerifiedMember = Boolean(
     wallet.isConnected &&
     activeAddress &&
+    !isUnderfunded &&
     (memberData?.isMember === true || Number(memberData?.position) > 0)
   );
+
+  // 48-Hour Live Countdown Timer hook for underfunded members
+  const [underfundedTimeLeft, setUnderfundedTimeLeft] = useState<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+    isExpired: boolean;
+  }>({ hours: 48, minutes: 0, seconds: 0, totalSeconds: 48 * 3600, isExpired: false });
+
+  useEffect(() => {
+    if (!isUnderfunded) return;
+
+    function calc() {
+      let targetMs: number;
+      if (memberData?.retopupDeadline) {
+        targetMs = new Date(memberData.retopupDeadline).getTime();
+      } else {
+        targetMs = Date.now() + 48 * 3600 * 1000;
+      }
+      const diff = targetMs - Date.now();
+      if (diff <= 0) {
+        setUnderfundedTimeLeft({ hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, isExpired: true });
+        return;
+      }
+      const totalSeconds = Math.floor(diff / 1000);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setUnderfundedTimeLeft({ hours, minutes, seconds, totalSeconds, isExpired: false });
+    }
+
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [isUnderfunded, memberData?.retopupDeadline]);
 
   // Note: Do not kick disconnected mobile users back to landing page;
   // allow them to view registration criteria and connect wallet directly on mobile.
@@ -526,6 +582,235 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     } catch { /* ignore */ }
     window.location.href = '/';
   };
+
+  // ── Access Restricted: Underfunded 48-Hour Dashboard Barrier Screen ────────
+  if (isUnderfunded) {
+    const underfundedPos = memberData?.position || '—';
+    const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
+    const currentPriceUsd = priceData?.priceUsd || 0.056;
+    const requiredTotalTrob = priceData?.seatEntryTrob || Math.round((300 / currentPriceUsd) * 100) / 100;
+    const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
+    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * currentPriceUsd * 100) / 100;
+    const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
+    const progressPercent = Math.min(100, Math.max(0, ((underfundedTimeLeft.totalSeconds) / (48 * 3600)) * 100));
+
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-b from-[#0B1528] via-[#0E1E38] to-[#070D18] text-white flex flex-col items-center justify-center p-3 sm:p-6 lg:p-10 relative select-none font-sans overflow-x-hidden">
+        {/* Ambient Red/Amber Glows */}
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-red-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-amber-600/15 rounded-full blur-[140px] pointer-events-none" />
+
+        {/* Central Barrier Modal Card */}
+        <div className="w-full max-w-2xl bg-[#111C31]/95 border-2 border-red-500/40 rounded-3xl shadow-[0_25px_80px_rgba(239,68,68,0.25)] p-5 sm:p-8 backdrop-blur-xl relative overflow-hidden space-y-6">
+          
+          {/* Top Banner with Seat & Status */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-600 flex items-center justify-center shadow-lg shadow-red-500/30">
+                <Lock className="w-6 h-6 text-white animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    Dashboard Access Strictly Locked
+                  </span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-white/10 text-white/90">
+                    Seat #{underfundedPos}
+                  </span>
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-white mt-1">
+                  Genesis Council Seat #{underfundedPos} Held in Reservation
+                </h2>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDisconnect}
+              className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Disconnect</span>
+            </button>
+          </div>
+
+          {/* Explicit Access Statement */}
+          <div className="bg-gradient-to-r from-red-950/60 via-amber-950/40 to-red-950/60 border border-red-500/30 rounded-2xl p-4 sm:p-5 space-y-2">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Full Payment Required to Access Council Dashboard</span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              You can only access the <strong className="text-white">EQUORA DAO Dashboard</strong>, VIP Lounge, governance voting, and matrix dividend pools after paying your remaining seat entry balance.
+            </p>
+          </div>
+
+          {/* 48-Hour Live Digital Countdown Timer */}
+          <div className="bg-black/40 border border-amber-500/30 rounded-2xl p-4 sm:p-5 text-center space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 font-bold text-amber-400 uppercase tracking-wider">
+                <Clock className="w-4 h-4 text-amber-400 animate-spin-reverse" />
+                48-Hour Seat Reservation Timer
+              </span>
+              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${
+                underfundedTimeLeft.isExpired
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                {underfundedTimeLeft.isExpired ? 'Reservation Expired' : 'Active Countdown'}
+              </span>
+            </div>
+
+            {/* 3 Digital Blocks */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-sm mx-auto pt-1">
+              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
+                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300">
+                  {String(underfundedTimeLeft.hours).padStart(2, '0')}
+                </div>
+                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+                  Hours
+                </div>
+              </div>
+              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
+                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300">
+                  {String(underfundedTimeLeft.minutes).padStart(2, '0')}
+                </div>
+                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+                  Minutes
+                </div>
+              </div>
+              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
+                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300 animate-pulse">
+                  {String(underfundedTimeLeft.seconds).padStart(2, '0')}
+                </div>
+                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+                  Seconds
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 h-full transition-all duration-1000"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-slate-400">
+              {underfundedTimeLeft.isExpired
+                ? 'Your 48-hour reservation window has expired. Your seat will be returned to the Genesis Council queue.'
+                : 'Complete the remaining balance before this 48-hour timer reaches 00:00:00 to lock in your permanent seat.'}
+            </p>
+          </div>
+
+          {/* Financial Ledger & Remaining Balance Breakdown */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Entry Deposit Ledger & Credit Calculation
+            </h4>
+
+            <div className="space-y-2 text-xs sm:text-sm">
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Required Genesis Council Seat Entry</span>
+                <span className="font-mono font-bold text-white">
+                  $300.00 USD <span className="text-slate-400 text-xs">(≈ {requiredTotalTrob.toLocaleString()} TROB)</span>
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-emerald-400">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Initial Deposit Paid (100% Credited)</span>
+                </span>
+                <span className="font-mono font-bold">
+                  - {underfundedPaidTrob.toLocaleString()} TROB <span className="text-emerald-500/80 text-xs">(≈ ${paidUsdEstimate})</span>
+                </span>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex justify-between items-center">
+                <span className="font-bold text-white text-sm sm:text-base">
+                  Net Remaining Balance Due
+                </span>
+                <div className="text-right">
+                  <div className="font-mono font-black text-amber-300 text-base sm:text-xl">
+                    {netRemainingTrob.toLocaleString()} TROB
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    (≈ ${remainingUsdEstimate}.00 USD)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Action Button */}
+          <div className="space-y-3 pt-2">
+            <button
+              type="button"
+              disabled={underfundedTimeLeft.isExpired}
+              onClick={() => setUnderfundedRetopupOpen(true)}
+              className={`w-full py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-xl cursor-pointer ${
+                underfundedTimeLeft.isExpired
+                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-red-600 via-amber-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white shadow-amber-600/30 hover:shadow-amber-600/50 hover:scale-[1.01] active:scale-[0.99]'
+              }`}
+            >
+              <Zap className="w-5 h-5 fill-white" />
+              <span>
+                Pay Remaining Balance ({netRemainingTrob.toLocaleString()} TROB) to Unlock Dashboard
+              </span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+
+            {/* Support & Explorer Links */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-400">
+              <a
+                href={OFFICIAL_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-emerald-400 flex items-center gap-1.5 transition-colors"
+              >
+                <span>Need Assistance? Contact Council Support</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              {activeAddress && (
+                <a
+                  href={getExplorerAddressUrl(activeAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-blue-400 flex items-center gap-1.5 transition-colors"
+                >
+                  <span>View Seat On TrobScan</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Retopup Modal */}
+        <RetopupModal
+          isOpen={underfundedRetopupOpen}
+          onClose={() => setUnderfundedRetopupOpen(false)}
+          seatPosition={typeof underfundedPos === 'number' ? underfundedPos : 1}
+          retopupDeadline={memberData?.retopupDeadline}
+          trobPriceUsd={currentPriceUsd}
+          alreadyPaidTrob={underfundedPaidTrob}
+          isUnderfunded={true}
+          onSuccess={() => {
+            setUnderfundedRetopupOpen(false);
+            refetchMember();
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
   // ── Access Granted: Render DAO Dashboard Layout ────────────────────────────
   if (isVerifiedMember) {

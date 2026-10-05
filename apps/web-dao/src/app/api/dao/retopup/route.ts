@@ -67,15 +67,17 @@ export async function POST(req: NextRequest) {
     const m = memberRes.rows[0];
     const isUnderfunded = m.status === 'underfunded';
 
-    // 1. Check if 48-Hour retopup window has expired (only for capped members)
-    if (!isUnderfunded && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
+    // 1. Check if 48-Hour payment/retopup window has expired
+    if (m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
       await queryNeon(
         `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
         [m.id]
       );
       return NextResponse.json({
         success: false,
-        error: '48-Hour Retopup Window has expired. Your Council seat is now vacant and open for queue takeover.',
+        error: isUnderfunded
+          ? '48-Hour Seat Reservation Window has expired. Your Council seat reservation has expired and is reopened for the Genesis pool.'
+          : '48-Hour Retopup Window has expired. Your Council seat is now vacant and open for queue takeover.',
       }, { status: 410 });
     }
 

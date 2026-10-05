@@ -87,19 +87,36 @@ export async function GET(
     if (m && (m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000)) {
       const entryTrob = parseFloat(m.entryAmountBtt || '0');
       const entryUsd = parseFloat(m.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
+      
+      let retopupDeadline = m.retopupDeadline;
+      if (!retopupDeadline) {
+        // Start 48-hour retopup window
+        retopupDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+        await queryNeon(
+          `UPDATE "DaoMember" SET "retopupDeadline" = $1, "updatedAt" = NOW() WHERE id = $2`,
+          [retopupDeadline, m.id]
+        );
+      }
+      const diffMs = new Date(retopupDeadline).getTime() - Date.now();
+      const retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
+      const isExpired = retopupTimeRemainingSeconds === 0;
+
       return NextResponse.json({
         success: true,
         data: {
           isMember: true,
           position: m.position,
           nftTokenId: m.nftTokenId || onChainPos,
-          status: 'underfunded',
+          status: isExpired ? 'expired' : 'underfunded',
           joinedAt: m.joinedAt,
           entryAmountBtt: entryTrob,
           entryAmountTrob: entryTrob,
           entryAmountUsdEstimate: entryUsd,
           isQualified: false,
           underfunded: true,
+          retopupDeadline,
+          retopupTimeRemainingSeconds,
+          isExpired,
           notice: `Incomplete Deposit: Council Seat #${m.position} was activated with only ${entryTrob} TROB (~$${entryUsd}). A minimum of $300 USD is strictly required to unlock Council Governance, Matrix Pools & VIP Lounge.`,
           userId: m.id,
         },

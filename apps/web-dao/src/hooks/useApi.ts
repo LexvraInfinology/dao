@@ -300,6 +300,9 @@ export interface LoungeData {
   position?: number;
   nftTokenId?: number;
   status?: string;
+  accessGranted?: boolean;
+  underfunded?: boolean;
+  entryAmountBtt?: number;
   soulboundPass?: {
     tokenId: number | null;
     seatNumber: number | null;

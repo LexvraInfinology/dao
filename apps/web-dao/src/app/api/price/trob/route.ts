@@ -12,7 +12,24 @@ function calculateTrobPegs(priceUsd: number) {
   return { seatEntryUsd, seatEntryTrob, earningsCapUsd, earningsCapTrob };
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function GET() {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   // 1. Fetch live TROB market price directly from official Trobchain API
   const TROB_MARKET_API = TROB_PRICE_API_URL;
   try {
@@ -31,16 +48,19 @@ export async function GET() {
       const priceUsd = Number(data?.priceUsd);
       if (Number.isFinite(priceUsd) && priceUsd > 0) {
         const pegs = calculateTrobPegs(priceUsd);
-        return NextResponse.json({
-          success: true,
-          data: {
-            priceUsd,
-            priceSource: 'trobchain-live-api',
-            updatedAt: data.updatedAt || new Date().toISOString(),
-            isStale: false,
-            ...pegs,
+        return NextResponse.json(
+          {
+            success: true,
+            data: {
+              priceUsd,
+              priceSource: 'trobchain-live-api',
+              updatedAt: data.updatedAt || new Date().toISOString(),
+              isStale: false,
+              ...pegs,
+            },
           },
-        });
+          { headers: corsHeaders }
+        );
       }
     }
   } catch (err) {
@@ -52,27 +72,33 @@ export async function GET() {
   if (backendRes && backendRes.success && backendRes.data && backendRes.data.priceUsd > 0) {
     const priceUsd = backendRes.data.priceUsd;
     const pegs = calculateTrobPegs(priceUsd);
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...backendRes.data,
-        ...pegs,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          ...backendRes.data,
+          ...pegs,
+        },
       },
-    });
+      { headers: corsHeaders }
+    );
   }
 
   // 3. Graceful fallback for offline development
-  const priceUsd = 0.056;
+  const priceUsd = 0.055;
   const pegs = calculateTrobPegs(priceUsd);
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      priceUsd,
-      priceSource: 'trobchain-cached',
-      updatedAt: new Date().toISOString(),
-      isStale: false,
-      ...pegs,
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        priceUsd,
+        priceSource: 'trobchain-cached',
+        updatedAt: new Date().toISOString(),
+        isStale: false,
+        ...pegs,
+      },
     },
-  });
+    { headers: corsHeaders }
+  );
 }

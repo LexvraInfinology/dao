@@ -251,7 +251,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div className="p-3.5 sm:p-6 space-y-3.5 sm:space-y-4 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
           {successData ? (
             /* Success State */
             <div className="py-4 text-center space-y-4 animate-fadeIn">
@@ -328,24 +328,24 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 </div>
 
                 {/* 3-Part Digital Clock */}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white rounded-lg p-2 border border-amber-200 shadow-xs">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
+                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-[#14304A]">
                       {String(timeLeft.hours).padStart(2, '0')}
                     </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-400">Hours</div>
+                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Hours</div>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border border-amber-200 shadow-xs">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
+                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-[#14304A]">
                       {String(timeLeft.minutes).padStart(2, '0')}
                     </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-400">Minutes</div>
+                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Minutes</div>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border border-amber-200 shadow-xs">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-rose-600">
+                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
+                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-rose-600">
                       {String(timeLeft.seconds).padStart(2, '0')}
                     </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-400">Seconds</div>
+                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Seconds</div>
                   </div>
                 </div>
 
@@ -430,7 +430,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
               <button
                 onClick={handleRetopup}
                 disabled={loading || (!isUnderfunded && timeLeft.isExpired) || !wallet.isConnected}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                className="w-full min-h-[46px] py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-center leading-snug"
               >
                 {loading ? (
                   <>

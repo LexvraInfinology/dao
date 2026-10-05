@@ -34,10 +34,19 @@ export async function getOnChainDaoTransactions(
     if (legacyAddress && legacyAddress !== daoAddress) {
       addressesToQuery.push(legacyAddress);
     }
+    if (filterAddress && filterAddress.trim()) {
+      const cleanFilter = filterAddress.trim();
+      if (!addressesToQuery.includes(cleanFilter)) {
+        addressesToQuery.push(cleanFilter);
+      }
+    }
 
     const responses = await Promise.all(
       addressesToQuery.map((addr) =>
-        fetch(`${BACKEND_EXPLORER_API}/accounts/${addr}/transactions?limit=100`, { cache: 'no-store' })
+        fetch(`${BACKEND_EXPLORER_API}/accounts/${addr}/transactions?limit=100`, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(2000),
+        })
           .then((r) => (r.ok ? r.json() : { data: [] }))
           .catch(() => ({ data: [] }))
       )
@@ -113,6 +122,7 @@ export async function getOnChainDaoTransactions(
         try {
           const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${hash}`, {
             cache: 'no-store',
+            signal: AbortSignal.timeout(1500),
           });
           if (detailRes.ok) {
             const detailJson = await detailRes.json();
@@ -354,6 +364,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
         function_selector: 'getAllMembers()',
         parameter: '',
       }),
+      signal: AbortSignal.timeout(4000),
       cache: 'no-store',
     });
 
@@ -376,7 +387,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
     const onChainCount = memberHexes.length;
 
     const dbCountRes = await queryNeon<{ count: string; max_pos: string }>(
-      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped')`
+      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped', 'underfunded')`
     );
     const dbCount = parseInt(dbCountRes.rows[0]?.count || '0', 10);
     const maxDbPos = parseInt(dbCountRes.rows[0]?.max_pos || '0', 10);
@@ -402,7 +413,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
           [position]
         );
 
-        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase() || existing.rows[0].status === 'underfunded') {
+        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase()) {
           let totalEarnedTrob = 0;
           try {
             const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
@@ -452,7 +463,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
                5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NULL, NOW(), NOW()
              )
              ON CONFLICT (position) DO UPDATE
-             SET address = $1, "pushedAmountBtt" = $3, status = 'active', "retopupDeadline" = NULL, "entryAmountBtt" = 5357.14, "entryAmountUsdAtJoin" = 300, "updatedAt" = NOW()`,
+             SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,
             [b58Addr, position, totalEarnedTrob]
           );
 

@@ -211,6 +211,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
+  const effectiveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.055;
+  const effectiveSeatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+    ? priceData.seatEntryTrob
+    : Math.round((300 / effectiveTrobPrice) * 100) / 100;
 
   // Synchronize local membership cache and purge stale keys
   useEffect(() => {
@@ -492,11 +496,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       setPayError('You must join and verify the official WhatsApp channel before registering.');
       return;
     }
-    if (!priceData || priceData.priceUsd <= 0) {
-      setPayError('Fetching live TROB market rate... Please try again in a few seconds.');
-      return;
-    }
-
     const activeAddr = wallet.base58Address || wallet.hexAddress;
     if (!activeAddr) {
       setPayError('No active address found from TrobSafe. Please unlock your wallet.');
@@ -507,7 +506,6 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     setPayTxHash('pending');
 
     try {
-      // 1. Mandatory on-chain execution of EquoraDAO.sol contract joinDAO()
       const targetContract =
         DAO_CONTRACT_ADDRESS &&
         DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
@@ -515,7 +513,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           ? DAO_CONTRACT_ADDRESS
           : getActiveDaoAddress();
 
-      const seatEntryTrob = priceData.seatEntryTrob;
+      const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+        ? priceData.seatEntryTrob
+        : effectiveSeatEntryTrob;
+
       // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
       if (seatEntryTrob < 4500) {
         throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
@@ -607,205 +608,145 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   if (isUnderfunded) {
     const underfundedPos = memberData?.position || '—';
     const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
-    const currentPriceUsd = priceData?.priceUsd || 0.056;
-    const requiredTotalTrob = priceData?.seatEntryTrob || Math.round((300 / currentPriceUsd) * 100) / 100;
+    const currentPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.055;
+    const requiredTotalTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+      ? priceData.seatEntryTrob
+      : Math.round((300 / currentPriceUsd) * 100) / 100;
     const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
     const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * currentPriceUsd * 100) / 100;
     const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
-    const progressPercent = Math.min(100, Math.max(0, ((underfundedTimeLeft.totalSeconds) / (48 * 3600)) * 100));
 
     return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-[#0B1528] via-[#0E1E38] to-[#070D18] text-white flex flex-col items-center justify-center p-3 sm:p-6 lg:p-10 relative select-none font-sans overflow-x-hidden">
-        {/* Ambient Red/Amber Glows */}
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-red-600/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-amber-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="min-h-[100dvh] w-full bg-[#F8FAFD] text-[#14304A] flex flex-col items-center justify-center p-4 sm:p-6 font-sans relative select-none">
+        {/* Subtle Ambient Brand Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-72 bg-gradient-to-b from-[#0E62E4]/8 to-transparent pointer-events-none" />
 
-        {/* Central Barrier Modal Card */}
-        <div className="w-full max-w-2xl bg-[#111C31]/95 border-2 border-red-500/40 rounded-3xl shadow-[0_25px_80px_rgba(239,68,68,0.25)] p-5 sm:p-8 backdrop-blur-xl relative overflow-hidden space-y-6">
-          
-          {/* Top Banner with Seat & Status */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-600 flex items-center justify-center shadow-lg shadow-red-500/30">
-                <Lock className="w-6 h-6 text-white animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    Dashboard Access Strictly Locked
-                  </span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-white/10 text-white/90">
-                    Seat #{underfundedPos}
-                  </span>
-                </div>
-                <h2 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Genesis Council Seat #{underfundedPos} Held in Reservation
-                </h2>
+        {/* Minimal Luxury Card Matching Equora Project */}
+        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-[0_20px_50px_rgba(14,98,228,0.08)] p-6 sm:p-8 space-y-5 relative backdrop-blur-xl">
+
+          {/* Top Logo & Title */}
+          <div className="text-center space-y-2">
+            <div className="relative inline-block mx-auto">
+              <EquoraLogo size="lg" className="mx-auto" />
+              <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full p-1 shadow-xs border border-white">
+                <Crown className="w-3 h-3 text-white" />
               </div>
             </div>
 
-            <button
-              onClick={handleDisconnect}
-              className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Disconnect</span>
-            </button>
-          </div>
-
-          {/* Explicit Access Statement */}
-          <div className="bg-gradient-to-r from-red-950/60 via-amber-950/40 to-red-950/60 border border-red-500/30 rounded-2xl p-4 sm:p-5 space-y-2">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Full Payment Required to Access Council Dashboard</span>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80">
+                <Clock className="w-3 h-3 text-amber-600" />
+                <span>Seat #{underfundedPos} Reserved</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black font-sora text-[#14304A] tracking-tight mt-1.5">
+                EQUORA <span className="text-[#0E62E4]">DAO</span>
+              </h1>
+              <p className="text-xs text-[#60739A] mt-0.5">
+                Complete remaining balance to activate your Genesis seat.
+              </p>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              You can only access the <strong className="text-white">EQUORA DAO Dashboard</strong>, VIP Lounge, governance voting, and matrix dividend pools after paying your remaining seat entry balance.
-            </p>
           </div>
 
-          {/* 48-Hour Live Digital Countdown Timer */}
-          <div className="bg-black/40 border border-amber-500/30 rounded-2xl p-4 sm:p-5 text-center space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-amber-400 uppercase tracking-wider">
-                <Clock className="w-4 h-4 text-amber-400 animate-spin-reverse" />
-                48-Hour Seat Reservation Timer
+          {/* Minimal 3-Part Digital Countdown */}
+          <div className="bg-[#F8FAFD] rounded-2xl border border-slate-200/70 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#60739A]">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#0E62E4]" />
+                <span>48h Reservation Window</span>
               </span>
-              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${
-                underfundedTimeLeft.isExpired
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-              }`}>
-                {underfundedTimeLeft.isExpired ? 'Reservation Expired' : 'Active Countdown'}
+              <span className="font-mono font-bold text-[#0E62E4]">
+                {underfundedTimeLeft.isExpired ? 'Expired' : 'Active'}
               </span>
             </div>
 
-            {/* 3 Digital Blocks */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-sm mx-auto pt-1">
-              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
-                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
                   {String(underfundedTimeLeft.hours).padStart(2, '0')}
                 </div>
-                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                  Hours
-                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Hours</div>
               </div>
-              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
-                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300">
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
                   {String(underfundedTimeLeft.minutes).padStart(2, '0')}
                 </div>
-                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                  Minutes
-                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Minutes</div>
               </div>
-              <div className="bg-gradient-to-b from-[#18263E] to-[#0D1624] border border-amber-500/30 rounded-xl p-2.5 sm:p-3 shadow-inner">
-                <div className="text-2xl sm:text-4xl font-black font-mono text-amber-300 animate-pulse">
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-rose-600 animate-pulse">
                   {String(underfundedTimeLeft.seconds).padStart(2, '0')}
                 </div>
-                <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                  Seconds
-                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Seconds</div>
               </div>
             </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 h-full transition-all duration-1000"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-
-            <p className="text-[11px] sm:text-xs text-slate-400">
-              {underfundedTimeLeft.isExpired
-                ? 'Your 48-hour reservation window has expired. Your seat will be returned to the Genesis Council queue.'
-                : 'Complete the remaining balance before this 48-hour timer reaches 00:00:00 to lock in your permanent seat.'}
-            </p>
           </div>
 
-          {/* Financial Ledger & Remaining Balance Breakdown */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Entry Deposit Ledger & Credit Calculation
-            </h4>
-
-            <div className="space-y-2 text-xs sm:text-sm">
-              <div className="flex justify-between items-center text-slate-300">
-                <span>Required Genesis Council Seat Entry</span>
-                <span className="font-mono font-bold text-white">
-                  $300.00 USD <span className="text-slate-400 text-xs">(≈ {requiredTotalTrob.toLocaleString()} TROB)</span>
+          {/* Minimal Financial Summary */}
+          <div className="bg-[#EFF6FF] rounded-2xl border border-[#0E62E4]/20 p-4 space-y-2 text-xs">
+            <div className="flex justify-between items-center text-[#60739A]">
+              <span>Council Seat Fee (Fixed $300)</span>
+              <span className="font-mono font-semibold text-[#14304A]">
+                {requiredTotalTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-emerald-600">
+              <span>Initial Deposit Credited</span>
+              <span className="font-mono font-semibold">
+                - {underfundedPaidTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+            </div>
+            <div className="pt-2 border-t border-[#0E62E4]/15 flex justify-between items-center">
+              <span className="font-bold text-[#14304A] text-sm">Remaining Due</span>
+              <div className="text-right">
+                <span className="text-lg sm:text-xl font-black font-mono text-[#0E62E4]">
+                  {netRemainingTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
                 </span>
-              </div>
-
-              <div className="flex justify-between items-center text-emerald-400">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Initial Deposit Paid (100% Credited)</span>
-                </span>
-                <span className="font-mono font-bold">
-                  - {underfundedPaidTrob.toLocaleString()} TROB <span className="text-emerald-500/80 text-xs">(≈ ${paidUsdEstimate})</span>
-                </span>
-              </div>
-
-              <div className="pt-2 border-t border-white/10 flex justify-between items-center">
-                <span className="font-bold text-white text-sm sm:text-base">
-                  Net Remaining Balance Due
-                </span>
-                <div className="text-right">
-                  <div className="font-mono font-black text-amber-300 text-base sm:text-xl">
-                    {netRemainingTrob.toLocaleString()} TROB
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    (≈ ${remainingUsdEstimate}.00 USD)
-                  </div>
-                </div>
+                <div className="text-[10px] text-[#60739A]">≈ ${remainingUsdEstimate}.00 USD</div>
               </div>
             </div>
           </div>
 
           {/* Primary Action Button */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             <button
               type="button"
               disabled={underfundedTimeLeft.isExpired}
               onClick={() => setUnderfundedRetopupOpen(true)}
-              className={`w-full py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-xl cursor-pointer ${
+              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-center leading-snug font-sans ${
                 underfundedTimeLeft.isExpired
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-red-600 via-amber-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white shadow-amber-600/30 hover:shadow-amber-600/50 hover:scale-[1.01] active:scale-[0.99]'
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] active:scale-[0.99]'
               }`}
             >
-              <Zap className="w-5 h-5 fill-white" />
+              <Zap className="w-4 h-4 text-amber-300 shrink-0" />
               <span>
-                Pay Remaining Balance ({netRemainingTrob.toLocaleString()} TROB) to Unlock Dashboard
+                {underfundedTimeLeft.isExpired
+                  ? 'Reservation Window Expired'
+                  : `Complete Seat Activation (${netRemainingTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
               </span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
 
-            {/* Support & Explorer Links */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-400">
+            {/* Clean Secondary Links */}
+            <div className="flex items-center justify-between text-xs text-[#60739A] px-1 pt-1">
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="hover:text-rose-600 transition-colors flex items-center gap-1 cursor-pointer font-semibold text-[11px]"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect</span>
+              </button>
+
               <a
-                href={OFFICIAL_WHATSAPP_URL}
+                href={WHATSAPP_DAO_GROUP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-emerald-400 flex items-center gap-1.5 transition-colors"
+                className="hover:text-[#0E62E4] transition-colors flex items-center gap-1 font-semibold text-[11px]"
               >
-                <span>Need Assistance? Contact Council Support</span>
+                <span>WhatsApp Support</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
-
-              {activeAddress && (
-                <a
-                  href={getExplorerAddressUrl(activeAddress)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-blue-400 flex items-center gap-1.5 transition-colors"
-                >
-                  <span>View Seat On TrobScan</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
             </div>
           </div>
 
@@ -877,7 +818,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-[#38BDF8]/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* ── Main Registration Card (Light Fintech Theme • Fully Responsive Desktop & Mobile) ────── */}
-        <div className="w-full max-w-[480px] lg:max-w-5xl xl:max-w-6xl my-auto bg-white rounded-[24px] sm:rounded-[32px] border border-[#E2ECF9] shadow-[0_24px_70px_-15px_rgba(14,98,228,0.1)] p-4 sm:p-6 lg:p-8 xl:p-10 relative transition-all">
+        <div className="w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl my-auto bg-white rounded-[20px] min-[360px]:rounded-[24px] sm:rounded-[32px] border border-[#E2ECF9] shadow-[0_24px_70px_-15px_rgba(14,98,228,0.1)] p-3.5 min-[360px]:p-4 sm:p-6 lg:p-8 xl:p-10 relative transition-all">
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-start">
 
@@ -920,15 +861,13 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-sans">
                   <span className="font-semibold text-[#17334F] text-[10px] sm:text-[11px]">Council Seat Entry Fee</span>
                   <span suppressHydrationWarning className="font-mono text-[#0E62E4] font-semibold text-[10px] sm:text-[11px]">
-                    {mounted && priceData ? `@ $${priceData.priceUsd.toFixed(4)} / TROB` : 'Fetching live rate…'}
+                    {`@ $${effectiveTrobPrice.toFixed(4)} / TROB`}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-1.5">
                     <span suppressHydrationWarning className="text-xl sm:text-2xl lg:text-3xl font-black font-sora text-[#17334F] tracking-tight">
-                      {mounted && priceData
-                        ? priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                        : '…'}
+                      {effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
                     <span className="text-xs sm:text-sm font-bold text-[#0E62E4] font-sans">TROB</span>
                   </div>
@@ -1227,14 +1166,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       type="button"
                       onClick={handleStakeAndVote}
                       disabled={isStakingHelper}
-                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0E62E4] to-[#2575FC] hover:from-[#0B52C4] hover:to-[#1A62E8] border border-[#0E62E4]/20 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.98] font-sans"
+                      className="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0E62E4] to-[#2575FC] hover:from-[#0B52C4] hover:to-[#1A62E8] border border-[#0E62E4]/20 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.98] font-sans text-center leading-tight"
                     >
                       {isStakingHelper ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white shrink-0" />
                       ) : (
-                        <Zap className="w-3.5 h-3.5 text-amber-300" />
+                        <Zap className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                       )}
-                      <span>
+                      <span className="leading-snug break-words">
                         {isStakingHelper
                           ? 'Broadcasting On-Chain Freeze & Vote…'
                           : !eligibility?.condition2.energy.passed && !eligibility?.condition2.bandwidth.passed
@@ -1502,7 +1441,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 type="button"
                 onClick={() => handleClaimSeat()}
                 disabled={!isEligibleToPay || payTxHash === 'pending'}
-                className={`w-full py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 text-center transition-all font-sans ${
+                className={`w-full min-h-[48px] py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm md:text-base flex items-center justify-center gap-2 text-center transition-all font-sans ${
                   isEligibleToPay
                     ? 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] cursor-pointer ring-2 ring-blue-300/40 active:scale-[0.99]'
                     : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'

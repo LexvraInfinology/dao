@@ -181,7 +181,7 @@ export class BlockchainIndexer {
     }
 
     // 2. Query DAO contract members
-    const rawDao = process.env.NEXT_PUBLIC_DAO_HEX || "410a59d6a2dcd3b18687c1efe1625642ad85679377";
+    const rawDao = process.env.NEXT_PUBLIC_DAO_HEX || process.env.NEXT_PUBLIC_DAO_ADDRESS || "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4";
     const daoHex = (rawDao.startsWith("0x") ? "41" + rawDao.slice(2) : rawDao).toLowerCase();
 
     const contractRes = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
@@ -208,9 +208,9 @@ export class BlockchainIndexer {
 
     const onChainCount = memberAddresses.length;
 
-    // Check DB count
+    // Check DB count (include underfunded to match all on-chain seats)
     const dbRes = await queryNeonDirect<{ count: string; max_pos: string }>(
-      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped')`
+      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped', 'underfunded')`
     );
     const dbCount = parseInt(dbRes.rows[0]?.count || "0", 10);
     const maxDbPos = parseInt(dbRes.rows[0]?.max_pos || "0", 10);
@@ -281,7 +281,7 @@ export class BlockchainIndexer {
                5084.75, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
              )
              ON CONFLICT (position) DO UPDATE
-             SET address = $1, "pushedAmountBtt" = $3, status = 'active', "updatedAt" = NOW()`,
+             SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,
             [b58Addr, position, totalEarnedTrob]
           );
 

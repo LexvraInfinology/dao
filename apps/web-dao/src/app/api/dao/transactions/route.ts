@@ -43,74 +43,89 @@ export async function GET(req: NextRequest) {
     } catch {}
 
     // 2. Fetch direct on-chain smart contract transactions from TrobChain
-    let rawList: TransactionItem[] = [];
+    let onChainItems: TransactionItem[] = [];
     try {
-      const onChainItems = await getOnChainDaoTransactions(address, true);
-      if (onChainItems && onChainItems.length > 0) {
-        rawList = onChainItems;
-      }
+      onChainItems = (await getOnChainDaoTransactions(address, true)) || [];
     } catch (chainErr) {
       console.warn('[Transactions API] On-chain fetch warning:', chainErr);
     }
 
-    // 3. Fallback to Neon DB only if on-chain returned no transactions
-    if (rawList.length === 0) {
-      try {
-        let whereClauses: string[] = [];
-        let params: any[] = [];
+    // 3. Query Neon DB for confirmed protocol ledger events
+    let dbItems: TransactionItem[] = [];
+    try {
+      let whereClauses: string[] = [];
+      let params: any[] = [];
 
-        if (address && address.trim()) {
-          const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
-          const clean = address.trim();
-          const b58 = toTrobBase58(clean);
-          const hex = toTronHex(clean);
-          params.push(clean.toLowerCase(), b58.toLowerCase(), hex.toLowerCase());
-          whereClauses.push(`LOWER("userAddress") IN ($${params.length - 2}, $${params.length - 1}, $${params.length})`);
-        }
+      if (address && address.trim()) {
+        const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
+        const clean = address.trim();
+        const b58 = toTrobBase58(clean);
+        const hex = toTronHex(clean);
+        params.push(clean.toLowerCase(), b58.toLowerCase(), hex.toLowerCase());
+        whereClauses.push(`LOWER("userAddress") IN ($${params.length - 2}, $${params.length - 1}, $${params.length})`);
+      }
 
-        const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-        const rowsRes = await queryNeon<any>(
-          `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
-           FROM "DaoEvent"
-           ${whereSql}
-           ORDER BY "timestamp" DESC, "createdAt" DESC
-           LIMIT 200`,
-          params
-        );
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const rowsRes = await queryNeon<any>(
+        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
+         FROM "DaoEvent"
+         ${whereSql}
+         ORDER BY "timestamp" DESC, "createdAt" DESC
+         LIMIT 500`,
+        params
+      );
 
-        rawList = rowsRes.rows.map((evt) => {
-          const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-          const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
-          const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
+      dbItems = rowsRes.rows.map((evt) => {
+        const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+        const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+        const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * trobPriceUsd) * 100) / 100;
 
-          return {
-            id: evt.id,
-            type: evt.eventType as any,
-            typeLabel:
-              evt.reason ||
-              (evt.eventType === 'joined'
-                ? `Council Seat #${evt.incomingPosition || ''} Activated`
-                : evt.eventType === 'pushed'
-                ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-                : evt.eventType === 'retopup'
-                ? '5X Cap Retopup'
-                : 'Dividend Reward Claimed'),
-            amountBtt: amtBtt,
-            amountTrob: amtBtt,
-            amountUsd: amtUsd,
-            isPositive,
-            from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-            to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-            txHash: evt.txHash || '',
-            timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-            status: 'Confirmed',
-            incomingPosition: evt.incomingPosition,
-          };
-        });
-      } catch (dbErr) {
-        console.warn('[Transactions API] DB fetch warning:', dbErr);
+        return {
+          id: evt.id,
+          type: evt.eventType as any,
+          typeLabel:
+            evt.reason ||
+            (evt.eventType === 'joined'
+              ? `Council Seat #${evt.incomingPosition || ''} Activated`
+              : evt.eventType === 'pushed'
+              ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+              : evt.eventType === 'retopup'
+              ? '5X Cap Retopup'
+              : 'Dividend Reward Claimed'),
+          amountBtt: amtBtt,
+          amountTrob: amtBtt,
+          amountUsd: amtUsd,
+          isPositive,
+          from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+          to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+          txHash: evt.txHash || '',
+          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+          status: 'Confirmed',
+          incomingPosition: evt.incomingPosition,
+        };
+      });
+    } catch (dbErr) {
+      console.warn('[Transactions API] DB fetch warning:', dbErr);
+    }
+
+    // 4. Merge and deduplicate by transaction hash / ID
+    const mergedMap = new Map<string, TransactionItem>();
+    
+    // Put DB items first (they have verified timestamps and USD values)
+    for (const item of dbItems) {
+      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}` : item.id;
+      mergedMap.set(key, item);
+    }
+
+    // Overlay on-chain items
+    for (const item of onChainItems) {
+      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}` : item.id;
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, item);
       }
     }
+
+    const rawList = Array.from(mergedMap.values());
 
     // 4. Apply search and type filtering
     let filtered = rawList;

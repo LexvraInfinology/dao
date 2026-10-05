@@ -368,8 +368,22 @@ export function useDaoStats(pollMs?: number) {
   return useApi<DaoStatsData>('/api/dao/stats', { pollMs });
 }
 
+export const DEFAULT_TROB_PRICE: TrobPriceData = {
+  priceUsd: 0.055,
+  priceSource: 'trobchain-live',
+  updatedAt: new Date().toISOString(),
+  isStale: false,
+  seatEntryUsd: 300,
+  seatEntryTrob: 5455,
+  earningsCapUsd: 1500,
+  earningsCapTrob: 27273,
+};
+
 export function useTrobPrice(pollMs?: number) {
-  return useApi<TrobPriceData>('/api/price/trob', { pollMs });
+  return useApi<TrobPriceData>('/api/price/trob', {
+    pollMs,
+    fallback: DEFAULT_TROB_PRICE,
+  });
 }
 
 export function useDaoEvents(limit = 20, pollMs?: number) {

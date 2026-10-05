@@ -627,7 +627,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           {/* Top Logo & Title */}
           <div className="text-center space-y-2">
             <div className="relative inline-block mx-auto">
-              <EquoraLogo size="lg" className="mx-auto" />
+              <EquoraLogo size={48} className="mx-auto" />
               <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full p-1 shadow-xs border border-white">
                 <Crown className="w-3 h-3 text-white" />
               </div>

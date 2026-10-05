@@ -4,21 +4,29 @@ import React from 'react';
 
 interface EquoraLogoProps {
   className?: string;
-  size?: number;
+  size?: number | 'sm' | 'md' | 'lg' | 'xl';
 }
+
+const SIZE_MAP: Record<string, number> = {
+  sm: 24,
+  md: 36,
+  lg: 48,
+  xl: 64,
+};
 
 export const EquoraLogo: React.FC<EquoraLogoProps> = ({
   className = 'w-9 h-9',
   size,
 }) => {
+  const pixelSize = typeof size === 'number' ? size : (size ? SIZE_MAP[size] : 36);
   return (
     <img
       src="/dao/equoranewlogo.png"
       alt="EQUORA.FI Logo"
-      width={size || 36}
-      height={size || 36}
+      width={pixelSize}
+      height={pixelSize}
       className={`object-contain select-none pointer-events-none ${className}`}
-      style={size ? { width: size, height: size } : undefined}
+      style={pixelSize ? { width: pixelSize, height: pixelSize } : undefined}
       loading="eager"
       decoding="async"
     />

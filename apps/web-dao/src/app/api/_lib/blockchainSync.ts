@@ -364,7 +364,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
         function_selector: 'getAllMembers()',
         parameter: '',
       }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(10000),
       cache: 'no-store',
     });
 
@@ -479,7 +479,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
     return { onChainCount, dbCount: Math.max(dbCount, onChainCount), newMembersAdded };
   } catch (err) {
-    console.error('[OnChainSync] Error in syncOnChainMembersState:', err);
+    console.warn('[OnChainSync] Background sync notice:', (err as Error)?.message || err);
     return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
   } finally {
     isSyncingOnChain = false;

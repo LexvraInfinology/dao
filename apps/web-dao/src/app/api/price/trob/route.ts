@@ -23,6 +23,9 @@ export async function OPTIONS() {
   });
 }
 
+let cachedTrobPayload: any = null;
+let lastTrobFetchTime = 0;
+
 export async function GET() {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -30,11 +33,19 @@ export async function GET() {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
+  const now = Date.now();
+  if (cachedTrobPayload && now - lastTrobFetchTime < 30_000) {
+    return NextResponse.json(
+      { success: true, data: cachedTrobPayload },
+      { headers: corsHeaders }
+    );
+  }
+
   // 1. Fetch live TROB market price directly from official Trobchain API
   const TROB_MARKET_API = TROB_PRICE_API_URL;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 2500);
     const res = await fetch(TROB_MARKET_API, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
@@ -48,23 +59,32 @@ export async function GET() {
       const priceUsd = Number(data?.priceUsd);
       if (Number.isFinite(priceUsd) && priceUsd > 0) {
         const pegs = calculateTrobPegs(priceUsd);
+        const payload = {
+          priceUsd,
+          priceSource: 'trobchain-live-api',
+          updatedAt: data.updatedAt || new Date().toISOString(),
+          isStale: false,
+          ...pegs,
+        };
+        cachedTrobPayload = payload;
+        lastTrobFetchTime = Date.now();
         return NextResponse.json(
           {
             success: true,
-            data: {
-              priceUsd,
-              priceSource: 'trobchain-live-api',
-              updatedAt: data.updatedAt || new Date().toISOString(),
-              isStale: false,
-              ...pegs,
-            },
+            data: payload,
           },
           { headers: corsHeaders }
         );
       }
     }
   } catch (err) {
-    console.warn('[Price API] Direct market fetch note:', (err as Error).message);
+    // If cached payload exists, gracefully serve it on timeout
+    if (cachedTrobPayload) {
+      return NextResponse.json(
+        { success: true, data: cachedTrobPayload },
+        { headers: corsHeaders }
+      );
+    }
   }
 
   // 2. Fallback to backend proxy if available

@@ -18,9 +18,10 @@ export async function queryNeon<T = any>(
   sql: string,
   params: any[] = []
 ): Promise<{ rows: T[]; rowCount: number }> {
-  const dbUrl =
-    process.env.DATABASE_URL ||
-    'postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
+  let dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl || !dbUrl.includes('neon.tech')) {
+    dbUrl = 'postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
+  }
   const endpoint = getNeonSqlEndpoint(dbUrl);
   if (!endpoint) {
     throw new Error('Unable to resolve Neon SQL endpoint from DATABASE_URL');

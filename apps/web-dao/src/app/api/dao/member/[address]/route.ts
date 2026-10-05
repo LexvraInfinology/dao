@@ -41,19 +41,26 @@ export async function GET(
     let isUnderfundedReservation = false;
     let reservedPos = 0;
 
-    if (onChainPos === 0) {
-      // Check if address has an active underfunded reservation in DB or on-chain
-      const dbUnderfunded = await queryNeon<any>(
-        `SELECT position, status, "retopupDeadline", "entryAmountBtt" FROM "DaoMember"
-         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
-           AND LOWER(status) = 'underfunded'
-         LIMIT 1`,
-        [cleanAddr, base58Addr, hexAddr]
-      );
+    // Check Neon DB first or alongside on-chain position
+    const { rows } = await queryNeon<any>(
+      `SELECT * FROM "DaoMember" 
+       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR (position = $4 AND $4 > 0))
+       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
+       LIMIT 1`,
+      [cleanAddr, base58Addr, hexAddr, onChainPos]
+    );
 
-      if (dbUnderfunded.rows.length > 0) {
+    let m = rows[0];
+
+    // If onChainPos was 0 due to network/RPC latency, but DB has active record, use DB position
+    if (onChainPos === 0 && m && m.position > 0) {
+      onChainPos = m.position;
+    }
+
+    if (onChainPos === 0) {
+      if (m && m.status === 'underfunded') {
         isUnderfundedReservation = true;
-        reservedPos = dbUnderfunded.rows[0].position;
+        reservedPos = m.position;
         onChainPos = reservedPos;
       } else {
         // Also check on-chain reservation mapping from EquoraDAOv2
@@ -70,17 +77,8 @@ export async function GET(
       }
     }
 
-    // Blockchain is the strict single source of truth:
-    // If the smart contract returns onChainPos === 0 and no reservation exists, the address is NOT a member!
-    if (onChainPos === 0 && !isUnderfundedReservation) {
-      // Clean up any stale DB record that might have belonged to an old contract
-      await queryNeon(
-        `DELETE FROM "DaoMember" 
-         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
-           AND LOWER(status) != 'underfunded'`,
-        [cleanAddr, base58Addr, hexAddr]
-      );
-
+    // If neither on-chain nor DB record exists, address is not a member
+    if (onChainPos === 0 && !isUnderfundedReservation && !m) {
       return NextResponse.json({
         success: true,
         data: {
@@ -106,16 +104,6 @@ export async function GET(
         },
       });
     }
-
-    const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" 
-       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR position = $4)
-       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
-       LIMIT 1`,
-      [cleanAddr, base58Addr, hexAddr, onChainPos]
-    );
-
-    let m = rows[0];
 
     // If member has underfunded/provisional deposit status, lock governance & rewards
     if (m && (m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000)) {

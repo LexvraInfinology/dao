@@ -47,7 +47,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
@@ -93,7 +93,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       CHAIN_ID: ${CHAIN_ID:-1000}
       RPC_URL: ${RPC_URL:-https://fullnode-one.trobchain.com}
       INDEXER_POLL_INTERVAL_MS: ${INDEXER_POLL_INTERVAL_MS:-3000}
@@ -124,7 +124,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set and must use postgres as the host}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}

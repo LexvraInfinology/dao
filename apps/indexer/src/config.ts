@@ -30,8 +30,8 @@ export function to0xAddress(addr?: string): `0x${string}` {
 }
 
 export const config = {
-  chainId: parseInt(process.env.CHAIN_ID || "31337", 10),
-  rpcUrl: process.env.RPC_URL || "http://127.0.0.1:8545",
+  chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || "1000", 10),
+  rpcUrl: process.env.RPC_URL || process.env.FULLNODE_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one.trobchain.com",
   pollIntervalMs: parseInt(process.env.INDEXER_POLL_INTERVAL_MS || "3000", 10),
   startBlock: BigInt(process.env.INDEXER_START_BLOCK || "0"),
   contracts: {

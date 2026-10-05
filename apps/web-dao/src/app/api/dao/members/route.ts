@@ -29,7 +29,12 @@ export async function GET(req: NextRequest) {
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
     `/api/dao/members?page=${page}&limit=${limit}`
   );
-  if (backendRes && backendRes.success) {
+  if (
+    backendRes &&
+    backendRes.success &&
+    Array.isArray(backendRes.data?.members) &&
+    backendRes.data.members.length > 0
+  ) {
     if (page === '1' && limit === '100') {
       cachedMembersPayload = backendRes.data;
       cachedMembersTime = now;

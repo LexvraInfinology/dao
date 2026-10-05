@@ -25,7 +25,7 @@ export const config = {
     nonceTtlSeconds: parseInt(process.env.SIWE_NONCE_TTL_SECONDS || "300", 10),
   },
   blockchain: {
-    chainId: parseInt(process.env.CHAIN_ID || "31337", 10),
-    rpcUrl: process.env.RPC_URL || "http://127.0.0.1:8545",
+    chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || "1000", 10),
+    rpcUrl: process.env.RPC_URL || process.env.FULLNODE_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one.trobchain.com",
   },
 };

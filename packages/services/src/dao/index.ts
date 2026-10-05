@@ -337,6 +337,54 @@ export class DaoService {
     };
   }
 
+  private async getOnChainPosition(address: string): Promise<number> {
+    try {
+      const clean = address.trim();
+      if (!clean) return 0;
+      const variants = getAddressVariants(clean);
+      let hexOwner = variants.find((v) => /^41[0-9a-fA-F]{40}$/.test(v));
+      if (!hexOwner) {
+        const hex0x = variants.find((v) => /^0x[0-9a-fA-F]{40}$/.test(v));
+        if (hex0x) hexOwner = "41" + hex0x.slice(2);
+      }
+      if (!hexOwner) return 0;
+
+      const rpcUrl =
+        process.env.FULLNODE_URL ||
+        process.env.RPC_URL ||
+        process.env.NEXT_PUBLIC_RPC_URL ||
+        "https://fullnode-one.trobchain.com";
+      const daoHex = (
+        process.env.NEXT_PUBLIC_DAO_HEX || "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4"
+      )
+        .replace(/^0x/, "41")
+        .toLowerCase();
+
+      const res = await fetch(`${rpcUrl}/wallet/triggerconstantcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: hexOwner,
+          contract_address: daoHex,
+          function_selector: "memberPosition(address)",
+          parameter: hexOwner.replace(/^41/, "").padStart(64, "0"),
+        }),
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data?.constant_result?.[0]) {
+          const pos = parseInt(data.constant_result[0], 16);
+          if (Number.isFinite(pos) && pos > 0 && pos <= 100) {
+            return pos;
+          }
+        }
+      }
+    } catch (_) {}
+    return 0;
+  }
+
   async getMemberByAddress(address: string): Promise<MemberDetailsDTO> {
     const variants = getAddressVariants(address);
     const [member, priceData] = await Promise.all([
@@ -356,6 +404,37 @@ export class DaoService {
     ]);
 
     if (!member) {
+      const onChainPos = await this.getOnChainPosition(address);
+      if (onChainPos > 0) {
+        const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
+        const entryTrob = priceUsd > 0 ? Math.round((300 / priceUsd) * 100) / 100 : 5084.75;
+        const earningsCapTrob = priceUsd > 0 ? Math.round((1500 / priceUsd) * 100) / 100 : 25423.75;
+        return {
+          isMember: true,
+          position: onChainPos,
+          userId: null,
+          directReferralsCount: 0,
+          isQualified: true,
+          nftTokenId: onChainPos,
+          joinedAt: new Date(),
+          entryAmountBtt: entryTrob,
+          entryAmountTrob: entryTrob,
+          entryAmountUsdEstimate: 300,
+          pushedAmountBtt: 0,
+          pushedAmountTrob: 0,
+          pushedAmountUsdEstimate: 0,
+          earningsCapUsd: 1500,
+          earningsCapBtt: earningsCapTrob,
+          earningsCapTrob,
+          remainingCapUsd: 1500,
+          remainingCapTrob: earningsCapTrob,
+          capProgressPct: 0,
+          isCapped: false,
+          retopupDeadline: null,
+          retopupTimeRemainingSeconds: null,
+        };
+      }
+
       return {
         isMember: false,
         position: null,

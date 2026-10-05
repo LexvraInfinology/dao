@@ -364,7 +364,13 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
       for (let i = 0; i < memberHexes.length; i++) {
         const rawHex = memberHexes[i];
+        if (!rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000') {
+          continue;
+        }
         const b58Addr = toTrobBase58(rawHex);
+        if (!b58Addr || b58Addr === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') {
+          continue;
+        }
         const position = i + 1;
 
         const existing = await queryNeon<any>(

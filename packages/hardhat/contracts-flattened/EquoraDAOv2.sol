@@ -1893,6 +1893,9 @@ contract EquoraDAOv2 is ReentrancyGuard {
     // ─── Migration & Underfunded Reservations ──────────────────────────────────
 
     bool public migrationFinalized;
+    uint256 public reservationDeadline;
+    uint256 public totalPullFallback;
+    uint256 public totalDebtRecovered;
 
     struct UnderfundedReservation {
         uint256 reservedSeat;
@@ -1960,6 +1963,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
     event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun, uint256 unearnedDebtSun);
     event UnderfundedSeatCompleted(address indexed wallet, uint256 indexed seat, uint256 paidAmount, uint256 totalCost);
     event UnearnedDebtRecovered(address indexed member, uint256 amountDeducted, uint256 remainingDebt);
+    event RecoveredSurplusWithdrawn(address indexed to, uint256 amount, uint256 timestamp);
 
     // ─── Modifiers ─────────────────────────────────────────────────────────────
 
@@ -1999,6 +2003,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
     /**
      * @dev Safely migrates genuine members in batches without pushing dividends.
      *      Assigns their exact seats and mints Soulbound Membership NFTs.
+     *      Fills intervening gaps with address(0) to maintain exact 1-to-1 seat indexing.
      */
     function migrateGenuineMembers(
         address[] calldata _members,
@@ -2017,9 +2022,13 @@ contract EquoraDAOv2 is ReentrancyGuard {
             require(pos >= 1 && pos <= MAX_MEMBERS, "Invalid position");
             if (isDaoMember[m]) continue; // Skip if already migrated
 
+            while (daoMembers.length < pos) {
+                daoMembers.push(address(0));
+            }
+
+            daoMembers[pos - 1] = m;
             isDaoMember[m] = true;
             memberPosition[m] = pos;
-            daoMembers.push(m);
             lifetimeEarnings[m] = earned;
             memberRewardDebt[m] = accPoolSharePerMember;
 
@@ -2038,6 +2047,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
     /**
      * @dev Configure underfunded reservations so their 1.5 or 5.0 TROB credits are permanently saved.
+     *      Sets the 48-hour reservation deadline on-chain.
      */
     function setUnderfundedReservations(
         address[] calldata _wallets,
@@ -2053,14 +2063,22 @@ contract EquoraDAOv2 is ReentrancyGuard {
             "Mismatched lengths"
         );
 
+        if (reservationDeadline == 0) {
+            reservationDeadline = block.timestamp + RETOPUP_WINDOW;
+        }
+
         for (uint256 i = 0; i < _wallets.length; i++) {
+            uint256 seat = _seats[i];
+            while (daoMembers.length < seat) {
+                daoMembers.push(address(0));
+            }
             underfundedReservations[_wallets[i]] = UnderfundedReservation({
-                reservedSeat: _seats[i],
+                reservedSeat: seat,
                 previousDepositSun: _previousDeposits[i],
                 unearnedDebtSun: _unearnedDebts[i],
                 isReserved: true
             });
-            emit UnderfundedReservationSet(_wallets[i], _seats[i], _previousDeposits[i], _unearnedDebts[i]);
+            emit UnderfundedReservationSet(_wallets[i], seat, _previousDeposits[i], _unearnedDebts[i]);
         }
     }
 
@@ -2120,11 +2138,17 @@ contract EquoraDAOv2 is ReentrancyGuard {
             revert PaymentFailed();
         }
 
-        // 1. Scan for any vacant slot (missed 48h retopup)
+        // 1. Scan for any vacant slot (expired retopup member OR expired reservation where daoMembers[i] == address(0))
         uint256 vacantIndex = type(uint256).max;
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address m = daoMembers[i];
-            if (slotBlank[m] || (capHitTimestamp[m] > 0 && block.timestamp > capHitTimestamp[m] + RETOPUP_WINDOW)) {
+            if (m == address(0)) {
+                // If 48h reservation deadline has passed, this vacant slot is now open to anyone!
+                if (reservationDeadline > 0 && block.timestamp > reservationDeadline) {
+                    vacantIndex = i;
+                    break;
+                }
+            } else if (slotBlank[m] || (capHitTimestamp[m] > 0 && block.timestamp > capHitTimestamp[m] + RETOPUP_WINDOW)) {
                 vacantIndex = i;
                 break;
             }
@@ -2134,26 +2158,33 @@ contract EquoraDAOv2 is ReentrancyGuard {
         totalCollected += paidAmount;
         uint256 tokenId;
 
-        // 2. If a vacant seat exists, replace the expired member
+        // 2. If a vacant seat exists, claim or replace the expired member
         if (vacantIndex != type(uint256).max) {
             address oldMember = daoMembers[vacantIndex];
-            isDaoMember[oldMember]      = false;
-            slotBlank[oldMember]        = false;
-            capHitTimestamp[oldMember]  = 0;
-            memberPosition[oldMember]   = 0;
-            lifetimeEarnings[oldMember] = 0;
-            memberRewardDebt[oldMember] = 0;
+            position = vacantIndex + 1;
+
+            if (oldMember != address(0)) {
+                isDaoMember[oldMember]      = false;
+                slotBlank[oldMember]        = false;
+                capHitTimestamp[oldMember]  = 0;
+                memberPosition[oldMember]   = 0;
+                lifetimeEarnings[oldMember] = 0;
+                memberRewardDebt[oldMember] = 0;
+            }
 
             daoMembers[vacantIndex]     = msg.sender;
             isDaoMember[msg.sender]     = true;
-            position                    = vacantIndex + 1;
             memberPosition[msg.sender]  = position;
             memberRewardDebt[msg.sender] = accPoolSharePerMember;
             lastJoinTimestamp           = block.timestamp;
 
             _registerUserInRegistry(msg.sender);
 
-            tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
+            if (oldMember != address(0)) {
+                tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
+            } else {
+                tokenId = membershipNFT.mint(msg.sender, position);
+            }
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
             _distributeRetopup(msg.sender, paidAmount);
@@ -2163,8 +2194,8 @@ contract EquoraDAOv2 is ReentrancyGuard {
         // 3. No vacant seat — standard join up to MAX_MEMBERS
         if (daoMembers.length >= MAX_MEMBERS) revert QueueFull();
 
-        position = daoMembers.length + 1;
         daoMembers.push(msg.sender);
+        position = daoMembers.length;
         isDaoMember[msg.sender]    = true;
         memberPosition[msg.sender] = position;
 
@@ -2180,8 +2211,17 @@ contract EquoraDAOv2 is ReentrancyGuard {
         _distributeEntryFee(position, paidAmount);
 
         if (daoMembers.length == MAX_MEMBERS) {
-            daoCompleted = true;
-            emit QueueClosed(MAX_MEMBERS, block.timestamp);
+            bool allFilled = true;
+            for (uint256 i = 0; i < MAX_MEMBERS; i++) {
+                if (daoMembers[i] == address(0)) {
+                    allFilled = false;
+                    break;
+                }
+            }
+            if (allFilled) {
+                daoCompleted = true;
+                emit QueueClosed(MAX_MEMBERS, block.timestamp);
+            }
         }
 
         return position;
@@ -2198,7 +2238,6 @@ contract EquoraDAOv2 is ReentrancyGuard {
         UnderfundedReservation memory res = underfundedReservations[msg.sender];
         if (!res.isReserved) revert InvalidReservation();
         if (isDaoMember[msg.sender]) revert AlreadyMember();
-        if (daoMembers.length >= MAX_MEMBERS) revert QueueFull();
 
         uint256 requiredDelta = entryFee > res.previousDepositSun ? entryFee - res.previousDepositSun : 0;
         if (requiredDelta < (MIN_ENTRY_FEE_FLOOR > res.previousDepositSun ? MIN_ENTRY_FEE_FLOOR - res.previousDepositSun : 0)) {
@@ -2211,9 +2250,15 @@ contract EquoraDAOv2 is ReentrancyGuard {
         underfundedReservations[msg.sender].isReserved = false;
 
         position = res.reservedSeat;
+        uint256 memberIdx = position - 1;
+
+        while (daoMembers.length < position) {
+            daoMembers.push(address(0));
+        }
+
+        daoMembers[memberIdx]       = msg.sender;
         isDaoMember[msg.sender]     = true;
         memberPosition[msg.sender]  = position;
-        daoMembers.push(msg.sender);
         unearnedDebt[msg.sender]    = res.unearnedDebtSun;
         lifetimeEarnings[msg.sender] = res.unearnedDebtSun;
         memberRewardDebt[msg.sender] = accPoolSharePerMember;
@@ -2226,11 +2271,20 @@ contract EquoraDAOv2 is ReentrancyGuard {
         emit UnderfundedSeatCompleted(msg.sender, position, msg.value, msg.value + res.previousDepositSun);
 
         // Distribute entry fee to all active genuine members
-        _distributeEntryFee(daoMembers.length, msg.value);
+        _distributeEntryFee(position, msg.value);
 
         if (daoMembers.length == MAX_MEMBERS) {
-            daoCompleted = true;
-            emit QueueClosed(MAX_MEMBERS, block.timestamp);
+            bool allFilled = true;
+            for (uint256 i = 0; i < MAX_MEMBERS; i++) {
+                if (daoMembers[i] == address(0)) {
+                    allFilled = false;
+                    break;
+                }
+            }
+            if (allFilled) {
+                daoCompleted = true;
+                emit QueueClosed(MAX_MEMBERS, block.timestamp);
+            }
         }
 
         return position;
@@ -2346,7 +2400,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         for (uint256 i = 0; i < incomingPosition; i++) {
             if (i >= daoMembers.length) break;
             address m = daoMembers[i];
-            if (!slotBlank[m] && capHitTimestamp[m] == 0) {
+            if (m != address(0) && !slotBlank[m] && capHitTimestamp[m] == 0) {
                 eligibleCount++;
             }
         }
@@ -2361,7 +2415,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         for (uint256 i = 0; i < incomingPosition; i++) {
             if (i >= daoMembers.length) break;
             address recipient = daoMembers[i];
-            if (!slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+            if (recipient != address(0) && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
                 uint256 headroom = earningsCap > lifetimeEarnings[recipient]
                     ? earningsCap - lifetimeEarnings[recipient]
                     : 0;
@@ -2390,7 +2444,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
         uint256 eligibleCount = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address m = daoMembers[i];
-            if (!slotBlank[m] && capHitTimestamp[m] == 0) {
+            if (m != address(0) && !slotBlank[m] && capHitTimestamp[m] == 0) {
                 eligibleCount++;
             }
         }
@@ -2404,7 +2458,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address recipient = daoMembers[i];
-            if (!slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+            if (recipient != address(0) && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
                 uint256 headroom = earningsCap > lifetimeEarnings[recipient]
                     ? earningsCap - lifetimeEarnings[recipient]
                     : 0;
@@ -2442,7 +2496,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
             for (uint256 i = 0; i < maxCount; i++) {
                 if (i >= daoMembers.length) break;
                 address m = daoMembers[i];
-                if (m != excludeAddr && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                if (m != address(0) && m != excludeAddr && !slotBlank[m] && capHitTimestamp[m] == 0) {
                     uncappedCount++;
                 }
             }
@@ -2457,7 +2511,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
             for (uint256 i = 0; i < maxCount; i++) {
                 if (i >= daoMembers.length) break;
                 address recipient = daoMembers[i];
-                if (recipient != excludeAddr && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
+                if (recipient != address(0) && recipient != excludeAddr && !slotBlank[recipient] && capHitTimestamp[recipient] == 0) {
                     uint256 headroom = earningsCap > lifetimeEarnings[recipient]
                         ? earningsCap - lifetimeEarnings[recipient]
                         : 0;
@@ -2490,6 +2544,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
                 unearnedDebt[recipient] = debt - amount;
                 lifetimeEarnings[recipient] += amount;
                 totalDistributed += amount;
+                totalDebtRecovered += amount;
                 emit UnearnedDebtRecovered(recipient, amount, unearnedDebt[recipient]);
                 return;
             } else {
@@ -2498,6 +2553,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
                 amount -= toDeduct;
                 lifetimeEarnings[recipient] += toDeduct;
                 totalDistributed += toDeduct;
+                totalDebtRecovered += toDeduct;
                 emit UnearnedDebtRecovered(recipient, toDeduct, 0);
             }
         }
@@ -2514,6 +2570,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
             emit DAOPayoutPushed(recipient, amount, fromPosition, block.timestamp);
         } else {
             pullFallbackBalance[recipient] += amount;
+            totalPullFallback              += amount;
             lifetimeEarnings[recipient]    += amount;
             totalDistributed               += amount;
             emit DAOPayoutFallback(recipient, amount, fromPosition, "Transfer fallback", block.timestamp);
@@ -2534,11 +2591,46 @@ contract EquoraDAOv2 is ReentrancyGuard {
         if (amount == 0) revert NothingToClaim();
 
         pullFallbackBalance[msg.sender] = 0;
+        totalPullFallback -= amount;
 
         (bool sent, ) = payable(msg.sender).call{value: amount}("");
         if (!sent) revert TransferFailed();
 
         emit FallbackClaimed(msg.sender, amount, block.timestamp);
+    }
+
+    /**
+     * @dev Public function to blank expired cap slots.
+     */
+    function enforceCapExpirations() external {
+        for (uint256 i = 0; i < daoMembers.length; i++) {
+            address member = daoMembers[i];
+            if (
+                member != address(0) &&
+                capHitTimestamp[member] > 0 &&
+                !slotBlank[member] &&
+                block.timestamp > capHitTimestamp[member] + RETOPUP_WINDOW
+            ) {
+                _updateMemberPoolReward(member);
+                slotBlank[member] = true;
+                emit SlotBlanked(member, block.timestamp);
+            }
+        }
+    }
+
+    /**
+     * @dev Allows admin to sweep recovered unearned debt and protocol surplus.
+     *      User fallback balances are strictly protected by totalPullFallback.
+     */
+    function withdrawRecoveredSurplus(address payable to, uint256 amount) external onlyAdmin {
+        require(to != address(0), "Invalid recipient");
+        uint256 available = address(this).balance > totalPullFallback
+            ? address(this).balance - totalPullFallback
+            : 0;
+        require(amount <= available, "Amount exceeds available surplus");
+        (bool sent, ) = to.call{value: amount}("");
+        require(sent, "Withdraw failed");
+        emit RecoveredSurplusWithdrawn(to, amount, block.timestamp);
     }
 
     // ─── View Functions ────────────────────────────────────────────────────────
@@ -2584,18 +2676,24 @@ contract EquoraDAOv2 is ReentrancyGuard {
         )
     {
         uint256 blanks = 0;
+        uint256 active = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
-            if (slotBlank[daoMembers[i]]) blanks++;
+            address m = daoMembers[i];
+            if (m == address(0) || slotBlank[m]) {
+                blanks++;
+            } else {
+                active++;
+            }
         }
 
         return (
-            daoMembers.length,
+            active,
             totalCollected,
             totalDistributed,
             daoCompleted,
             false,
             SEAT_WINDOW,
-            daoMembers.length - blanks,
+            active,
             blanks,
             totalPoolReceived,
             totalPoolDistributed
@@ -2603,8 +2701,15 @@ contract EquoraDAOv2 is ReentrancyGuard {
     }
 
     function getRemainingPositions() external view returns (uint256) {
-        if (daoMembers.length >= MAX_MEMBERS) return 0;
-        return MAX_MEMBERS - daoMembers.length;
+        if (daoCompleted) return 0;
+        uint256 occupied = 0;
+        for (uint256 i = 0; i < daoMembers.length; i++) {
+            if (daoMembers[i] != address(0) && !slotBlank[daoMembers[i]]) {
+                occupied++;
+            }
+        }
+        if (occupied >= MAX_MEMBERS) return 0;
+        return MAX_MEMBERS - occupied;
     }
 
     function getAllMembers() external view returns (address[] memory) {

@@ -29,18 +29,35 @@ export async function getOnChainDaoTransactions(
   }
 
   try {
-    const res = await fetch(
-      `${BACKEND_EXPLORER_API}/accounts/${daoAddress}/transactions?limit=100`,
-      { cache: 'no-store' }
-    );
-
-    if (!res.ok) {
-      console.warn(`[BlockchainSync] Failed to fetch account txs (${res.status})`);
-      return filterItems(cachedParsedItems, filterAddress);
+    const addressesToQuery = [daoAddress];
+    const legacyAddress = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+    if (legacyAddress && legacyAddress !== daoAddress) {
+      addressesToQuery.push(legacyAddress);
     }
 
-    const json = await res.json();
-    const txList = (json.data || []) as any[];
+    const responses = await Promise.all(
+      addressesToQuery.map((addr) =>
+        fetch(`${BACKEND_EXPLORER_API}/accounts/${addr}/transactions?limit=100`, { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : { data: [] }))
+          .catch(() => ({ data: [] }))
+      )
+    );
+
+    const txMap = new Map<string, any>();
+    for (const json of responses) {
+      for (const tx of (json.data || [])) {
+        if (tx && tx.hash && !txMap.has(tx.hash)) {
+          txMap.set(tx.hash, tx);
+        }
+      }
+    }
+
+    const txList = Array.from(txMap.values()).sort((a, b) => {
+      const ta = Number(a.timestamp || 0);
+      const tb = Number(b.timestamp || 0);
+      return tb - ta;
+    });
+
     cachedAccountTxs = txList;
     lastAccountFetchTime = now;
 

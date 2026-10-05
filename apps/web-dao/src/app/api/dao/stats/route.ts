@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>('/api/dao/stats');
-  if (backendRes && backendRes.success && backendRes.data) {
+  if (backendRes && backendRes.success && backendRes.data && (backendRes.data.memberCount || 0) > 0) {
     cachedStatsData = backendRes.data;
     cachedStatsTime = now;
     return NextResponse.json(backendRes);

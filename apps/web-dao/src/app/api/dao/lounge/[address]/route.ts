@@ -12,7 +12,7 @@ export async function GET(
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
     `/api/dao/lounge/${address}`
   );
-  if (backendRes && backendRes.success) {
+  if (backendRes && backendRes.success && backendRes.data?.isMember) {
     return NextResponse.json(backendRes);
   }
 

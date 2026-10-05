@@ -18,7 +18,7 @@ export async function GET(
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>(
     `/api/dao/profile/${address}`
   );
-  if (backendRes && backendRes.success && backendRes.data) {
+  if (backendRes && backendRes.success && backendRes.data && backendRes.data.isMember) {
     return NextResponse.json(backendRes);
   }
 

@@ -1013,16 +1013,3 @@ contract EquoraCoin is ERC20, ERC20Burnable, ERC20Pausable, Ownable {
         super._update(from, to, value);
     }
 }
-
-
-// File contracts/token/EquoraToken.sol
-
-// Original license: SPDX_License_Identifier: MIT
-
-/**
- * @title EquoraToken (Compatibility Alias for EquoraCoin)
- * @dev Preserves backward compatibility while pointing to EquoraCoin with 21 Crore supply.
- */
-contract EquoraToken is EquoraCoin {
-    constructor(address _treasury) EquoraCoin(_treasury) {}
-}

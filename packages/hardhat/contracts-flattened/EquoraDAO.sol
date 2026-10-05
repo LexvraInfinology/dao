@@ -34,7 +34,7 @@ interface IERC20Errors {
     error ERC20InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `spender`'s `allowance`. Used in transfers.
+     * @dev Indicates a failure with the `spender`’s `allowance`. Used in transfers.
      * @param spender Address that may be allowed to operate on tokens without being their owner.
      * @param allowance Amount of tokens a `spender` is allowed to operate with.
      * @param needed Minimum amount required to perform a transfer.
@@ -93,7 +93,7 @@ interface IERC721Errors {
     error ERC721InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`'s approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param tokenId Identifier number of a token.
      */
@@ -139,7 +139,7 @@ interface IERC1155Errors {
     error ERC1155InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`'s approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param owner Address of the current owner of a token.
      */
@@ -681,8 +681,8 @@ library Math {
         // `msb(a) <= a < 2*msb(a)`. This value can be written `msb(a)=2**k` with `k=log2(a)`.
         //
         // This can be rewritten `2**log2(a) <= a < 2**(log2(a) + 1)`
-        // - `sqrt(2**k) <= sqrt(a) < sqrt(2**(k+1))`
-        // - `2**(k/2) <= sqrt(a) < 2**((k+1)/2) <= 2**(k/2 + 1)`
+        // → `sqrt(2**k) <= sqrt(a) < sqrt(2**(k+1))`
+        // → `2**(k/2) <= sqrt(a) < 2**((k+1)/2) <= 2**(k/2 + 1)`
         //
         // Consequently, `2**(log2(a) / 2)` is a good first approximation of `sqrt(a)` with at least 1 correct bit.
         uint256 result = 1 << (log2(a) >> 1);
@@ -1812,7 +1812,7 @@ interface IEquoraRegistry {
 // Original license: SPDX_License_Identifier: MIT
 /**
  * @title EquoraDAO
- * @dev Genesis DAO - 100-seat founding council on the Equora.Fi platform.
+ * @dev Genesis DAO — 100-seat founding council on the Equora.Fi platform.
  *
  * === ECONOMIC MODEL (USD-PEGGED) =============================================
  *   Entry Fee: $300 USD worth of TROB tokens per seat.
@@ -1831,8 +1831,8 @@ interface IEquoraRegistry {
  *     Total Payout = entryFee (100% peer distribution, zero platform fees).
  *
  * === 5X EARNINGS CAP + 48-HOUR RE-TOPUP =====================================
- *   - Each member can earn a maximum of 5- their deposit = $1,500 USD in TROB.
- *   - earningsCap = entryFee - 5. Updated automatically when setEntryFee() is called.
+ *   - Each member can earn a maximum of 5× their deposit = $1,500 USD in TROB.
+ *   - earningsCap = entryFee × 5. Updated automatically when setEntryFee() is called.
  *   - When a member's lifetime earnings (in TROB) hit earningsCap, their slot is capped.
  *   - They have 48 hours to call retopup() and pay entryFee TROB again.
  *   - If they miss the window, their slot is BLANKED (permanently skipped in
@@ -1849,7 +1849,7 @@ interface IEquoraRegistry {
  * === PRESERVED ===============================================================
  *   - Soulbound ERC-721 per seat (EquoraDAOMembership NFT)
  *   - Instant push distribution to all prior members
- *   - Anti-griefing: failed push - pullFallbackBalance for manual claim
+ *   - Anti-griefing: failed push → pullFallbackBalance for manual claim
  *   - Zero platform fees: 100% of entry flows to members
  *
  * === PRICE ORACLE NOTE =======================================================
@@ -1864,7 +1864,7 @@ interface IEquoraRegistry {
  */
 contract EquoraDAO is ReentrancyGuard {
 
-    // --- Constants -------------------------------------------------------------
+    // ─── Constants ─────────────────────────────────────────────────────────────
 
     /// @dev USD peg for entry fee: $300.00 (6 decimal places, i.e. 300_000_000 = $300)
     uint256 public constant ENTRY_FEE_USD          = 300_000_000; // $300 USD (6 decimals)
@@ -1884,24 +1884,24 @@ contract EquoraDAO is ReentrancyGuard {
     /// @dev Target daily free transactions for Matrix members (Formula: 5 TX/day)
     uint256 public constant MATRIX_TARGET_FREE_TX_PER_DAY = 5;
 
-    // --- Admin (Null Key / Renounceable) ---------------------------------------
+    // ─── Admin (Null Key / Renounceable) ───────────────────────────────────────
 
-    /// @dev Admin address - can be permanently renounced to address(0) for 100% zero-admin sovereign autonomy
+    /// @dev Admin address — can be permanently renounced to address(0) for 100% zero-admin sovereign autonomy
     address public admin;
 
-    // --- Immutable Dependencies ------------------------------------------------
+    // ─── Immutable Dependencies ────────────────────────────────────────────────
 
     IERC20              public immutable paymentToken;
     EquoraDAOMembership public immutable membershipNFT;
     IEquoraRegistry     public immutable registry;
 
-    // --- Dynamic Price State ---------------------------------------------------
+    // ─── Dynamic Price State ───────────────────────────────────────────────────
 
     /// @dev Current entry fee in TROB tokens (6 decimals for native TROB sun). Equivalent to $300 USD.
     ///      Default: 5460 * 10**6 (at $0.054945/TROB; update via setEntryFee)
     uint256 public entryFee    = 5460 * 10 ** 6;
 
-    /// @dev Current earnings cap in TROB tokens (6 decimals). Always = entryFee - 5 = $1,500 USD (27,300 TROB).
+    /// @dev Current earnings cap in TROB tokens (6 decimals). Always = entryFee × 5 = $1,500 USD (27,300 TROB).
     uint256 public earningsCap = 27300 * 10 ** 6;
 
     /// @dev Last TROB price used (in USD with 6 decimals, e.g. 0.055 TROB/USD = 55_000)
@@ -1910,11 +1910,11 @@ contract EquoraDAO is ReentrancyGuard {
     /// @dev Timestamp when entryFee was last updated
     uint256 public lastPriceUpdateTimestamp;
 
-    // --- Configured Contracts --------------------------------------------------
+    // ─── Configured Contracts ──────────────────────────────────────────────────
 
     address public vaultContract;
 
-    // --- State Variables -------------------------------------------------------
+    // ─── State Variables ───────────────────────────────────────────────────────
 
     address[] public daoMembers;
     mapping(address => bool)    public isDaoMember;
@@ -1944,7 +1944,7 @@ contract EquoraDAO is ReentrancyGuard {
     uint256 public lastJoinTimestamp;
     uint256 public daoLaunchTimestamp;
 
-    // --- Custom Errors ---------------------------------------------------------
+    // ─── Custom Errors ─────────────────────────────────────────────────────────
 
     error QueueFull();
     error QueueExpired();
@@ -1959,7 +1959,7 @@ contract EquoraDAO is ReentrancyGuard {
     error SlotNotBlank();
     error Unauthorized();
 
-    // --- Events ----------------------------------------------------------------
+    // ─── Events ────────────────────────────────────────────────────────────────
 
     event VaultContractSet(address indexed vault);
     event DAOPositionJoined(
@@ -1991,7 +1991,7 @@ contract EquoraDAO is ReentrancyGuard {
     event Retopup(address indexed member, uint256 position, uint256 timestamp);
     event PoolDepositReceived(uint256 amount, uint256 accPerMember, uint256 timestamp);
     event PoolShareClaimed(address indexed member, uint256 amount, uint256 timestamp);
-    /// @dev Emitted when admin updates entry fee to reflect current USD-TROB rate
+    /// @dev Emitted when admin updates entry fee to reflect current USD–TROB rate
     event EntryFeeUpdated(uint256 newEntryFee, uint256 newEarningsCap, uint256 trobPriceUsd6, uint256 timestamp);
     /// @dev Emitted when wallet deposit eligibility is attested
     event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
@@ -2000,7 +2000,7 @@ contract EquoraDAO is ReentrancyGuard {
     /// @dev Emitted when administrative privileges are permanently renounced to address(0)
     event AdminRenounced(address indexed previousAdmin, uint256 timestamp);
 
-    // --- Constructor -----------------------------------------------------------
+    // ─── Constructor ───────────────────────────────────────────────────────────
 
     constructor(
         address _paymentToken,
@@ -2017,11 +2017,11 @@ contract EquoraDAO is ReentrancyGuard {
         daoLaunchTimestamp = block.timestamp;
         lastJoinTimestamp  = block.timestamp;
 
-        // Deploy Soulbound Membership NFT - this contract is sole minter
+        // Deploy Soulbound Membership NFT — this contract is sole minter
         membershipNFT = new EquoraDAOMembership(address(this));
     }
 
-    // --- Vault Configuration (One-Time Deployment Wiring) ----------------------
+    // ─── Vault Configuration (One-Time Deployment Wiring) ──────────────────────
 
     /**
      * @dev Set the EquoraVault contract address (authorized to call receivePoolDeposit).
@@ -2034,14 +2034,14 @@ contract EquoraDAO is ReentrancyGuard {
         emit VaultContractSet(_vault);
     }
 
-    // --- Entry Fee Management (Price Oracle Sync) ------------------------------
+    // ─── Entry Fee Management (Price Oracle Sync) ──────────────────────────────
 
     /**
      * @dev Update the TROB entry fee to reflect the current live USD market price.
      *      Only callable by admin (the deployer or a price-keeper bot).
      *
      * @param _newEntryFee   TROB amount (18-decimal) equivalent to $300 USD.
-     *                       Example: TROB = $0.056 => $300 / 0.056 ~ 5357.14 TROB
+     *                       Example: TROB = $0.056 => $300 / 0.056 ≈ 5357.14 TROB
      *                                => _newEntryFee = 5357142857142857142857 (5357.14 * 1e18)
      * @param _trobPriceUsd6 The TROB/USD price used, with 6 decimals. E.g. $0.056 => 56000
      *                       Stored for on-chain auditing only.
@@ -2104,7 +2104,7 @@ contract EquoraDAO is ReentrancyGuard {
 
     receive() external payable {}
 
-    // --- Core Join Function ----------------------------------------------------
+    // ─── Core Join Function ────────────────────────────────────────────────────
 
     /**
      * @dev Join the Genesis DAO as one of 100 founding members.
@@ -2174,7 +2174,7 @@ contract EquoraDAO is ReentrancyGuard {
             return position;
         }
 
-        // 4. No vacant seat - standard new join up to 100 seats
+        // 4. No vacant seat — standard new join up to 100 seats
         if (daoMembers.length >= MAX_MEMBERS) revert QueueFull();
 
         position = daoMembers.length + 1;
@@ -2216,7 +2216,7 @@ contract EquoraDAO is ReentrancyGuard {
         }
     }
 
-    // --- Re-topup (5X Cap Reset) -----------------------------------------------
+    // ─── Re-topup (5X Cap Reset) ───────────────────────────────────────────────
 
     /**
      * @dev Called by a member who has hit their 5X earnings cap to re-activate
@@ -2228,7 +2228,7 @@ contract EquoraDAO is ReentrancyGuard {
 
         // 48-hour window check (if cap timestamp was set, enforce deadline)
         if (capHitTimestamp[msg.sender] > 0 && block.timestamp > capHitTimestamp[msg.sender] + RETOPUP_WINDOW) {
-            // Window expired - slot should already be blank (or we blank it now)
+            // Window expired — slot should already be blank (or we blank it now)
             if (!slotBlank[msg.sender]) {
                 _updateMemberPoolReward(msg.sender);
                 slotBlank[msg.sender] = true;
@@ -2285,7 +2285,7 @@ contract EquoraDAO is ReentrancyGuard {
         }
     }
 
-    // --- DAO Plan Share Benefit (35% Matrix Volume Pool) -----------------------
+    // ─── DAO Plan Share Benefit (35% Matrix Volume Pool) ───────────────────────
 
     /**
      * @dev Receive 35% matrix volume pool deposit from EquoraVault.
@@ -2358,7 +2358,7 @@ contract EquoraDAO is ReentrancyGuard {
         return (totalPoolReceived, totalPoolDistributed, accPoolSharePerMember);
     }
 
-    // --- Expiry Check ----------------------------------------------------------
+    // ─── Expiry Check ──────────────────────────────────────────────────────────
 
     /**
      * @dev Check and mark expiry. Called at the top of joinDAO().
@@ -2374,7 +2374,7 @@ contract EquoraDAO is ReentrancyGuard {
         }
     }
 
-    // --- Internal Distribution Logic ------------------------------------------
+    // ─── Internal Distribution Logic ──────────────────────────────────────────
 
     /**
      * @dev Distribute $300 entry fee (in TROB) instantly following 300 / N formula:
@@ -2588,7 +2588,7 @@ contract EquoraDAO is ReentrancyGuard {
         }
     }
 
-    // --- Fallback Claim --------------------------------------------------------
+    // ─── Fallback Claim ────────────────────────────────────────────────────────
 
     /**
      * @dev Claim accumulated fallback balance (from failed push transfers).
@@ -2613,7 +2613,7 @@ contract EquoraDAO is ReentrancyGuard {
         emit FallbackClaimed(msg.sender, amount, block.timestamp);
     }
 
-    // --- View Functions --------------------------------------------------------
+    // ─── View Functions ────────────────────────────────────────────────────────
 
     /**
      * @dev Full member state for UI display.
@@ -2666,7 +2666,7 @@ contract EquoraDAO is ReentrancyGuard {
             uint256 totalPoolDistributedAmount
         )
     {
-        bool exp = false; // Permanent queue - no 21-day inactivity timeout
+        bool exp = false; // Permanent queue — no 21-day inactivity timeout
         uint256 rem = 0;
         if (!daoCompleted && !exp) {
             uint256 startTs = daoLaunchTimestamp > 0 ? daoLaunchTimestamp : lastJoinTimestamp;

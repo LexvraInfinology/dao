@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const contracts = [
+  { name: 'EquoraCoin', src: 'contracts/token/EquoraCoin.sol' },
   { name: 'EquoraToken', src: 'contracts/token/EquoraToken.sol' },
   { name: 'EquoraRegistry', src: 'contracts/core/EquoraRegistry.sol' },
   { name: 'EquoraNFT', src: 'contracts/rewards/EquoraNFT.sol' },

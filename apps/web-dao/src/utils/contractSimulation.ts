@@ -10,6 +10,7 @@ const KNOWN_ERROR_SELECTORS: Record<string, string> = {
   b99335a0: 'RetopupWindowExpired: The 48-hour re-topup window has expired.',
   '4c995576': 'NotMember: This wallet does not own an active council seat.',
   f7c46006: 'Unauthorized: Caller is not authorized for this operation.',
+  '4e487b71': 'InvalidReservation: No active reservation found for this wallet.',
 };
 
 export interface SimulationResult {
@@ -19,11 +20,11 @@ export interface SimulationResult {
 }
 
 /**
- * Pre-flight EVM dry-run simulation for joinDAO() and retopup().
+ * Pre-flight EVM dry-run simulation for joinDAO(), retopup(), and completeUnderfundedSeat().
  * Evaluates execution against the live smart contract state before prompting user to sign in TrobSafe.
  */
 export async function simulateContractCall(params: {
-  functionName: 'joinDAO()' | 'retopup()';
+  functionName: 'joinDAO()' | 'retopup()' | 'completeUnderfundedSeat()' | string;
   ownerAddress: string;
   contractAddress?: string;
   callValueSun?: number;

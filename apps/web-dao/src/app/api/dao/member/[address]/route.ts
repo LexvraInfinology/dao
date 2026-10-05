@@ -38,12 +38,46 @@ export async function GET(
       onChainPos = await getOnChainMemberPosition(hexAddr);
     }
 
-    // Blockchain is the strict single source of truth:
-    // If the smart contract returns onChainPos === 0, the address is NOT a member!
+    let isUnderfundedReservation = false;
+    let reservedPos = 0;
+
     if (onChainPos === 0) {
+      // Check if address has an active underfunded reservation in DB or on-chain
+      const dbUnderfunded = await queryNeon<any>(
+        `SELECT position, status, "retopupDeadline", "entryAmountBtt" FROM "DaoMember"
+         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
+           AND LOWER(status) = 'underfunded'
+         LIMIT 1`,
+        [cleanAddr, base58Addr, hexAddr]
+      );
+
+      if (dbUnderfunded.rows.length > 0) {
+        isUnderfundedReservation = true;
+        reservedPos = dbUnderfunded.rows[0].position;
+        onChainPos = reservedPos;
+      } else {
+        // Also check on-chain reservation mapping from EquoraDAOv2
+        const { getOnChainUnderfundedReservation } = await import('../../../_lib/txVerifier');
+        const onChainRes = (await getOnChainUnderfundedReservation(cleanAddr))
+          || (base58Addr !== cleanAddr ? await getOnChainUnderfundedReservation(base58Addr) : null)
+          || (hexAddr !== cleanAddr ? await getOnChainUnderfundedReservation(hexAddr) : null);
+
+        if (onChainRes && onChainRes.isReserved) {
+          isUnderfundedReservation = true;
+          reservedPos = onChainRes.reservedSeat;
+          onChainPos = reservedPos;
+        }
+      }
+    }
+
+    // Blockchain is the strict single source of truth:
+    // If the smart contract returns onChainPos === 0 and no reservation exists, the address is NOT a member!
+    if (onChainPos === 0 && !isUnderfundedReservation) {
       // Clean up any stale DB record that might have belonged to an old contract
       await queryNeon(
-        `DELETE FROM "DaoMember" WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))`,
+        `DELETE FROM "DaoMember" 
+         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
+           AND LOWER(status) != 'underfunded'`,
         [cleanAddr, base58Addr, hexAddr]
       );
 

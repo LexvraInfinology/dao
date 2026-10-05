@@ -236,3 +236,66 @@ export async function isMemberOnChain(
   return pos > 0;
 }
 
+export interface OnChainReservation {
+  isReserved: boolean;
+  reservedSeat: number;
+  previousDepositSun: number;
+  unearnedDebtSun: number;
+}
+
+/**
+ * Queries underfundedReservations(address) directly from EquoraDAOv2 on TrobChain.
+ * Returns reservation details if the address has an active 48h reserved seat.
+ */
+export async function getOnChainUnderfundedReservation(
+  walletAddress: string,
+  contractAddress?: string
+): Promise<OnChainReservation | null> {
+  const cleanAddr = (walletAddress || '').trim();
+  if (!cleanAddr) return null;
+
+  const hexOwner = toTronHex(cleanAddr);
+  const targetContract = contractAddress || getActiveDaoAddress();
+  const hexContract = toTronHex(targetContract);
+
+  try {
+    const res = await fetch(`${FULLNODE_RPC_URL}/wallet/triggerconstantcontract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        owner_address: hexOwner,
+        contract_address: hexContract,
+        function_selector: 'underfundedReservations(address)',
+        parameter: hexOwner.replace(/^41/, '').padStart(64, '0'),
+      }),
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.constant_result?.[0]) {
+        const raw = data.constant_result[0];
+        // 4 ABI words of 32 bytes (64 hex characters each)
+        if (raw.length >= 256) {
+          const seat = parseInt(raw.slice(0, 64), 16);
+          const prevDep = parseInt(raw.slice(64, 128), 16);
+          const debt = parseInt(raw.slice(128, 192), 16);
+          const isReserved = parseInt(raw.slice(192, 256), 16) === 1;
+          if (isReserved && seat > 0 && seat <= 100) {
+            return {
+              isReserved: true,
+              reservedSeat: seat,
+              previousDepositSun: prevDep,
+              unearnedDebtSun: debt,
+            };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[txVerifier] Failed to query underfundedReservations:', err);
+  }
+
+  return null;
+}
+

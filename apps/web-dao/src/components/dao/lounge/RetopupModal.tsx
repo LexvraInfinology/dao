@@ -128,25 +128,26 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
     try {
       const contractAddress = getActiveDaoAddress();
       const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
+      const targetFunction = isUnderfunded ? 'completeUnderfundedSeat()' : 'retopup()';
 
       // Pre-flight EVM dry-run simulation
       const { simulateContractCall } = await import('@/utils/contractSimulation');
       const sim = await simulateContractCall({
-        functionName: 'retopup()',
+        functionName: targetFunction,
         ownerAddress: activeAddr,
         contractAddress,
         callValueSun,
       });
 
       if (!sim.canProceed) {
-        throw new Error(sim.errorReason || 'Smart contract pre-flight simulation failed. Re-topup cannot be accepted at this time.');
+        throw new Error(sim.errorReason || 'Smart contract pre-flight simulation failed. Transaction cannot be accepted at this time.');
       }
 
       let txId: string | null = null;
       try {
         const result = await wallet.callContract({
           contract_address: contractAddress,
-          function_selector: 'retopup()',
+          function_selector: targetFunction,
           parameter: '',
           call_value: callValueSun,
           fee_limit: 100_000_000,
@@ -186,6 +187,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
           address: activeAddr,
           txHash: txId,
           retopupFeeTrob,
+          isUnderfunded,
         }),
       });
 
@@ -200,11 +202,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         });
         if (onSuccess) onSuccess();
       } else {
-        setError(data.error || 'Failed to complete retopup synchronization. Please try again.');
+        setError(data.error || 'Failed to complete deposit synchronization. Please try again.');
       }
     } catch (err: any) {
-      console.error('Retopup execution error:', err);
-      setError(err.message || 'Error executing re-topup transaction.');
+      console.error('Deposit execution error:', err);
+      setError(err.message || 'Error executing deposit transaction.');
     } finally {
       setLoading(false);
     }
@@ -230,12 +232,12 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-white">
-                  5X Cap Loop
+                  {isUnderfunded ? 'Seat Reservation' : '5X Cap Loop'}
                 </span>
                 <span className="text-xs font-bold text-amber-950">Seat #{seatPosition}</span>
               </div>
               <h3 className="text-sm sm:text-base font-bold text-[#14304A]">
-                48h Seat Retopup & Cashback Loop
+                {isUnderfunded ? 'Complete Council Seat Deposit' : '48h Seat Retopup & Cashback Loop'}
               </h3>
             </div>
           </div>
@@ -258,10 +260,14 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
               </div>
               <div className="space-y-1">
                 <h4 className="text-lg font-bold text-[#14304A]">
-                  Seat #{seatPosition} Successfully Retopuped!
+                  {isUnderfunded
+                    ? `Seat #${seatPosition} Fully Funded & Activated!`
+                    : `Seat #${seatPosition} Successfully Retopuped!`}
                 </h4>
                 <p className="text-xs text-[#4F6D87] max-w-sm mx-auto">
-                  Your 5X Cap ($1,500 USD) has been reset to zero ($0.00), and your seat remains permanently active.
+                  {isUnderfunded
+                    ? 'Your Council Seat deposit is confirmed on-chain. VIP Lounge Pass, Matrix Pools & full governance voting are now unlocked!'
+                    : 'Your 5X Cap ($1,500 USD) has been reset to zero ($0.00), and your seat remains permanently active.'}
                 </p>
               </div>
 

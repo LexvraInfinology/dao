@@ -86,19 +86,20 @@ export async function POST(req: NextRequest) {
     const retopupTrob = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
     const pos = m.position || 1;
 
-    // 2. Reset member's earnings counter to 0, unlock underfunded status to 'active', update entry amounts if underfunded
+    // 2. Reset member's earnings counter to 0 (unless underfunded, where past earnings count towards cap!), unlock underfunded status to 'active', update entry amounts if underfunded
     await queryNeon(
       `UPDATE "DaoMember"
-       SET "pushedAmountBtt" = 0,
+       SET "pushedAmountBtt" = CASE WHEN status = 'underfunded' THEN "pushedAmountBtt" ELSE 0 END,
            status = 'active',
            "retopupDeadline" = NULL,
            "cappedAt" = NULL,
            "retopupCount" = COALESCE("retopupCount", 0) + 1,
            "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN $2 ELSE "entryAmountBtt" END,
            "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300 ELSE "entryAmountUsdAtJoin" END,
+           "txHash" = $3,
            "updatedAt" = NOW()
        WHERE id = $1`,
-      [m.id, retopupTrob]
+      [m.id, retopupTrob, cleanTx]
     );
 
     // 3. Record retopup event in DaoEvent

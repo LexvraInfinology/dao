@@ -81,11 +81,12 @@ export async function getOnChainDaoTransactions(
 
       // Check if this is a DAO interaction method
       const isJoin = methodName === 'joinDAO' || selector === 'f63d13d7';
+      const isCompleteSeat = methodName === 'completeUnderfundedSeat' || selector === '7f15ea38' || selector === '0x7f15ea38';
       const isRetopup = methodName === 'retopup' || selector === 'd7b275bf';
       const isClaimPool = methodName === 'claimPoolShare' || selector === '85b736b4';
       const isClaimFallback = methodName === 'claimFallback' || selector === 'a04467c6';
 
-      if (!isJoin && !isRetopup && !isClaimPool && !isClaimFallback) {
+      if (!isJoin && !isCompleteSeat && !isRetopup && !isClaimPool && !isClaimFallback) {
         continue;
       }
 
@@ -114,9 +115,13 @@ export async function getOnChainDaoTransactions(
       const caller = (joinEvt?.args?.user || detail.from_addr || tx.from_addr || detail.ownerAddress || tx.ownerAddress || '').trim();
       const isoTime = detail.timestamp || tx.timestamp || new Date().toISOString();
 
-      if (isJoin) {
-        // Parse joinDAO
+      if (isJoin || isCompleteSeat) {
+        // Parse joinDAO or completeUnderfundedSeat
+        const completedEvt = events.find((e) => e.name === 'UnderfundedSeatCompleted');
         let pos = joinEvt?.args?.position ? parseInt(joinEvt.args.position, 10) : 0;
+        if (!pos && completedEvt?.args?.seat) {
+          pos = parseInt(completedEvt.args.seat, 10);
+        }
         if (!pos || pos < 1 || pos > 100) {
           pos = caller ? await getOnChainMemberPosition(caller, daoAddress) : 0;
         }
@@ -141,11 +146,13 @@ export async function getOnChainDaoTransactions(
         const depositTime = new Date(baseMs - 2000).toISOString();
         const cashbackTime = new Date(baseMs - 1000).toISOString();
 
-        // 1. Council Seat Activated (Deposit transaction from user)
+        // 1. Council Seat Activated / Fully Funded
         parsedItems.push({
           id: `${hash}-joined`,
-          type: 'joined',
-          typeLabel: `Council Seat #${pos} Activated`,
+          type: isCompleteSeat ? 'retopup' : 'joined',
+          typeLabel: isCompleteSeat
+            ? `Council Seat #${pos} Fully Funded (Topup Complete)`
+            : `Council Seat #${pos} Activated`,
           amountBtt: paidAmountTrob,
           amountTrob: paidAmountTrob,
           amountUsd: 300,
@@ -374,11 +381,11 @@ export async function syncOnChainMembersState(force = false): Promise<{
         const position = i + 1;
 
         const existing = await queryNeon<any>(
-          `SELECT id, address, position FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+          `SELECT id, address, position, status FROM "DaoMember" WHERE position = $1 LIMIT 1`,
           [position]
         );
 
-        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase()) {
+        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase() || existing.rows[0].status === 'underfunded') {
           let totalEarnedTrob = 0;
           try {
             const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
@@ -421,14 +428,14 @@ export async function syncOnChainMembersState(force = false): Promise<{
             `INSERT INTO "DaoMember" (
                id, address, position, "joinedAt", "txHash", "blockNumber",
                "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId",
-               "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt"
+               "priceSource", "pushedAmountBtt", status, "retopupDeadline", "createdAt", "updatedAt"
              )
              VALUES (
                gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-               5084.75, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
+               5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NULL, NOW(), NOW()
              )
              ON CONFLICT (position) DO UPDATE
-             SET address = $1, "pushedAmountBtt" = $3, status = 'active', "updatedAt" = NOW()`,
+             SET address = $1, "pushedAmountBtt" = $3, status = 'active', "retopupDeadline" = NULL, "entryAmountBtt" = 5357.14, "entryAmountUsdAtJoin" = 300, "updatedAt" = NOW()`,
             [b58Addr, position, totalEarnedTrob]
           );
 
@@ -514,6 +521,20 @@ async function syncOnChainMembersToDb(
           `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
            VALUES (gen_random_uuid(), $1, $2, $3, $4, 1, $5, 300, $6, 'blockchain-onchain', $7, 'active', NOW(), NOW())`,
           [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
+        );
+      } else if (existing.rows[0].status === 'underfunded') {
+        // Underfunded member just completed deposit on-chain! Unlock to active in Neon DB
+        await queryNeon(
+          `UPDATE "DaoMember"
+           SET status = 'active',
+               "retopupDeadline" = NULL,
+               "entryAmountBtt" = "entryAmountBtt" + $1,
+               "entryAmountUsdAtJoin" = 300,
+               "txHash" = $2,
+               "nftTokenId" = $3,
+               "updatedAt" = NOW()
+           WHERE position = $4`,
+          [m.paidAmountTrob, m.txHash, m.tokenId, m.position]
         );
       } else if (
         existing.rows[0].status !== 'vacant' &&

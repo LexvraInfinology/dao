@@ -82,6 +82,14 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Strict entry fee security floor: at least 4,500 TROB ($300 USD equivalent)
+    if (txReceipt.callValueSun !== undefined && txReceipt.callValueSun > 0 && txReceipt.callValueSun < 4500 * 1_000_000) {
+      return NextResponse.json({
+        success: false,
+        error: `Insufficient entry deposit (${(txReceipt.callValueSun / 1e6).toFixed(2)} TROB). Full entry fee ($300 USD / at least 4,500 TROB) is required to activate a Genesis Council Seat.`,
+      }, { status: 400 });
+    }
+
     // 3. Query the smart contract directly for verified on-chain seat assignment
     let finalPos = await getOnChainMemberPosition(userAddr, getActiveDaoAddress());
     if (finalPos === 0) {

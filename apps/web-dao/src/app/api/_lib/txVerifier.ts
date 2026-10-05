@@ -8,6 +8,7 @@ export interface TxVerificationResult {
   toAddr?: string;
   contractRet?: string;
   blockNumber?: number;
+  callValueSun?: number;
 }
 
 /**
@@ -103,12 +104,14 @@ export async function verifyOnChainTransaction(
                 }
               }
 
+              const callValue = contractParam?.call_value ? Number(contractParam.call_value) : 0;
               return {
                 valid: true,
                 contractRet: 'SUCCESS',
                 fromAddr: fromAddress,
                 toAddr: toAddress,
                 blockNumber: info.blockNumber,
+                callValueSun: callValue,
               };
             }
           }
@@ -153,12 +156,14 @@ export async function verifyOnChainTransaction(
           }
 
           if (retStatus === 'SUCCESS' || tx.result === 'SUCCESS') {
+            const expCallValue = tx.call_value ? Number(tx.call_value) : (tx.amount ? Number(tx.amount) : 0);
             return {
               valid: true,
               contractRet: 'SUCCESS',
               fromAddr: tx.from_addr,
               toAddr: tx.to_addr,
               blockNumber: tx.block_number,
+              callValueSun: expCallValue,
             };
           }
         }

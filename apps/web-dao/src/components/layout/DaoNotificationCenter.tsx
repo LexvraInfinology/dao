@@ -100,8 +100,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       actionLabel: 'View Treasury',
     });
 
-    // 3. Matrix Launch Countdown alert (Temporarily hidden as per user request)
-    /*
+    // 3. Matrix Launch Countdown alert (Day 22 Retail Matrix countdown active)
     list.push({
       id: 'matrix_bridge_status',
       type: 'matrix_launch',
@@ -112,7 +111,6 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       actionUrl: '/dao/matrix-bridge',
       actionLabel: 'Countdown Status',
     });
-    */
 
     // 4. Council Queue Update
     list.push({
@@ -235,11 +233,11 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       const customEvent = e as CustomEvent<DaoNotification>;
       if (!customEvent.detail) return;
       const newNotif = customEvent.detail;
-      // Do not display matrix opportunity notifications as per user request
+      // Do not display matrix root/leader opportunity notifications as per user request
       if (
         newNotif.type === 'matrix_leader_offer' ||
-        newNotif.type === 'matrix_launch' ||
-        newNotif.title?.toLowerCase().includes('matrix opportunity')
+        newNotif.title?.toLowerCase().includes('apex matrix root') ||
+        newNotif.title?.toLowerCase().includes('matrix opportunity ready')
       ) {
         return;
       }

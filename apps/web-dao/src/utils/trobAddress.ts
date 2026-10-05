@@ -7,8 +7,8 @@ import { sha256, getBytes } from 'ethers';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-export const ACTIVE_DAO_BASE58 = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
-export const ACTIVE_DAO_HEX = '410a59d6a2dcd3b18687c1efe1625642ad85679377';
+export const ACTIVE_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
+export const ACTIVE_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
 
 export const DEPRECATED_DAO_ADDRESSES = new Set([
   'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf',
@@ -26,6 +26,9 @@ export const DEPRECATED_DAO_ADDRESSES = new Set([
   'THfWLrRy139LHhfxPLHFuiEqMeiw81FiQD',
   '415467fea66ec96d1d9d0f5063cee941a24eb7e5cf',
   '0x5467fea66ec96d1d9d0f5063cee941a24eb7e5cf',
+  'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto',
+  '410a59d6a2dcd3b18687c1efe1625642ad85679377',
+  '0x0a59d6a2dcd3b18687c1efe1625642ad85679377',
   '0x4b6aB5F819A515382B0dEB6935D793817bB4af28',
   '0x0000000000000000000000000000000000000000',
   '',
@@ -63,8 +66,8 @@ export const DEPLOYED_CONTRACTS = {
     hex: getActiveDaoHex(),
   },
   EquoraToken: {
-    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn',
-    hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9',
+    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt',
+    hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '41b0e42d3a38e37f2be412b06af572fea20d9c5216',
   },
   EquoraRegistry: {
     base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy',

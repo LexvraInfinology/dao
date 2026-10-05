@@ -46,11 +46,11 @@ export const OFFICIAL_SR_MAINNET =
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
   process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-  'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+  'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '410a59d6a2dcd3b18687c1efe1625642ad85679377';
+  '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
 
 // Chain ID (TrobChain Mainnet is 1000)
 export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1000', 10);

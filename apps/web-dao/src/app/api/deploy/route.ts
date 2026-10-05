@@ -79,6 +79,15 @@ const CONTRACT_CONFIGS: Record<
       return coder.encode(['address', 'address'], [token, registry]).replace(/^0x/, '');
     },
   },
+  EquoraDAOv2: {
+    artifactSubpath: 'core/EquoraDAOv2.sol/EquoraDAOv2.json',
+    flattenedPath: 'EquoraDAOv2.sol',
+    buildParams: (coder, _, extra) => {
+      const token = extra.tokenAddress?.startsWith('0x') ? extra.tokenAddress : '0x' + extra.tokenAddress?.slice(2);
+      const registry = extra.registryAddress?.startsWith('0x') ? extra.registryAddress : '0x' + extra.registryAddress?.slice(2);
+      return coder.encode(['address', 'address'], [token, registry]).replace(/^0x/, '');
+    },
+  },
   EquoraVault: {
     artifactSubpath: 'core/EquoraVault.sol/EquoraVault.json',
     flattenedPath: 'EquoraVault.sol',

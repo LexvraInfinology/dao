@@ -34,6 +34,10 @@ export interface TrobWalletState {
   base58Address: string | null;
   isConnected: boolean;
   isInstalled: boolean;
+  /** Whether the wallet is connected to an unsupported network (e.g. Nile/Shasta testnet instead of Mainnet) */
+  isWrongNetwork?: boolean;
+  /** Detected network name ('mainnet' | 'testnet') */
+  networkName?: string;
   error: string | null;
   /** Connect wallet (opens TrobSafe permission dialog) */
   connect: () => Promise<TrobAddress | null>;
@@ -116,8 +120,27 @@ export function useTrobWallet(): TrobWalletState {
   const [address, setAddress]         = useState<TrobAddress | null>(null);
   const [error, setError]             = useState<string | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
+  const [isWrongNetwork, setIsWrongNetwork] = useState<boolean>(false);
+  const [networkName, setNetworkName]       = useState<string>('mainnet');
 
   // ── helpers ──────────────────────────────────────────────────────────────
+  const checkNetwork = useCallback((t?: any) => {
+    if (typeof window === 'undefined') return;
+    const w = window as any;
+    const trob = t || w.trob || w.trobWeb;
+    if (!trob) return;
+    const host = String(trob?.fullNode?.host || w.trobWeb?.fullNode?.host || '').toLowerCase();
+    const net = String(trob?.network || '').toLowerCase();
+    const isTest = host.includes('nile') || host.includes('shasta') || host.includes('testnet') || net === 'testnet';
+    const targetNet = process.env.NEXT_PUBLIC_TARGET_NETWORK || 'mainnet';
+    if (targetNet === 'mainnet' && isTest) {
+      setIsWrongNetwork(true);
+      setNetworkName('testnet');
+    } else {
+      setIsWrongNetwork(false);
+      setNetworkName(isTest ? 'testnet' : 'mainnet');
+    }
+  }, []);
   const getTrob = (): TrobWalletAPI | any | null => {
     if (typeof window === 'undefined') return null;
     const w = window as any;
@@ -226,6 +249,7 @@ export function useTrobWallet(): TrobWalletState {
       const isInst = Boolean((trob && isTrobActive(trob)) || hasBridge);
       if (isInst) {
         setIsInstalled(true);
+        checkNetwork(trob);
       }
       return isInst;
     };
@@ -712,6 +736,8 @@ export function useTrobWallet(): TrobWalletState {
     base58Address: address?.base58 ? address.base58              : null,
     isConnected:   status === 'connected' && Boolean(address?.base58 || address?.hex),
     isInstalled,
+    isWrongNetwork,
+    networkName,
     error,
     connect,
     connectWithAddress,

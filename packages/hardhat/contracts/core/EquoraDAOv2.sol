@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./EquoraDAOMembership.sol";
 import "../interfaces/IEquoraRegistry.sol";
 
 /**
@@ -41,7 +40,6 @@ contract EquoraDAOv2 is ReentrancyGuard {
     // ─── Dependencies ──────────────────────────────────────────────────────────
 
     IERC20              public immutable paymentToken;
-    EquoraDAOMembership public immutable membershipNFT;
     IEquoraRegistry     public immutable registry;
     address             public vaultContract;
 
@@ -179,8 +177,6 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
         daoLaunchTimestamp = block.timestamp;
         lastJoinTimestamp  = block.timestamp;
-
-        membershipNFT = new EquoraDAOMembership(address(this));
     }
 
     function setVaultContract(address _vault) external onlyAdmin {
@@ -226,7 +222,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
             _registerUserInRegistry(m);
 
-            uint256 tokenId = membershipNFT.mint(m, pos);
+            uint256 tokenId = pos;
             emit DAOPositionJoined(m, pos, tokenId, block.timestamp);
 
             if (earned >= earningsCap) {
@@ -372,11 +368,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
             _registerUserInRegistry(msg.sender);
 
-            if (oldMember != address(0)) {
-                tokenId = membershipNFT.reassignSeat(oldMember, msg.sender, position);
-            } else {
-                tokenId = membershipNFT.mint(msg.sender, position);
-            }
+            tokenId = position;
             emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
             _distributeRetopup(msg.sender, paidAmount);
@@ -396,7 +388,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
         _registerUserInRegistry(msg.sender);
 
-        tokenId = membershipNFT.mint(msg.sender, position);
+        tokenId = position;
         emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
 
         memberRewardDebt[msg.sender] = accPoolSharePerMember;
@@ -458,7 +450,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
         _registerUserInRegistry(msg.sender);
 
-        uint256 tokenId = membershipNFT.mint(msg.sender, position);
+        uint256 tokenId = position;
         emit DAOPositionJoined(msg.sender, position, tokenId, block.timestamp);
         emit UnderfundedSeatCompleted(msg.sender, position, msg.value, msg.value + res.previousDepositSun);
 

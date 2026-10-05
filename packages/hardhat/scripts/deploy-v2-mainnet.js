@@ -297,30 +297,6 @@ async function main() {
   );
   await verifyContractOnExplorer('EquoraDAOv2', deployed.EquoraDAOv2.contractAddressBase58, 'EquoraDAOv2.sol');
 
-  // Query and verify internal EquoraDAOMembership NFT contract
-  try {
-    const nftQueryRes = await fetch(`${MAINNET_RPC_URL}/wallet/triggerconstantcontract`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        owner_address: deployer.tronHex,
-        contract_address: deployed.EquoraDAOv2.contractAddressHex,
-        function_selector: 'membershipNFT()',
-        parameter: '',
-      }),
-    });
-    const nftQueryData = await nftQueryRes.json();
-    if (nftQueryData.constant_result?.[0]) {
-      const nftHex = '41' + nftQueryData.constant_result[0].slice(24);
-      const nftBase58 = hexToBase58(nftHex);
-      deployed.EquoraDAOMembership = { contractAddressHex: nftHex, contractAddressBase58: nftBase58 };
-      console.log(`\n   Internal Membership NFT Address: ${nftBase58}`);
-      await verifyContractOnExplorer('EquoraDAOMembership', nftBase58, 'EquoraDAOMembership.sol');
-    }
-  } catch (err) {
-    console.warn('   Could not auto-verify membership NFT:', err.message);
-  }
-
   // ─── 3. Execute Migration ────────────────────────────────────────────────────
   console.log('\n======================================================================');
   console.log('📦 EXECUTING ON-CHAIN MIGRATION FOR 85 GENUINE MEMBERS');

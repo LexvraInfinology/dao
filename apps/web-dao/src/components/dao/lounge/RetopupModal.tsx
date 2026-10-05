@@ -27,6 +27,8 @@ interface RetopupModalProps {
   seatPosition: number;
   retopupDeadline?: string | null;
   trobPriceUsd?: number;
+  alreadyPaidTrob?: number;
+  isUnderfunded?: boolean;
   onSuccess?: () => void;
 }
 
@@ -36,6 +38,8 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   seatPosition,
   retopupDeadline,
   trobPriceUsd = 0.056,
+  alreadyPaidTrob = 0,
+  isUnderfunded = false,
   onSuccess,
 }) => {
   const wallet = useWallet();
@@ -104,10 +108,12 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
 
   const entryAmountUsd = 300;
   const price = trobPriceUsd > 0 ? trobPriceUsd : 0.056;
-  const retopupFeeTrob = Math.round((entryAmountUsd / price) * 100) / 100;
+  const fullRequiredTrob = Math.round((entryAmountUsd / price) * 100) / 100;
+  const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
+  const retopupFeeTrob = Math.round((fullRequiredTrob - creditTrob) * 100) / 100;
   const cashbackUsd = parseFloat((entryAmountUsd / (seatPosition || 1)).toFixed(2));
   const cashbackTrob = Math.round((cashbackUsd / price) * 100) / 100;
-  const netUsd = parseFloat((entryAmountUsd - cashbackUsd).toFixed(2));
+  const netUsd = parseFloat((retopupFeeTrob * price).toFixed(2));
   const activeAddr = wallet.base58Address || wallet.hexAddress || '';
 
   const handleRetopup = async () => {
@@ -338,7 +344,9 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
-                  {timeLeft.isExpired
+                  {isUnderfunded
+                    ? `Your initial deposit of ${creditTrob} TROB has been credited. Pay the remaining ${retopupFeeTrob.toLocaleString()} TROB to fully fund your seat, unlock your Soulbound VIP Lounge Pass, and activate your dividend earnings.`
+                    : timeLeft.isExpired
                     ? `Your 48-hour retopup window has lapsed. Seat #${seatPosition} is now vacant and open to any queue claimant.`
                     : `You have reached the 5X Cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat, distribute to active members, and reset your cap to zero.`}
                 </p>
@@ -346,27 +354,54 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
 
               {/* Financial Breakdown Table */}
               <div className="p-3.5 rounded-xl bg-[#FAFBFD] border border-[#E2EEF9] space-y-2 text-xs">
-                <div className="flex items-center justify-between text-[#4F6D87]">
-                  <span>Retopup Deposit (300 USD):</span>
-                  <span className="font-mono font-bold text-[#14304A]">
-                    ${entryAmountUsd}.00 USD (≈ {retopupFeeTrob.toLocaleString()} TROB)
-                  </span>
-                </div>
+                {isUnderfunded ? (
+                  <>
+                    <div className="flex items-center justify-between text-[#4F6D87]">
+                      <span>Required Seat Value:</span>
+                      <span className="font-mono font-bold text-[#14304A]">
+                        ${entryAmountUsd}.00 USD (≈ {fullRequiredTrob.toLocaleString()} TROB)
+                      </span>
+                    </div>
 
-                <div className="flex items-center justify-between text-blue-700 bg-blue-50/70 p-2 rounded-lg border border-blue-200/60">
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Member Pool Distribution:</span>
-                  </span>
-                  <span className="font-mono font-bold text-blue-700">
-                    Split to other active members
-                  </span>
-                </div>
+                    <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-semibold">
+                      <span>Previous Deposit Credited:</span>
+                      <span className="font-mono font-bold text-emerald-700">
+                        -{creditTrob.toLocaleString()} TROB (~${(creditTrob * price).toFixed(2)} USD)
+                      </span>
+                    </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8]">
-                  <span>Restored Earning Capacity:</span>
-                  <span className="font-bold text-emerald-600">$1,500.00 USD (Fresh 5X Cap)</span>
-                </div>
+                    <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
+                      <span>Remaining Payable Amount:</span>
+                      <span className="font-mono text-sm text-[#0E62E4]">
+                        {retopupFeeTrob.toLocaleString()} TROB (~${netUsd} USD)
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-[#4F6D87]">
+                      <span>Retopup Deposit (300 USD):</span>
+                      <span className="font-mono font-bold text-[#14304A]">
+                        ${entryAmountUsd}.00 USD (≈ {retopupFeeTrob.toLocaleString()} TROB)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/70 p-2 rounded-lg border border-blue-200/60">
+                      <span className="font-semibold flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Member Pool Distribution:</span>
+                      </span>
+                      <span className="font-mono font-bold text-blue-700">
+                        Split to other active members
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8]">
+                      <span>Restored Earning Capacity:</span>
+                      <span className="font-bold text-emerald-600">$1,500.00 USD (Fresh 5X Cap)</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Error Alert */}
@@ -388,7 +423,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
               {/* CTA Action Button */}
               <button
                 onClick={handleRetopup}
-                disabled={loading || timeLeft.isExpired || !wallet.isConnected}
+                disabled={loading || (!isUnderfunded && timeLeft.isExpired) || !wallet.isConnected}
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 {loading ? (
@@ -400,7 +435,9 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   <>
                     <Zap className="w-4 h-4 fill-white" />
                     <span>
-                      Confirm Re-topup (${entryAmountUsd} USD • Receive +${cashbackUsd} Cashback)
+                      {isUnderfunded
+                        ? `Activate Seat #${seatPosition} (${retopupFeeTrob.toLocaleString()} TROB • $${netUsd} USD)`
+                        : `Confirm Re-topup ($${entryAmountUsd} USD • Receive +$${cashbackUsd} Cashback)`}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>

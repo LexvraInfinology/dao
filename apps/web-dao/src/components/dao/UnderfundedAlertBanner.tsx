@@ -120,6 +120,8 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
         onClose={() => setRetopupModalOpen(false)}
         seatPosition={typeof position === 'number' ? position : 1}
         trobPriceUsd={priceUsd}
+        alreadyPaidTrob={entryTrob}
+        isUnderfunded={true}
         onSuccess={() => {
           setRetopupModalOpen(false);
           refetch();

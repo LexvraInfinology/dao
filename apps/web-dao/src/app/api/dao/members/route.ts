@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     backendRes &&
     backendRes.success &&
     Array.isArray(backendRes.data?.members) &&
-    backendRes.data.members.length > 0
+    backendRes.data.members.length >= 93
   ) {
     if (page === '1' && limit === '100') {
       cachedMembersPayload = backendRes.data;
@@ -69,14 +69,14 @@ export async function GET(req: NextRequest) {
     const { rows } = await queryNeon<any>(
       `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt"
        FROM "DaoMember"
-       WHERE LOWER(status) IN ('active', 'capped')
+       WHERE LOWER(status) NOT IN ('vacant', 'blank')
        ORDER BY position ASC
        LIMIT $1 OFFSET $2`,
       [limitNum, offset]
     );
 
     const countRes = await queryNeon<{ count: string }>(
-      `SELECT count(*) as count FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped')`
+      `SELECT count(*) as count FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
     );
     const total = parseInt(countRes.rows[0]?.count || '0', 10);
 

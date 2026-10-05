@@ -106,7 +106,7 @@ export async function GET(
     }
 
     // If member has underfunded/provisional deposit status, lock governance & rewards
-    if (m && (m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000)) {
+    if (m && m.status === 'underfunded') {
       const entryTrob = parseFloat(m.entryAmountBtt || '0');
       const entryUsd = parseFloat(m.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
       

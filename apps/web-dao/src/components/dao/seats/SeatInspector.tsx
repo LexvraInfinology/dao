@@ -64,6 +64,8 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
                 : seat.statusBadge === '5X Capped'
                 ? 'bg-red-50 text-red-700 border-red-300 font-bold animate-pulse'
+                : seat.statusBadge === 'Underfunded'
+                ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
                 : seat.status === 'claimed'
                 ? 'bg-slate-100 text-slate-800 border-slate-300 font-bold'
                 : seat.status === 'defaulted'

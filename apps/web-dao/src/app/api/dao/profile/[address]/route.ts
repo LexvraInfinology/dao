@@ -79,7 +79,7 @@ export async function GET(
     }
 
     if (m) {
-      const isUnderfunded = m.status === 'underfunded' || parseFloat(m.entryAmountBtt || '0') < 1000;
+      const isUnderfunded = m.status === 'underfunded';
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5357.15');
       const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;

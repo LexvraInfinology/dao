@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   const backendRes = await fetchFromBackend<{ success: boolean; data: any }>('/api/dao/stats');
-  if (backendRes && backendRes.success && backendRes.data && (backendRes.data.memberCount || 0) > 0) {
+  if (backendRes && backendRes.success && backendRes.data && (backendRes.data.memberCount || 0) >= 93) {
     cachedStatsData = backendRes.data;
     cachedStatsTime = now;
     return NextResponse.json(backendRes);
@@ -61,18 +61,20 @@ export async function GET() {
   // Single combined live query to Neon DB
   try {
     const combinedRes = await queryNeon<{
+      total_count: string;
       active_count: string;
       total_collected: string;
       total_distributed: string;
     }>(
       `SELECT 
-        COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'capped')) as active_count,
+        COUNT(*) as total_count,
+        COUNT(*) FILTER (WHERE LOWER(status) NOT IN ('vacant', 'blank')) as active_count,
         COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
         COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
        FROM "DaoMember"`
     );
     if (combinedRes.rows.length > 0) {
-      memberCount = parseInt(combinedRes.rows[0].active_count, 10) || 0;
+      memberCount = parseInt(combinedRes.rows[0].active_count || combinedRes.rows[0].total_count, 10) || 0;
       totalCollectedBTT = parseFloat(combinedRes.rows[0].total_collected) || 0;
       totalDistributedBTT = parseFloat(combinedRes.rows[0].total_distributed) || 0;
     }

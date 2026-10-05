@@ -242,7 +242,7 @@ export class DaoService {
       blankMembers: blankCount,
       cappedMembers: cappedCount,
       capacity: 100,
-      remainingPositions: Math.max(0, 100 - activeCount),
+      remainingPositions: Math.max(0, 100 - memberCount),
       // USD-pegged values (always $300 / $1500)
       entryFeeUsd: SEAT_ENTRY_USD,
       earningsCapUsd: EARNINGS_CAP_USD,
@@ -278,10 +278,11 @@ export class DaoService {
   }> {
     const skip = (page - 1) * limit;
     const [total, members, priceData] = await Promise.all([
-      prisma.daoMember.count(),
+      prisma.daoMember.count({ where: { status: { notIn: ["vacant", "blank"] } } }),
       prisma.daoMember.findMany({
         skip,
         take: limit,
+        where: { status: { notIn: ["vacant", "blank"] } },
         orderBy: { position: "asc" },
         include: {
           user: {

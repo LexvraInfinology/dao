@@ -135,6 +135,11 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             topElement = (
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-red-400 ring-1 ring-white animate-ping" />
             );
+          } else if (seat.statusBadge === 'Underfunded') {
+            tileClasses = 'border-2 border-amber-400 bg-amber-500 text-white shadow-sm';
+            topElement = (
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-200 ring-1 ring-white" />
+            );
           } else if (seat.status === 'defaulted') {
             tileClasses = 'border-2 border-dashed border-rose-400 bg-rose-50 text-rose-700 hover:bg-rose-100';
             topElement = (

@@ -387,7 +387,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
     const onChainCount = memberHexes.length;
 
     const dbCountRes = await queryNeon<{ count: string; max_pos: string }>(
-      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped', 'underfunded')`
+      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
     );
     const dbCount = parseInt(dbCountRes.rows[0]?.count || '0', 10);
     const maxDbPos = parseInt(dbCountRes.rows[0]?.max_pos || '0', 10);

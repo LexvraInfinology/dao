@@ -51,6 +51,9 @@ jobs:
       - name: Validate Docker Compose configuration
         run: docker compose --env-file .env.example config --quiet
 
+      - name: Build Docker images
+        run: docker compose --env-file .env.example build
+
   deploy:
     name: Deploy to Utho VM
     needs: ci

@@ -75,7 +75,7 @@ function toTronHex(addressOrHex) {
     const val = ALPHABET.indexOf(c);
     if (val === -1) throw new Error('Invalid base58 character');
     for (let j = 0; j < bytes.length; j++) bytes[j] *= 58;
-    bytes[j] += val;
+    bytes[0] += val;
     let carry = 0;
     for (let j = 0; j < bytes.length; j++) {
       bytes[j] += carry;
@@ -273,16 +273,29 @@ async function main() {
   const coder = new ethers.AbiCoder();
   const deployed = {};
 
-  // ─── 1. Deploy EquoraCoin (21 Crore Supply) ──────────────────────────────────
+  // ─── 1. Deploy or Reuse EquoraCoin (21 Crore Supply) ─────────────────────────
   const coinTreasury = deployer.evmAddress;
-  const coinParams = coder.encode(['address'], [coinTreasury]);
-  deployed.EquoraCoin = await deployContract(
-    deployer,
-    'EquoraCoin',
-    'token/EquoraCoin.sol/EquoraCoin.json',
-    coinParams
-  );
-  await verifyContractOnExplorer('EquoraCoin', deployed.EquoraCoin.contractAddressBase58, 'EquoraCoin.sol');
+  const existingCoin = process.env.EXISTING_COIN_ADDRESS || 'TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt';
+  if (existingCoin && !process.env.REDEPLOY_COIN) {
+    const existingHex = toTronHex(existingCoin);
+    console.log(`\n----------------------------------------------------------------------`);
+    console.log(`💎 Using verified EquoraCoin: ${existingCoin} (${existingHex})`);
+    deployed.EquoraCoin = {
+      contractName: 'EquoraCoin',
+      contractAddressBase58: existingCoin,
+      contractAddressHex: existingHex,
+      txHash: '0x8239fa7ed1c00a3aa74f791e7b5425cdb73750ad0b152b760e5f19abf9389fa9',
+    };
+  } else {
+    const coinParams = coder.encode(['address'], [coinTreasury]);
+    deployed.EquoraCoin = await deployContract(
+      deployer,
+      'EquoraCoin',
+      'token/EquoraCoin.sol/EquoraCoin.json',
+      coinParams
+    );
+    await verifyContractOnExplorer('EquoraCoin', deployed.EquoraCoin.contractAddressBase58, 'EquoraCoin.sol');
+  }
 
   // ─── 2. Deploy EquoraDAOv2 ───────────────────────────────────────────────────
   const registryHex = toTronHex('TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy');

@@ -59,7 +59,8 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
   useEffect(() => {
     const list: DaoNotification[] = [];
 
-    // 1. Root Matrix Leader waterfall priority for Seats 1–10
+    // 1. Root Matrix Leader waterfall priority for Seats 1–10 (Temporarily hidden as per user request)
+    /*
     if (userSeat && userSeat >= 1 && userSeat <= 10) {
       list.push({
         id: `root_leader_offer_${userSeat}`,
@@ -85,6 +86,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
         actionLabel: 'Inspect Matrix Tree',
       });
     }
+    */
 
     // 2. 35% Global Protocol Pool Push
     list.push({
@@ -98,7 +100,8 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       actionLabel: 'View Treasury',
     });
 
-    // 3. Matrix Launch Countdown alert
+    // 3. Matrix Launch Countdown alert (Temporarily hidden as per user request)
+    /*
     list.push({
       id: 'matrix_bridge_status',
       type: 'matrix_launch',
@@ -109,6 +112,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       actionUrl: '/dao/matrix-bridge',
       actionLabel: 'Countdown Status',
     });
+    */
 
     // 4. Council Queue Update
     list.push({
@@ -193,7 +197,8 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
     };
   }, [open]);
 
-  // Handle play sound on new high-priority offer
+  // Handle play sound on new high-priority offer (Disabled while matrix root opportunity is hidden)
+  /*
   useEffect(() => {
     if (!hasPlayedInitial && userSeat && userSeat >= 1 && userSeat <= 10 && soundEnabled) {
       const timer = setTimeout(() => {
@@ -203,6 +208,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       return () => clearTimeout(timer);
     }
   }, [userSeat, soundEnabled, hasPlayedInitial]);
+  */
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -229,6 +235,14 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       const customEvent = e as CustomEvent<DaoNotification>;
       if (!customEvent.detail) return;
       const newNotif = customEvent.detail;
+      // Do not display matrix opportunity notifications as per user request
+      if (
+        newNotif.type === 'matrix_leader_offer' ||
+        newNotif.type === 'matrix_launch' ||
+        newNotif.title?.toLowerCase().includes('matrix opportunity')
+      ) {
+        return;
+      }
       setNotifications((prev) => {
         if (prev.some((n) => n.id === newNotif.id)) return prev;
         return [newNotif, ...prev];

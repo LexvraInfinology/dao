@@ -140,9 +140,9 @@ export async function GET(
       const entryBtt = parseFloat(m.entryAmountBtt || '5244.75');
       const capBtt = entryBtt * 5;
       const isUnderfunded = m.status === 'underfunded';
-      const isCapped = m.status === 'capped' || pushedBtt >= capBtt;
-      const exactPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : calculateMemberEarnedUsd(m.position, m.status, 93);
-      const pushedUsd = exactPushedUsd;
+      const exactPushedUsd = isUnderfunded ? 0 : (m.status === 'capped' ? earningsCapUsd : calculateMemberEarnedUsd(m.position, m.status, 93));
+      const isCapped = !isUnderfunded && (m.status === 'capped' || pushedBtt >= capBtt || exactPushedUsd >= earningsCapUsd);
+      const pushedUsd = isCapped ? earningsCapUsd : exactPushedUsd;
       let retopupDeadline = m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null;
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;

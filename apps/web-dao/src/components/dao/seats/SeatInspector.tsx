@@ -245,6 +245,16 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             <span>Complete Re-topup to Unlock Seat #{seat.seatNumber}</span>
             <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
+        ) : seat.statusBadge === '5X Capped' && seat.status === 'mine' && onRetopup ? (
+          <button
+            type="button"
+            onClick={onRetopup}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold shadow-[0_4px_14px_rgba(217,119,6,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Re-topup Seat #{seat.seatNumber} ($300 USD)</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+          </button>
         ) : seat.status === 'mine' ? (
           <a
             href="/dao/lounge"

@@ -393,12 +393,21 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-medium">
-                      <span>Credited Initial Deposit:</span>
-                      <span className="font-mono font-bold text-emerald-700">
-                        -{creditTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${(creditTrob * price).toFixed(2)} USD)
-                      </span>
-                    </div>
+                    {creditTrob > 0 ? (
+                      <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-medium">
+                        <span>Credited Initial Deposit:</span>
+                        <span className="font-mono font-bold text-emerald-700">
+                          -{creditTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${(creditTrob * price).toFixed(2)} USD)
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-amber-800 bg-amber-50/70 p-2 rounded-lg border border-amber-200/60 font-medium">
+                        <span>Initial Deposit Status:</span>
+                        <span className="font-mono font-bold text-amber-700">
+                          $0.00 Credited (Full $300 Entry Required)
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between text-blue-700 bg-blue-50/60 p-2 rounded-lg border border-blue-200/60">
                       <span className="flex items-center gap-1.5">

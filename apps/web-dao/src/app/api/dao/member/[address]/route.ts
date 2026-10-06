@@ -219,7 +219,9 @@ export async function GET(
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || String(entryAmountBtt));
       const capBtt = entryBtt * 5;
-      const isCapped = capBtt > 0 && pushedBtt >= capBtt;
+      const isUnderfunded = m.status === 'underfunded';
+      const exactPushedUsd = isUnderfunded ? 0 : (m.status === 'capped' ? earningsCapUsd : calculateMemberEarnedUsd(onChainPos || m.position, m.status, 93));
+      const isCapped = !isUnderfunded && (m.status === 'capped' || (capBtt > 0 && pushedBtt >= capBtt) || exactPushedUsd >= earningsCapUsd);
 
       let retopupDeadline = m.retopupDeadline;
       let retopupTimeRemainingSeconds: number | null = null;
@@ -251,8 +253,6 @@ export async function GET(
       }
 
       const isMember = !isExpired && m.status !== 'vacant' && m.status !== 'defaulted';
-      const isUnderfunded = m.status === 'underfunded';
-      const exactPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : calculateMemberEarnedUsd(onChainPos || m.position, m.status, 93);
       const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / earningsCapUsd) * 100));
 
       return NextResponse.json({

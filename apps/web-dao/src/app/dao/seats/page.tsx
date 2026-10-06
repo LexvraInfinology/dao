@@ -342,21 +342,34 @@ export default function CouncilSeatsPage() {
         />
       )}
 
-      <RetopupModal
-        isOpen={retopupModalOpen}
-        onClose={() => setRetopupModalOpen(false)}
-        seatPosition={memberData?.position || selectedSeat.seatNumber}
-        retopupDeadline={memberData?.retopupDeadline}
-        trobPriceUsd={price?.priceUsd}
-        alreadyPaidTrob={memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5}
-        isUnderfunded={true}
-        onSuccess={() => {
-          refetchMember();
-          refetchMembers();
-          setRetopupModalOpen(false);
-          setNotification(`Re-topup successfully confirmed on blockchain! Seat #${memberData?.position || selectedSeat.seatNumber} is now fully funded.`);
-        }}
-      />
+      {(() => {
+        const isUnderfundedSeat = Boolean(
+          memberData?.underfunded ||
+          memberData?.status === 'underfunded' ||
+          selectedSeat.statusBadge === 'Underfunded'
+        );
+        return (
+          <RetopupModal
+            isOpen={retopupModalOpen}
+            onClose={() => setRetopupModalOpen(false)}
+            seatPosition={memberData?.position || selectedSeat.seatNumber}
+            retopupDeadline={memberData?.retopupDeadline}
+            trobPriceUsd={price?.priceUsd}
+            alreadyPaidTrob={isUnderfundedSeat ? (memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5) : 0}
+            isUnderfunded={isUnderfundedSeat}
+            onSuccess={() => {
+              refetchMember();
+              refetchMembers();
+              setRetopupModalOpen(false);
+              setNotification(
+                isUnderfundedSeat
+                  ? `Seat #${memberData?.position || selectedSeat.seatNumber} successfully activated on blockchain!`
+                  : `5X Cap reset confirmed on blockchain! Seat #${memberData?.position || selectedSeat.seatNumber} is now active.`
+              );
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

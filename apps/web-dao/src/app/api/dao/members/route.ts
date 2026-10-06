@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
           pushedAmountUsdEstimate: pushedUsd,
           status: r.status || 'active',
           joinedAt: r.joinedAt,
-          retopupDeadline: r.retopupDeadline,
+          retopupDeadline: r.retopupDeadline ? new Date(r.retopupDeadline).toISOString() : null,
         };
       }),
       total,

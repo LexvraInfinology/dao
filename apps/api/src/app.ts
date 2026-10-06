@@ -28,12 +28,25 @@ import { createPublicClient, http, parseAbi } from "viem";
 export function createApp(): Express {
   const app = express();
 
+  // ── Trust Reverse Proxy (Nginx / Caddy / Cloudflare / Utho VM HTTPS termination) ──
+  app.set("trust proxy", 1);
+
   // ── Security & Standard Middleware ────────────────────────────────────────
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
     })
   );
+
+  // Ensure HTTPS security headers and protocol availability denote
+  app.use((req, res, next) => {
+    const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https";
+    if (isHttps) {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+    res.setHeader("X-Forwarded-Proto-Accepted", "https, http");
+    next();
+  });
 
   const configuredOrigins = (config.corsOrigin || "")
     .split(",")
@@ -49,36 +62,53 @@ export function createApp(): Express {
         if (
           origin.startsWith("http://localhost:") ||
           origin.startsWith("http://127.0.0.1:") ||
+          origin.startsWith("https://localhost:") ||
           configuredOrigins.includes(origin) ||
-          origin.endsWith("equorafidao.com") ||
-          origin.endsWith("equorafi.com")
+          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafidao\.com(:\d+)?$/.test(origin) ||
+          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafi\.com(:\d+)?$/.test(origin)
         ) {
           return callback(null, true);
         }
         callback(null, false);
       },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
     })
   );
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   // ── Root & Health ─────────────────────────────────────────────────────────
-  app.get("/", (_req, res) => {
+  app.get("/", (req, res) => {
+    const proto = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
+    const host = req.get("host") || "api.equorafidao.com";
     res.json({
       message: "EQUORA Protocol API is up and running...",
       service: "@equora/api",
       version: "1.0.0",
-      trpcEndpoint: "/trpc",
-      healthEndpoint: "/health",
+      protocol: proto,
+      httpsAvailable: true,
+      baseUrl: `${proto}://${host}`,
+      endpoints: {
+        stats: `${proto}://${host}/api/dao/stats`,
+        members: `${proto}://${host}/api/dao/members`,
+        events: `${proto}://${host}/api/dao/events`,
+        price: `${proto}://${host}/api/price/trob`,
+        health: `${proto}://${host}/health`,
+        trpc: `${proto}://${host}/trpc`,
+      },
       chainId: config.blockchain.chainId,
     });
   });
 
-  app.get("/health", (_req, res) => {
+  app.get("/health", (req, res) => {
+    const proto = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
     res.json({
       status: "healthy",
       service: "equora-api",
+      protocol: proto,
+      httpsAvailable: true,
       timestamp: new Date().toISOString(),
       chainId: config.blockchain.chainId,
     });

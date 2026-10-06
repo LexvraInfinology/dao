@@ -149,6 +149,13 @@ export async function GET(
       const retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
       const isExpired = retopupTimeRemainingSeconds === 0;
 
+      if (isExpired && m?.id && m.status !== 'vacant') {
+        await queryNeon(
+          `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
+          [m.id]
+        ).catch(() => {});
+      }
+
       const pos = m?.position || onChainPos || reservedPos;
 
       return NextResponse.json({

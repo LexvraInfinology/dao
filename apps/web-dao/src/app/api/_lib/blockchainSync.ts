@@ -431,6 +431,14 @@ export async function syncOnChainMembersState(force = false): Promise<{
                 [prevDep, position]
               );
             }
+          } else {
+            // Not reserved on-chain and position is 0 on-chain => seat is vacant!
+            if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {
+              await queryNeon(
+                `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE position = $1`,
+                [position]
+              );
+            }
           }
         }
         continue;
@@ -442,29 +450,41 @@ export async function syncOnChainMembersState(force = false): Promise<{
         continue;
       }
 
-      if (existing.rows.length === 0) {
-        let totalEarnedTrob = 0;
-        try {
-          const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              owner_address: daoHex,
-              contract_address: daoHex,
-              function_selector: 'getMemberDetails(address)',
-              parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
-            }),
-            cache: 'no-store',
-          });
-          if (detailRes.ok) {
-            const detailJson = await detailRes.json();
-            if (detailJson.constant_result?.[0]) {
-              const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detailJson.constant_result[0]);
-              totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
+      let totalEarnedTrob = 0;
+      let isOnChainCapped = false;
+      let onChainDeadlineIso: string | null = null;
+      let isOnChainBlank = false;
+
+      try {
+        const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            owner_address: daoHex,
+            contract_address: daoHex,
+            function_selector: 'getMemberDetails(address)',
+            parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
+          }),
+          cache: 'no-store',
+        });
+        if (detailRes.ok) {
+          const detailJson = await detailRes.json();
+          if (detailJson.constant_result?.[0]) {
+            const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detailJson.constant_result[0]);
+            totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
+            isOnChainCapped = Boolean(decoded.isCapped);
+            isOnChainBlank = Boolean(decoded.isBlank);
+            const dlSec = Number(decoded.retopupDeadline);
+            if (dlSec > 0) {
+              onChainDeadlineIso = new Date(dlSec * 1000).toISOString();
             }
           }
-        } catch {}
+        }
+      } catch {}
 
+      const memberEffectiveStatus = isOnChainBlank ? 'vacant' : (isOnChainCapped ? 'capped' : 'active');
+
+      if (existing.rows.length === 0) {
         const userCheck = await queryNeon<any>(
           `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
           [b58Addr]
@@ -489,11 +509,11 @@ export async function syncOnChainMembersState(force = false): Promise<{
            )
            VALUES (
              gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-             5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NULL, NOW(), NOW()
+             5357.14, 300, $2, 'trobchain-mainnet', $3, $4, $5, NOW(), NOW()
            )
            ON CONFLICT (position) DO UPDATE
-           SET address = $1, "pushedAmountBtt" = $3, status = 'active', "retopupDeadline" = NULL, "updatedAt" = NOW()`,
-          [b58Addr, position, totalEarnedTrob]
+           SET address = $1, "pushedAmountBtt" = $3, status = $4, "retopupDeadline" = $5, "updatedAt" = NOW()`,
+          [b58Addr, position, totalEarnedTrob, memberEffectiveStatus, onChainDeadlineIso]
         );
 
         newMembersAdded++;
@@ -507,13 +527,31 @@ export async function syncOnChainMembersState(force = false): Promise<{
           await queryNeon(
             `UPDATE "DaoMember"
              SET address = $1,
-                 status = 'active',
-                 "retopupDeadline" = NULL,
+                 status = $2,
+                 "retopupDeadline" = $3,
                  "entryAmountUsdAtJoin" = 300,
+                 "pushedAmountBtt" = GREATEST("pushedAmountBtt", $4),
                  "updatedAt" = NOW()
-             WHERE position = $2`,
-            [b58Addr, position]
+             WHERE position = $5`,
+            [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
           );
+        } else {
+          // Synchronize status, retopup deadline, and earnings if state changed on-chain
+          if (
+            dbMember.status !== memberEffectiveStatus ||
+            (onChainDeadlineIso && dbMember.retopupDeadline !== onChainDeadlineIso) ||
+            totalEarnedTrob > parseFloat(dbMember.pushedAmountBtt || '0')
+          ) {
+            await queryNeon(
+              `UPDATE "DaoMember"
+               SET status = $1,
+                   "retopupDeadline" = $2,
+                   "pushedAmountBtt" = GREATEST("pushedAmountBtt", $3),
+                   "updatedAt" = NOW()
+               WHERE position = $4`,
+              [memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
+            );
+          }
         }
       }
     }

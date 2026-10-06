@@ -67,8 +67,11 @@ export async function POST(req: NextRequest) {
     const m = memberRes.rows[0];
     const isUnderfunded = m.status === 'underfunded';
 
-    // 1. Check if 48-Hour payment/retopup window has expired
-    if (m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
+    // 1. Check if 48-Hour payment/retopup window has expired.
+    // If the transaction receipt is valid and was accepted/mined on-chain by the smart contract,
+    // the smart contract's block timestamp was within the acceptable window and accepted the payment.
+    // We strictly record and synchronize the database with on-chain reality.
+    if (!txReceipt.valid && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
       await queryNeon(
         `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
         [m.id]

@@ -81,8 +81,17 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
+    // Automatically transition expired seats to vacant so queue priority fills them first
+    await queryNeon(
+      `UPDATE "DaoMember"
+       SET status = 'vacant', "updatedAt" = NOW()
+       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+         AND "retopupDeadline" IS NOT NULL
+         AND "retopupDeadline" < NOW()`
+    ).catch(() => {});
+
     const { rows } = await queryNeon<any>(
-      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt"
+      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt", "retopupDeadline"
        FROM "DaoMember"
        WHERE LOWER(status) NOT IN ('vacant', 'blank')
        ORDER BY position ASC
@@ -112,6 +121,7 @@ export async function GET(req: NextRequest) {
           pushedAmountUsdEstimate: pushedUsd,
           status: r.status || 'active',
           joinedAt: r.joinedAt,
+          retopupDeadline: r.retopupDeadline,
         };
       }),
       total,

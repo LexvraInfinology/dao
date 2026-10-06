@@ -334,11 +334,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
             /* Active Retopup Form */
             <>
               {/* 48-Hour Live Countdown Alert Card */}
-              <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 space-y-2.5">
+              <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-300 space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                    <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-                    <span>48-Hour Reservation Window</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    <span>Reservation Window</span>
                   </div>
                   <span
                     className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
@@ -347,103 +347,105 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                         : 'bg-amber-200 text-amber-900 border-amber-300'
                     }`}
                   >
-                    {timeLeft.isExpired ? 'Window Expired' : 'Action Required'}
+                    {timeLeft.isExpired ? 'Window Expired' : 'Window Active'}
                   </span>
                 </div>
 
                 {/* 3-Part Digital Clock */}
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
-                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
-                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                <div className="grid grid-cols-3 gap-1.5 text-center">
+                  <div className="bg-white rounded-lg p-1.5 border border-amber-200 shadow-2xs">
+                    <div className="text-lg font-black font-mono text-[#14304A]">
                       {String(timeLeft.hours).padStart(2, '0')}
                     </div>
-                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Hours</div>
+                    <div className="text-[8.5px] uppercase font-bold text-slate-400">Hours</div>
                   </div>
-                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
-                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                  <div className="bg-white rounded-lg p-1.5 border border-amber-200 shadow-2xs">
+                    <div className="text-lg font-black font-mono text-[#14304A]">
                       {String(timeLeft.minutes).padStart(2, '0')}
                     </div>
-                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Minutes</div>
+                    <div className="text-[8.5px] uppercase font-bold text-slate-400">Minutes</div>
                   </div>
-                  <div className="bg-white rounded-lg p-1.5 sm:p-2 border border-amber-200 shadow-xs">
-                    <div className="text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono text-rose-600">
+                  <div className="bg-white rounded-lg p-1.5 border border-amber-200 shadow-2xs">
+                    <div className="text-lg font-black font-mono text-rose-600">
                       {String(timeLeft.seconds).padStart(2, '0')}
                     </div>
-                    <div className="text-[8.5px] min-[360px]:text-[9px] uppercase font-bold text-slate-400">Seconds</div>
+                    <div className="text-[8.5px] uppercase font-bold text-slate-400">Seconds</div>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                <p className="text-[11px] text-amber-900 leading-snug font-medium">
                   {isUnderfunded
-                    ? `Your initial deposit of ${creditTrob} TROB has been credited. Pay the remaining ${retopupFeeTrob.toLocaleString()} TROB to fully fund your seat, unlock your Soulbound VIP Lounge Pass, and activate your dividend earnings.`
+                    ? `Seat #${seatPosition} reserved. Pay remaining balance to activate your seat and unlock dividend earnings.`
                     : timeLeft.isExpired
-                    ? `Your 48-hour retopup window has lapsed. Seat #${seatPosition} is now vacant and open to any queue claimant.`
-                    : `You have reached the 5X Cap ($1,500 USD). Complete your $300 USD retopup within 48h to secure your seat, distribute to active members, and reset your cap to zero.`}
+                    ? `48-hour window has expired. Seat #${seatPosition} is now open for queue claim.`
+                    : `Seat #${seatPosition} reached the 5X Cap. Complete $300 USD re-topup to reset cap to $0.00 and resume payouts.`}
                 </p>
               </div>
 
-              {/* Financial Breakdown Table */}
+              {/* Financial Breakdown Table - Clean & Minimal */}
               <div className="p-3.5 rounded-xl bg-[#FAFBFD] border border-[#E2EEF9] space-y-2 text-xs">
                 {isUnderfunded ? (
                   <>
                     <div className="flex items-center justify-between text-[#4F6D87]">
-                      <span>Required Seat Value:</span>
+                      <span>Seat Entry Value:</span>
                       <span className="font-mono font-bold text-[#14304A]">
-                        ${entryAmountUsd}.00 USD (≈ {fullRequiredTrob.toLocaleString()} TROB)
+                        $300.00 USD (≈ {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-semibold">
-                      <span>Previous Deposit Credited:</span>
+                    <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-medium">
+                      <span>Credited Initial Deposit:</span>
                       <span className="font-mono font-bold text-emerald-700">
-                        -{creditTrob.toLocaleString()} TROB (~${(creditTrob * price).toFixed(2)} USD)
+                        -{creditTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${(creditTrob * price).toFixed(2)} USD)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/60 p-2 rounded-lg border border-blue-200/60">
+                      <span className="flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Live TROB Exchange Rate:</span>
+                      </span>
+                      <span className="font-mono font-bold">
+                        1 TROB = ${price.toFixed(4)} USD
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Remaining Payable Amount:</span>
                       <span className="font-mono text-sm text-[#0E62E4]">
-                        {retopupFeeTrob.toLocaleString()} TROB (~${netUsd} USD)
+                        {retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${netUsd} USD)
                       </span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[#4F6D87] gap-0.5">
-                      <span>Retopup Deposit (300 USD):</span>
+                    <div className="flex items-center justify-between text-[#4F6D87]">
+                      <span>Re-topup Deposit:</span>
                       <span className="font-mono font-bold text-[#14304A]">
-                        ${entryAmountUsd}.00 USD (≈ {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+                        $300.00 USD
                       </span>
                     </div>
 
-                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] bg-blue-50/70 p-2 rounded-lg border border-blue-200/60 gap-0.5">
-                      <span className="font-medium text-[#0E62E4] flex items-center gap-1.5">
-                        <TrendingUp className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/60 p-2 rounded-lg border border-blue-200/60">
+                      <span className="flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <span>Live TROB Exchange Rate:</span>
                       </span>
-                      <span className="font-mono font-bold text-[#0E62E4]">
+                      <span className="font-mono font-bold">
                         1 TROB = ${price.toFixed(4)} USD
                       </span>
                     </div>
 
-                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] gap-0.5">
-                      <span>Current Payout Status:</span>
-                      <span className="font-bold text-rose-600 font-jakarta">5X Capped ($1,500 USD) • Dividends Paused</span>
-                    </div>
-
-                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[#14304A] bg-[#F1F5F9]/80 p-2 rounded-lg border border-[#E2EEF9] gap-1">
-                      <span className="font-semibold text-xs flex items-center gap-1.5 text-[#4F6D87]">
-                        <Coins className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
-                        <span>Protocol Distribution:</span>
-                      </span>
-                      <span className="font-mono text-xs font-bold text-[#14304A]">
-                        Equal split among active members
+                    <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
+                      <span>Required Payment:</span>
+                      <span className="font-mono text-sm text-[#0E62E4]">
+                        {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
                       </span>
                     </div>
 
-                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8] gap-0.5">
-                      <span>Restored Earning Capacity:</span>
-                      <span className="font-bold text-emerald-600">$1,500.00 USD (Fresh 5X Cap)</span>
+                    <div className="flex items-center justify-between text-[11px] text-[#4F6D87] pt-0.5">
+                      <span>Cap After Re-topup:</span>
+                      <span className="font-semibold text-emerald-600">Resets to $0.00 / $1,500.00 USD</span>
                     </div>
                   </>
                 )}

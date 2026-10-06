@@ -56,8 +56,8 @@ export const ACTIVE_DAO_CONTRACT_HEX =
 export const CHAIN_ID = 1000;
 
 // Backend API Host, Port & URLs with Docker and local dev fallbacks (Backend port 4000, Web port 3000)
-export const BACKEND_API_PORT = parseInt(process.env.API_PORT || process.env.PORT || '4000', 10);
-export const WEB_PORT = parseInt(process.env.WEB_PORT || '3000', 10);
+export const BACKEND_API_PORT = parseInt(process.env.API_PORT || process.env.BACKEND_API_PORT || '4000', 10);
+export const WEB_PORT = parseInt(process.env.WEB_PORT || process.env.PORT || '3000', 10);
 export const BACKEND_API_HOST = process.env.API_HOST || 'api.equorafidao.com';
 export const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.equorafidao.com';
 export const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.equorafidao.com';

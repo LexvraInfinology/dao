@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
   const baseUrl = `${proto}://${host}`;
 
   // Ports configuration (Express API on 4000, Next.js Web on 3000)
-  const apiPort = BACKEND_API_PORT || parseInt(process.env.API_PORT || process.env.PORT || `${defaultApiPort}`, 10);
-  const webPort = WEB_PORT || parseInt(process.env.WEB_PORT || `${defaultWebPort}`, 10);
+  const apiPort = BACKEND_API_PORT || parseInt(process.env.API_PORT || process.env.BACKEND_API_PORT || `${defaultApiPort}`, 10);
+  const webPort = WEB_PORT || parseInt(process.env.WEB_PORT || process.env.PORT || `${defaultWebPort}`, 10);
 
   // Backend API Host
   const apiHost = isLocal

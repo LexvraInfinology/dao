@@ -80,13 +80,14 @@ export async function GET(
 
     if (m) {
       const isUnderfunded = m.status === 'underfunded';
+      const isCapped = m.status === 'capped';
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5357.15');
       const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
       const earningsCapUsd = 1500;
-      const pushedUsd = isUnderfunded ? 0 : Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
+      const pushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
       const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
-      const capProgressPct = isUnderfunded ? 0 : Math.min(100, Math.round((pushedUsd / earningsCapUsd) * 100));
+      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((pushedUsd / earningsCapUsd) * 100));
 
       const nftBadges = [
         {

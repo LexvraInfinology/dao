@@ -70,23 +70,29 @@ export function buildLiveCouncilSeats(
       const isMine =
         !!canonicalMyAddress &&
         liveMember.address.toLowerCase() === canonicalMyAddress;
+      const isCapped = liveMember.status === 'capped';
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
-      const earningsUsd =
+      const rawEarningsUsd =
         liveMember.pushedAmountUsdEstimate ??
         pushedBtt * (bttPriceUsd > 0 ? bttPriceUsd : 0.05525);
-      const capPct = Math.min(100, Math.round((earningsUsd / 1500) * 100));
+      const earningsUsd = isCapped ? 1500 : Math.min(1500, rawEarningsUsd);
+      const capPct = isCapped ? 100 : Math.min(100, Math.round((earningsUsd / 1500) * 100));
 
       const addr = liveMember.address;
       const shortAddr =
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
-      const liveTrob = pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0);
+      const liveTrob = isCapped
+        ? Math.max(pushedBtt, 27530)
+        : (pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0));
 
       return {
         seatNumber,
         status: isMine ? 'mine' : 'claimed',
         ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
-        lifetimeEarnings: liveTrob > 0
+        lifetimeEarnings: isCapped
+          ? `$1,500.00 USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
+          : liveTrob > 0
           ? `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
           : `$${earningsUsd.toFixed(2)} USD`,
         capProgress: capPct,

@@ -452,8 +452,10 @@ export class DaoService {
           pushedTrob = Math.round((300 / priceUsd) * 100) / 100;
         }
 
+        const isCapped = m.status === 'capped';
         const entryUsd = Number(m.entryAmountUsdAtJoin) > 0 ? Number(m.entryAmountUsdAtJoin) : 300;
-        const pushedUsd = Number((pushedTrob * priceUsd).toFixed(2));
+        const rawPushedUsd = Number((pushedTrob * priceUsd).toFixed(2));
+        const pushedUsd = isCapped ? 1500 : Math.min(1500, rawPushedUsd);
 
         return {
           position: m.position,
@@ -463,8 +465,8 @@ export class DaoService {
           entryAmountBtt: entryTrob,
           entryAmountTrob: entryTrob,
           entryAmountUsdEstimate: entryUsd,
-          pushedAmountBtt: pushedTrob,
-          pushedAmountTrob: pushedTrob,
+          pushedAmountBtt: isCapped ? Math.max(pushedTrob, 27529.6) : pushedTrob,
+          pushedAmountTrob: isCapped ? Math.max(pushedTrob, 27529.6) : pushedTrob,
           pushedAmountUsdEstimate: pushedUsd,
           status: m.status,
           joinedAt: m.joinedAt,

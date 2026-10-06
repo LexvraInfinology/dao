@@ -96,15 +96,17 @@ export async function GET(req: NextRequest) {
     const data = {
       members: rows.map((r) => {
         const pushedAmt = parseFloat(r.pushedAmountBtt || '0');
-        const pushedUsd = Math.round(pushedAmt * cachedTrobPrice * 100) / 100;
+        const isCapped = r.status === 'capped';
+        const rawPushedUsd = Math.round(pushedAmt * cachedTrobPrice * 100) / 100;
+        const pushedUsd = isCapped ? 1500 : Math.min(1500, rawPushedUsd);
         return {
           position: r.position,
           address: r.address,
           nftTokenId: r.nftTokenId,
           entryAmountBtt: parseFloat(r.entryAmountBtt || '0'),
           entryAmountTrob: parseFloat(r.entryAmountBtt || '0'),
-          pushedAmountBtt: pushedAmt,
-          pushedAmountTrob: pushedAmt,
+          pushedAmountBtt: isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt,
+          pushedAmountTrob: isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt,
           pushedAmountUsdEstimate: pushedUsd,
           status: r.status || 'active',
           joinedAt: r.joinedAt,

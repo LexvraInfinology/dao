@@ -5,10 +5,10 @@ import { User, Clock, Users, AppWindow } from 'lucide-react';
 import { useDaoStats, useTrobPrice } from '@/hooks/useApi';
 
 export const CouncilStatCards: React.FC = () => {
-  const { data: stats } = useDaoStats(30_000);
+  const { data: stats, loading: statsLoading } = useDaoStats(30_000);
   const { data: price } = useTrobPrice(30_000);
 
-  const isLoaded       = stats !== null && stats !== undefined;
+  const isLoaded       = stats !== null && stats !== undefined && (!statsLoading || (stats.memberCount || 0) > 0);
   const seatsFilled    = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? (100 - seatsFilled);
   const filledPct      = Math.min(100, Math.round((seatsFilled / 100) * 100));

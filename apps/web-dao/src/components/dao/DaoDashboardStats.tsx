@@ -51,7 +51,7 @@ function useCountdown() {
 }
 
 export function DaoDashboardStats() {
-  const { data: stats } = useDaoStats(30_000);
+  const { data: stats, loading: statsLoading } = useDaoStats(30_000);
   const { data: price } = useTrobPrice(30_000);
   const auth = useAuthContext();
   const wallet = useWallet();
@@ -77,7 +77,7 @@ export function DaoDashboardStats() {
     setActiveSlide(idx);
   };
 
-  const isStatsLoaded = stats !== null && stats !== undefined;
+  const isStatsLoaded = stats !== null && stats !== undefined && (!statsLoading || (stats.memberCount || 0) > 0);
   const seatsFilled = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? Math.max(0, 100 - seatsFilled);
   const filledPct = Math.min(100, Math.round((seatsFilled / 100) * 100));

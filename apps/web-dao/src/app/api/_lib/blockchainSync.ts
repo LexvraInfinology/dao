@@ -110,7 +110,13 @@ export async function getOnChainDaoTransactions(
       const isCompleteSeat = methodName === 'completeUnderfundedSeat' || selector === '7f15ea38' || selector === '0x7f15ea38';
       const isRetopup = methodName === 'retopup' || selector === 'd7b275bf';
       const isClaimPool = methodName === 'claimPoolShare' || selector === '85b736b4';
-      const isClaimFallback = methodName === 'claimFallback' || selector === 'a04467c6';
+      const isClaimFallback = methodName === 'claimFallback' || selector === 'a04467c6' || selector === 'a3e0acca';
+      const isMigrate = methodName === 'migrateGenuineMembers' || selector === '63187018';
+
+      if (isMigrate) {
+        syncOnChainMembersState().catch(() => {});
+        continue;
+      }
 
       if (!isJoin && !isCompleteSeat && !isRetopup && !isClaimPool && !isClaimFallback) {
         continue;

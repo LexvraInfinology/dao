@@ -18,7 +18,7 @@ export interface UseApiResult<T> {
  * useApi<T> — fetches a GET endpoint and returns { data, loading, error, refetch }.
  * Automatically attaches JWT Bearer token from AuthContext when available.
  */
-export const EQUORA_CACHE_VERSION = 'v2026_10_02_clean_genesis';
+export const EQUORA_CACHE_VERSION = 'v2026_10_06_live_v2';
 
 // Auto-purge stale client caches on version bump
 if (typeof window !== 'undefined') {
@@ -36,7 +36,8 @@ if (typeof window !== 'undefined') {
             k.startsWith('eq_cache_') ||
             k.startsWith('trob_member_') ||
             k.includes('member') ||
-            k.includes('claimed'))
+            k.includes('claimed') ||
+            k.includes('stats'))
         ) {
           toRemove.push(k);
         }
@@ -72,17 +73,16 @@ export function clearDaoClientCaches() {
 // Global in-memory cache for live dynamic API responses (persists across component mounts)
 const memoryApiCache = new Map<string, any>();
 
-function isDynamicUserPath(path: string): boolean {
+function isDynamicPath(path: string): boolean {
   return (
-    path.includes('/dao/member/') ||
-    path.includes('/dao/lounge/') ||
-    path.includes('/dao/profile/') ||
-    path.includes('/dao/eligibility/')
+    path.includes('/dao/') ||
+    path.includes('/price/') ||
+    path.includes('/user/')
   );
 }
 
 function getInitialCachedData<T>(path: string | null, fallback: T | null): T | null {
-  if (!path || isDynamicUserPath(path)) return fallback;
+  if (!path || isDynamicPath(path)) return fallback;
   if (memoryApiCache.has(path)) {
     return memoryApiCache.get(path) as T;
   }
@@ -119,14 +119,14 @@ export function useApi<T>(
   const [error, setError]     = useState<string | null>(null);
   const pollRef               = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Safely hydrate from memory or sessionStorage cache on client immediately after mount
+  // Safely hydrate from memory cache (or static non-dynamic sessionStorage) on client immediately after mount
   useEffect(() => {
     if (!path) return;
     if (memoryApiCache.has(path)) {
       setData(memoryApiCache.get(path));
       return;
     }
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !isDynamicPath(path)) {
       try {
         const stored = sessionStorage.getItem(`eq_cache_${path}`);
         if (stored) {
@@ -162,13 +162,15 @@ export function useApi<T>(
       const json = await res.json();
       const result = json.data !== undefined ? json.data : json;
       setData(result);
-      if (path && !isDynamicUserPath(path)) {
+      if (path && !isDynamicPath(path)) {
         memoryApiCache.set(path, result);
         if (typeof window !== 'undefined') {
           try {
             sessionStorage.setItem(`eq_cache_${path}`, JSON.stringify(result));
           } catch {}
         }
+      } else if (path) {
+        memoryApiCache.set(path, result);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error';

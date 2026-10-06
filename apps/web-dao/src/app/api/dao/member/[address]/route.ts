@@ -1,62 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
+import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from '../../../_lib/txVerifier';
+import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { address: string } }
+  context: { params: { address: string } }
 ) {
-  const address = params.address;
-  if (!address) {
-    return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
-  }
-
-  // Blockchain smart contract is the absolute Single Source of Truth.
-  // We do not proxy through unverified backend caches.
-
-  const bttPriceUsd = 0.0572;
-  const entryAmountUsd = 300;
-  const earningsCapUsd = 1500;
-  const entryAmountBtt = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
-  const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
-
-  // 2. Direct Serverless Neon Lookup & On-Chain Verification
   try {
-    const cleanAddr = address.trim();
-    const { getOnChainMemberPosition } = await import('../../../_lib/txVerifier');
-    const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
-    const base58Addr = toTrobBase58(cleanAddr);
-    const hexAddr = toTronHex(cleanAddr);
-
-    let onChainPos = await getOnChainMemberPosition(cleanAddr);
-    if (onChainPos === 0 && base58Addr !== cleanAddr) {
-      onChainPos = await getOnChainMemberPosition(base58Addr);
-    }
-    if (onChainPos === 0 && hexAddr !== cleanAddr) {
-      onChainPos = await getOnChainMemberPosition(hexAddr);
+    const address = context?.params?.address;
+    if (!address) {
+      return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
     }
 
-    let isUnderfundedReservation = false;
-    let reservedPos = 0;
+    // Blockchain smart contract is the absolute Single Source of Truth.
+    // We do not proxy through unverified backend caches.
 
-    // Check Neon DB first or alongside on-chain position
-    const { rows } = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" 
-       WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR (position = $4 AND $4 > 0))
-       ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
-       LIMIT 1`,
-      [cleanAddr, base58Addr, hexAddr, onChainPos]
-    );
+    const bttPriceUsd = 0.0572;
+    const entryAmountUsd = 300;
+    const earningsCapUsd = 1500;
+    const entryAmountBtt = Math.round((entryAmountUsd / bttPriceUsd) * 100) / 100;
+    const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
 
-    let m = rows[0];
+    // 2. Direct Serverless Neon Lookup & On-Chain Verification
+    try {
+      const cleanAddr = address.trim();
+      const base58Addr = toTrobBase58(cleanAddr);
+      const hexAddr = toTronHex(cleanAddr);
 
-    // Check on-chain reservation mapping from EquoraDAOv2 unconditionally
-    const { getOnChainUnderfundedReservation } = await import('../../../_lib/txVerifier');
-    const onChainRes = (await getOnChainUnderfundedReservation(cleanAddr))
-      || (base58Addr !== cleanAddr ? await getOnChainUnderfundedReservation(base58Addr) : null)
-      || (hexAddr !== cleanAddr ? await getOnChainUnderfundedReservation(hexAddr) : null);
+      let onChainPos = await getOnChainMemberPosition(cleanAddr);
+      if (onChainPos === 0 && base58Addr !== cleanAddr) {
+        onChainPos = await getOnChainMemberPosition(base58Addr);
+      }
+      if (onChainPos === 0 && hexAddr !== cleanAddr) {
+        onChainPos = await getOnChainMemberPosition(hexAddr);
+      }
+
+      let isUnderfundedReservation = false;
+      let reservedPos = 0;
+
+      // Check Neon DB first or alongside on-chain position
+      const { rows } = await queryNeon<any>(
+        `SELECT * FROM "DaoMember" 
+         WHERE (LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) OR (position = $4 AND $4 > 0))
+         ORDER BY CASE WHEN LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3)) THEN 0 ELSE 1 END
+         LIMIT 1`,
+        [cleanAddr, base58Addr, hexAddr, onChainPos]
+      );
+
+      let m = rows[0];
+
+      // Check on-chain reservation mapping from EquoraDAOv2 unconditionally
+      const onChainRes = (await getOnChainUnderfundedReservation(cleanAddr))
+        || (base58Addr !== cleanAddr ? await getOnChainUnderfundedReservation(base58Addr) : null)
+        || (hexAddr !== cleanAddr ? await getOnChainUnderfundedReservation(hexAddr) : null);
 
     if (onChainRes && onChainRes.isReserved) {
       isUnderfundedReservation = true;
@@ -268,29 +267,36 @@ export async function GET(
     console.warn('[member route] Error:', dbErr);
   }
 
-  // Non-member response
-  return NextResponse.json({
-    success: true,
-    data: {
-      isMember: false,
-      position: null,
-      nftTokenId: null,
-      status: 'unclaimed',
-      joinedAt: undefined,
-      pushedAmountBtt: 0,
-      pushedAmountTrob: 0,
-      pushedAmountUsdEstimate: 0,
-      earningsCapBtt,
-      earningsCapTrob: earningsCapBtt,
-      earningsCapUsd,
-      capProgressPct: 0,
-      isCapped: false,
-      entryAmountBtt,
-      entryAmountTrob: entryAmountBtt,
-      entryAmountUsdEstimate: entryAmountUsd,
-      directReferralsCount: 0,
-      isQualified: false,
-      userId: null,
-    },
-  });
+    // Non-member response
+    return NextResponse.json({
+      success: true,
+      data: {
+        isMember: false,
+        position: null,
+        nftTokenId: null,
+        status: 'unclaimed',
+        joinedAt: undefined,
+        pushedAmountBtt: 0,
+        pushedAmountTrob: 0,
+        pushedAmountUsdEstimate: 0,
+        earningsCapBtt,
+        earningsCapTrob: earningsCapBtt,
+        earningsCapUsd,
+        capProgressPct: 0,
+        isCapped: false,
+        entryAmountBtt,
+        entryAmountTrob: entryAmountBtt,
+        entryAmountUsdEstimate: entryAmountUsd,
+        directReferralsCount: 0,
+        isQualified: false,
+        userId: null,
+      },
+    });
+  } catch (error: any) {
+    console.error('[API member/[address]] FATAL ERROR:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || String(error), stack: error?.stack },
+      { status: 500 }
+    );
+  }
 }

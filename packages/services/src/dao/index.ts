@@ -194,43 +194,143 @@ export class PriceService {
 
 export const priceService = new PriceService();
 
+const NEON_DIRECT_URL =
+  process.env.NEON_DATABASE_URL ||
+  "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+
+export async function queryNeonHttp<T = any>(query: string, params: any[] = []): Promise<T[]> {
+  try {
+    let dbUrl = process.env.DATABASE_URL || "";
+    if (!dbUrl.includes("neon.tech")) {
+      dbUrl = NEON_DIRECT_URL;
+    }
+    const match = dbUrl.match(/@([^/:]+)/);
+    const host = match && match[1] ? match[1] : "ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech";
+    const endpoint = `https://${host}/sql`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Neon-Connection-String": dbUrl,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query, params }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return [];
+    const json = (await res.json()) as any;
+    return (json.rows || []) as T[];
+  } catch (e) {
+    return [];
+  }
+}
+
 export class DaoService {
   private priceService = priceService;
 
   async getDAOStats(): Promise<DaoStatsDTO> {
-    const [memberCount, activeCount, blankCount, cappedCount, priceData, instance, vaultSplits] =
+    let [memberCount, activeCount, blankCount, cappedCount, priceData, instance, vaultSplits] =
       await Promise.all([
-        prisma.daoMember.count(),
-        prisma.daoMember.count({ where: { status: "active" } }),
-        prisma.daoMember.count({ where: { status: "blank" } }),
-        prisma.daoMember.count({ where: { status: "capped" } }),
-        this.priceService.getBttUsdPrice(),
-        prisma.daoInstance.findUnique({ where: { id: 1 } }),
+        prisma.daoMember.count({ where: { status: { notIn: ["vacant", "blank"] } } }).catch(() => 0),
+        prisma.daoMember.count({ where: { status: "active" } }).catch(() => 0),
+        prisma.daoMember.count({ where: { status: "blank" } }).catch(() => 0),
+        prisma.daoMember.count({ where: { status: "capped" } }).catch(() => 0),
+        this.priceService.getBttUsdPrice().catch(() => ({
+          priceUsd: 0.055,
+          priceSource: "default",
+          updatedAt: new Date(),
+          isStale: true,
+        })),
+        prisma.daoInstance.findUnique({ where: { id: 1 } }).catch(() => null),
         prisma.vaultDepositSplit.aggregate({
           _sum: {
             daoAmount: true,
           },
-        }),
+        }).catch(() => null),
       ]);
 
+    let totalCollectedDb = 0;
+    let totalDistributedDb = 0;
+
+    // Fallback directly to Neon DB if local database count is 0
+    if (memberCount === 0) {
+      const neonRows = await queryNeonHttp<{
+        count: string;
+        active_count: string;
+        capped_count: string;
+        total_collected: string;
+        total_distributed: string;
+      }>(
+        `SELECT 
+          count(*) as count,
+          COUNT(*) FILTER (WHERE LOWER(status) NOT IN ('vacant', 'blank')) as active_count,
+          COUNT(*) FILTER (WHERE LOWER(status) = 'capped') as capped_count,
+          COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
+          COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
+         FROM "DaoMember"`
+      );
+      if (neonRows.length > 0 && Number(neonRows[0].count) > 0) {
+        memberCount = parseInt(neonRows[0].active_count || neonRows[0].count, 10);
+        activeCount = memberCount;
+        cappedCount = parseInt(neonRows[0].capped_count || "0", 10);
+        totalCollectedDb = parseFloat(neonRows[0].total_collected) || 0;
+        totalDistributedDb = parseFloat(neonRows[0].total_distributed) || 0;
+      }
+    }
+
+    // Direct On-Chain fallback if still 0
+    if (memberCount === 0) {
+      try {
+        const fullNode = servicesConfig.blockchain.rpcUrl || "https://fullnode-one.trobchain.com";
+        const daoHex = "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4";
+        const ocRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner_address: daoHex,
+            contract_address: daoHex,
+            function_selector: "getAllMembers()",
+            parameter: "",
+          }),
+          signal: AbortSignal.timeout(4000),
+        });
+        if (ocRes.ok) {
+          const ocJson = (await ocRes.json()) as any;
+          if (ocJson.constant_result?.[0]) {
+            const raw = String(ocJson.constant_result[0]);
+            const memberCountMatch = raw.length > 128 ? Math.floor((raw.length - 128) / 64) : 0;
+            if (memberCountMatch > 0) {
+              memberCount = memberCountMatch;
+              activeCount = memberCountMatch;
+            }
+          }
+        }
+      } catch {}
+    }
+
     const isCompleted = instance ? instance.isClosed : memberCount >= 100;
-    const priceUsd = priceData?.priceUsd || 0;
+    const priceUsd = priceData?.priceUsd || 0.055;
 
     // USD-pegged economics: $300 entry fee, $1,500 cap (5x)
-    const SEAT_ENTRY_USD = servicesConfig.price.seatEntryUsd; // $300
-    const EARNINGS_CAP_USD = SEAT_ENTRY_USD * 5;             // $1,500
+    const SEAT_ENTRY_USD = servicesConfig.price.seatEntryUsd || 300;
+    const EARNINGS_CAP_USD = SEAT_ENTRY_USD * 5;
 
     // TROB equivalents at current market price
     const entryFeeTrob    = priceUsd > 0 ? SEAT_ENTRY_USD / priceUsd : 0;
     const earningsCapTrob = priceUsd > 0 ? EARNINGS_CAP_USD / priceUsd : 0;
 
-    const totalCollectedTrob    = memberCount * entryFeeTrob;
-    const totalDistributedTROB  = instance
-      ? Number(instance.totalDistributedBtt)
-      : (await prisma.daoMember.findMany({ select: { pushedAmountBtt: true } })).reduce(
-          (acc: number, m: { pushedAmountBtt: any }) => acc + Number(m.pushedAmountBtt),
-          0
-        );
+    const totalCollectedTrob = totalCollectedDb > 0 ? totalCollectedDb : (memberCount * entryFeeTrob);
+    const totalDistributedTROB = totalDistributedDb > 0
+      ? totalDistributedDb
+      : (instance
+        ? Number(instance.totalDistributedBtt)
+        : (await prisma.daoMember.findMany({ select: { pushedAmountBtt: true } }).catch(() => [])).reduce(
+            (acc: number, m: { pushedAmountBtt: any }) => acc + Number(m.pushedAmountBtt),
+            0
+          ));
 
     const totalPoolReceivedBTT = Number(vaultSplits?._sum?.daoAmount || 0);
     const totalDistributedUSDEstimate = totalDistributedTROB * priceUsd;
@@ -266,6 +366,8 @@ export class DaoService {
       trobPriceUsd: priceUsd,
       priceSource: priceData.priceSource,
       priceUpdatedAt: priceData.updatedAt,
+      dividendYieldApy: "0%",
+      treasurySnapshotUsd: 0,
     };
   }
 
@@ -277,8 +379,8 @@ export class DaoService {
     members: DaoMemberDTO[];
   }> {
     const skip = (page - 1) * limit;
-    const [total, members, priceData] = await Promise.all([
-      prisma.daoMember.count({ where: { status: { notIn: ["vacant", "blank"] } } }),
+    let [total, members, priceData] = await Promise.all([
+      prisma.daoMember.count({ where: { status: { notIn: ["vacant", "blank"] } } }).catch(() => 0),
       prisma.daoMember.findMany({
         skip,
         take: limit,
@@ -294,9 +396,44 @@ export class DaoService {
           },
           fallbackClaims: true,
         },
-      }),
-      this.priceService.getTrobUsdPrice(),
+      }).catch(() => []),
+      this.priceService.getTrobUsdPrice().catch(() => ({
+        priceUsd: 0.055,
+        priceSource: "default",
+        updatedAt: new Date(),
+        isStale: true,
+      })),
     ]);
+
+    // Fallback directly to Neon DB if local database returned 0 members
+    if (total === 0 || members.length === 0) {
+      try {
+        const [neonMembers, neonCountRows] = await Promise.all([
+          queryNeonHttp<any>(
+            `SELECT * FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank') ORDER BY position ASC LIMIT $1 OFFSET $2`,
+            [limit, skip]
+          ),
+          queryNeonHttp<{ count: string }>(
+            `SELECT COUNT(*) as count FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
+          ),
+        ]);
+        if (neonMembers && neonMembers.length > 0) {
+          total = neonCountRows.length > 0 ? parseInt(neonCountRows[0].count, 10) : neonMembers.length;
+          members = neonMembers.map((row: any) => ({
+            ...row,
+            position: Number(row.position),
+            entryAmountBtt: row.entryAmountBtt,
+            pushedAmountBtt: row.pushedAmountBtt,
+            nftTokenId: Number(row.nftTokenId) || Number(row.position),
+            joinedAt: new Date(row.joinedAt),
+            user: null,
+            fallbackClaims: [],
+          }));
+        }
+      } catch (neonErr) {
+        console.warn("[DaoService] Neon fallback for getDAOMembers failed:", neonErr);
+      }
+    }
 
     return {
       total,
@@ -388,7 +525,7 @@ export class DaoService {
 
   async getMemberByAddress(address: string): Promise<MemberDetailsDTO> {
     const variants = getAddressVariants(address);
-    const [member, priceData] = await Promise.all([
+    let [member, priceData] = await Promise.all([
       prisma.daoMember.findFirst({
         where: {
           OR: [
@@ -400,9 +537,40 @@ export class DaoService {
           user: true,
           fallbackClaims: true,
         },
-      }),
-      this.priceService.getTrobUsdPrice(),
+      }).catch(() => null),
+      this.priceService.getTrobUsdPrice().catch(() => ({
+        priceUsd: 0.055,
+        priceSource: "default",
+        updatedAt: new Date(),
+        isStale: true,
+      })),
     ]);
+
+    if (!member) {
+      try {
+        const lowerAddrs = variants.map((v) => v.toLowerCase());
+        const neonMemberRows = await queryNeonHttp<any>(
+          `SELECT * FROM "DaoMember" WHERE LOWER(address) = ANY($1::text[]) LIMIT 1`,
+          [lowerAddrs]
+        );
+        if (neonMemberRows && neonMemberRows.length > 0) {
+          const row = neonMemberRows[0];
+          member = {
+            ...row,
+            position: Number(row.position),
+            entryAmountBtt: row.entryAmountBtt,
+            pushedAmountBtt: row.pushedAmountBtt,
+            nftTokenId: Number(row.nftTokenId) || Number(row.position),
+            joinedAt: new Date(row.joinedAt),
+            updatedAt: new Date(row.updatedAt || row.joinedAt),
+            user: null,
+            fallbackClaims: [],
+          };
+        }
+      } catch (err) {
+        console.warn("[DaoService] Neon fallback for getMemberByAddress error:", err);
+      }
+    }
 
     if (!member) {
       const onChainPos = await this.getOnChainPosition(address);
@@ -535,13 +703,35 @@ export class DaoService {
   }
 
   async getDAOEvents(limit = 20): Promise<DaoEventDTO[]> {
-    const [events, priceData] = await Promise.all([
+    let [events, priceData] = await Promise.all([
       prisma.daoEvent.findMany({
         take: limit,
         orderBy: { timestamp: "desc" },
-      }),
-      this.priceService.getTrobUsdPrice(),
+      }).catch(() => []),
+      this.priceService.getTrobUsdPrice().catch(() => ({
+        priceUsd: 0.055,
+        priceSource: "default",
+        updatedAt: new Date(),
+        isStale: true,
+      })),
     ]);
+
+    if (events.length === 0) {
+      try {
+        const neonEvents = await queryNeonHttp<any>(
+          `SELECT * FROM "DaoEvent" ORDER BY timestamp DESC LIMIT $1`,
+          [limit]
+        );
+        if (neonEvents && neonEvents.length > 0) {
+          events = neonEvents.map((e: any) => ({
+            ...e,
+            timestamp: new Date(e.timestamp),
+          }));
+        }
+      } catch (neonErr) {
+        console.warn("[DaoService] Neon fallback for getDAOEvents error:", neonErr);
+      }
+    }
 
     const priceUsd = priceData?.priceUsd > 0 ? priceData.priceUsd : 0.053111;
 

@@ -33,6 +33,8 @@ export interface DaoStatsDTO {
   trobPriceUsd: number;
   priceSource: string;
   priceUpdatedAt: Date;
+  dividendYieldApy?: string;
+  treasurySnapshotUsd?: number;
 }
 
 export interface DaoMemberDTO {

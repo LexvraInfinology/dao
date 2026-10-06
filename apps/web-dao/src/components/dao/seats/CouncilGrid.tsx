@@ -148,9 +148,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-200 ring-1 ring-white" />
             );
           } else if (seat.status === 'defaulted') {
-            tileClasses = 'border-2 border-dashed border-rose-400 bg-rose-50 text-rose-700 hover:bg-rose-100';
+            tileClasses = 'border-2 border-dashed border-purple-400 bg-purple-50 text-purple-700 hover:bg-purple-100';
             topElement = (
-              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-purple-500 animate-pulse" />
             );
           } else if (seat.status === 'next') {
             tileClasses = 'border-2 border-sky-300 bg-[#0E62E4] text-white font-bold ring-2 ring-[#0E62E4]/40 shadow-md animate-pulse z-10';
@@ -194,7 +194,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
       {/* Legend Footer */}
       <div className="pt-3 border-t border-[#E2EEF9]">
         {/* Desktop Legend */}
-        <div className="hidden md:flex flex-wrap items-center justify-between gap-2.5 text-xs font-semibold">
+        <div className="hidden md:flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200">
             <span className="w-2.5 h-2.5 rounded bg-[#14304A] border border-[#234668]" />
             <span className="text-[#14304A]">Claimed Seat</span>
@@ -203,6 +203,11 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200">
             <span className="w-2.5 h-2.5 rounded bg-red-600 border border-red-400 animate-pulse" />
             <span className="text-red-700 font-bold">5X Capped</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200">
+            <span className="w-2.5 h-2.5 rounded bg-amber-500 border border-amber-300" />
+            <span className="text-amber-800 font-bold">Underfunded</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200">
@@ -215,9 +220,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="text-[#0E62E4] font-bold">Next Available</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200">
-            <span className="w-2.5 h-2.5 rounded bg-rose-100 border border-dashed border-rose-500" />
-            <span className="text-rose-700">Defaulted Vacancy</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200">
+            <span className="w-2.5 h-2.5 rounded bg-purple-100 border border-dashed border-purple-500" />
+            <span className="text-purple-700 font-bold">Defaulted Vacancy</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
@@ -227,7 +232,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
         </div>
 
         {/* Mobile Legend */}
-        <div className="md:hidden flex flex-wrap items-center justify-between gap-1.5 text-[10px] font-semibold">
+        <div className="md:hidden flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">
             <span className="w-2 h-2 rounded bg-[#14304A]" />
             <span className="text-[#14304A]">Claimed</span>
@@ -235,6 +240,10 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 border border-red-200">
             <span className="w-2 h-2 rounded bg-red-600 animate-pulse" />
             <span className="text-red-700 font-bold">5X Cap</span>
+          </div>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200">
+            <span className="w-2 h-2 rounded bg-amber-500" />
+            <span className="text-amber-800 font-bold">Underfunded</span>
           </div>
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
             <span className="w-2 h-2 rounded bg-emerald-600" />
@@ -244,9 +253,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="w-2 h-2 rounded bg-[#0E62E4]" />
             <span className="text-[#0E62E4] font-bold">Next</span>
           </div>
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200">
-            <span className="w-2 h-2 rounded bg-rose-400" />
-            <span className="text-rose-700">Vacant</span>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 border border-purple-200">
+            <span className="w-2 h-2 rounded bg-purple-100 border border-dashed border-purple-500" />
+            <span className="text-purple-700 font-bold">Vacant</span>
           </div>
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">
             <Lock className="w-2 h-2 text-slate-500" />

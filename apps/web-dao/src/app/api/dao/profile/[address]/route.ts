@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,17 @@ export async function GET(
     `/api/dao/profile/${address}`
   );
   if (backendRes && backendRes.success && backendRes.data && backendRes.data.isMember) {
+    const d = backendRes.data;
+    const isUnderfunded = d.status === 'underfunded';
+    const isCapped = d.status === 'capped';
+    const exactPushedUsd = isUnderfunded ? 0 : isCapped ? 1500 : calculateMemberEarnedUsd(d.position, d.status, 93);
+    d.totalEarnedUsd = exactPushedUsd;
+    d.pushedAmountUsdEstimate = exactPushedUsd;
+    d.capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / 1500) * 100));
+    if (d.poolCards && d.poolCards[0]) {
+      d.poolCards[0].pushedAmountUsd = exactPushedUsd;
+      d.poolCards[0].progressPct = d.capProgressPct;
+    }
     return NextResponse.json(backendRes);
   }
 
@@ -83,9 +95,9 @@ export async function GET(
       const isCapped = m.status === 'capped';
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5357.15');
-      const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
       const earningsCapUsd = 1500;
-      const pushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
+      const exactPushedUsd = calculateMemberEarnedUsd(m.position, m.status, 93);
+      const pushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : exactPushedUsd;
       const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
       const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((pushedUsd / earningsCapUsd) * 100));
 
@@ -141,7 +153,7 @@ export async function GET(
           earningsCapBtt,
           earningsCapUsd,
           capProgressPct,
-          isCapped: !isUnderfunded && (pushedBtt >= earningsCapBtt || rawPushedUsd >= earningsCapUsd),
+          isCapped: !isUnderfunded && (isCapped || pushedUsd >= earningsCapUsd),
           bttPriceUsd,
           trobPriceUsd: bttPriceUsd,
           priceSource: 'trobchain-live',

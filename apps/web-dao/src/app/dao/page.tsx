@@ -27,6 +27,7 @@ import {
   useDaoStats,
   useDaoEvents,
 } from '@/hooks/useApi';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -488,9 +489,18 @@ export default function DaoDashboardPage() {
                     TOTAL INFLOW
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
-                    {isMember && myPosition
-                      ? `+$${Math.max(300 / myPosition, memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0 ? memberData.pushedAmountUsdEstimate : (300 / myPosition)).toFixed(2)}`
-                      : 'Total Return'}
+                    {(() => {
+                      if (!isMember || !myPosition) return 'Total Return';
+                      if (memberData?.status === 'underfunded') return '+$0.00';
+                      if (memberData?.status === 'capped') return '+$1,500.00';
+                      const calculated = calculateMemberEarnedUsd(myPosition, memberData?.status, 93);
+                      const exactUsd = calculated > 0
+                        ? calculated
+                        : (memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0
+                            ? memberData.pushedAmountUsdEstimate
+                            : 0);
+                      return `+$${exactUsd.toFixed(2)}`;
+                    })()}
                   </div>
                   <div className="text-[9px] text-[#4F6D87] font-medium leading-tight truncate">
                     Cashback + Pool Dividends

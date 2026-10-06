@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +15,14 @@ export async function GET(
   );
   if (backendRes && backendRes.success && backendRes.data?.isMember) {
     const d = backendRes.data;
-    if (d.isCapped) {
-      d.pushedUsd = d.earningsCapUsd || 1500;
-      d.totalReceivedUsd = d.earningsCapUsd || 1500;
-      d.capProgressPct = 100;
-      d.remainingCapUsd = 0;
+    const isUnderfunded = d.status === 'underfunded';
+    const isCapped = d.status === 'capped' || d.isCapped;
+    const exactPushedUsd = isUnderfunded ? 0 : isCapped ? (d.earningsCapUsd || 1500) : calculateMemberEarnedUsd(d.position, d.status, 93);
+    d.pushedUsd = exactPushedUsd;
+    d.totalReceivedUsd = exactPushedUsd;
+    d.capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / (d.earningsCapUsd || 1500)) * 100));
+    d.remainingCapUsd = isUnderfunded ? (d.earningsCapUsd || 1500) : isCapped ? 0 : Math.max(0, (d.earningsCapUsd || 1500) - exactPushedUsd);
+    if (isCapped) {
       d.remainingCapBtt = 0;
       if (!d.bypassedToCouncilUsd) {
         d.bypassedToCouncilUsd = 6.49;
@@ -135,9 +139,10 @@ export async function GET(
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5244.75');
       const capBtt = entryBtt * 5;
-      const rawPushedUsd = Math.round(pushedBtt * bttPriceUsd * 100) / 100;
-      const pushedUsd = Math.min(earningsCapUsd, rawPushedUsd); // Strict 5X hard cap ($1,500 max)
-      const isCapped = pushedBtt >= capBtt || rawPushedUsd >= earningsCapUsd;
+      const isUnderfunded = m.status === 'underfunded';
+      const isCapped = m.status === 'capped' || pushedBtt >= capBtt;
+      const exactPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : calculateMemberEarnedUsd(m.position, m.status, 93);
+      const pushedUsd = exactPushedUsd;
       let retopupDeadline = m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null;
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
@@ -204,10 +209,10 @@ export async function GET(
       }
 
       const currentStatus = isExpired ? 'vacant' : isCapped ? 'capped' : (m.status || 'active');
-      const displayPushedUsd = isCapped ? earningsCapUsd : pushedUsd;
-      const displayCapProgressPct = isCapped ? 100 : Math.min(100, Math.round((pushedBtt / capBtt) * 100));
+      const displayPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : exactPushedUsd;
+      const displayCapProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / earningsCapUsd) * 100));
       const displayRemainingCapBtt = isCapped ? 0 : Math.max(0, capBtt - pushedBtt);
-      const displayRemainingCapUsd = isCapped ? 0 : Math.max(0, earningsCapUsd - pushedUsd);
+      const displayRemainingCapUsd = isUnderfunded ? earningsCapUsd : isCapped ? 0 : Math.max(0, earningsCapUsd - displayPushedUsd);
 
       return NextResponse.json({
         success: true,

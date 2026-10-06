@@ -8,6 +8,7 @@ import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner'
 import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export default function DaoTreasuryPage() {
   const wallet = useWallet();
@@ -29,16 +30,21 @@ export default function DaoTreasuryPage() {
     setBalance((prev) => Math.max(0, parseFloat((prev - amount).toFixed(2))));
   };
 
+  const exactReceivedUsd = lounge?.position
+    ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93)
+    : (lounge?.totalReceivedUsd ?? 0);
+  const totalReceivedUsd = Math.min(1500, exactReceivedUsd);
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
       <UnderfundedAlertBanner />
-      <TreasuryHero balance={balance} loungeData={lounge} />
+      <TreasuryHero balance={balance} loungeData={{ ...lounge, totalReceivedUsd } as any} />
 
       {/* Desktop */}
       <div className="hidden lg:block space-y-6 sm:space-y-8">
         <TreasuryBalanceCard
           balance={balance}
-          totalVaultAssets={Math.min(1500, lounge?.totalReceivedUsd ?? 0)}
+          totalVaultAssets={totalReceivedUsd}
           contractAddress={getActiveDaoAddress()}
         />
         <TreasuryWithdrawCard
@@ -59,7 +65,7 @@ export default function DaoTreasuryPage() {
         />
         <TreasuryBalanceCard
           balance={balance}
-          totalVaultAssets={Math.min(1500, lounge?.totalReceivedUsd ?? 0)}
+          totalVaultAssets={totalReceivedUsd}
           contractAddress={getActiveDaoAddress()}
         />
       </div>

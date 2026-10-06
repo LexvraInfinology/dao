@@ -4,6 +4,8 @@ import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+
 export const dynamic = 'force-dynamic';
 
 // In-memory cache for fast dynamic responses (3s cache for members, 30s for trob price)
@@ -35,17 +37,17 @@ export async function GET(req: NextRequest) {
     Array.isArray(backendRes.data?.members) &&
     backendRes.data.members.length > 0
   ) {
-    // Ensure underfunded members reflect their actual provisional deposit, not an inflated $300 entry fee
+    // Ensure underfunded members reflect their actual provisional deposit, and all members have exact historical USD earnings
     backendRes.data.members = backendRes.data.members.map((m: any) => {
-      if (m.status === 'underfunded' && m.entryAmountBtt > 300) {
-        const trueDeposit = (m.position === 90 || m.position === 91) ? 5.0 : 1.5;
-        return {
-          ...m,
-          entryAmountBtt: trueDeposit,
-          entryAmountTrob: trueDeposit,
-        };
-      }
-      return m;
+      const isUnderfunded = m.status === 'underfunded';
+      const trueDeposit = (m.position === 90 || m.position === 91) ? 5.0 : 1.5;
+      const exactUsd = calculateMemberEarnedUsd(m.position, m.status, backendRes.data?.total || 93);
+      return {
+        ...m,
+        entryAmountBtt: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
+        entryAmountTrob: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
+        pushedAmountUsdEstimate: exactUsd,
+      };
     });
 
     if (page === '1' && limit === '100') {
@@ -97,8 +99,8 @@ export async function GET(req: NextRequest) {
       members: rows.map((r) => {
         const pushedAmt = parseFloat(r.pushedAmountBtt || '0');
         const isCapped = r.status === 'capped';
-        const rawPushedUsd = Math.round(pushedAmt * cachedTrobPrice * 100) / 100;
-        const pushedUsd = isCapped ? 1500 : Math.min(1500, rawPushedUsd);
+        const exactPushedUsd = calculateMemberEarnedUsd(r.position, r.status, total || 93);
+        const pushedUsd = isCapped ? 1500 : exactPushedUsd;
         return {
           position: r.position,
           address: r.address,

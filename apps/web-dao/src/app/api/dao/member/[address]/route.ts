@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from '../../../_lib/txVerifier';
 import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export const dynamic = 'force-dynamic';
 
@@ -161,6 +162,14 @@ export async function GET(
           entryAmountBtt: entryTrob,
           entryAmountTrob: entryTrob,
           entryAmountUsdEstimate: entryUsd,
+          pushedAmountBtt: 0,
+          pushedAmountTrob: 0,
+          pushedAmountUsdEstimate: 0,
+          earningsCapBtt,
+          earningsCapTrob: earningsCapBtt,
+          earningsCapUsd,
+          capProgressPct: 0,
+          isCapped: false,
           isQualified: false,
           underfunded: true,
           retopupDeadline,
@@ -235,6 +244,9 @@ export async function GET(
       }
 
       const isMember = !isExpired && m.status !== 'vacant' && m.status !== 'defaulted';
+      const isUnderfunded = m.status === 'underfunded';
+      const exactPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : calculateMemberEarnedUsd(onChainPos || m.position, m.status, 93);
+      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / earningsCapUsd) * 100));
 
       return NextResponse.json({
         success: true,
@@ -244,13 +256,13 @@ export async function GET(
           nftTokenId: m.nftTokenId || onChainPos,
           status: isExpired ? 'vacant' : (m.status || (isCapped ? 'capped' : 'ACTIVE')),
           joinedAt: m.joinedAt,
-          pushedAmountBtt: isCapped ? Math.max(pushedBtt, capBtt) : pushedBtt,
-          pushedAmountTrob: isCapped ? Math.max(pushedBtt, capBtt) : pushedBtt,
-          pushedAmountUsdEstimate: isCapped ? earningsCapUsd : Math.round(pushedBtt * bttPriceUsd * 100) / 100,
+          pushedAmountBtt: isCapped ? Math.max(pushedBtt, capBtt) : (isUnderfunded ? 0 : pushedBtt),
+          pushedAmountTrob: isCapped ? Math.max(pushedBtt, capBtt) : (isUnderfunded ? 0 : pushedBtt),
+          pushedAmountUsdEstimate: exactPushedUsd,
           earningsCapBtt: capBtt,
           earningsCapTrob: capBtt,
           earningsCapUsd,
-          capProgressPct: isCapped ? 100 : (capBtt > 0 ? Math.min(100, Math.round((pushedBtt / capBtt) * 100)) : 0),
+          capProgressPct,
           isCapped,
           retopupDeadline,
           retopupTimeRemainingSeconds,

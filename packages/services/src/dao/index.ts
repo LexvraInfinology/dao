@@ -79,6 +79,24 @@ import {
   MemberDetailsDTO,
 } from "./model";
 
+export function calculateMemberEarnedUsd(
+  position: number | null | undefined,
+  status?: string | null,
+  totalActiveSeats: number = 93
+): number {
+  if (!position || position <= 0) return 0;
+  const s = status ? status.toLowerCase() : '';
+  if (s === 'underfunded' || s === 'vacant' || s === 'blank' || s === 'defaulted') return 0;
+  if (s === 'capped') return 1500;
+
+  let totalUsd = 0;
+  const maxK = Math.max(position, totalActiveSeats);
+  for (let k = position; k <= maxK; k++) {
+    totalUsd += 300 / k;
+  }
+  return Math.min(1500, Math.round(totalUsd * 100) / 100);
+}
+
 const AGGREGATOR_V3_ABI = parseAbi([
   "function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
   "function decimals() external view returns (uint8)",
@@ -453,9 +471,10 @@ export class DaoService {
         }
 
         const isCapped = m.status === 'capped';
+        const isUnderfunded = m.status === 'underfunded';
         const entryUsd = Number(m.entryAmountUsdAtJoin) > 0 ? Number(m.entryAmountUsdAtJoin) : 300;
-        const rawPushedUsd = Number((pushedTrob * priceUsd).toFixed(2));
-        const pushedUsd = isCapped ? 1500 : Math.min(1500, rawPushedUsd);
+        const exactPushedUsd = isUnderfunded ? 0 : isCapped ? 1500 : calculateMemberEarnedUsd(m.position, m.status, total || 93);
+        const pushedUsd = exactPushedUsd;
 
         return {
           position: m.position,
@@ -638,8 +657,9 @@ export class DaoService {
     // Compute cap in TROB using live price
     const earningsCapTrob = priceUsd > 0 ? Math.round((EARNINGS_CAP_USD / priceUsd) * 100) / 100 : 0;
 
-    // Cap progress based on USD value (5x limit hits when $1,500 is earned)
-    const pushedUsd       = Number((pushedTrob * priceUsd).toFixed(2));
+    // Cap progress based on exact protocol USD earnings (not fluctuating with live TROB rate)
+    const exactPushedUsd  = isUnderfunded ? 0 : member.status === "capped" ? EARNINGS_CAP_USD : calculateMemberEarnedUsd(member.position, member.status, 93);
+    const pushedUsd       = exactPushedUsd;
     const isCapped        = pushedUsd >= EARNINGS_CAP_USD || member.status === "capped";
     const remainingCapUsd = isCapped ? 0 : Math.max(0, Number((EARNINGS_CAP_USD - pushedUsd).toFixed(2)));
     const remainingCapTrob= isCapped ? 0 : (priceUsd > 0 ? Math.round((remainingCapUsd / priceUsd) * 100) / 100 : 0);

@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { useTrobPrice } from '@/hooks/useApi';
 import { playPriorityAlertChime } from '@/utils/soundEffects';
 import { getExplorerTxUrl } from '@/utils/explorer';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
@@ -45,6 +46,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   onSuccess,
 }) => {
   const wallet = useWallet();
+  const { data: livePriceData } = useTrobPrice(15_000);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,9 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   if (!isOpen || !mounted) return null;
 
   const entryAmountUsd = 300;
-  const price = trobPriceUsd > 0 ? trobPriceUsd : 0.056;
+  const price = (livePriceData?.priceUsd && livePriceData.priceUsd > 0)
+    ? livePriceData.priceUsd
+    : (trobPriceUsd > 0 ? trobPriceUsd : 0.038);
   const fullRequiredTrob = Math.round((entryAmountUsd / price) * 100) / 100;
   const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
   const retopupFeeTrob = Math.round((fullRequiredTrob - creditTrob) * 100) / 100;
@@ -222,7 +226,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       }
     } catch (err: any) {
       console.error('Deposit execution error:', err);
-      setError(err.message || 'Error executing deposit transaction.');
+      let rawMsg = err?.message || 'Error executing deposit transaction.';
+      if (rawMsg.includes('Validate InternalTransfer error') || rawMsg.includes('balance is not sufficient')) {
+        rawMsg = `Insufficient TROB Balance: Your wallet requires ${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$${isUnderfunded ? netUsd : entryAmountUsd} USD at $${price.toFixed(4)}/TROB) to complete this transaction. Please add TROB to your connected wallet.`;
+      }
+      setError(rawMsg);
     } finally {
       setLoading(false);
     }
@@ -404,7 +412,17 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[#4F6D87] gap-0.5">
                       <span>Retopup Deposit (300 USD):</span>
                       <span className="font-mono font-bold text-[#14304A]">
-                        ${entryAmountUsd}.00 USD
+                        ${entryAmountUsd}.00 USD (≈ {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] bg-blue-50/70 p-2 rounded-lg border border-blue-200/60 gap-0.5">
+                      <span className="font-medium text-[#0E62E4] flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                        <span>Live TROB Exchange Rate:</span>
+                      </span>
+                      <span className="font-mono font-bold text-[#0E62E4]">
+                        1 TROB = ${price.toFixed(4)} USD
                       </span>
                     </div>
 
@@ -464,7 +482,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <span>
                       {isUnderfunded
                         ? `Activate Seat #${seatPosition} (${retopupFeeTrob.toLocaleString()} TROB • $${netUsd} USD)`
-                        : `Confirm Re-topup ($${entryAmountUsd} USD)`}
+                        : `Confirm Re-topup ($300 USD ≈ ${fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)`}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>

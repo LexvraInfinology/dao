@@ -70,6 +70,12 @@ export async function simulateContractCall(params: {
           if (ascii) rawMsg = ascii;
         }
       } catch {}
+      if (rawMsg.includes('Validate InternalTransfer error') || rawMsg.includes('balance is not sufficient')) {
+        return {
+          canProceed: false,
+          errorReason: 'Insufficient TROB Balance: Your wallet does not have enough TROB tokens to complete this transaction. Please add TROB and try again.',
+        };
+      }
       return {
         canProceed: false,
         errorReason: `Node Pre-flight Validation: ${rawMsg}`,

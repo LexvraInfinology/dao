@@ -3,6 +3,7 @@
 import React from 'react';
 import { Vote, Wallet, ShieldCheck, Info, BarChart3, CircleDollarSign } from 'lucide-react';
 import type { ProfileData } from '@/hooks/useApi';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 interface ProfileMetricsGridProps {
   profile?: ProfileData | null;
@@ -10,17 +11,28 @@ interface ProfileMetricsGridProps {
 
 export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile }) => {
   const isMember = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
+  const isUnderfunded = profile?.status === 'underfunded';
   const effectiveCapUsd = (profile?.earningsCapUsd && profile.earningsCapUsd >= 300) ? profile.earningsCapUsd : 1500;
-  const rawTotalEarnedUsd = profile?.totalEarnedUsd ?? 0;
   const isCapped       = profile?.status === 'capped';
-  const totalEarnedUsd = isMember ? (isCapped ? effectiveCapUsd : Math.min(effectiveCapUsd, rawTotalEarnedUsd)) : rawTotalEarnedUsd;
+  const pos            = profile?.position ?? 0;
+  const exactEarnedFromPos = pos > 0 ? calculateMemberEarnedUsd(pos, profile?.status, 93) : 0;
+  const rawTotalEarnedUsd = exactEarnedFromPos > 0
+    ? exactEarnedFromPos
+    : (profile?.totalEarnedUsd && profile.totalEarnedUsd > 0
+        ? profile.totalEarnedUsd
+        : (profile?.pushedAmountUsdEstimate && profile.pushedAmountUsdEstimate > 0
+            ? profile.pushedAmountUsdEstimate
+            : 0));
+  const totalEarnedUsd = isMember
+    ? (isUnderfunded ? 0 : isCapped ? effectiveCapUsd : Math.min(effectiveCapUsd, rawTotalEarnedUsd))
+    : 0;
   const bttPrice       = profile?.bttPriceUsd    ?? 0;
-  const totalEarnedBtt = bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0;
+  const onChainBtt     = profile?.pushedAmountBtt || profile?.totalEarnedBtt || 0;
+  const totalEarnedBtt = isUnderfunded ? 0 : isCapped ? Math.max(onChainBtt, 27530) : onChainBtt > 0 ? onChainBtt : (bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0);
 
   const effectivePrice  = bttPrice > 0 ? bttPrice : 0.056;
-  const rawPushedUsd    = isMember ? (isCapped ? effectiveCapUsd : (profile?.pushedAmountUsdEstimate ?? ((profile?.pushedAmountBtt ?? 0) * effectivePrice))) : 0;
-  const pushedUsd       = isMember ? (isCapped ? effectiveCapUsd : Math.min(effectiveCapUsd, rawPushedUsd)) : 0;
-  const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isCapped ? 100 : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100))) : 0;
+  const pushedUsd       = totalEarnedUsd;
+  const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100))) : 0;
   const earningsCapBtt  = isMember ? (profile?.earningsCapBtt && profile.earningsCapBtt > 1500 ? profile.earningsCapBtt : Math.round(effectiveCapUsd / effectivePrice)) : 0;
   const entryAmountBtt  = isMember ? (profile?.entryAmountBtt && profile.entryAmountBtt > 300 ? profile.entryAmountBtt : Math.round(300 / effectivePrice)) : 0;
   const remainingCapUsd = isMember ? (isCapped ? 0 : Math.max(0, effectiveCapUsd - pushedUsd)) : 0;
@@ -109,7 +121,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             <BarChart3 className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-bold font-jakarta text-[#071A4A]">{isMember ? '1.0%' : '0.0%'}</div>
+            <div className="text-xs min-[360px]:text-sm font-bold font-jakarta text-[#071A4A] truncate">{isMember ? '1.0%' : '0.0%'}</div>
             <div className="text-[10px] text-[#64748B] font-jakarta truncate">Voting Power</div>
           </div>
         </div>
@@ -119,8 +131,8 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             <CircleDollarSign className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-bold font-jakarta text-[#071A4A]">
-              ${totalEarnedUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div className="text-xs min-[360px]:text-sm font-bold font-jakarta text-[#071A4A] truncate">
+              ${totalEarnedUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-[10px] text-[#64748B] font-jakarta truncate">Lifetime Earnings</div>
           </div>
@@ -136,7 +148,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             </svg>
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-bold font-jakarta text-[#071A4A]">{capProgressPct.toFixed(1)}%</div>
+            <div className="text-xs min-[360px]:text-sm font-bold font-jakarta text-[#071A4A] truncate">{capProgressPct.toFixed(1)}%</div>
             <div className="text-[10px] text-[#64748B] font-jakarta truncate">5X Cap Progress</div>
           </div>
         </div>
@@ -146,7 +158,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             <span className={`w-3.5 h-3.5 rounded-full ${isActive ? 'bg-[#10B981]' : 'bg-slate-400'}`} />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-bold font-jakarta text-[#071A4A] capitalize">{status}</div>
+            <div className="text-xs min-[360px]:text-sm font-bold font-jakarta text-[#071A4A] capitalize truncate">{status}</div>
             <div className="text-[10px] text-[#64748B] font-jakarta truncate">Seat Status</div>
           </div>
         </div>

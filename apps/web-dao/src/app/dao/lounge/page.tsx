@@ -13,6 +13,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useLounge } from '@/hooks/useApi';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { Lock, ShieldAlert } from 'lucide-react';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export default function MemberLoungePage() {
   const wallet     = useWallet();
@@ -51,7 +52,8 @@ export default function MemberLoungePage() {
   const isCapped           = Boolean(lounge?.isCapped);
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
   const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
-  const pushedUsd          = isCapped ? earningsCapUsd : (lounge?.pushedUsd ?? 0);
+  const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93) : 0;
+  const pushedUsd          = isCapped ? earningsCapUsd : (exactEarnedFromPos > 0 ? exactEarnedFromPos : (lounge?.pushedUsd ?? 0));
   const capProgressPct     = isCapped ? 100 : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / earningsCapUsd) * 100)) : 0);
 
   return (

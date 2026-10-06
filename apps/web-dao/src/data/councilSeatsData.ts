@@ -1,3 +1,5 @@
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+
 export type SeatStatus = 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked';
 
 export interface CouncilSeatDetail {
@@ -71,18 +73,17 @@ export function buildLiveCouncilSeats(
         !!canonicalMyAddress &&
         liveMember.address.toLowerCase() === canonicalMyAddress;
       const isCapped = liveMember.status === 'capped';
+      const isUnderfunded = liveMember.status === 'underfunded';
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
-      const rawEarningsUsd =
-        liveMember.pushedAmountUsdEstimate ??
-        pushedBtt * (bttPriceUsd > 0 ? bttPriceUsd : 0.05525);
-      const earningsUsd = isCapped ? 1500 : Math.min(1500, rawEarningsUsd);
-      const capPct = isCapped ? 100 : Math.min(100, Math.round((earningsUsd / 1500) * 100));
+      const exactEarnedUsd = calculateMemberEarnedUsd(seatNumber, liveMember.status, 93);
+      const earningsUsd = isUnderfunded ? 0 : isCapped ? 1500 : (exactEarnedUsd > 0 ? exactEarnedUsd : (liveMember.pushedAmountUsdEstimate ?? 0));
+      const capPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((earningsUsd / 1500) * 100));
 
       const addr = liveMember.address;
       const shortAddr =
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
-      const liveTrob = isCapped
+      const liveTrob = isUnderfunded ? 0 : isCapped
         ? Math.max(pushedBtt, 27530)
         : (pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0));
 
@@ -90,7 +91,9 @@ export function buildLiveCouncilSeats(
         seatNumber,
         status: isMine ? 'mine' : 'claimed',
         ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
-        lifetimeEarnings: isCapped
+        lifetimeEarnings: isUnderfunded
+          ? '$0.00 USD'
+          : isCapped
           ? `$1,500.00 USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
           : liveTrob > 0
           ? `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`

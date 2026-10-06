@@ -58,7 +58,7 @@ jobs:
     name: Deploy to Utho VM
     needs: ci
     if: >-
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devops') &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/devops' || github.ref == 'refs/heads/developer') &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     timeout-minutes: 60

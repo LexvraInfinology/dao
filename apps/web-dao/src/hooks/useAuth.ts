@@ -190,8 +190,8 @@ export function useAuth(): AuthState {
       if (!nonce) throw new Error('Server returned empty nonce.');
 
       // 2. Build SIWE message
-      const domain    = typeof window !== 'undefined' ? window.location.host : 'equorafi.com';
-      const uri       = typeof window !== 'undefined' ? window.location.origin : 'https://equorafi.com';
+      const domain    = typeof window !== 'undefined' ? window.location.host : 'equorafidao.com';
+      const uri       = typeof window !== 'undefined' ? window.location.origin : 'https://equorafidao.com';
       const issuedAt  = new Date().toISOString();
       const chainId   = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? '1000', 10);
 

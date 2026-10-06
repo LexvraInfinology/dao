@@ -2,7 +2,7 @@ import { getActiveDaoAddress, getActiveDaoHex, toTrobBase58, toTronHex } from '@
 import { queryNeon } from './neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
 import { EXPLORER_API_URL } from '@/config/env';
-import { getOnChainMemberPosition } from './txVerifier';
+import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from './txVerifier';
 
 const BACKEND_EXPLORER_API = EXPLORER_API_URL;
 
@@ -78,6 +78,7 @@ export async function getOnChainDaoTransactions(
       txHash: string;
       timestamp: string;
       paidAmountTrob: number;
+      isCompleteSeat?: boolean;
     }> = [];
 
     const RESET_CUTOFF_MS = process.env.DAO_SYNC_START_TIMESTAMP
@@ -205,6 +206,7 @@ export async function getOnChainDaoTransactions(
           txHash: hash,
           timestamp: isoTime,
           paidAmountTrob,
+          isCompleteSeat: Boolean(isCompleteSeat),
         });
 
         // 2. Decode DAOPayoutPushed events (Formula: 300/N)
@@ -396,92 +398,128 @@ export async function syncOnChainMembersState(force = false): Promise<{
       `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
     );
     const dbCount = parseInt(dbCountRes.rows[0]?.count || '0', 10);
-    const maxDbPos = parseInt(dbCountRes.rows[0]?.max_pos || '0', 10);
 
     let newMembersAdded = 0;
 
-    if (onChainCount > dbCount || onChainCount > maxDbPos) {
-      console.log(`[OnChainSync] Found ${onChainCount} on-chain members vs ${dbCount} in DB. Syncing...`);
+    for (let i = 0; i < memberHexes.length; i++) {
+      const position = i + 1;
+      const rawHex = memberHexes[i];
+      const isZero = !rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000';
 
-      for (let i = 0; i < memberHexes.length; i++) {
-        const rawHex = memberHexes[i];
-        if (!rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000') {
-          continue;
-        }
-        const b58Addr = toTrobBase58(rawHex);
-        if (!b58Addr || b58Addr === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') {
-          continue;
-        }
-        const position = i + 1;
+      const existing = await queryNeon<any>(
+        `SELECT id, address, position, status, "entryAmountBtt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+        [position]
+      );
 
-        const existing = await queryNeon<any>(
-          `SELECT id, address, position, status FROM "DaoMember" WHERE position = $1 LIMIT 1`,
-          [position]
-        );
-
-        if (existing.rows.length === 0 || existing.rows[0].address.toLowerCase() !== b58Addr.toLowerCase()) {
-          let totalEarnedTrob = 0;
-          try {
-            const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                owner_address: daoHex,
-                contract_address: daoHex,
-                function_selector: 'getMemberDetails(address)',
-                parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
-              }),
-              cache: 'no-store',
-            });
-            if (detailRes.ok) {
-              const detailJson = await detailRes.json();
-              if (detailJson.constant_result?.[0]) {
-                const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detailJson.constant_result[0]);
-                totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
-              }
+      if (isZero) {
+        // Seat position is zero on-chain (quarantined underfunded reservation or vacant)
+        if (existing.rows.length > 0) {
+          const dbMember = existing.rows[0];
+          const onChainRes = await getOnChainUnderfundedReservation(dbMember.address, daoHex);
+          if (onChainRes && onChainRes.isReserved) {
+            const prevDep = onChainRes.previousDepositSun / 1e6;
+            if (dbMember.status !== 'underfunded' || Math.abs(parseFloat(dbMember.entryAmountBtt || '0') - prevDep) > 0.01) {
+              await queryNeon(
+                `UPDATE "DaoMember"
+                 SET status = 'underfunded',
+                     "entryAmountBtt" = $1,
+                     "retopupDeadline" = COALESCE("retopupDeadline", NOW() + INTERVAL '48 hours'),
+                     "updatedAt" = NOW()
+                 WHERE position = $2`,
+                [prevDep, position]
+              );
             }
-          } catch {}
-
-          const userCheck = await queryNeon<any>(
-            `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-            [b58Addr]
-          );
-
-          if (userCheck.rows.length === 0) {
-            const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
-            const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
-            await queryNeon(
-              `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-               VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
-               ON CONFLICT (address) DO NOTHING`,
-              [b58Addr, nextId]
-            );
           }
-
-          await queryNeon(
-            `INSERT INTO "DaoMember" (
-               id, address, position, "joinedAt", "txHash", "blockNumber",
-               "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId",
-               "priceSource", "pushedAmountBtt", status, "retopupDeadline", "createdAt", "updatedAt"
-             )
-             VALUES (
-               gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-               5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NULL, NOW(), NOW()
-             )
-             ON CONFLICT (position) DO UPDATE
-             SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,
-            [b58Addr, position, totalEarnedTrob]
-          );
-
-          newMembersAdded++;
         }
+        continue;
       }
 
-      await queryNeon(
-        `UPDATE "DaoInstance" SET capacity = 100, "isClosed" = $1, "updatedAt" = NOW() WHERE id = 1`,
-        [onChainCount >= 100]
-      );
+      // Seat position has a verified genuine member on-chain
+      const b58Addr = toTrobBase58(rawHex);
+      if (!b58Addr || b58Addr === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') {
+        continue;
+      }
+
+      if (existing.rows.length === 0) {
+        let totalEarnedTrob = 0;
+        try {
+          const detailRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              owner_address: daoHex,
+              contract_address: daoHex,
+              function_selector: 'getMemberDetails(address)',
+              parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
+            }),
+            cache: 'no-store',
+          });
+          if (detailRes.ok) {
+            const detailJson = await detailRes.json();
+            if (detailJson.constant_result?.[0]) {
+              const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detailJson.constant_result[0]);
+              totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
+            }
+          }
+        } catch {}
+
+        const userCheck = await queryNeon<any>(
+          `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+          [b58Addr]
+        );
+
+        if (userCheck.rows.length === 0) {
+          const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
+          const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
+          await queryNeon(
+            `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+             VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+             ON CONFLICT (address) DO NOTHING`,
+            [b58Addr, nextId]
+          );
+        }
+
+        await queryNeon(
+          `INSERT INTO "DaoMember" (
+             id, address, position, "joinedAt", "txHash", "blockNumber",
+             "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId",
+             "priceSource", "pushedAmountBtt", status, "retopupDeadline", "createdAt", "updatedAt"
+           )
+           VALUES (
+             gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
+             5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NULL, NOW(), NOW()
+           )
+           ON CONFLICT (position) DO UPDATE
+           SET address = $1, "pushedAmountBtt" = $3, status = 'active', "retopupDeadline" = NULL, "updatedAt" = NOW()`,
+          [b58Addr, position, totalEarnedTrob]
+        );
+
+        newMembersAdded++;
+      } else {
+        const dbMember = existing.rows[0];
+        if (
+          dbMember.status === 'underfunded' ||
+          dbMember.address.toLowerCase() !== b58Addr.toLowerCase()
+        ) {
+          // Member completed topup OR new user claimed seat!
+          await queryNeon(
+            `UPDATE "DaoMember"
+             SET address = $1,
+                 status = 'active',
+                 "retopupDeadline" = NULL,
+                 "entryAmountUsdAtJoin" = 300,
+                 "updatedAt" = NOW()
+             WHERE position = $2`,
+            [b58Addr, position]
+          );
+        }
+      }
     }
+
+    await queryNeon(
+      `UPDATE "DaoInstance" SET capacity = 100, "isClosed" = $1, "updatedAt" = NOW() WHERE id = 1`,
+      [onChainCount >= 100]
+    );
 
     return { onChainCount, dbCount: Math.max(dbCount, onChainCount), newMembersAdded };
   } catch (err) {
@@ -520,6 +558,7 @@ async function syncOnChainMembersToDb(
     txHash: string;
     timestamp: string;
     paidAmountTrob: number;
+    isCompleteSeat?: boolean;
   }>
 ) {
   if (members.length === 0) return;
@@ -557,30 +596,30 @@ async function syncOnChainMembersToDb(
           [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
         );
       } else if (existing.rows[0].status === 'underfunded') {
-        // Underfunded member just completed deposit on-chain! Unlock to active in Neon DB
-        await queryNeon(
-          `UPDATE "DaoMember"
-           SET status = 'active',
-               "retopupDeadline" = NULL,
-               "entryAmountBtt" = "entryAmountBtt" + $1,
-               "entryAmountUsdAtJoin" = 300,
-               "txHash" = $2,
-               "nftTokenId" = $3,
-               "updatedAt" = NOW()
-           WHERE position = $4`,
-          [m.paidAmountTrob, m.txHash, m.tokenId, m.position]
-        );
+        if ((m as any).isCompleteSeat) {
+          // Underfunded member just completed deposit on-chain! Unlock to active in Neon DB
+          await queryNeon(
+            `UPDATE "DaoMember"
+             SET status = 'active',
+                 "retopupDeadline" = NULL,
+                 "entryAmountBtt" = "entryAmountBtt" + $1,
+                 "entryAmountUsdAtJoin" = 300,
+                 "txHash" = $2,
+                 "nftTokenId" = $3,
+                 "updatedAt" = NOW()
+             WHERE position = $4`,
+            [m.paidAmountTrob, m.txHash, m.tokenId, m.position]
+          );
+        }
       } else if (
-        existing.rows[0].status !== 'vacant' &&
-        existing.rows[0].status !== 'capped' &&
         existing.rows[0].address.toLowerCase() !== m.user.toLowerCase() &&
         (!existing.rows[0].joinedAt || new Date(m.timestamp).getTime() > new Date(existing.rows[0].joinedAt).getTime())
       ) {
         await queryNeon(
           `UPDATE "DaoMember"
-           SET address = $1, "txHash" = $2, "nftTokenId" = $3, "updatedAt" = NOW()
-           WHERE position = $4`,
-          [m.user, m.txHash, m.tokenId, m.position]
+           SET address = $1, status = 'active', "retopupDeadline" = NULL, "entryAmountBtt" = $2, "entryAmountUsdAtJoin" = 300, "txHash" = $3, "nftTokenId" = $4, "updatedAt" = NOW()
+           WHERE position = $5`,
+          [m.user, m.paidAmountTrob, m.txHash, m.tokenId, m.position]
         );
       }
 

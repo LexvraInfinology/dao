@@ -138,5 +138,7 @@ export interface MemberDetailsDTO {
   retopupDeadline?: Date | null;
   retopupTimeRemainingSeconds?: number | null;
   fallbackClaims?: FallbackClaimDTO[];
+  underfunded?: boolean;
+  notice?: string;
 }
 

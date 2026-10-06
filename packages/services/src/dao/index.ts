@@ -445,7 +445,7 @@ export class DaoService {
         let pushedTrob = Number(m.pushedAmountBtt);
         const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.053111;
 
-        if (entryTrob <= 300 && priceUsd > 0) {
+        if (m.status !== "underfunded" && entryTrob <= 300 && priceUsd > 0) {
           entryTrob = Math.round((300 / priceUsd) * 100) / 100;
         }
         if (pushedTrob <= 300 && m.position === 1 && priceUsd > 0) {
@@ -621,7 +621,9 @@ export class DaoService {
     let pushedTrob          = Number(member.pushedAmountBtt);
     let entryTrob           = Number(member.entryAmountBtt);
 
-    if (entryTrob <= 300 && priceUsd > 0) {
+    const isUnderfunded     = member.status === "underfunded";
+
+    if (!isUnderfunded && entryTrob <= 300 && priceUsd > 0) {
       entryTrob = Math.round((300 / priceUsd) * 100) / 100;
     }
     if (pushedTrob <= 300 && member.position === 1 && priceUsd > 0) {
@@ -657,19 +659,27 @@ export class DaoService {
       capHitAt = capEvent?.timestamp || member.updatedAt || new Date();
       retopupDeadline = new Date(capHitAt.getTime() + 48 * 3600 * 1000);
       retopupTimeRemainingSeconds = Math.max(0, Math.floor((retopupDeadline.getTime() - Date.now()) / 1000));
+    } else if (isUnderfunded) {
+      const deadline = (member as any).retopupDeadline ? new Date((member as any).retopupDeadline) : new Date(Date.now() + 48 * 3600 * 1000);
+      retopupDeadline = deadline;
+      retopupTimeRemainingSeconds = Math.max(0, Math.floor((deadline.getTime() - Date.now()) / 1000));
     }
+
+    const entryUsdEstimate = isUnderfunded
+      ? (Number((member as any).entryAmountUsdAtJoin) > 0 ? Number((member as any).entryAmountUsdAtJoin) : Math.round(entryTrob * priceUsd * 100) / 100)
+      : SEAT_ENTRY_USD;
 
     return {
       isMember: true,
       position: member.position,
       userId: member.user?.userId || null,
       directReferralsCount: member.user?.directReferralsCount || 0,
-      isQualified: member.user?.isQualified || false,
+      isQualified: isUnderfunded ? false : (member.user?.isQualified || false),
       nftTokenId: member.nftTokenId || member.position,
       joinedAt: member.joinedAt,
       entryAmountBtt: entryTrob,
       entryAmountTrob: entryTrob,
-      entryAmountUsdEstimate: SEAT_ENTRY_USD, // Always $300 USD regardless of TROB price
+      entryAmountUsdEstimate: entryUsdEstimate,
       pushedAmountBtt: pushedTrob,
       pushedAmountTrob: pushedTrob,
       pushedAmountUsdEstimate: pushedUsd,
@@ -688,6 +698,10 @@ export class DaoService {
       trobPriceUsd: priceUsd,
       bttPriceUsd: priceUsd,
       status: member.status,
+      underfunded: isUnderfunded,
+      notice: isUnderfunded
+        ? `Incomplete Deposit: Council Seat #${member.position} was activated with only ${entryTrob} TROB (~$${entryUsdEstimate}). A minimum of $300 USD is strictly required to unlock Council Governance, Matrix Pools & VIP Lounge.`
+        : undefined,
       txHash: member.txHash,
       fallbackClaims: (member.fallbackClaims || []).map((f: any) => ({
         id: f.id,

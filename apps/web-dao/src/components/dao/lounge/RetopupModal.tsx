@@ -179,8 +179,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       }
 
       // Synchronize database via serverless retopup endpoint
-      const apiUrl = 'https://api.equorafidao.com';
-      const res = await fetch(`${apiUrl}/api/dao/retopup`, {
+      let res = await fetch('/api/dao/retopup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,7 +188,20 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
           retopupFeeTrob,
           isUnderfunded,
         }),
-      });
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch('https://api.equorafidao.com/api/dao/retopup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: activeAddr,
+            txHash: txId,
+            retopupFeeTrob,
+            isUnderfunded,
+          }),
+        });
+      }
 
       const data = await res.json();
       if (data.success) {

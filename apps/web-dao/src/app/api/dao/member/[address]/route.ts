@@ -52,29 +52,51 @@ export async function GET(
 
     let m = rows[0];
 
+    // Check on-chain reservation mapping from EquoraDAOv2 unconditionally
+    const { getOnChainUnderfundedReservation } = await import('../../../_lib/txVerifier');
+    const onChainRes = (await getOnChainUnderfundedReservation(cleanAddr))
+      || (base58Addr !== cleanAddr ? await getOnChainUnderfundedReservation(base58Addr) : null)
+      || (hexAddr !== cleanAddr ? await getOnChainUnderfundedReservation(hexAddr) : null);
+
+    if (onChainRes && onChainRes.isReserved) {
+      isUnderfundedReservation = true;
+      reservedPos = onChainRes.reservedSeat;
+      onChainPos = reservedPos;
+      if (m && m.status !== 'underfunded') {
+        const prevDep = onChainRes.previousDepositSun / 1e6;
+        await queryNeon(
+          `UPDATE "DaoMember"
+           SET status = 'underfunded',
+               "entryAmountBtt" = $1,
+               "retopupDeadline" = COALESCE("retopupDeadline", NOW() + INTERVAL '48 hours'),
+               "updatedAt" = NOW()
+           WHERE id = $2`,
+          [prevDep, m.id]
+        );
+        m.status = 'underfunded';
+        m.entryAmountBtt = prevDep;
+      }
+    } else if (m && m.status === 'underfunded' && onChainPos > 0) {
+      // Member has completed top-up on-chain! Unlock to active
+      await queryNeon(
+        `UPDATE "DaoMember"
+         SET status = 'active',
+             "retopupDeadline" = NULL,
+             "entryAmountUsdAtJoin" = 300,
+             "updatedAt" = NOW()
+         WHERE id = $1`,
+        [m.id]
+      );
+      m.status = 'active';
+    } else if (m && m.status === 'underfunded') {
+      isUnderfundedReservation = true;
+      reservedPos = m.position;
+      onChainPos = reservedPos;
+    }
+
     // If onChainPos was 0 due to network/RPC latency, but DB has active record, use DB position
     if (onChainPos === 0 && m && m.position > 0) {
       onChainPos = m.position;
-    }
-
-    if (onChainPos === 0) {
-      if (m && m.status === 'underfunded') {
-        isUnderfundedReservation = true;
-        reservedPos = m.position;
-        onChainPos = reservedPos;
-      } else {
-        // Also check on-chain reservation mapping from EquoraDAOv2
-        const { getOnChainUnderfundedReservation } = await import('../../../_lib/txVerifier');
-        const onChainRes = (await getOnChainUnderfundedReservation(cleanAddr))
-          || (base58Addr !== cleanAddr ? await getOnChainUnderfundedReservation(base58Addr) : null)
-          || (hexAddr !== cleanAddr ? await getOnChainUnderfundedReservation(hexAddr) : null);
-
-        if (onChainRes && onChainRes.isReserved) {
-          isUnderfundedReservation = true;
-          reservedPos = onChainRes.reservedSeat;
-          onChainPos = reservedPos;
-        }
-      }
     }
 
     // If neither on-chain nor DB record exists, address is not a member
@@ -106,31 +128,37 @@ export async function GET(
     }
 
     // If member has underfunded/provisional deposit status, lock governance & rewards
-    if (m && m.status === 'underfunded') {
-      const entryTrob = parseFloat(m.entryAmountBtt || '0');
-      const entryUsd = parseFloat(m.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
+    if ((m && m.status === 'underfunded') || isUnderfundedReservation) {
+      const entryTrob = onChainRes?.isReserved
+        ? onChainRes.previousDepositSun / 1e6
+        : parseFloat(m?.entryAmountBtt || '0');
+      const entryUsd = parseFloat(m?.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
       
-      let retopupDeadline = m.retopupDeadline;
+      let retopupDeadline = m?.retopupDeadline;
       if (!retopupDeadline) {
         // Start 48-hour retopup window
         retopupDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
-        await queryNeon(
-          `UPDATE "DaoMember" SET "retopupDeadline" = $1, "updatedAt" = NOW() WHERE id = $2`,
-          [retopupDeadline, m.id]
-        );
+        if (m?.id) {
+          await queryNeon(
+            `UPDATE "DaoMember" SET "retopupDeadline" = $1, "updatedAt" = NOW() WHERE id = $2`,
+            [retopupDeadline, m.id]
+          );
+        }
       }
       const diffMs = new Date(retopupDeadline).getTime() - Date.now();
       const retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
       const isExpired = retopupTimeRemainingSeconds === 0;
 
+      const pos = m?.position || onChainPos || reservedPos;
+
       return NextResponse.json({
         success: true,
         data: {
           isMember: true,
-          position: m.position,
-          nftTokenId: m.nftTokenId || onChainPos,
+          position: pos,
+          nftTokenId: m?.nftTokenId || pos,
           status: isExpired ? 'expired' : 'underfunded',
-          joinedAt: m.joinedAt,
+          joinedAt: m?.joinedAt,
           entryAmountBtt: entryTrob,
           entryAmountTrob: entryTrob,
           entryAmountUsdEstimate: entryUsd,
@@ -139,8 +167,8 @@ export async function GET(
           retopupDeadline,
           retopupTimeRemainingSeconds,
           isExpired,
-          notice: `Incomplete Deposit: Council Seat #${m.position} was activated with only ${entryTrob} TROB (~$${entryUsd}). A minimum of $300 USD is strictly required to unlock Council Governance, Matrix Pools & VIP Lounge.`,
-          userId: m.id,
+          notice: `Incomplete Deposit: Council Seat #${pos} was activated with only ${entryTrob} TROB (~$${entryUsd}). A minimum of $300 USD is strictly required to unlock Council Governance, Matrix Pools & VIP Lounge.`,
+          userId: m?.id,
         },
       });
     }

@@ -11,6 +11,7 @@ interface SeatInspectorProps {
   priceData?: TrobPriceData | null;
   onClose?: () => void;
   onMintSeat?: (seatNumber: number) => void;
+  onRetopup?: () => void;
 }
 
 export const SeatInspector: React.FC<SeatInspectorProps> = ({
@@ -18,6 +19,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   priceData,
   onClose,
   onMintSeat,
+  onRetopup,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -60,12 +62,12 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </h3>
           <span
             className={`text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border ${
-              seat.status === 'mine'
+              seat.statusBadge === 'Underfunded'
+                ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
+                : seat.status === 'mine'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
                 : seat.statusBadge === '5X Capped'
                 ? 'bg-red-50 text-red-700 border-red-300 font-bold animate-pulse'
-                : seat.statusBadge === 'Underfunded'
-                ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
                 : seat.status === 'claimed'
                 ? 'bg-slate-100 text-slate-800 border-slate-300 font-bold'
                 : seat.status === 'defaulted'
@@ -75,7 +77,9 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
                 : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}
           >
-            {seat.status === 'mine' ? 'Your Seat' : seat.statusBadge}
+            {seat.statusBadge === 'Underfunded'
+              ? (seat.status === 'mine' ? 'Your Seat (Underfunded)' : 'Underfunded')
+              : (seat.status === 'mine' ? 'Your Seat' : seat.statusBadge)}
           </span>
         </div>
 
@@ -83,6 +87,21 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           Genesis Council
         </span>
       </div>
+
+      {/* Underfunded Seat Alert Box */}
+      {seat.statusBadge === 'Underfunded' && (
+        <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300/80 text-amber-950 space-y-1.5 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-amber-900">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Underfunded Seat • Retopup Required</span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            {seat.status === 'mine'
+              ? 'Your seat reservation requires completing the $300 entry fee. Pay remaining balance to unlock Council privileges, Matrix Pools & Member Lounge.'
+              : 'This seat was reserved with a provisional deposit. The owner has a 48-hour retopup window to pay the remaining deficit, after which it will reopen for queue takeover.'}
+          </p>
+        </div>
+      )}
 
       {/* Soulbound NFT Card (Dark Navy Midnight Card from Figma) */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#071437] to-[#0D2057] p-4 text-white shadow-md">
@@ -216,7 +235,17 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
 
       {/* Action Buttons */}
       <div className="pt-2 space-y-2">
-        {seat.status === 'mine' ? (
+        {seat.statusBadge === 'Underfunded' && seat.status === 'mine' && onRetopup ? (
+          <button
+            type="button"
+            onClick={onRetopup}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold shadow-[0_4px_14px_rgba(245,158,11,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Complete Re-topup to Unlock Seat #{seat.seatNumber}</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+          </button>
+        ) : seat.status === 'mine' ? (
           <a
             href="/dao/lounge"
             className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5"

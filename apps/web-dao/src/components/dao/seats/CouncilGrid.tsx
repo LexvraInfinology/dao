@@ -15,7 +15,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
   selectedSeat,
   onSelectSeat,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked'>('all');
+  const [filter, setFilter] = useState<'all' | 'claimed' | 'mine' | 'underfunded' | 'next' | 'defaulted' | 'locked'>('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
     all: 'All Seats',
     claimed: 'Claimed Seats',
     mine: mySeat ? `Your Seat (#${mySeat.seatNumber})` : 'Your Seat',
+    underfunded: 'Underfunded Seats',
     next: nextSeat ? `Next Available (#${nextSeat.seatNumber})` : 'Next Available',
     defaulted: 'Defaulted Vacancies',
     locked: 'Locked Future',
@@ -46,8 +47,9 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
 
   const filteredSeats = seats.filter((s) => {
     if (filter === 'all') return true;
-    if (filter === 'claimed') return s.status === 'claimed';
+    if (filter === 'claimed') return s.status === 'claimed' && s.statusBadge !== 'Underfunded';
     if (filter === 'mine') return s.status === 'mine';
+    if (filter === 'underfunded') return s.statusBadge === 'Underfunded';
     if (filter === 'next') return s.status === 'next';
     if (filter === 'defaulted') return s.status === 'defaulted';
     if (filter === 'locked') return s.status === 'locked';
@@ -125,7 +127,12 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
             <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-400" />
           );
 
-          if (seat.status === 'mine') {
+          if (seat.status === 'mine' && seat.statusBadge === 'Underfunded') {
+            tileClasses = 'border-2 border-amber-400 bg-amber-500 text-white shadow-md ring-2 ring-amber-300 animate-pulse z-20';
+            topElement = (
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-amber-200 ring-1 ring-white animate-ping" />
+            );
+          } else if (seat.status === 'mine') {
             tileClasses = 'border-2 border-emerald-300 bg-emerald-600 text-white shadow-md z-20';
             topElement = (
               <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-200 ring-1 ring-white animate-pulse" />

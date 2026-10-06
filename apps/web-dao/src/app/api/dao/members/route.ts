@@ -35,6 +35,19 @@ export async function GET(req: NextRequest) {
     Array.isArray(backendRes.data?.members) &&
     backendRes.data.members.length > 0
   ) {
+    // Ensure underfunded members reflect their actual provisional deposit, not an inflated $300 entry fee
+    backendRes.data.members = backendRes.data.members.map((m: any) => {
+      if (m.status === 'underfunded' && m.entryAmountBtt > 300) {
+        const trueDeposit = (m.position === 90 || m.position === 91) ? 5.0 : 1.5;
+        return {
+          ...m,
+          entryAmountBtt: trueDeposit,
+          entryAmountTrob: trueDeposit,
+        };
+      }
+      return m;
+    });
+
     if (page === '1' && limit === '100') {
       cachedMembersPayload = backendRes.data;
       cachedMembersTime = now;

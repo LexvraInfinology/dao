@@ -19,6 +19,7 @@ import { Check, Loader2, ShieldCheck } from 'lucide-react';
 
 import { SeatPaymentModal } from '@/components/dao/seats/SeatPaymentModal';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { RetopupModal } from '@/components/dao/lounge/RetopupModal';
 import { DEPLOYED_CONTRACTS, getActiveDaoAddress } from '@/utils/trobAddress';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
@@ -45,6 +46,7 @@ export default function CouncilSeatsPage() {
   const [minting, setMinting]           = useState(false);
   const [mintErr, setMintErr]           = useState<string | null>(null);
   const [paymentModalSeat, setPaymentModalSeat] = useState<CouncilSeatDetail | null>(null);
+  const [retopupModalOpen, setRetopupModalOpen] = useState(false);
 
   // Dynamically build the 100 seats array from live data
   const seats: CouncilSeatDetail[] = useMemo(() => {
@@ -320,6 +322,7 @@ export default function CouncilSeatsPage() {
             seat={selectedSeat}
             priceData={price}
             onMintSeat={minting || memberData?.isMember ? undefined : handleOpenClaimModal}
+            onRetopup={() => setRetopupModalOpen(true)}
           />
           <CouncilAboutCard />
 
@@ -338,6 +341,22 @@ export default function CouncilSeatsPage() {
           onConfirmPayment={handleConfirmPayment}
         />
       )}
+
+      <RetopupModal
+        isOpen={retopupModalOpen}
+        onClose={() => setRetopupModalOpen(false)}
+        seatPosition={memberData?.position || selectedSeat.seatNumber}
+        retopupDeadline={memberData?.retopupDeadline}
+        trobPriceUsd={price?.priceUsd}
+        alreadyPaidTrob={memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5}
+        isUnderfunded={true}
+        onSuccess={() => {
+          refetchMember();
+          refetchMembers();
+          setRetopupModalOpen(false);
+          setNotification(`Re-topup successfully confirmed on blockchain! Seat #${memberData?.position || selectedSeat.seatNumber} is now fully funded.`);
+        }}
+      />
     </div>
   );
 }

@@ -38,7 +38,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.node-service
-      network: host
       args:
         SERVICE_PACKAGE: '@equora/api'
         SERVICE_DIR: apps/api
@@ -86,7 +85,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.node-service
-      network: host
       args:
         SERVICE_PACKAGE: '@equora/indexer'
         SERVICE_DIR: apps/indexer
@@ -117,7 +115,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.node-service
-      network: host
       args:
         SERVICE_PACKAGE: '@equora/queue'
         SERVICE_DIR: apps/queue
@@ -144,7 +141,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
-      network: host
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://equorafidao.com}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.equorafidao.com}

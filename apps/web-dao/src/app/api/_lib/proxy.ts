@@ -1,5 +1,5 @@
-export const BACKEND_API_URL = 'https://api.equorafidao.com';
-const BACKEND_URL = BACKEND_API_URL;
+export const BACKEND_API_URL: string = 'https://api.equorafidao.com';
+const BACKEND_URL: string = BACKEND_API_URL;
 
 let isBackendDown = false;
 let backendDownUntil = 0;
@@ -12,7 +12,7 @@ export async function fetchFromBackend<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T | null> {
-  if (!BACKEND_URL || BACKEND_URL === '' || (isBackendDown && Date.now() < backendDownUntil)) {
+  if (!BACKEND_URL || (isBackendDown && Date.now() < backendDownUntil)) {
     return null;
   }
   const controller = new AbortController();

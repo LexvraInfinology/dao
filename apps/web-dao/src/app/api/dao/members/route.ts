@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     backendRes &&
     backendRes.success &&
     Array.isArray(backendRes.data?.members) &&
-    backendRes.data.members.length >= 93
+    backendRes.data.members.length > 0
   ) {
     if (page === '1' && limit === '100') {
       cachedMembersPayload = backendRes.data;
@@ -81,17 +81,22 @@ export async function GET(req: NextRequest) {
     const total = parseInt(countRes.rows[0]?.count || '0', 10);
 
     const data = {
-      members: rows.map((r) => ({
-        position: r.position,
-        address: r.address,
-        nftTokenId: r.nftTokenId,
-        entryAmountBtt: parseFloat(r.entryAmountBtt || '0'),
-        entryAmountTrob: parseFloat(r.entryAmountBtt || '0'),
-        pushedAmountBtt: parseFloat(r.pushedAmountBtt || '0'),
-        pushedAmountTrob: parseFloat(r.pushedAmountBtt || '0'),
-        status: r.status || 'active',
-        joinedAt: r.joinedAt,
-      })),
+      members: rows.map((r) => {
+        const pushedAmt = parseFloat(r.pushedAmountBtt || '0');
+        const pushedUsd = Math.round(pushedAmt * cachedTrobPrice * 100) / 100;
+        return {
+          position: r.position,
+          address: r.address,
+          nftTokenId: r.nftTokenId,
+          entryAmountBtt: parseFloat(r.entryAmountBtt || '0'),
+          entryAmountTrob: parseFloat(r.entryAmountBtt || '0'),
+          pushedAmountBtt: pushedAmt,
+          pushedAmountTrob: pushedAmt,
+          pushedAmountUsdEstimate: pushedUsd,
+          status: r.status || 'active',
+          joinedAt: r.joinedAt,
+        };
+      }),
       total,
       bttPriceUsd: cachedTrobPrice,
       trobPriceUsd: cachedTrobPrice,

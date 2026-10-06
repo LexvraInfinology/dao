@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     );
 
     const user = userRes.rows[0];
-    const isMember = Boolean(user && user.daoPosition && user.daoStatus === 'active');
+    const isMember = Boolean(user && user.daoPosition && user.daoStatus !== 'vacant' && user.daoStatus !== 'blank');
 
     return NextResponse.json({
       success: true,

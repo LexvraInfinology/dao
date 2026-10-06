@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
   try {
     // 1. Fetch active DAO member count
     const countRes = await queryNeon<any>(
-      `SELECT count(*)::int as count FROM "DaoMember" WHERE LOWER(status) = 'active'`
+      `SELECT count(*)::int as count FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
     );
-    const activeDaoCount = countRes.rows[0]?.count || 2;
+    const activeDaoCount = countRes.rows[0]?.count || 93;
 
     // 2. Fetch live TROB price or default
     const bttPriceUsd = 0.056;

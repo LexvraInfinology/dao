@@ -80,7 +80,7 @@ export function createApp(): Express {
   app.use(express.urlencoded({ extended: true }));
 
   // ── Root & Health ─────────────────────────────────────────────────────────
-  app.get("/", (req, res) => {
+  app.get(["/", "/api"], (req, res) => {
     const proto = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
     const host = req.get("host") || "api.equorafidao.com";
     res.json({
@@ -91,10 +91,23 @@ export function createApp(): Express {
       httpsAvailable: true,
       baseUrl: `${proto}://${host}`,
       endpoints: {
+        dao: `${proto}://${host}/api/dao`,
         stats: `${proto}://${host}/api/dao/stats`,
         members: `${proto}://${host}/api/dao/members`,
+        seats: `${proto}://${host}/api/dao/seats`,
+        transactions: `${proto}://${host}/api/dao/transactions`,
         events: `${proto}://${host}/api/dao/events`,
         price: `${proto}://${host}/api/price/trob`,
+        resourceParams: `${proto}://${host}/api/dao/resource-params`,
+        eligibility: `${proto}://${host}/api/dao/eligibility/:address`,
+        member: `${proto}://${host}/api/dao/member/:address`,
+        lounge: `${proto}://${host}/api/dao/lounge/:address`,
+        profile: `${proto}://${host}/api/dao/profile/:address`,
+        proposals: `${proto}://${host}/api/dao/proposals`,
+        claim: `${proto}://${host}/api/dao/claim`,
+        retopup: `${proto}://${host}/api/dao/retopup`,
+        verifyWhatsapp: `${proto}://${host}/api/dao/verify-whatsapp`,
+        stakeResources: `${proto}://${host}/api/dao/stake-resources`,
         health: `${proto}://${host}/health`,
         trpc: `${proto}://${host}/trpc`,
       },
@@ -117,11 +130,11 @@ export function createApp(): Express {
   // ── PRICE ─────────────────────────────────────────────────────────────────
 
   /**
-   * GET /api/price/trob
+   * GET /api/price/trob (and /api/price)
    * Returns the current live TROB/USD price from Chainlink (or fallback).
    * Used by the frontend to calculate how many TROB = $300 for seat minting.
    */
-  app.get("/api/price/trob", async (_req, res, next) => {
+  app.get(["/api/price/trob", "/api/price"], async (_req, res, next) => {
     try {
       const price = await priceService.getBttUsdPrice();
       if (!price || !price.priceUsd || price.priceUsd <= 0) {
@@ -341,8 +354,8 @@ export function createApp(): Express {
   app.get("/api/dao/seats", handleMembersOrSeats);
   app.get("/api/seats", handleMembersOrSeats);
 
-  /** GET /api/dao/events?limit= */
-  app.get("/api/dao/events", async (req, res) => {
+  /** GET /api/dao/events?limit= (and /api/events) */
+  app.get(["/api/dao/events", "/api/events"], async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
       const events = await daoService.getDAOEvents(limit);

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   BACKEND_API_URL,
+  BACKEND_API_HOST,
+  BACKEND_API_PORT,
+  WEB_PORT,
   ACTIVE_DAO_CONTRACT_ADDRESS,
   CHAIN_ID,
   EXPLORER_BASE_URL,
@@ -14,10 +17,33 @@ export const dynamic = 'force-dynamic';
  * Service Discovery & Root API Directory for EQUORA Genesis DAO
  */
 export async function GET(req: NextRequest) {
-  const host = req.headers.get('host') || 'equorafidao.com';
-  const proto = req.headers.get('x-forwarded-proto') || (host.startsWith('localhost') ? 'http' : 'https');
+  // Default hosts and ports
+  const defaultWebHost = 'equorafidao.com';
+  const defaultApiHost = 'api.equorafidao.com';
+  const defaultApiPort = 4000;
+  const defaultWebPort = 3000;
+
+  // Frontend Web Host & Base URL
+  const host = req.headers.get('host') || defaultWebHost;
+  const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  const proto = req.headers.get('x-forwarded-proto') || (isLocal ? 'http' : 'https');
   const baseUrl = `${proto}://${host}`;
-  const apiBackendUrl = BACKEND_API_URL; // 'https://api.equorafidao.com'
+
+  // Ports configuration (Express API on 4000, Next.js Web on 3000)
+  const apiPort = BACKEND_API_PORT || parseInt(process.env.API_PORT || process.env.PORT || `${defaultApiPort}`, 10);
+  const webPort = WEB_PORT || parseInt(process.env.WEB_PORT || `${defaultWebPort}`, 10);
+
+  // Backend API Host
+  const apiHost = isLocal
+    ? `localhost:${apiPort}`
+    : (process.env.API_HOST || process.env.NEXT_PUBLIC_API_DOMAIN || BACKEND_API_HOST || defaultApiHost);
+
+  // Backend API URL: resolved dynamically with fallbacks for production HTTPS, Docker container network (http://api:4000), local dev, or environment overrides
+  const apiBackendUrl =
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    BACKEND_API_URL ||
+    (isLocal ? `http://localhost:${apiPort}` : `https://${defaultApiHost}`);
 
   return NextResponse.json({
     message: 'EQUORA Protocol Web DAO API is up and running...',
@@ -25,8 +51,23 @@ export async function GET(req: NextRequest) {
     version: '1.0.0',
     protocol: proto,
     httpsAvailable: true,
+    host,
+    apiHost,
     baseUrl,
     apiBackendUrl,
+    ports: {
+      web: webPort,
+      api: apiPort,
+    },
+    docker: {
+      apiInternalUrl: `http://api:${apiPort}`,
+      webInternalUrl: `http://frontend:${webPort}`,
+    },
+    usage: {
+      baseUrl: 'Frontend Next.js origin for browser requests and Next.js /api routes (e.g. fetch(`/api/dao/stats`))',
+      apiBackendUrl: 'Direct Express backend REST & Auth service (e.g. https://api.equorafidao.com or Docker http://api:4000)',
+      apiHost: 'Express backend hostname (api.equorafidao.com or localhost:4000)',
+    },
     chainId: CHAIN_ID,
     contracts: {
       daoContract: ACTIVE_DAO_CONTRACT_ADDRESS,
@@ -50,6 +91,8 @@ export async function GET(req: NextRequest) {
       member: `${baseUrl}/api/dao/member/[address]`,
       lounge: `${baseUrl}/api/dao/lounge/[address]`,
       profile: `${baseUrl}/api/dao/profile/[address]`,
+      matrix: `${baseUrl}/api/dao/matrix`,
+      contractsFlattened: `${baseUrl}/api/contracts/flattened/[name]`,
       claim: `${baseUrl}/api/dao/claim`,
       retopup: `${baseUrl}/api/dao/retopup`,
       verifyWhatsapp: `${baseUrl}/api/dao/verify-whatsapp`,
@@ -67,9 +110,13 @@ export async function GET(req: NextRequest) {
       stats: `${apiBackendUrl}/api/dao/stats`,
       members: `${apiBackendUrl}/api/dao/members`,
       seats: `${apiBackendUrl}/api/dao/seats`,
+      seatsAlias: `${apiBackendUrl}/api/seats`,
       transactions: `${apiBackendUrl}/api/dao/transactions`,
+      transactionsAlias: `${apiBackendUrl}/api/transactions`,
       events: `${apiBackendUrl}/api/dao/events`,
+      eventsAlias: `${apiBackendUrl}/api/events`,
       price: `${apiBackendUrl}/api/price/trob`,
+      priceAlias: `${apiBackendUrl}/api/price`,
       resourceParams: `${apiBackendUrl}/api/dao/resource-params`,
       eligibility: `${apiBackendUrl}/api/dao/eligibility/:address`,
       member: `${apiBackendUrl}/api/dao/member/:address`,
@@ -80,7 +127,11 @@ export async function GET(req: NextRequest) {
       retopup: `${apiBackendUrl}/api/dao/retopup`,
       verifyWhatsapp: `${apiBackendUrl}/api/dao/verify-whatsapp`,
       stakeResources: `${apiBackendUrl}/api/dao/stake-resources`,
+      authNonce: `${apiBackendUrl}/api/auth/nonce`,
+      authVerify: `${apiBackendUrl}/api/auth/verify`,
+      authSession: `${apiBackendUrl}/api/auth/session`,
       health: `${apiBackendUrl}/health`,
+      trpc: `${apiBackendUrl}/trpc`,
     },
   });
 }

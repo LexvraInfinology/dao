@@ -326,8 +326,8 @@ export function createApp(): Express {
     }
   });
 
-  /** GET /api/dao/members?page=&limit= */
-  app.get("/api/dao/members", async (req, res) => {
+  /** GET /api/dao/members?page=&limit= and aliases /api/dao/seats, /api/seats */
+  const handleMembersOrSeats = async (req: any, res: any) => {
     try {
       const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
       const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 100;
@@ -336,7 +336,10 @@ export function createApp(): Express {
     } catch (err) {
       res.json({ success: true, data: { members: [], total: 0, page: 1, limit: 100 } });
     }
-  });
+  };
+  app.get("/api/dao/members", handleMembersOrSeats);
+  app.get("/api/dao/seats", handleMembersOrSeats);
+  app.get("/api/seats", handleMembersOrSeats);
 
   /** GET /api/dao/events?limit= */
   app.get("/api/dao/events", async (req, res) => {
@@ -1515,7 +1518,7 @@ export function createApp(): Express {
    * Returns paginated transaction history for a given wallet address.
    * Combines: DaoEvent, MatrixPlacement, Withdrawal.
    */
-  app.get("/api/dao/transactions", async (req, res, next) => {
+  app.get(["/api/dao/transactions", "/api/transactions"], async (req, res, next) => {
     try {
       const address = req.query.address
         ? String(req.query.address).toLowerCase()
@@ -1559,6 +1562,40 @@ export function createApp(): Express {
         }),
       ]);
 
+      let eventsToUse = daoEvents;
+      let totalCount = 0;
+      let isNeonFallback = false;
+
+      if (eventsToUse.length === 0) {
+        try {
+          const neonEvents = await queryNeonHttp<any>(
+            address
+              ? `SELECT * FROM "DaoEvent" WHERE LOWER("userAddress") = LOWER($1) ORDER BY timestamp DESC LIMIT $2 OFFSET $3`
+              : `SELECT * FROM "DaoEvent" ORDER BY timestamp DESC LIMIT $1 OFFSET $2`,
+            address ? [address, limit, skip] : [limit, skip]
+          );
+          if (neonEvents && neonEvents.length > 0) {
+            eventsToUse = neonEvents.map((ne) => ({
+              ...ne,
+              timestamp: new Date(ne.timestamp),
+            }));
+            isNeonFallback = true;
+          }
+
+          const neonCount = await queryNeonHttp<{ count: string }>(
+            address
+              ? `SELECT count(*) as count FROM "DaoEvent" WHERE LOWER("userAddress") = LOWER($1)`
+              : `SELECT count(*) as count FROM "DaoEvent"`,
+            address ? [address] : []
+          );
+          if (neonCount && neonCount.length > 0) {
+            totalCount = parseInt(neonCount[0].count, 10);
+          }
+        } catch (err) {
+          console.warn("[API] Neon fallback for /api/dao/transactions note:", err);
+        }
+      }
+
       // Normalize to a unified transaction shape
       type TxItem = {
         id: string;
@@ -1573,11 +1610,12 @@ export function createApp(): Express {
         txHash: string;
         timestamp: Date;
         status: string;
+        incomingPosition?: number | null;
       };
 
       const txItems: TxItem[] = [];
 
-      for (const e of daoEvents) {
+      for (const e of eventsToUse) {
         let amt = Number(e.amountBtt);
         let usdVal = Number((e as any).amountUsdEst);
 
@@ -1616,11 +1654,12 @@ export function createApp(): Express {
           amountTrob: amt,
           amountUsd: Number(usdVal.toFixed(2)),
           isPositive: e.eventType === "pushed" || e.eventType === "fallback_claimed",
-          from: e.eventType === "joined" ? (e.userAddress ?? "Member") : "EquoraDAO Protocol",
+          from: e.eventType === "joined" ? (e.userAddress ?? "Member") : (process.env.NEXT_PUBLIC_DAO_ADDRESS || "EquoraDAO Protocol"),
           to: e.eventType === "joined" ? (process.env.NEXT_PUBLIC_DAO_ADDRESS || "EquoraDAO Protocol") : (e.userAddress ?? "Member"),
-          txHash: e.txHash,
+          txHash: e.txHash ?? "",
           timestamp: e.timestamp,
           status: "Confirmed",
+          incomingPosition: e.incomingPosition,
         });
       }
 
@@ -1634,6 +1673,7 @@ export function createApp(): Express {
           type: "matrix_" + p.payoutType.toLowerCase(),
           typeLabel: "Matrix " + p.payoutType.replace(/_/g, " "),
           amountBtt: amt,
+          amountTrob: amt,
           amountUsd: amt * priceData.priceUsd,
           isPositive: isIncoming,
           from: p.placedUserAddress,
@@ -1651,6 +1691,7 @@ export function createApp(): Express {
           type: "withdrawal",
           typeLabel: "Withdrawal",
           amountBtt: amt,
+          amountTrob: amt,
           amountUsd: amt * priceData.priceUsd,
           isPositive: false,
           from: w.userAddress,
@@ -1661,10 +1702,11 @@ export function createApp(): Express {
         });
       }
 
-      // Sort all by timestamp desc, paginate
+      // Sort all by timestamp desc
       txItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      const total = txItems.length;
-      const paginated = txItems.slice(skip, skip + limit);
+      const total = totalCount > 0 ? totalCount : txItems.length;
+      const paginated = isNeonFallback ? txItems : txItems.slice(skip, skip + limit);
+      const pages = Math.ceil(total / limit) || 1;
 
       res.json({
         success: true,
@@ -1673,8 +1715,9 @@ export function createApp(): Express {
           total,
           page,
           limit,
-          pages: Math.ceil(total / limit),
+          pages,
           bttPriceUsd: priceData.priceUsd,
+          trobPriceUsd: priceData.priceUsd,
           priceSource: priceData.priceSource,
         },
       });

@@ -182,7 +182,7 @@ export const DaoOnboardingModal: React.FC = () => {
       }
 
       // 2. Register membership in database via backend API & Anti-Sybil device fingerprint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = 'https://api.equorafidao.com';
       const deviceFingerprint = await getDeviceFingerprint();
       const res = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',

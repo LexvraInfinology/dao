@@ -560,7 +560,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       }
 
       // 2. Register membership in database via backend API with verified on-chain tx & Anti-Sybil device fingerprint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = 'https://api.equorafidao.com';
       const deviceFingerprint = await getDeviceFingerprint();
       const claimRes = await fetch(`${apiUrl}/api/dao/claim`, {
         method: 'POST',

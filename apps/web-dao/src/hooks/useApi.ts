@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+const API_BASE = '';
 
 // ─── Generic fetch hook ───────────────────────────────────────────────────────
 

@@ -24,7 +24,7 @@ export const LandingFooter: React.FC = () => {
     { label: 'Genesis Queue', href: '#queue' },
     { label: 'Simulator', href: '#simulator' },
     { label: 'TrobChain', href: '#trobchain' },
-    { label: 'Retail Matrix', href: '/dao' },
+    { label: 'Member Lounge', href: '/dao/lounge' },
     { label: 'Governance', href: '/dao' },
   ];
 

@@ -6,7 +6,8 @@
  * This module is used for server-side fetches or one-off calls outside React.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+const API_BASE = BACKEND_API_URL;
 
 // ─── Response types ───────────────────────────────────────────────────────────
 

@@ -55,8 +55,12 @@ export const ACTIVE_DAO_CONTRACT_HEX =
 // Chain ID (TrobChain Mainnet is 1000)
 export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1000', 10);
 
-// External Matrix URL (configurable via env only, no hardcoded live URL)
-export const MATRIX_URL = process.env.NEXT_PUBLIC_MATRIX_URL || '';
+// Hardcoded Backend API URL for EQUORA DAO production service
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+export const NEXT_PUBLIC_API_URL = 'https://api.equorafidao.com';
+
+// External Matrix URL (disabled for now as Matrix app code is not completed; Matrix Bridge is retained)
+export const MATRIX_URL = '';
 
 // TrobSafe APK Download URL
 export const TROBSAFE_APK_URL =

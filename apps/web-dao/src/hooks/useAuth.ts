@@ -43,7 +43,8 @@ export interface AuthState {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? '';
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+const API_BASE    = '';
 const TOKEN_KEY   = 'equora_jwt';
 const ADDRESS_KEY = 'equora_auth_address';
 

@@ -1,7 +1,5 @@
-const BACKEND_URL = (
-  process.env.BACKEND_API_URL ||
-  (process.env.NODE_ENV === 'production' ? 'https://api.equorafidao.com' : 'http://localhost:4000')
-).trim();
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+const BACKEND_URL = BACKEND_API_URL;
 
 let isBackendDown = false;
 let backendDownUntil = 0;

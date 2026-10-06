@@ -53,7 +53,7 @@ export const MatrixRegisterModal: React.FC<MatrixRegisterModalProps> = ({
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = 'https://api.equorafidao.com';
       const action = isRootLeaderClaim ? 'claim_root_leader' : 'register_slot';
 
       const res = await fetch(`${apiUrl}/api/dao/matrix`, {

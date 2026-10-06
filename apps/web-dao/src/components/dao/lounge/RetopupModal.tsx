@@ -179,7 +179,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       }
 
       // Synchronize database via serverless retopup endpoint
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const apiUrl = 'https://api.equorafidao.com';
       const res = await fetch(`${apiUrl}/api/dao/retopup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

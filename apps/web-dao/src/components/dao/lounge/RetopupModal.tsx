@@ -29,6 +29,7 @@ interface RetopupModalProps {
   trobPriceUsd?: number;
   alreadyPaidTrob?: number;
   isUnderfunded?: boolean;
+  cashbackUsd?: number;
   onSuccess?: () => void;
 }
 
@@ -40,6 +41,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   trobPriceUsd = 0.056,
   alreadyPaidTrob = 0,
   isUnderfunded = false,
+  cashbackUsd,
   onSuccess,
 }) => {
   const wallet = useWallet();
@@ -111,8 +113,10 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   const fullRequiredTrob = Math.round((entryAmountUsd / price) * 100) / 100;
   const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
   const retopupFeeTrob = Math.round((fullRequiredTrob - creditTrob) * 100) / 100;
-  const cashbackUsd = parseFloat((entryAmountUsd / (seatPosition || 1)).toFixed(2));
-  const cashbackTrob = Math.round((cashbackUsd / price) * 100) / 100;
+  const effectiveCashbackUsd = cashbackUsd && cashbackUsd > 0 && cashbackUsd < 300
+    ? cashbackUsd
+    : 3.53;
+  const cashbackTrob = Math.round((effectiveCashbackUsd / price) * 100) / 100;
   const netUsd = parseFloat((retopupFeeTrob * price).toFixed(2));
   const activeAddr = wallet.base58Address || wallet.hexAddress || '';
 
@@ -244,12 +248,12 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-white">
-                  {isUnderfunded ? 'Seat Reservation' : '5X Cap Loop'}
+                  {isUnderfunded ? 'Seat Reservation' : '5X Cap Renewal'}
                 </span>
                 <span className="text-xs font-bold text-amber-950">Seat #{seatPosition}</span>
               </div>
               <h3 className="text-sm sm:text-base font-bold text-[#14304A]">
-                {isUnderfunded ? 'Complete Council Seat Deposit' : '48h Seat Retopup & Cashback Loop'}
+                {isUnderfunded ? 'Complete Seat Deposit' : 'Council Seat Re-topup'}
               </h3>
             </div>
           </div>
@@ -292,8 +296,8 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 <div className="text-xl font-black font-mono text-emerald-700">
                   ${successData.retopupAmountUsd}.00 USD
                 </div>
-                <div className="text-[11px] text-emerald-600 font-mono">
-                  (≈ {successData.retopupTrob.toLocaleString()} TROB distributed equally across active council members)
+                <div className="text-[11px] text-emerald-600 font-medium">
+                  Distributed equally across all active council members
                 </div>
               </div>
 
@@ -397,24 +401,29 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between text-[#4F6D87]">
+                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[#4F6D87] gap-0.5">
                       <span>Retopup Deposit (300 USD):</span>
                       <span className="font-mono font-bold text-[#14304A]">
-                        ${entryAmountUsd}.00 USD (≈ {retopupFeeTrob.toLocaleString()} TROB)
+                        ${entryAmountUsd}.00 USD
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/70 p-2 rounded-lg border border-blue-200/60">
-                      <span className="font-semibold flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Member Pool Distribution:</span>
+                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] gap-0.5">
+                      <span>Current Payout Status:</span>
+                      <span className="font-bold text-rose-600 font-jakarta">5X Capped ($1,500 USD) • Dividends Paused</span>
+                    </div>
+
+                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[#14304A] bg-[#F1F5F9]/80 p-2 rounded-lg border border-[#E2EEF9] gap-1">
+                      <span className="font-semibold text-xs flex items-center gap-1.5 text-[#4F6D87]">
+                        <Coins className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                        <span>Protocol Distribution:</span>
                       </span>
-                      <span className="font-mono font-bold text-blue-700">
-                        Split to other active members
+                      <span className="font-mono text-xs font-bold text-[#14304A]">
+                        Equal split among active members
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8]">
+                    <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between text-[11px] text-[#4F6D87] pt-1 border-t border-[#E7EEF8] gap-0.5">
                       <span>Restored Earning Capacity:</span>
                       <span className="font-bold text-emerald-600">$1,500.00 USD (Fresh 5X Cap)</span>
                     </div>
@@ -455,7 +464,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <span>
                       {isUnderfunded
                         ? `Activate Seat #${seatPosition} (${retopupFeeTrob.toLocaleString()} TROB • $${netUsd} USD)`
-                        : `Confirm Re-topup ($${entryAmountUsd} USD • Receive +$${cashbackUsd} Cashback)`}
+                        : `Confirm Re-topup ($${entryAmountUsd} USD)`}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>

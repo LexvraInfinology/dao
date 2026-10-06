@@ -127,10 +127,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
       {/* Metadata Detail Rows */}
       <div className="space-y-3 text-xs">
         {/* Owner Address */}
-        <div className="flex items-center justify-between">
-          <span className="text-[#4F6D87]">Owner Address</span>
-          <div className="flex items-center gap-1.5 font-mono font-bold text-[#14304A]">
-            <span>{seat.ownerAddress}</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#4F6D87] shrink-0">Owner Address</span>
+          <div className="flex items-center gap-1.5 font-mono font-bold text-[#14304A] truncate">
+            <span className="truncate">{seat.ownerAddress}</span>
             <button
               type="button"
               onClick={handleCopyAddress}

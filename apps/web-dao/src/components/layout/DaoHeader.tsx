@@ -472,11 +472,11 @@ export const DaoHeader: React.FC = () => {
 
       {/* 5X Earnings Cap Reached Retopup Urgent Warning Banner */}
       {memberData?.isCapped && (
-        <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-3 sm:px-6 py-2 shadow-md flex items-center justify-between text-xs sticky top-14 sm:top-16 z-20">
-          <div className="flex items-center gap-2 font-semibold">
+        <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
+          <div className="flex items-center gap-2 font-semibold min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
-            <span className="font-bold">5X Cap Reached (Seat #{memberData.position}):</span>
-            <span className="hidden md:inline text-amber-100">
+            <span className="font-bold shrink-0">5X Cap Reached (Seat #{memberData.position}):</span>
+            <span className="hidden md:inline text-amber-100 truncate">
               48-hour retopup window active. Re-topup $300 within 48h to preserve your seat & receive your instant cashback loop.
             </span>
           </div>
@@ -486,7 +486,7 @@ export const DaoHeader: React.FC = () => {
               setRetopupDeadline(memberData.retopupDeadline || null);
               setRetopupModalOpen(true);
             }}
-            className="px-3 py-1 rounded-lg bg-white text-amber-950 font-bold hover:bg-amber-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-amber-950 font-bold hover:bg-amber-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto"
           >
             <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
             <span>Re-topup Seat #{memberData.position} ($300)</span>
@@ -497,11 +497,11 @@ export const DaoHeader: React.FC = () => {
 
       {/* Incomplete Funding (Underfunded) Urgent Warning Banner */}
       {(memberData?.status === 'underfunded' || memberData?.underfunded) && (
-        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-red-700 text-white px-3 sm:px-6 py-2 shadow-md flex items-center justify-between text-xs sticky top-14 sm:top-16 z-20">
-          <div className="flex items-center gap-2 font-semibold">
+        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-red-700 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
+          <div className="flex items-center gap-2 font-semibold min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
-            <span className="font-bold">Incomplete Seat Funding (Seat #{memberData.position}):</span>
-            <span className="hidden md:inline text-red-100">
+            <span className="font-bold shrink-0">Incomplete Seat Funding (Seat #{memberData.position}):</span>
+            <span className="hidden md:inline text-red-100 truncate">
               Paid {memberData.entryAmountTrob ?? memberData.entryAmountBtt ?? 1.5} TROB of $300. Complete re-topup to unlock Lounge & matrix dividends.
             </span>
           </div>
@@ -511,7 +511,7 @@ export const DaoHeader: React.FC = () => {
               setRetopupDeadline(null);
               setRetopupModalOpen(true);
             }}
-            className="px-3 py-1 rounded-lg bg-white text-red-950 font-bold hover:bg-red-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-red-950 font-bold hover:bg-red-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto"
           >
             <Zap className="w-3.5 h-3.5 text-red-600 fill-red-600" />
             <span>Complete Re-topup (Seat #{memberData.position})</span>

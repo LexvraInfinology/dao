@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   RefreshCw, Users, CreditCard, Vote, Armchair, ArrowDownLeft,
   ArrowUpRight, Layers, ExternalLink, ArrowLeft, ArrowRight, Loader2,
-  Search, ChevronsLeft, ChevronsRight, Globe, Wallet, Filter, Check, Copy, X
+  Search, ChevronsLeft, ChevronsRight, Globe, Wallet, Filter, Check, Copy, X, Zap
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
@@ -31,8 +31,12 @@ interface TransactionsTableProps {
   trobPriceUsd?: number;
 }
 
-function getTypeIcon(type: string) {
+function getTypeIcon(type: string, typeLabel: string = '') {
   const base = 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0';
+  const l = (typeLabel || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+  if (t === 'retopup' || l.includes('retopup') || l.includes('cap') || l.includes('bypassed'))
+    return <div className={`${base} bg-amber-50 border border-amber-300 text-amber-700`}><Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-600" /></div>;
   if (type === 'withdrawal')
     return <div className={`${base} bg-[#FEF2F2] text-[#EF4444]`}><ArrowUpRight className="w-3.5 h-3.5" /></div>;
   if (type.startsWith('matrix_'))
@@ -245,6 +249,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <option value="all">All Types</option>
               <option value="joined">Seat Activations</option>
               <option value="pushed">Cashback Dividends (300/N)</option>
+              <option value="retopup">5X Cap Retopups & Distributions</option>
               <option value="matrix">Matrix Bridge</option>
               <option value="withdrawal">Withdrawals</option>
             </select>
@@ -304,10 +309,17 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
               className="grid grid-cols-12 gap-4 px-6 py-3.5 items-center hover:bg-[#F8FAFC] cursor-pointer transition-colors text-xs font-jakarta"
             >
               {/* Type icon */}
-              <div className="col-span-1">{getTypeIcon(tx.type)}</div>
+              <div className="col-span-1">{getTypeIcon(tx.type, tx.typeLabel)}</div>
               {/* Label + time */}
               <div className="col-span-3 min-w-0">
-                <div className="font-bold text-[#071A4A] truncate">{tx.typeLabel}</div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-[#071A4A] truncate">{tx.typeLabel}</span>
+                  {tx.categoryBadge && (
+                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                      {tx.categoryBadge}
+                    </span>
+                  )}
+                </div>
                 <div className="text-[#94A3B8] mt-0.5">{timeAgoLabel(tx.timestamp)}</div>
               </div>
               {/* From */}
@@ -523,6 +535,15 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 </div>
               ))}
             </div>
+            {selectedTx.note && (
+              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 font-jakarta leading-relaxed space-y-1">
+                <div className="font-bold text-amber-900 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                  <span>On-Chain Distribution Logic:</span>
+                </div>
+                <p className="text-[11px] text-amber-900 leading-normal">{selectedTx.note}</p>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setSelectedTx(null)}

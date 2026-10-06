@@ -48,10 +48,11 @@ export default function MemberLoungePage() {
   }
 
   // Pass live values down as props where components accept them
+  const isCapped           = Boolean(lounge?.isCapped);
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
-  const pushedUsd          = lounge?.pushedUsd             ?? 0;
   const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
-  const capProgressPct     = earningsCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / earningsCapUsd) * 100)) : 0;
+  const pushedUsd          = isCapped ? earningsCapUsd : (lounge?.pushedUsd ?? 0);
+  const capProgressPct     = isCapped ? 100 : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / earningsCapUsd) * 100)) : 0);
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
@@ -65,14 +66,17 @@ export default function MemberLoungePage() {
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm sm:text-base font-black text-[#071A4A] tracking-tight">
-                  5X EARNINGS CAP REACHED — 48H RE-TOPUP WINDOW OPEN
+                  5X EARNINGS CAP REACHED ($1,500.00 USD) — 48H RE-TOPUP WINDOW OPEN
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 uppercase">
                   Seat #{lounge?.position}
                 </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 uppercase">
+                  Dividends Paused
+                </span>
               </div>
               <p className="text-xs text-[#4F6184] leading-relaxed">
-                You have reached 5X ($1,500.00 USD) on your Genesis Council seat. Re-topup $300 USD in TROB within 48 hours to reset your cap and preserve continuous dividend payouts.
+                You have reached the maximum 5X return ($1,500.00 USD). While capped, new dividends bypass this seat and are automatically split among the other {lounge?.activeMembersCount ? lounge.activeMembersCount - 1 : 84} active council members. Any surplus beyond $1,500 was redistributed on-chain. Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend payouts.
               </p>
             </div>
           </div>
@@ -96,6 +100,7 @@ export default function MemberLoungePage() {
               pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
               priceUsd={lounge?.bttPriceUsd || 0.056}
               walletAddress={activeAddress ?? undefined}
+              isCapped={lounge?.isCapped}
             />
             <EarningsCapCard
               variant="desktop"
@@ -107,6 +112,11 @@ export default function MemberLoungePage() {
               retopupDeadline={lounge?.retopupDeadline}
               retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
               position={lounge?.position}
+              retopupCashbackUsd={lounge?.retopupCashbackUsd}
+              activeMembersCount={lounge?.activeMembersCount}
+              bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
+              newActivationsSinceCap={lounge?.newActivationsSinceCap}
+              cappedAt={lounge?.cappedAt}
             />
           </div>
         </div>
@@ -125,6 +135,11 @@ export default function MemberLoungePage() {
           retopupDeadline={lounge?.retopupDeadline}
           retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
           position={lounge?.position}
+          retopupCashbackUsd={lounge?.retopupCashbackUsd}
+          activeMembersCount={lounge?.activeMembersCount}
+          bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
+          newActivationsSinceCap={lounge?.newActivationsSinceCap}
+          cappedAt={lounge?.cappedAt}
         />
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
@@ -132,6 +147,7 @@ export default function MemberLoungePage() {
           pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
           priceUsd={lounge?.bttPriceUsd || 0.056}
           walletAddress={activeAddress ?? undefined}
+          isCapped={lounge?.isCapped}
         />
         <IncomeChannelsCard loungeData={lounge} />
       </div>

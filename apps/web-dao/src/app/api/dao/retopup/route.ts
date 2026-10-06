@@ -232,7 +232,12 @@ export async function POST(req: NextRequest) {
           [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
         );
 
+        const isCaller = item.id === m.id;
+        const eventReason = isCaller
+          ? `Instant Cashback on Retopup Loop (Seat #${pos})`
+          : `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`;
         const actualUsd = parseFloat((item.payoutTrob * bttPriceUsd).toFixed(2));
+
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,
@@ -242,11 +247,14 @@ export async function POST(req: NextRequest) {
             `${cleanTx}-retopup-push-${item.position}`,
             item.payoutTrob,
             actualUsd,
-            `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`
+            eventReason,
           ]
         );
       }
     }
+
+    const callerPayout = memberPayouts.find(p => p.id === m.id);
+    const callerCashbackUsd = parseFloat(((callerPayout?.payoutTrob || 0) * bttPriceUsd).toFixed(2));
 
     return NextResponse.json({
       success: true,
@@ -254,13 +262,15 @@ export async function POST(req: NextRequest) {
         address: m.address,
         position: pos,
         status: 'active',
-        pushedAmountBtt: 0,
+        pushedAmountBtt: callerPayout?.newPushed || 0,
+        instantCashbackUsd: callerCashbackUsd,
+        instantCashbackTrob: callerPayout?.payoutTrob || 0,
         retopupAmountUsd: entryAmountUsd,
         retopupTrob,
         distributedToMembers: memberPayouts.filter(p => p.payoutTrob > 0).length,
         retopupCount: (m.retopupCount || 0) + 1,
         txHash: cleanTx,
-        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset to zero, and your $300 fee has been distributed equally to all active council members.`,
+        message: `Retopup confirmed! Your 5X Cap ($1,500) has reset to zero, and your $300 fee has been distributed equally to all active council members (including your instant cashback).`,
       },
     });
   } catch (err: unknown) {

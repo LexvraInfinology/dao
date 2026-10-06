@@ -11,6 +11,7 @@ interface ClaimableDividendsCardProps {
   pushedAmountTrob?: number;  // Total TROB pushed directly to wallet
   priceUsd?: number;          // Live TROB/USD market price
   walletAddress?: string;
+  isCapped?: boolean;
 }
 
 export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
@@ -19,6 +20,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   pushedAmountTrob = 0,
   priceUsd,
   walletAddress,
+  isCapped = false,
 }) => {
   const wallet = useWallet();
   const [balance, setBalance] = useState<number>(initialAmount);
@@ -71,16 +73,11 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
     }
   };
 
-  const displayPushedUsd = pushedAmountUsd > 0 ? pushedAmountUsd : 0;
-  const effectivePrice = priceUsd && priceUsd > 0 ? priceUsd : 0.056;
-  const displayPushedTrob = pushedAmountTrob > 0
-    ? pushedAmountTrob.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : displayPushedUsd > 0
-    ? (displayPushedUsd / effectivePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '0.00';
+  const isCapHit = Boolean(isCapped || pushedAmountUsd >= 1500);
+  const displayPushedUsd = isCapHit ? 1500 : (pushedAmountUsd > 0 ? pushedAmountUsd : 0);
 
   return (
-    <div className="bg-white border border-[#E2ECF9] rounded-3xl p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4">
+    <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -89,9 +86,11 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
           </div>
           <h3 className="text-base font-bold font-jakarta text-[#071A4A]">Direct-to-Wallet Payouts</h3>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-bold text-[#059669]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-          Zero Gas Fees
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold ${
+          isCapHit ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-emerald-50 border-emerald-200/80 text-[#059669]'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${isCapHit ? 'bg-amber-500 animate-pulse' : 'bg-[#10B981] animate-pulse'}`} />
+          {isCapHit ? '5X Cap Reached' : 'Zero Gas Fees'}
         </span>
       </div>
 
@@ -103,21 +102,30 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
         <div className="text-3xl sm:text-4xl font-black font-jakarta text-[#071A4A] tracking-tight">
           ${displayPushedUsd.toFixed(2)} <span className="text-lg font-normal text-slate-400">USD</span>
         </div>
-        <div className="text-xs font-semibold font-jakarta text-[#10B981] flex items-center gap-1.5">
-          <span>≈ {displayPushedTrob} TROB</span>
-          <span className="text-[#94A3B8]">·</span>
-          <span>Delivered On-Chain</span>
+        <div className={`text-xs font-semibold font-jakarta flex items-center gap-1.5 ${
+          isCapHit ? 'text-amber-700' : 'text-[#10B981]'
+        }`}>
+          <span className={`w-2 h-2 rounded-full ${isCapHit ? 'bg-amber-500 animate-pulse' : 'bg-[#10B981] animate-pulse'}`} />
+          <span>{isCapHit ? 'Max 5X Cap Reached · Dividends Paused (Re-topup to Resume)' : 'Delivered On-Chain Directly to Wallet'}</span>
         </div>
       </div>
 
       {/* Autonomous Push Explainer */}
-      <div className="p-3.5 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] space-y-1.5">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#166534] font-jakarta">
-          <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
-          <span>100% Autonomous On-Chain Push</span>
+      <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
+        isCapHit ? 'bg-amber-50/80 border-amber-200' : 'bg-[#F0FDF4] border-[#BBF7D0]'
+      }`}>
+        <div className={`flex items-center gap-2 text-xs font-bold font-jakarta ${
+          isCapHit ? 'text-amber-900' : 'text-[#166534]'
+        }`}>
+          <CheckCircle2 className={`w-4 h-4 shrink-0 ${isCapHit ? 'text-amber-600' : 'text-[#16A34A]'}`} />
+          <span>{isCapHit ? '5X Maximum Cap Reached ($1,500.00 USD)' : '100% Autonomous On-Chain Push'}</span>
         </div>
-        <p className="text-[11px] text-[#15803D] font-jakarta leading-relaxed">
-          Instant cashback (300/N split) and pool distributions are sent automatically by smart contracts directly into your connected wallet. No manual withdraw button or gas fees needed.
+        <p className={`text-[11px] font-jakarta leading-relaxed ${
+          isCapHit ? 'text-amber-800' : 'text-[#15803D]'
+        }`}>
+          {isCapHit
+            ? 'Your seat has accumulated the maximum $1,500.00 USD under 5X capping policy. Dividends are currently paused and redirected to other active council members until your $300 USD re-topup is completed.'
+            : 'Instant cashback (300/N split) and pool distributions are sent automatically by smart contracts directly into your connected wallet. No manual withdraw button or gas fees needed.'}
         </p>
       </div>
 
@@ -134,11 +142,11 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
           <span className="text-[#60739A]">Your Gas Fee to Receive</span>
           <span className="font-bold text-[#10B981]">$0.00 (Paid by Depositor)</span>
         </div>
-        <div className="py-2 flex items-center justify-between">
-          <span className="text-[#60739A]">Destination Wallet</span>
-          <span className="font-mono font-bold text-[#155EEF] flex items-center gap-1">
-            <Wallet className="w-3 h-3 text-[#155EEF]" />
-            {shortAddr}
+        <div className="py-2 flex items-center justify-between gap-2">
+          <span className="text-[#60739A] shrink-0">Destination Wallet</span>
+          <span className="font-mono font-bold text-[#155EEF] flex items-center gap-1 min-w-0">
+            <Wallet className="w-3 h-3 text-[#155EEF] shrink-0" />
+            <span className="truncate max-w-[130px] min-[360px]:max-w-[170px] sm:max-w-none">{shortAddr}</span>
           </span>
         </div>
       </div>

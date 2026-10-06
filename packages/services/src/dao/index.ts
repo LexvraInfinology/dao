@@ -636,12 +636,13 @@ export class DaoService {
     // Compute cap in TROB using live price
     const earningsCapTrob = priceUsd > 0 ? Math.round((EARNINGS_CAP_USD / priceUsd) * 100) / 100 : 0;
 
-    // Cap progress based on USD value (5x limit hits only when $1,500 is earned)
+    // Cap progress based on USD value (5x limit hits when $1,500 is earned)
     const pushedUsd       = Number((pushedTrob * priceUsd).toFixed(2));
     const isCapped        = pushedUsd >= EARNINGS_CAP_USD || member.status === "capped";
-    const remainingCapUsd = Math.max(0, Number((EARNINGS_CAP_USD - pushedUsd).toFixed(2)));
-    const remainingCapTrob= priceUsd > 0 ? Math.round((remainingCapUsd / priceUsd) * 100) / 100 : 0;
-    const capProgressPct  = EARNINGS_CAP_USD > 0 ? Math.min(100, (pushedUsd / EARNINGS_CAP_USD) * 100) : 0;
+    const remainingCapUsd = isCapped ? 0 : Math.max(0, Number((EARNINGS_CAP_USD - pushedUsd).toFixed(2)));
+    const remainingCapTrob= isCapped ? 0 : (priceUsd > 0 ? Math.round((remainingCapUsd / priceUsd) * 100) / 100 : 0);
+    const capProgressPct  = isCapped ? 100 : (EARNINGS_CAP_USD > 0 ? Math.min(100, (pushedUsd / EARNINGS_CAP_USD) * 100) : 0);
+    const effectivePushedUsd = isCapped ? EARNINGS_CAP_USD : pushedUsd;
 
     let capHitAt: Date | null = null;
     let retopupDeadline: Date | null = null;
@@ -682,7 +683,7 @@ export class DaoService {
       entryAmountUsdEstimate: entryUsdEstimate,
       pushedAmountBtt: pushedTrob,
       pushedAmountTrob: pushedTrob,
-      pushedAmountUsdEstimate: pushedUsd,
+      pushedAmountUsdEstimate: effectivePushedUsd,
       // USD-pegged cap values ($1,500 max cap)
       earningsCapUsd: EARNINGS_CAP_USD,
       earningsCapBtt: earningsCapTrob,

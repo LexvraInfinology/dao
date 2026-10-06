@@ -295,10 +295,12 @@ export async function getOnChainDaoTransactions(
           incomingPosition: pos,
         });
 
+        const retopupActiveCount = Math.max(1, payoutEvts.length > 0 ? payoutEvts.length : 85);
         for (const p of payoutEvts) {
           const recipient = (p.args?.recipient || caller).trim();
-          const pAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : amountTrob / pos;
+          const pAmt = p.args?.amount ? Number(p.args.amount) / 1e6 : amountTrob / retopupActiveCount;
           const isCashback = recipient.toLowerCase() === caller.toLowerCase();
+          const pUsd = parseFloat((300 / retopupActiveCount).toFixed(2));
           parsedItems.push({
             id: `${hash}-retopup-push-${recipient}`,
             type: 'pushed',
@@ -307,7 +309,7 @@ export async function getOnChainDaoTransactions(
               : `Dividend Push from Seat #${pos} (Retopup Loop)`,
             amountBtt: pAmt,
             amountTrob: pAmt,
-            amountUsd: parseFloat((300 / pos).toFixed(2)),
+            amountUsd: pUsd,
             isPositive: true,
             from: daoAddress,
             to: recipient,

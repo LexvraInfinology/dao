@@ -42,7 +42,7 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
   };
 
   return (
-    <div className="bg-white border border-[#E2ECF9] rounded-3xl p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-5">
+    <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold font-jakarta text-[#071A4A]">Soulbound Pass</h2>
         <button onClick={handleShare}
@@ -124,7 +124,7 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
 
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="bg-white border border-[#E2ECF9] rounded-2xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#E2ECF9] pb-3">
               <h3 className="text-base font-bold text-[#071A4A] font-jakarta">
                 {activeModal === 'explorer' ? 'Explorer Verification' : 'On-Chain SBT Specification'}
@@ -134,11 +134,11 @@ export const SoulboundPassCard: React.FC<SoulboundPassCardProps> = ({ loungeData
               </button>
             </div>
             <div className="space-y-3 text-xs text-[#4F6184] font-jakarta">
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-1.5">
-                <div className="flex justify-between"><span className="text-[#60739A]">Contract Standard:</span><span className="font-mono font-bold text-[#071A4A]">ERC-5192 (Soulbound Token)</span></div>
-                <div className="flex justify-between"><span className="text-[#60739A]">Contract Address:</span><span className="font-mono font-bold text-[#155EEF]">{nftContractAddress.slice(0, 10)}…</span></div>
-                <div className="flex justify-between"><span className="text-[#60739A]">Token ID:</span><span className="font-bold text-[#071A4A]">{sbtId}</span></div>
-                <div className="flex justify-between"><span className="text-[#60739A]">Owner:</span><span className="font-mono text-[#071A4A]">{shortOwner}</span></div>
+              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] space-y-2">
+                <div className="flex items-center justify-between gap-2"><span className="text-[#60739A] shrink-0">Contract Standard:</span><span className="font-mono font-bold text-[#071A4A] text-right truncate">ERC-5192 (Soulbound Token)</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="text-[#60739A] shrink-0">Contract Address:</span><span className="font-mono font-bold text-[#155EEF] text-right truncate">{nftContractAddress.slice(0, 10)}…</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="text-[#60739A] shrink-0">Token ID:</span><span className="font-bold text-[#071A4A] text-right truncate">{sbtId}</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="text-[#60739A] shrink-0">Owner:</span><span className="font-mono text-[#071A4A] text-right truncate">{shortOwner}</span></div>
               </div>
               <p className="text-[11px] text-[#60739A] italic">This Soulbound Pass is non-transferable and represents sovereign governance rights in Genesis DAO.</p>
             </div>

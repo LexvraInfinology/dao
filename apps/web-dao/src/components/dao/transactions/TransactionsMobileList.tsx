@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
   Users, CreditCard, Vote, Armchair, ChevronRight, Loader2,
   ArrowDownLeft, ArrowUpRight, Layers, Building2, Inbox, ArrowLeft,
-  ArrowRight, Globe, Wallet, Filter, Check, Copy, ExternalLink, X
+  ArrowRight, Globe, Wallet, Filter, Check, Copy, ExternalLink, X, Zap
 } from 'lucide-react';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl } from '@/utils/explorer';
@@ -26,8 +26,12 @@ interface TransactionsMobileListProps {
   activeAddress?: string | null;
 }
 
-function getTypeIcon(type: string) {
+function getTypeIcon(type: string, typeLabel: string = '') {
   const base = 'w-8 h-8 rounded-xl flex items-center justify-center shrink-0';
+  const l = (typeLabel || '').toLowerCase();
+  const t = (type || '').toLowerCase();
+  if (t === 'retopup' || l.includes('retopup') || l.includes('cap') || l.includes('bypassed'))
+    return <div className={`${base} bg-amber-50 border border-amber-300 text-amber-700`}><Zap className="w-4 h-4 fill-amber-500 text-amber-600" /></div>;
   if (type === 'withdrawal')
     return <div className={`${base} bg-[#FEF2F2] border border-[#FECACA] text-[#EF4444]`}><CreditCard className="w-4 h-4" /></div>;
   if (type.startsWith('matrix_'))
@@ -145,6 +149,7 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
             <option value="all">All Transaction Types</option>
             <option value="joined">Seat Activations</option>
             <option value="pushed">Cashback Dividends (300/N)</option>
+            <option value="retopup">5X Cap Retopups & Distributions</option>
             <option value="matrix">Matrix Bridge</option>
             <option value="withdrawal">Withdrawals</option>
           </select>
@@ -181,8 +186,17 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
               {/* Top row */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {getTypeIcon(tx.type)}
-                  <span className="text-xs sm:text-sm font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</span>
+                  {getTypeIcon(tx.type, tx.typeLabel)}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs sm:text-sm font-bold font-jakarta text-[#071A4A] truncate">{tx.typeLabel}</span>
+                      {tx.categoryBadge && (
+                        <span className="px-1.5 py-0.2 rounded-md text-[8.5px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                          {tx.categoryBadge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <span className="text-[11px] sm:text-xs text-[#60739A] font-medium font-jakarta whitespace-nowrap">{timeAgoLabel(tx.timestamp)}</span>
@@ -345,6 +359,15 @@ export const TransactionsMobileList: React.FC<TransactionsMobileListProps> = ({
                 </div>
               ))}
             </div>
+            {selectedTx.note && (
+              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 font-jakarta leading-relaxed space-y-1">
+                <div className="font-bold text-amber-900 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                  <span>On-Chain Distribution Logic:</span>
+                </div>
+                <p className="text-[11px] text-amber-900 leading-normal">{selectedTx.note}</p>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setSelectedTx(null)}

@@ -41,11 +41,13 @@ export const LoungeCompactMemberCard: React.FC<LoungeCompactMemberCardProps> = (
 
       <div className="shrink-0">
         <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-2xs ${
-          isActive
+          loungeData?.isCapped
+            ? 'bg-amber-100 border border-amber-300 text-amber-800'
+            : isActive
             ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669]'
             : 'bg-slate-100 border border-slate-200 text-slate-500'
         }`}>
-          {isActive ? 'Active' : status}
+          {loungeData?.isCapped ? '5X Capped' : isActive ? 'Active' : status}
         </span>
       </div>
     </div>

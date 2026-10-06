@@ -1213,7 +1213,16 @@ export function createApp(): Express {
       const now = new Date();
 
       const pos = member.position || 1;
-      const cashbackUsd = parseFloat((300 / pos).toFixed(2));
+
+      // In retopup, the $300 fee is distributed equally across ALL active uncapped members
+      const otherActiveMembers = await prisma.daoMember.findMany({
+        where: {
+          id: { not: member.id },
+          status: "active",
+        },
+      });
+      const totalEligibleCount = otherActiveMembers.length + 1; // plus the retopup depositor
+      const cashbackUsd = parseFloat((300 / totalEligibleCount).toFixed(2));
       const cashbackTrob = Math.round((cashbackUsd / priceUsd) * 100) / 100;
       const cleanTx = String(txHash || `retopup-${Date.now()}`);
 
@@ -1260,40 +1269,32 @@ export function createApp(): Express {
         }),
       ]);
 
-      // Distribute to prior active members if pos > 1
-      if (pos > 1) {
-        const priorMembers = await prisma.daoMember.findMany({
-          where: {
-            position: { lt: pos },
-            status: "active",
+      // Distribute equal dividend share to ALL other active members
+      for (const other of otherActiveMembers) {
+        await prisma.daoMember.update({
+          where: { id: other.id },
+          data: {
+            pushedAmountBtt: { increment: cashbackTrob },
+            updatedAt: now,
           },
         });
-        for (const prior of priorMembers) {
-          await prisma.daoMember.update({
-            where: { id: prior.id },
-            data: {
-              pushedAmountBtt: { increment: cashbackTrob },
-              updatedAt: now,
-            },
-          });
-          await prisma.daoEvent.create({
-            data: {
-              eventType: "pushed",
-              userAddress: prior.address,
-              incomingPosition: pos,
-              amountBtt: cashbackTrob,
-              amountUsdEst: cashbackUsd,
-              priceSource: priceData.priceSource || "trobchain-api",
-              reason: `Dividend push from Seat #${pos} (Retopup Loop)`,
-              txHash: `${cleanTx}-retopup-push-${prior.position}`,
-              blockNumber: BigInt(1),
-              timestamp: new Date(now.getTime() + 200),
-            },
-          });
-          broadcastNativePayout(prior.address, cashbackTrob).catch((e) => {
-            console.error(`[Payout Relayer] Failed retopup dividend to Seat #${prior.position}:`, e);
-          });
-        }
+        await prisma.daoEvent.create({
+          data: {
+            eventType: "pushed",
+            userAddress: other.address,
+            incomingPosition: pos,
+            amountBtt: cashbackTrob,
+            amountUsdEst: cashbackUsd,
+            priceSource: priceData.priceSource || "trobchain-api",
+            reason: `Dividend push from Seat #${pos} (Retopup Distribution)`,
+            txHash: `${cleanTx}-retopup-push-${other.position}`,
+            blockNumber: BigInt(1),
+            timestamp: new Date(now.getTime() + 200),
+          },
+        });
+        broadcastNativePayout(other.address, cashbackTrob).catch((e) => {
+          console.error(`[Payout Relayer] Failed retopup dividend to Seat #${other.position}:`, e);
+        });
       }
 
       // Broadcast instant cashback payout to retopup caller
@@ -1446,14 +1447,20 @@ export function createApp(): Express {
       const priceUsd = priceData.priceUsd > 0 ? priceData.priceUsd : 0.0533;
       const earningsCapUsd = 1500; // $1,500 USD max cap
       const earningsCapBtt = Math.round((earningsCapUsd / priceUsd) * 100) / 100; // $1,500 worth of TROB
+      const isCapped = Boolean(memberDetails.isCapped || memberDetails.status === "capped");
       const pushedBtt = memberDetails.pushedAmountBtt;
-      const pushedUsd = memberDetails.pushedAmountUsdEstimate > 0
+      const pushedUsd = isCapped ? earningsCapUsd : (memberDetails.pushedAmountUsdEstimate > 0
         ? memberDetails.pushedAmountUsdEstimate
-        : pushedBtt * priceUsd;
-      const remainingCapUsd = Math.max(0, earningsCapUsd - pushedUsd);
-      const remainingCapBtt = Math.max(0, earningsCapBtt - pushedBtt);
-      const capProgressPct = Math.min(100, (pushedUsd / earningsCapUsd) * 100);
-      const isCapped = Boolean(memberDetails.isCapped || pushedUsd >= earningsCapUsd || memberDetails.status === "capped");
+        : pushedBtt * priceUsd);
+      const remainingCapUsd = isCapped ? 0 : Math.max(0, earningsCapUsd - pushedUsd);
+      const remainingCapBtt = isCapped ? 0 : Math.max(0, earningsCapBtt - pushedBtt);
+      const capProgressPct = isCapped ? 100 : Math.min(100, (pushedUsd / earningsCapUsd) * 100);
+
+      // Total active members for equal retopup distribution
+      const activeCount = await prisma.daoMember.count({ where: { status: "active" } });
+      const totalEligibleCount = Math.max(1, activeCount + (isCapped ? 1 : 0));
+      const retopupCashbackUsd = parseFloat((300 / totalEligibleCount).toFixed(2));
+      const retopupCashbackTrob = Math.round((retopupCashbackUsd / priceUsd) * 100) / 100;
 
       // Rank pool cards for income channels
       const poolCards = await prisma.poolCard.findMany({
@@ -1491,7 +1498,7 @@ export function createApp(): Express {
           claimableDividendsBtt: unclaimedTrob,
           claimableDividendsUsd: unclaimedTrob * priceData.priceUsd,
           totalReceivedBtt: pushedBtt,
-          totalReceivedUsd: pushedBtt * priceData.priceUsd,
+          totalReceivedUsd: pushedUsd,
           // Earnings cap
           earningsCapBtt,
           earningsCapUsd,
@@ -1501,6 +1508,9 @@ export function createApp(): Express {
           remainingCapBtt,
           remainingCapUsd,
           isCapped,
+          retopupCashbackUsd,
+          retopupCashbackTrob,
+          activeMembersCount: totalEligibleCount,
           capHitAt: memberDetails.capHitAt ?? null,
           retopupDeadline: memberDetails.retopupDeadline ?? null,
           retopupTimeRemainingSeconds: memberDetails.retopupTimeRemainingSeconds ?? null,

@@ -328,6 +328,12 @@ export interface LoungeData {
   capHitAt?: string | null;
   retopupDeadline?: string | null;
   retopupTimeRemainingSeconds?: number | null;
+  activeMembersCount?: number;
+  retopupCashbackUsd?: number;
+  retopupCashbackTrob?: number;
+  bypassedToCouncilUsd?: number;
+  newActivationsSinceCap?: number;
+  cappedAt?: string | null;
   incomeChannels?: {
     daoSeats: { label: string; earnedBtt: number; earnedUsd: number };
     matrixSlots: { label: string; earnedBtt: number; earnedUsd: number; highestSlot: number };
@@ -352,6 +358,9 @@ export interface TransactionItem {
   timestamp: string;
   status: string;
   incomingPosition?: number | null;
+  categoryBadge?: string;
+  sourceSeat?: number;
+  note?: string;
 }
 
 export interface TransactionsData {

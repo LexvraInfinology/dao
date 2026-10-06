@@ -33,7 +33,13 @@ export const IncomeChannelsCard: React.FC<IncomeChannelsCardProps> = ({ loungeDa
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#059669]">Active</span>
+            <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold ${
+              loungeData?.isCapped
+                ? 'bg-amber-100 border-amber-300 text-amber-800'
+                : 'bg-[#ECFDF5] border-[#A7F3D0]/60 text-[#059669]'
+            }`}>
+              {loungeData?.isCapped ? '5X Capped' : 'Active'}
+            </span>
             <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
           </div>
         </div>

@@ -211,8 +211,8 @@ export function createApp(): Express {
 
   // ── DAO STATS & MEMBERS (public) ──────────────────────────────────────────
 
-  /** GET /api/dao/stats */
-  app.get("/api/dao/stats", async (_req, res) => {
+  /** GET /api/dao and GET /api/dao/stats */
+  app.get(["/api/dao", "/api/dao/stats"], async (_req, res) => {
     try {
       const stats = await daoService.getDAOStats();
       if (stats && stats.memberCount > 0) {

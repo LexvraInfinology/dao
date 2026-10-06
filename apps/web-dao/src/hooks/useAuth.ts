@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { getStoredAvatarSeed } from '@/utils/avatar';
+import { CHAIN_ID } from '@/config/env';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -194,7 +195,7 @@ export function useAuth(): AuthState {
       const domain    = typeof window !== 'undefined' ? window.location.host : 'equorafidao.com';
       const uri       = typeof window !== 'undefined' ? window.location.origin : 'https://equorafidao.com';
       const issuedAt  = new Date().toISOString();
-      const chainId   = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? '1000', 10);
+      const chainId   = CHAIN_ID;
 
       const message = buildSiweMessage({
         domain,

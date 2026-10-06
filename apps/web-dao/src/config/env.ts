@@ -53,7 +53,7 @@ export const ACTIVE_DAO_CONTRACT_HEX =
   '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
 
 // Chain ID (TrobChain Mainnet is 1000)
-export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '1000', 10);
+export const CHAIN_ID = 1000;
 
 // Hardcoded Backend API URL for EQUORA DAO production service
 export const BACKEND_API_URL = 'https://api.equorafidao.com';

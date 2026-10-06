@@ -14,7 +14,7 @@ export const servicesConfig = {
     nonceTtlSeconds: parseInt(process.env.SIWE_NONCE_TTL_SECONDS || "300", 10),
   },
   blockchain: {
-    chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || "1000", 10),
+    chainId: 1000,
     rpcUrl: process.env.RPC_URL || process.env.FULLNODE_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one.trobchain.com",
   },
   price: {

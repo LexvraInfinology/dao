@@ -409,7 +409,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
       const isZero = !rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000';
 
       const existing = await queryNeon<any>(
-        `SELECT id, address, position, status, "entryAmountBtt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+        `SELECT id, address, position, status, "entryAmountBtt", "retopupDeadline", "retopupCount", "pushedAmountBtt", "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
         [position]
       );
 
@@ -530,26 +530,32 @@ export async function syncOnChainMembersState(force = false): Promise<{
                  status = $2,
                  "retopupDeadline" = $3,
                  "entryAmountUsdAtJoin" = 300,
-                 "pushedAmountBtt" = GREATEST("pushedAmountBtt", $4),
+                 "pushedAmountBtt" = $4,
                  "updatedAt" = NOW()
              WHERE position = $5`,
             [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
           );
         } else {
           // Synchronize status, retopup deadline, and earnings if state changed on-chain
-          if (
-            dbMember.status !== memberEffectiveStatus ||
-            (onChainDeadlineIso && dbMember.retopupDeadline !== onChainDeadlineIso) ||
-            totalEarnedTrob > parseFloat(dbMember.pushedAmountBtt || '0')
-          ) {
+          const dbPushed = parseFloat(dbMember.pushedAmountBtt || '0');
+          const hasPushedChanged = Math.abs(totalEarnedTrob - dbPushed) > 0.0001;
+          const hasStatusChanged = dbMember.status !== memberEffectiveStatus;
+          const hasDeadlineChanged = Boolean(onChainDeadlineIso && dbMember.retopupDeadline !== onChainDeadlineIso);
+
+          if (hasStatusChanged || hasDeadlineChanged || hasPushedChanged) {
+            // A genuine 5X retopup reset ONLY occurs when the DB member was previously 'capped'
+            // and the on-chain smart contract state is now uncapped and 'active'.
+            const isRetopupReset = dbMember.status === 'capped' && memberEffectiveStatus === 'active';
             await queryNeon(
               `UPDATE "DaoMember"
                SET status = $1,
                    "retopupDeadline" = $2,
-                   "pushedAmountBtt" = GREATEST("pushedAmountBtt", $3),
+                   "cappedAt" = CASE WHEN $1 = 'capped' THEN COALESCE("cappedAt", NOW()) ELSE NULL END,
+                   "retopupCount" = CASE WHEN $5 THEN COALESCE("retopupCount", 0) + 1 ELSE "retopupCount" END,
+                   "pushedAmountBtt" = $3,
                    "updatedAt" = NOW()
                WHERE position = $4`,
-              [memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
+              [memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position, isRetopupReset]
             );
           }
         }

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import SettingsHero from '@/components/dao/settings/SettingsHero';
 import SettingsTabs, { SettingsTabType } from '@/components/dao/settings/SettingsTabs';
 import AccountInformationCard from '@/components/dao/settings/AccountInformationCard';
-import SettingsDangerZone from '@/components/dao/settings/SettingsDangerZone';
 
 // Security tab components
 import WalletSecurityCard from '@/components/dao/settings/security/WalletSecurityCard';
@@ -20,7 +19,6 @@ import StayInformedCard from '@/components/dao/settings/notifications/StayInform
 // Wallet tab components
 import ConnectedWalletCard from '@/components/dao/settings/wallet/ConnectedWalletCard';
 import WalletInformationCard from '@/components/dao/settings/wallet/WalletInformationCard';
-import WalletManagementCard from '@/components/dao/settings/wallet/WalletManagementCard';
 import WalletAccessCard from '@/components/dao/settings/wallet/WalletAccessCard';
 
 // Privacy tab components
@@ -46,7 +44,6 @@ export default function DaoSettingsPage() {
       {activeTab === 'account' && (
         <div className="animate-fadeIn space-y-5 max-w-4xl mx-auto">
           <AccountInformationCard />
-          <SettingsDangerZone />
         </div>
       )}
 
@@ -118,9 +115,6 @@ export default function DaoSettingsPage() {
             <WalletInformationCard />
             <WalletAccessCard />
           </div>
-
-          {/* Full-width Wallet Management Card */}
-          <WalletManagementCard />
         </div>
       )}
 

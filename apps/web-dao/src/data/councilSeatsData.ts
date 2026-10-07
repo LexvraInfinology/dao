@@ -14,6 +14,8 @@ export interface CouncilSeatDetail {
   soulboundId: string;
   entryAmount?: string;
   claimedDate?: string;
+  alreadyPaidTrob?: number;
+  remainingTrob?: number;
 }
 
 export interface CouncilActivityItem {
@@ -28,6 +30,8 @@ export interface RawMemberData {
   position: number;
   address: string;
   nftTokenId?: number;
+  entryAmountBtt?: number;
+  entryAmountTrob?: number;
   pushedAmountBtt?: number;
   pushedAmountUsdEstimate?: number;
   status?: string;
@@ -74,6 +78,10 @@ export function buildLiveCouncilSeats(
         liveMember.address.toLowerCase() === canonicalMyAddress;
       const isCapped = liveMember.status === 'capped';
       const isUnderfunded = liveMember.status === 'underfunded';
+      const entryTrob = liveMember.entryAmountTrob ?? liveMember.entryAmountBtt ?? 0;
+      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.056;
+      const fullRequiredTrob = Math.round((300 / effectiveTrobPrice) * 100) / 100;
+      const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
       const exactEarnedUsd = calculateMemberEarnedUsd(seatNumber, liveMember.status, 93);
       const earningsUsd = isUnderfunded ? 0 : isCapped ? 1500 : (exactEarnedUsd > 0 ? exactEarnedUsd : (liveMember.pushedAmountUsdEstimate ?? 0));
@@ -113,6 +121,8 @@ export function buildLiveCouncilSeats(
           ? 'Underfunded'
           : 'Active Member',
         soulboundId,
+        alreadyPaidTrob: entryTrob,
+        remainingTrob,
         claimedDate: liveMember.joinedAt
           ? new Date(liveMember.joinedAt).toLocaleDateString('en-US', {
               month: 'short',

@@ -355,7 +355,7 @@ export default function CouncilSeatsPage() {
             seatPosition={memberData?.position || selectedSeat.seatNumber}
             retopupDeadline={memberData?.retopupDeadline}
             trobPriceUsd={price?.priceUsd}
-            alreadyPaidTrob={isUnderfundedSeat ? (memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5) : 0}
+            alreadyPaidTrob={isUnderfundedSeat ? (memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? selectedSeat.alreadyPaidTrob ?? 0) : 0}
             isUnderfunded={isUnderfundedSeat}
             onSuccess={() => {
               refetchMember();

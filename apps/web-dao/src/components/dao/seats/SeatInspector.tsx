@@ -35,6 +35,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
   const seatEntryTrob = priceData?.seatEntryTrob ?? Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
+  const alreadyPaidTrob = seat.alreadyPaidTrob ?? 0;
+  const remainingTrob = seat.remainingTrob && seat.remainingTrob > 0
+    ? seat.remainingTrob
+    : Math.max(0, Math.round((seatEntryTrob - alreadyPaidTrob) * 100) / 100);
 
   return (
     <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
@@ -90,16 +94,22 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
 
       {/* Underfunded Seat Alert Box */}
       {seat.statusBadge === 'Underfunded' && (
-        <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300/80 text-amber-950 space-y-1.5 text-xs">
+        <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300/80 text-amber-950 space-y-2 text-xs">
           <div className="flex items-center gap-1.5 font-bold text-amber-900">
             <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Underfunded Seat • Retopup Required</span>
+            <span>Underfunded Seat • Remaining Deposit Required</span>
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {seat.status === 'mine'
-              ? 'Your seat reservation requires completing the $300 entry fee. Pay remaining balance to unlock Council privileges, Matrix Pools & Member Lounge.'
+              ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} at today's rate to activate your seat and unlock full governance & dividends.`
               : 'This seat was reserved with a provisional deposit. The owner has a 48-hour retopup window to pay the remaining deficit, after which it will reopen for queue takeover.'}
           </p>
+          {alreadyPaidTrob > 0 && (
+            <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-amber-200/70 font-semibold text-amber-900">
+              <span>Credited Initial Deposit:</span>
+              <span className="font-mono text-emerald-700">-{alreadyPaidTrob.toLocaleString()} TROB</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -242,7 +252,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold shadow-[0_4px_14px_rgba(245,158,11,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Complete Re-topup to Unlock Seat #{seat.seatNumber}</span>
+            <span>Pay Remaining Balance {remainingTrob ? `(${Math.round(remainingTrob).toLocaleString()} TROB)` : ''} • Unlock Seat #{seat.seatNumber}</span>
             <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
         ) : seat.statusBadge === '5X Capped' && seat.status === 'mine' && onRetopup ? (

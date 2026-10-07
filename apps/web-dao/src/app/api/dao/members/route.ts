@@ -5,6 +5,7 @@ import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/b
 import { TROB_PRICE_API_URL } from '@/config/env';
 
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { toUtcIso } from '../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,16 +38,38 @@ export async function GET(req: NextRequest) {
     Array.isArray(backendRes.data?.members) &&
     backendRes.data.members.length > 0
   ) {
+    const deadlineMap = new Map<number, string>();
+    const statusMap = new Map<number, string>();
+    try {
+      const dlRes = await queryNeon<any>(
+        `SELECT position, status, "retopupDeadline" FROM "DaoMember" WHERE "retopupDeadline" IS NOT NULL OR status IN ('underfunded', 'capped', 'vacant')`
+      );
+      for (const r of dlRes.rows) {
+        if (r.position) {
+          if (r.retopupDeadline) {
+            deadlineMap.set(r.position, toUtcIso(r.retopupDeadline)!);
+          }
+          if (r.status) {
+            statusMap.set(r.position, r.status);
+          }
+        }
+      }
+    } catch {}
+
     // Ensure underfunded members reflect their actual provisional deposit, and all members have exact historical USD earnings
     backendRes.data.members = backendRes.data.members.map((m: any) => {
-      const isUnderfunded = m.status === 'underfunded';
+      const effStatus = statusMap.get(m.position) || m.status;
+      const isUnderfunded = effStatus === 'underfunded';
       const trueDeposit = (m.position === 90 || m.position === 91) ? 5.0 : 1.5;
-      const exactUsd = calculateMemberEarnedUsd(m.position, m.status, backendRes.data?.total || 93);
+      const exactUsd = calculateMemberEarnedUsd(m.position, effStatus, backendRes.data?.total || 93);
+      const dl = deadlineMap.get(m.position) || toUtcIso(m.retopupDeadline);
       return {
         ...m,
+        status: effStatus,
         entryAmountBtt: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
         entryAmountTrob: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
         pushedAmountUsdEstimate: exactUsd,
+        retopupDeadline: dl || null,
       };
     });
 
@@ -121,7 +144,7 @@ export async function GET(req: NextRequest) {
           pushedAmountUsdEstimate: pushedUsd,
           status: r.status || 'active',
           joinedAt: r.joinedAt,
-          retopupDeadline: r.retopupDeadline ? new Date(r.retopupDeadline).toISOString() : null,
+          retopupDeadline: toUtcIso(r.retopupDeadline),
         };
       }),
       total,

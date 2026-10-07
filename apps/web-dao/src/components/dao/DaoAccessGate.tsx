@@ -211,10 +211,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
-  const effectiveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.055;
-  const effectiveSeatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
-    ? priceData.seatEntryTrob
-    : Math.round((300 / effectiveTrobPrice) * 100) / 100;
+  const effectiveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.037757;
+  const effectiveSeatEntryTrob = Math.max(5357.14, Math.round((300 / effectiveTrobPrice) * 100) / 100);
 
   // Synchronize local membership cache and purge stale keys
   useEffect(() => {
@@ -608,10 +606,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   if (isUnderfunded) {
     const underfundedPos = memberData?.position || '—';
     const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
-    const currentPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.055;
-    const requiredTotalTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
-      ? priceData.seatEntryTrob
-      : Math.round((300 / currentPriceUsd) * 100) / 100;
+    const currentPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.037757;
+    const requiredTotalTrob = Math.max(5357.14, Math.round((300 / currentPriceUsd) * 100) / 100);
     const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
     const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * currentPriceUsd * 100) / 100;
     const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
@@ -778,8 +774,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     return <>{children}</>;
   }
 
-  // If verifying membership on first load, display clean loader instead of gate window
-  if (wallet.isConnected && activeAddress && memberLoading && !memberData && !isLocalMember) {
+  // If verifying membership on load, display clean loader instead of gate window
+  if (wallet.isConnected && activeAddress && (memberLoading || memberData === null)) {
     return (
       <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

@@ -114,8 +114,14 @@ export function useApi<T>(
   const auth = useAuthContext();
   const { fallback = null, pollMs, enabled = true } = options ?? {};
 
-  // Initial state matches server-rendered HTML exactly to prevent hydration mismatch
-  const [data, setData]       = useState<T | null>(fallback ?? null);
+  // Initial state matches server-rendered HTML or cached data in memory
+  const [data, setData]       = useState<T | null>(() => {
+    if (fallback !== null && fallback !== undefined) return fallback;
+    if (path && memoryApiCache.has(path)) {
+      return memoryApiCache.get(path) as T;
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const pollRef               = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -196,7 +202,8 @@ export function useApi<T>(
     };
   }, [fetchData, pollMs, path, enabled]);
 
-  return { data, loading, error, refetch: fetchData };
+  const isActivelyLoading = loading || (Boolean(path && enabled) && data === null && !error);
+  return { data, loading: isActivelyLoading, error, refetch: fetchData };
 }
 
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
@@ -381,14 +388,14 @@ export function useDaoStats(pollMs?: number) {
 }
 
 export const DEFAULT_TROB_PRICE: TrobPriceData = {
-  priceUsd: 0.055,
+  priceUsd: 0.037757,
   priceSource: 'trobchain-live',
   updatedAt: new Date().toISOString(),
   isStale: false,
   seatEntryUsd: 300,
-  seatEntryTrob: 5455,
+  seatEntryTrob: 7945.55,
   earningsCapUsd: 1500,
-  earningsCapTrob: 27273,
+  earningsCapTrob: 39727.73,
 };
 
 export function useTrobPrice(pollMs?: number) {
@@ -402,10 +409,10 @@ export function useDaoEvents(limit = 20, pollMs?: number) {
   return useApi<DaoEventData[]>(`/api/dao/events?limit=${limit}`, { pollMs });
 }
 
-export function useDaoMember(address: string | null) {
+export function useDaoMember(address: string | null, pollMs?: number) {
   return useApi<MemberDetailsData>(
     address ? `/api/dao/member/${address}` : null,
-    { enabled: !!address }
+    { enabled: !!address, pollMs }
   );
 }
 

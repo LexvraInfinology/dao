@@ -2,15 +2,21 @@ import { FULLNODE_RPC_URL } from '@/config/env';
 import { getActiveDaoAddress, toTronHex } from './trobAddress';
 
 const KNOWN_ERROR_SELECTORS: Record<string, string> = {
+  f499da20: 'PaymentFailed: The deposit amount is invalid or contract rejected the payment value.',
   fb8f41b2: 'PaymentFailed: The deposit amount is invalid or contract rejected the payment value.',
-  '291fc442': 'NotCapped: This seat has not reached the 5X earnings cap yet ($1,500 USD). Re-topup is only accepted after reaching the 5X limit.',
-  e2832811: 'AlreadyMember: This wallet already owns an active Genesis Council seat. Limit: 1 seat per wallet.',
+  '7d887110': 'NotCapped: This seat has not reached the 5X earnings cap yet ($1,500 USD). Re-topup is only accepted after reaching the 5X limit.',
+  '09786b09': 'RetopupWindowExpired: The 48-hour re-topup window has expired.',
+  '291fc442': 'NotMember: This wallet does not own an active council seat.',
   '810074be': 'AlreadyMember: This wallet already owns an active Genesis Council seat. Limit: 1 seat per wallet.',
+  '8acb5f27': 'QueueFull: All 100 Genesis Council seats are currently filled.',
   ca7105b4: 'QueueFull: All 100 Genesis Council seats are currently filled.',
-  b99335a0: 'RetopupWindowExpired: The 48-hour re-topup window has expired.',
-  '4c995576': 'NotMember: This wallet does not own an active council seat.',
-  f7c46006: 'Unauthorized: Caller is not authorized for this operation.',
+  b6330810: 'InvalidReservation: No active reservation found for this wallet.',
   '4e487b71': 'InvalidReservation: No active reservation found for this wallet.',
+  bcfcdc11: 'NotQualified: Wallet is not qualified or attested.',
+  '82b42900': 'Unauthorized: Caller is not authorized for this operation.',
+  '012d817c': 'MigrationClosed: Migration setup is finalized.',
+  '6e790153': 'SlotNotBlank: Member slot is not blanked.',
+  ce0a747e: 'QueueExpired: Genesis queue period has expired.',
 };
 
 export interface SimulationResult {
@@ -40,6 +46,7 @@ export async function simulateContractCall(params: {
   const hexContract = toTronHex(targetContract);
 
   try {
+    // Perform dry-run state simulation (without call_value first to avoid balance pre-check failure on read-only node)
     const res = await fetch(`${FULLNODE_RPC_URL}/wallet/triggerconstantcontract`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,7 +55,7 @@ export async function simulateContractCall(params: {
         contract_address: hexContract,
         function_selector: functionName,
         parameter: '',
-        call_value: callValueSun || 0,
+        call_value: 0,
       }),
       cache: 'no-store',
     });
@@ -92,13 +99,13 @@ export async function simulateContractCall(params: {
       const rawHex = data.constant_result?.[0] || '';
       const selector = rawHex.slice(0, 8).toLowerCase();
 
-      if (selector && KNOWN_ERROR_SELECTORS[selector]) {
-        // Special case: PaymentFailed in a zero-value/simulated dry run is expected because native value is signed by wallet
-        // PaymentFailed means all state checks (membership/not full/retopup window) passed!
-        if (selector === 'fb8f41b2') {
-          return { canProceed: true, energyEstimated: data.energy_used };
-        }
+      // Special case: PaymentFailed in a zero-value/simulated dry run is expected because native value is signed by wallet
+      // PaymentFailed means all state checks (membership/not full/retopup window/reservation) passed!
+      if (selector === 'f499da20' || selector === 'fb8f41b2') {
+        return { canProceed: true, energyEstimated: data.energy_used };
+      }
 
+      if (selector && KNOWN_ERROR_SELECTORS[selector]) {
         return {
           canProceed: false,
           errorReason: KNOWN_ERROR_SELECTORS[selector],

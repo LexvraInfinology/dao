@@ -59,9 +59,9 @@ export const LandingFooter: React.FC = () => {
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white via-white/70 to-transparent" />
       </div>
 
-      <div className="max-w-[1360px] mx-auto px-3.5 sm:px-8 lg:px-12 relative z-10">
-        {/* Frosted Glass Footer Card — Divided Structure for Institutional Look */}
-        <div className="rounded-2xl sm:rounded-3xl bg-white/90 backdrop-blur-2xl border border-white/90 shadow-[0_16px_50px_rgba(15,23,42,0.07)] p-4 sm:p-8 lg:p-12 space-y-6 sm:space-y-8">
+      <div className="max-w-[1360px] mx-auto px-2.5 min-[360px]:px-3 sm:px-8 lg:px-12 relative z-10">
+        {/* Crisp Footer Card — Institutional Look, Zero Blur Filter */}
+        <div className="rounded-2xl sm:rounded-3xl bg-white/95 sm:bg-white/90 border border-slate-200/80 shadow-[0_12px_40px_rgba(15,23,42,0.06)] p-4 sm:p-8 lg:p-12 space-y-5 sm:space-y-8">
           
           {/* 1. TOP DIVIDED SECTION: Brand Identity & Social Channels */}
           <div className="pb-5 sm:pb-6 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

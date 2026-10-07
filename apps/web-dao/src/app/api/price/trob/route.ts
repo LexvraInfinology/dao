@@ -105,7 +105,7 @@ export async function GET() {
   }
 
   // 3. Graceful fallback for offline development
-  const priceUsd = 0.055;
+  const priceUsd = 0.037757;
   const pegs = calculateTrobPegs(priceUsd);
 
   return NextResponse.json(

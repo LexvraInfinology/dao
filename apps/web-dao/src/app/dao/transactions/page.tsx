@@ -7,7 +7,7 @@ import { TransactionsMobileMetrics } from '@/components/dao/transactions/Transac
 import { TransactionsMobileList } from '@/components/dao/transactions/TransactionsMobileList';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
-import { useTransactions } from '@/hooks/useApi';
+import { useTransactions, useTrobPrice } from '@/hooks/useApi';
 
 export default function DaoTransactionsPage() {
   const wallet        = useWallet();
@@ -21,6 +21,7 @@ export default function DaoTransactionsPage() {
 
   const targetAddress = viewScope === 'my' ? activeAddress : null;
 
+  const { data: priceData } = useTrobPrice(15_000);
   const { data: txData, loading, refetch } = useTransactions(
     targetAddress,
     page,
@@ -32,7 +33,9 @@ export default function DaoTransactionsPage() {
   const transactions = txData?.transactions ?? [];
   const totalPages   = txData?.pages        ?? 1;
   const totalRecords = txData?.total        ?? transactions.length;
-  const trobPrice    = txData?.trobPriceUsd ?? txData?.bttPriceUsd ?? 0.056001;
+  const trobPrice    = priceData?.priceUsd && priceData.priceUsd > 0
+    ? priceData.priceUsd
+    : (txData?.trobPriceUsd ?? txData?.bttPriceUsd ?? 0.037757);
 
   const handleScopeChange = (scope: 'all' | 'my') => {
     setViewScope(scope);

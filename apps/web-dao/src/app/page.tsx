@@ -25,10 +25,8 @@ export default function HomePage() {
       {/* 1. Header / Navbar */}
       <LandingNavbar />
 
-      {/* Underfunded Status Banner (Prominently alerts council members if their seat is locked) */}
-      <div className="pt-20 sm:pt-24 px-4 sm:px-6 max-w-7xl mx-auto w-full z-20 relative">
-        <UnderfundedAlertBanner />
-      </div>
+      {/* Underfunded Status Banner (Renders ONLY when member has incomplete deposit, leaves 0px gap when inactive) */}
+      <UnderfundedAlertBanner className="mt-20 sm:mt-24 mb-2 px-4 sm:px-6 max-w-7xl mx-auto w-full z-20 relative" />
 
       {/* 2. Hero Section: 100 Seats. One Council A Shared Future. */}
       <LandingHero />

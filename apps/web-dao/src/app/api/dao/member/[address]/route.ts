@@ -3,6 +3,7 @@ import { queryNeon } from '../../../_lib/neonDb';
 import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from '../../../_lib/txVerifier';
 import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { toUtcIso } from '../../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,7 +135,7 @@ export async function GET(
         : parseFloat(m?.entryAmountBtt || '0');
       const entryUsd = parseFloat(m?.entryAmountUsdAtJoin || '0') || Math.round(entryTrob * 0.055 * 100) / 100;
       
-      let retopupDeadline = m?.retopupDeadline;
+      let retopupDeadline = m?.retopupDeadline ? toUtcIso(m.retopupDeadline) : null;
       if (!retopupDeadline) {
         // Start 48-hour retopup window
         retopupDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
@@ -223,7 +224,7 @@ export async function GET(
       const exactPushedUsd = isUnderfunded ? 0 : (m.status === 'capped' ? earningsCapUsd : calculateMemberEarnedUsd(onChainPos || m.position, m.status, 93));
       const isCapped = !isUnderfunded && (m.status === 'capped' || (capBtt > 0 && pushedBtt >= capBtt) || exactPushedUsd >= earningsCapUsd);
 
-      let retopupDeadline = m.retopupDeadline;
+      let retopupDeadline = toUtcIso(m.retopupDeadline);
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
 
@@ -271,6 +272,7 @@ export async function GET(
           earningsCapUsd,
           capProgressPct,
           isCapped,
+          underfunded: isUnderfunded,
           retopupDeadline,
           retopupTimeRemainingSeconds,
           entryAmountBtt: entryBtt,

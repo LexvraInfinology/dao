@@ -3,6 +3,7 @@ import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { toUtcIso } from '../../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,16 @@ export async function GET(
   }
 
   // 2. Direct Serverless Neon DB Query
-  const bttPriceUsd = 0.056;
+  let bttPriceUsd = 0.037757;
+  try {
+    const { TROB_PRICE_API_URL } = await import('@/config/env');
+    const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
+    if (pRes.ok) {
+      const pj = await pRes.json();
+      const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
+      if (Number.isFinite(p) && p > 0) bttPriceUsd = p;
+    }
+  } catch {}
   try {
     const cleanAddr = address.trim();
     const { toTrobBase58, toTronHex } = await import('@/utils/trobAddress');
@@ -127,9 +137,9 @@ export async function GET(
           joinedAt: m.joinedAt,
           registrationTimestamp: m.joinedAt,
           status: isUnderfunded ? 'underfunded' : (m.status || 'active'),
-          retopupDeadline: m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null,
-          retopupTimeRemainingSeconds: m.retopupDeadline ? Math.max(0, Math.floor((new Date(m.retopupDeadline).getTime() - Date.now()) / 1000)) : null,
-          isExpired: m.retopupDeadline ? new Date(m.retopupDeadline).getTime() < Date.now() : false,
+          retopupDeadline: toUtcIso(m.retopupDeadline),
+          retopupTimeRemainingSeconds: m.retopupDeadline ? Math.max(0, Math.floor((new Date(toUtcIso(m.retopupDeadline)!).getTime() - Date.now()) / 1000)) : null,
+          isExpired: m.retopupDeadline ? new Date(toUtcIso(m.retopupDeadline)!).getTime() < Date.now() : false,
           txHash: m.txHash,
           highestMatrixSlot: isUnderfunded ? 0 : 1,
           matrixSlots: [],

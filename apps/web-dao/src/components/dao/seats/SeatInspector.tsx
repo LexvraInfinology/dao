@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp, Loader2, Clock } from 'lucide-react';
 import { CouncilSeatDetail } from '@/data/councilSeatsData';
 import { TrobPriceData } from '@/hooks/useApi';
 import { getExplorerAddressUrl } from '@/utils/explorer';
@@ -12,6 +12,9 @@ interface SeatInspectorProps {
   onClose?: () => void;
   onMintSeat?: (seatNumber: number) => void;
   onRetopup?: () => void;
+  isMemberLoading?: boolean;
+  isSeatsLoading?: boolean;
+  walletConnected?: boolean;
 }
 
 export const SeatInspector: React.FC<SeatInspectorProps> = ({
@@ -20,8 +23,27 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   onClose,
   onMintSeat,
   onRetopup,
+  isMemberLoading = false,
+  isSeatsLoading = false,
+  walletConnected = false,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [, setTick] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatCountdown = (deadlineIso?: string | null) => {
+    if (!deadlineIso) return '48h 00m 00s';
+    const diffMs = new Date(deadlineIso).getTime() - Date.now();
+    if (diffMs <= 0) return 'Window Expired';
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  };
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(seat.ownerAddress);
@@ -29,11 +51,34 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (isSeatsLoading) {
+    return (
+      <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
+        <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EEF9]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#4F6D87]">
+            SEAT INSPECTOR
+          </span>
+          <span className="text-xs text-[#0E62E4] font-medium flex items-center gap-1.5">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Syncing Seat Data...</span>
+          </span>
+        </div>
+        <div className="space-y-3 py-6">
+          <div className="h-6 w-3/4 bg-blue-50/80 rounded-lg animate-pulse" />
+          <div className="h-4 w-1/2 bg-blue-50/50 rounded-lg animate-pulse" />
+          <div className="h-20 bg-slate-50 rounded-xl border border-slate-100 animate-pulse" />
+          <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
 
   const entryFeeUsd = 300;
-  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
-  const seatEntryTrob = priceData?.seatEntryTrob ?? Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.037757;
+  const rawSeatEntryTrob = Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const seatEntryTrob = Math.max(5357.14, rawSeatEntryTrob);
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
   const alreadyPaidTrob = seat.alreadyPaidTrob ?? 0;
   const remainingTrob = seat.remainingTrob && seat.remainingTrob > 0
@@ -92,17 +137,48 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         </span>
       </div>
 
+      {/* 5X Capped Alert Box */}
+      {seat.statusBadge === '5X Capped' && (
+        <div className="p-3.5 rounded-xl bg-rose-50/90 border border-rose-300/80 text-rose-950 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-rose-900">
+              <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>5X Earnings Cap Reached • $1,500 Earned</span>
+            </div>
+            {seat.retopupDeadline && (
+              <span className="flex items-center gap-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                <Clock className="w-3 h-3 text-rose-600 shrink-0" />
+                <span>{formatCountdown(seat.retopupDeadline)}</span>
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-rose-800 leading-relaxed">
+            {seat.status === 'mine'
+              ? 'Your seat has reached the maximum 5X payout cap. Dividends are paused. Re-topup $300 before the 48-hour window closes to reactivate your seat for the next cycle, or your seat will be vacated for queue takeover.'
+              : 'This seat reached the maximum $1,500 5X earnings cap. Dividends are paused. The owner has a 48-hour window to re-topup before the seat is vacated for queue takeover.'}
+          </p>
+        </div>
+      )}
+
       {/* Underfunded Seat Alert Box */}
       {seat.statusBadge === 'Underfunded' && (
         <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300/80 text-amber-950 space-y-2 text-xs">
-          <div className="flex items-center gap-1.5 font-bold text-amber-900">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Underfunded Seat • Remaining Deposit Required</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-amber-900">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Underfunded Seat • Deposit Deficit</span>
+            </div>
+            {seat.retopupDeadline && (
+              <span className="flex items-center gap-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>{formatCountdown(seat.retopupDeadline)}</span>
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {seat.status === 'mine'
               ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} at today's rate to activate your seat and unlock full governance & dividends.`
-              : 'This seat was reserved with a provisional deposit. The owner has a 48-hour retopup window to pay the remaining deficit, after which it will reopen for queue takeover.'}
+              : 'This seat was reserved with a provisional deposit. The owner must complete the remaining deposit before the 48-hour window closes, after which it reopens for queue takeover.'}
           </p>
           {alreadyPaidTrob > 0 && (
             <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-amber-200/70 font-semibold text-amber-900">
@@ -227,9 +303,9 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-[#4F6D87]">
-            <span>Live TROB Equivalent</span>
+            <span>Live TROB Equivalent (at ${trobPriceUsd.toFixed(4)})</span>
             <span className="font-mono font-bold text-[#14304A]">
-              ≈ {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB
+              ≈ {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
             </span>
           </div>
 
@@ -273,6 +349,11 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
             <span>Manage Seat in Member Lounge</span>
           </a>
+        ) : walletConnected && isMemberLoading ? (
+          <div className="w-full py-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-[#0E62E4] text-xs font-semibold shadow-xs flex items-center justify-center gap-2 select-none">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
+            <span>Syncing On-Chain Membership...</span>
+          </div>
         ) : isMintable && onMintSeat ? (
           <button
             type="button"

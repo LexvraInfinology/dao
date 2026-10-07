@@ -72,6 +72,7 @@ export default function DaoDashboardPage() {
   const { data: events } = useDaoEvents(5, 15_000);
 
   // ── Derived values ──────────────────────────────────────────────────────────
+  const isMemberChecking = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
   const isMember = memberData?.isMember ?? false;
   const myPosition = memberData?.position ?? null;
   const myNftId = memberData?.nftTokenId ?? null;
@@ -106,10 +107,10 @@ export default function DaoDashboardPage() {
             </p>
 
             {/* ── CTA: Member vs Non-Member ── */}
-            {memberLoading ? (
+            {isMemberChecking ? (
               <div className="flex items-center gap-2 text-xs text-[#4F6D87] pt-1">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
-                <span>Checking membership…</span>
+                <span>Verifying on-chain membership…</span>
               </div>
             ) : isMember ? (
               /* Member CTA */
@@ -212,7 +213,7 @@ export default function DaoDashboardPage() {
               </div>
             )}
 
-            {!isMember && !memberLoading && (
+            {!isMember && !isMemberChecking && (
               <div className="pt-1 flex items-center gap-1.5 text-[11px] font-medium text-[#4F6D87]">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#1F8A5B]" />
                 <span>Zero Referrals Required &bull; 100 Sovereign Seats</span>
@@ -306,10 +307,10 @@ export default function DaoDashboardPage() {
 
           {/* Mobile CTA */}
           <div className="pt-1">
-            {memberLoading ? (
+            {isMemberChecking ? (
               <div className="flex items-center justify-center gap-2 text-xs text-[#4F6D87] py-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
-                <span>Checking membership…</span>
+                <span>Verifying on-chain membership…</span>
               </div>
             ) : isMember ? (
               <div className="space-y-2">

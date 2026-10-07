@@ -11,6 +11,7 @@ import {
   LogOut,
   Copy,
   CheckCheck,
+  Loader2,
 } from 'lucide-react';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
 import { useWallet } from '@/context/WalletContext';
@@ -109,8 +110,9 @@ export const LandingNavbar: React.FC = () => {
   ) : '';
 
   const shortAddress = shortenAddress(displayAddress) || 'Connected';
-  const { data: memberData } = useDaoMember(displayAddress);
+  const { data: memberData, loading: memberLoading } = useDaoMember(displayAddress);
 
+  const isMemberLoading = Boolean(isConnected && displayAddress && (memberLoading || memberData === null));
   const isSeatMember = Boolean(
     memberData?.isMember ||
     (memberData?.position && memberData.position > 0) ||
@@ -223,7 +225,12 @@ export const LandingNavbar: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="whitespace-nowrap select-none">{shortAddress}</span>
                   </button>
-                  {isSeatMember ? (
+                  {isMemberLoading ? (
+                    <div className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-semibold text-xs text-[#0E62E4] bg-blue-50/80 border border-blue-200/80 flex items-center gap-2 shrink-0 select-none">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
+                      <span>Syncing...</span>
+                    </div>
+                  ) : isSeatMember ? (
                     <Link
                       href="/dao"
                       className="h-9 xl:h-10 px-3.5 xl:px-4 rounded-xl font-semibold text-xs uppercase tracking-[0.05em] text-white bg-[#0B132B] hover:bg-[#1E293B] shadow-xs transition-all duration-200 flex items-center gap-1.5 group shrink-0 whitespace-nowrap"
@@ -254,6 +261,11 @@ export const LandingNavbar: React.FC = () => {
                   <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                   <span>Connect</span>
                 </button>
+              ) : isMemberLoading ? (
+                <div className="whitespace-nowrap h-8 min-[360px]:h-8.5 sm:h-9 px-2.5 min-[360px]:px-3 rounded-lg sm:rounded-xl font-semibold text-[10px] min-[360px]:text-[11px] text-[#0E62E4] bg-blue-50 border border-blue-200/80 flex items-center gap-1.5 shrink-0 select-none">
+                  <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" />
+                  <span>Syncing</span>
+                </div>
               ) : (
                 <Link
                   href="/dao"
@@ -394,7 +406,13 @@ export const LandingNavbar: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full py-3 rounded-xl font-semibold text-xs sm:text-sm text-white bg-[#0B132B] hover:bg-[#1E293B] flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                   >
-                    <span>{isSeatMember ? 'Open Member Dashboard' : 'Claim Genesis Seat ($300)'}</span>
+                    <span>
+                      {isMemberLoading
+                        ? 'Syncing Membership Status...'
+                        : isSeatMember
+                        ? 'Open Member Dashboard'
+                        : 'Claim Genesis Seat ($300)'}
+                    </span>
                     <ArrowUpRight className="w-4 h-4" />
                   </Link>
                   <button

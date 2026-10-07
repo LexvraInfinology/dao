@@ -55,26 +55,26 @@ export const LandingQueueArena: React.FC = () => {
         {/* Top Header Block */}
         <div className="text-center max-w-3xl mx-auto space-y-2.5 sm:space-y-4">
           {/* Pill Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-blue-200/90 shadow-sm backdrop-blur-md">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/90 shadow-xs">
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
               The Genesis Queue
             </span>
           </div>
 
           {/* Heading */}
-          <h2 className="text-xl sm:text-3xl lg:text-[42px] font-extrabold uppercase text-[#0B132B] leading-tight tracking-tight drop-shadow-[0_1px_8px_rgba(255,255,255,0.75)]">
+          <h2 className="text-xl sm:text-3xl lg:text-[42px] font-black uppercase text-[#0B132B] leading-tight tracking-tight [text-shadow:0_1px_2px_rgba(255,255,255,0.95)]">
             100 Seats<br />
             <span className="text-[#155EEF]">One Genesis Queue.</span>
           </h2>
 
           {/* Subtitle */}
-          <p className="text-xs sm:text-base text-[#1D2939] font-medium leading-relaxed max-w-2xl mx-auto drop-shadow-[0_1px_6px_rgba(255,255,255,0.85)]">
+          <p className="text-xs sm:text-base text-[#0F172A] font-semibold leading-relaxed max-w-2xl mx-auto [text-shadow:0_1px_1px_rgba(255,255,255,0.9)]">
             Every seat enters a transparent FIFO queue. Automated cashback distribution via smart contract. No intermediaries. Ever.
           </p>
 
           {/* Desktop Status Badges */}
           <div className="hidden md:flex flex-row items-center justify-center gap-3 pt-2">
-            <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
+            <div className="px-5 py-2.5 rounded-full bg-white/95 border border-slate-200/90 shadow-xs flex items-center gap-2.5">
               <div className={`w-5 h-5 rounded-full ${isFull ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-[#155EEF]'} flex items-center justify-center font-bold text-xs`}>
                 <span className={`w-2 h-2 rounded-full ${isFull ? 'bg-amber-500' : 'bg-[#155EEF]'} animate-pulse`} />
               </div>
@@ -82,7 +82,7 @@ export const LandingQueueArena: React.FC = () => {
               <span className="text-xs text-[#64748B] font-medium">Council Membership</span>
             </div>
 
-            <div className="px-5 py-2.5 rounded-full bg-white/90 border border-slate-200/90 shadow-sm backdrop-blur-md flex items-center gap-2.5">
+            <div className="px-5 py-2.5 rounded-full bg-white/95 border border-slate-200/90 shadow-xs flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#12B76A]" />
               <span className="text-sm font-semibold text-[#0B132B]">$300 Entry = 300 / N Equal Split</span>
               <span className="text-xs text-[#027A48] font-medium">Smart Contract Verified</span>
@@ -110,12 +110,12 @@ export const LandingQueueArena: React.FC = () => {
           </div>
         </div>
 
-        {/* 4 Floating Glass Cards: 2x2 grid on mobile, 4-col on desktop */}
+        {/* 4 Floating Cards: 2x2 grid on mobile, 4-col on desktop */}
         <div className="pt-5 sm:pt-8 md:pt-24 lg:pt-40 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
           {cards.map((c) => (
             <div
               key={c.title}
-              className="p-3 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.06)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] hover:-translate-y-1 transition-all duration-200 space-y-1.5 sm:space-y-2.5"
+              className="p-3 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl bg-white/95 sm:bg-white/90 border border-slate-200/80 shadow-[0_8px_24px_rgba(15,23,42,0.06)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] hover:-translate-y-1 transition-all duration-200 space-y-1.5 sm:space-y-2.5"
             >
               <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#EFF8FF] border border-[#D1E9FF] flex items-center justify-center shrink-0">
                 {c.icon}

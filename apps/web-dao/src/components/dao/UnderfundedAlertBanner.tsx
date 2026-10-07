@@ -69,9 +69,9 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
 
   const position = memberData.position || '—';
   const entryTrob = memberData.entryAmountTrob ?? memberData.entryAmountBtt ?? 1.5;
-  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * 0.056 * 100) / 100;
-  const priceUsd = price?.priceUsd || 0.056;
-  const requiredTrob = price?.seatEntryTrob || Math.round((300 / priceUsd) * 100) / 100;
+  const priceUsd = price?.priceUsd || 0.037757;
+  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * priceUsd * 100) / 100;
+  const requiredTrob = Math.max(5357.14, Math.round((300 / priceUsd) * 100) / 100);
   const remainingTrob = Math.max(0, Math.round((requiredTrob - entryTrob) * 100) / 100);
 
   return (

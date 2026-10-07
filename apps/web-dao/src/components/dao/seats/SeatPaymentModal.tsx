@@ -45,8 +45,9 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
   // Pricing calculations pegged to $300 USD
   const entryFeeUsd = 300;
-  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.056;
-  const seatEntryTrob = priceData?.seatEntryTrob ?? Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.037757;
+  const rawSeatEntryTrob = Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
+  const seatEntryTrob = Math.max(5357.14, rawSeatEntryTrob);
   const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
 
   // Instant cashback formula: $300 / position

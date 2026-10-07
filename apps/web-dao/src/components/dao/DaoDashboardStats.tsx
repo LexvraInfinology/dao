@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, Clock, ShieldCheck, Wallet, Shield } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Wallet, Shield, Loader2 } from 'lucide-react';
 import { useDaoStats, useTrobPrice, useDaoMember } from '@/hooks/useApi';
 import { useAuthContext } from '@/context/AuthContext';
 import { useWallet } from '@/context/WalletContext';
@@ -56,7 +56,8 @@ export function DaoDashboardStats() {
   const auth = useAuthContext();
   const wallet = useWallet();
   const activeAddress = wallet.base58Address || wallet.hexAddress;
-  const { data: memberData } = useDaoMember(activeAddress);
+  const { data: memberData, loading: memberLoading } = useDaoMember(activeAddress);
+  const isMemberLoading = Boolean(activeAddress && (memberLoading || memberData === null));
 
   const cd = useCountdown();
 
@@ -77,7 +78,7 @@ export function DaoDashboardStats() {
     setActiveSlide(idx);
   };
 
-  const isStatsLoaded = stats !== null && stats !== undefined && (!statsLoading || (stats.memberCount || 0) > 0);
+  const isStatsLoaded = !statsLoading && stats !== null && stats !== undefined && stats.memberCount !== undefined && stats.memberCount > 0;
   const seatsFilled = stats?.memberCount ?? 0;
   const seatsRemaining = stats?.remainingPositions ?? Math.max(0, 100 - seatsFilled);
   const filledPct = Math.min(100, Math.round((seatsFilled / 100) * 100));
@@ -246,25 +247,57 @@ export function DaoDashboardStats() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg shrink-0 ${
-                isMember ? 'bg-[#1F8A5B]/10 text-[#1F8A5B]' : 'bg-[#0E62E4]/10 text-[#0E62E4]'
+                isMemberLoading
+                  ? 'bg-blue-50 text-[#0E62E4]'
+                  : isMember
+                  ? 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
+                  : 'bg-[#0E62E4]/10 text-[#0E62E4]'
               }`}>
-                {isMember ? <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                {isMemberLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-[#0E62E4]" />
+                ) : isMember ? (
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                ) : (
+                  <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                )}
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#17334F] truncate">
-                {isMember ? 'Council Position' : 'Membership Status'}
+                {isMemberLoading
+                  ? 'Verifying Member...'
+                  : isMember
+                  ? 'Council Position'
+                  : 'Membership Status'}
               </span>
             </div>
 
             <span className={`text-[9.5px] sm:text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${
-              isMember
+              isMemberLoading
+                ? 'bg-blue-50 text-[#0E62E4] border-blue-200'
+                : isMember
                 ? 'bg-[#1F8A5B]/10 text-[#1F8A5B] border-[#1F8A5B]/25'
                 : 'bg-[#0E62E4]/10 text-[#0E62E4] border-[#0E62E4]/20'
             }`}>
-              {isMember ? `Seat #${myPosition}` : 'Open Entry'}
+              {isMemberLoading ? 'Syncing...' : isMember ? `Seat #${myPosition}` : 'Open Entry'}
             </span>
           </div>
 
-          {isMember ? (
+          {isMemberLoading ? (
+            /* Loading Skeleton for Member Live Economics */
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-0.5 text-left">
+              <div className="p-1.5 min-[360px]:p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12 animate-pulse h-12 flex flex-col justify-center">
+                <div className="w-10 h-3 bg-blue-100 rounded mb-1 animate-pulse" />
+                <div className="w-7 h-2 bg-blue-100/60 rounded animate-pulse" />
+              </div>
+              <div className="p-1.5 min-[360px]:p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12 animate-pulse h-12 flex flex-col justify-center">
+                <div className="w-10 h-3 bg-blue-100 rounded mb-1 animate-pulse" />
+                <div className="w-7 h-2 bg-blue-100/60 rounded animate-pulse" />
+              </div>
+              <div className="p-1.5 min-[360px]:p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12 animate-pulse h-12 flex flex-col justify-center">
+                <div className="w-10 h-3 bg-blue-100 rounded mb-1 animate-pulse" />
+                <div className="w-7 h-2 bg-blue-100/60 rounded animate-pulse" />
+              </div>
+            </div>
+          ) : isMember ? (
             /* Member Live Economics */
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-0.5 text-left">
               <div className="p-1.5 min-[360px]:p-2 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/12">
@@ -324,7 +357,9 @@ export function DaoDashboardStats() {
 
           <div className="pt-2 border-t border-[#0E62E4]/10 flex items-center justify-between text-[9.5px] sm:text-[10px] text-[#4F6D87]">
             <span className="truncate">
-              {isMember
+              {isMemberLoading
+                ? 'Syncing blockchain allocation...'
+                : isMember
                 ? (myNftId ? `Soulbound SBT #${myNftId}` : 'Active Member')
                 : 'Permanent Seat'}
             </span>

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     await queryNeon(
       `UPDATE "DaoMember"
        SET status = 'vacant', "updatedAt" = NOW()
-       WHERE LOWER(status) IN ('capped', 'expired')
+       WHERE LOWER(status) IN ('capped', 'expired', 'underfunded')
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()`
     );
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
-    let trobPriceUsd = 0.0571;
+    let trobPriceUsd = 0.037757;
     try {
       const priceRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
       if (priceRes.ok) {
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     const entryAmountUsd = 300;
-    const entryAmountTrob = Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100;
+    const entryAmountTrob = Math.max(5357.14, Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100);
     // Formula works for any seat: 300 / N (e.g. Seat #2 gets 300/2 = $150 back instantly)
     const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
     const cashbackTrob = Math.round((cashbackUsd / trobPriceUsd) * 100) / 100;

@@ -19,6 +19,7 @@ import {
   LogOut,
   ExternalLink,
   Zap,
+  Loader2,
 } from 'lucide-react';
 import { DAO_NAV_ITEMS } from '@/data/navigation';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
@@ -106,7 +107,8 @@ export const DaoSidebar: React.FC = () => {
   ) : '';
 
   const shortDisplay = shortenAddress(displayAddress);
-  const { data: memberData } = useDaoMember(displayAddress);
+  const { data: memberData, loading: memberLoading } = useDaoMember(displayAddress);
+  const isMemberLoading = Boolean(isConnected && displayAddress && (memberLoading || memberData === null));
 
   const handleConnectClick = () => {
     triggerSmartConnectWallet({
@@ -206,6 +208,11 @@ export const DaoSidebar: React.FC = () => {
                     {(memberData?.isMember && Number(memberData?.position) > 0) ? (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                         Seat #{memberData.position}
+                      </span>
+                    ) : isMemberLoading ? (
+                      <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-[#0E62E4] border border-[#0E62E4]/20 flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        <span>Syncing</span>
                       </span>
                     ) : (
                       <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-[#0E62E4] border border-[#0E62E4]/20">

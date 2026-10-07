@@ -36,11 +36,21 @@ export default function CouncilSeatsPage() {
   const activeAddress = wallet.base58Address || wallet.hexAddress;
 
   const { data: price } = useTrobPrice(30_000);
-  const { data: memberData, refetch: refetchMember } = useDaoMember(activeAddress);
+  const { data: memberData, loading: memberLoading, refetch: refetchMember } = useDaoMember(activeAddress, 15_000);
 
-  // Fetch all 100 members from live backend API
+  // Fetch all 100 members from live backend API with 15s live polling
   const { data: membersPayload, loading: membersLoading, refetch: refetchMembers } =
-    useApi<ApiMembersPayload>('/api/dao/members?page=1&limit=100');
+    useApi<ApiMembersPayload>('/api/dao/members?page=1&limit=100', { pollMs: 15_000 });
+
+  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
+  const isSeatsLoading  = Boolean(membersLoading || !membersPayload);
+
+  // Live real-time tick to auto-evaluate 48h expiration in real time
+  const [clockTick, setClockTick] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setClockTick(Date.now()), 5_000);
+    return () => clearInterval(t);
+  }, []);
 
   const [notification, setNotification] = useState<string | null>(null);
   const [minting, setMinting]           = useState(false);
@@ -53,9 +63,9 @@ export default function CouncilSeatsPage() {
     const rawMembers = membersPayload?.members ?? [];
     const bttPrice = membersPayload?.bttPriceUsd ?? price?.priceUsd ?? 0;
     return buildLiveCouncilSeats(rawMembers, activeAddress, bttPrice);
-  }, [membersPayload, activeAddress, price?.priceUsd]);
+  }, [membersPayload, activeAddress, price?.priceUsd, clockTick]);
 
-  // Default selected seat: user's own seat → or next available → or first seat
+  // Default selected seat: user's own seat → or next available (lowest 1-100) → or defaulted → or first seat
   // Strictly verified on-chain: non-members NEVER receive a false seat allocation!
   const isUnderfundedMember = Boolean(memberData?.status === 'underfunded' || memberData?.underfunded);
   const isRealMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0 && !isUnderfundedMember);
@@ -66,10 +76,11 @@ export default function CouncilSeatsPage() {
       const foundMine = seats.find((s) => s.seatNumber === mySeatNumber);
       if (foundMine) return foundMine;
     }
+    const next = seats.find((s) => s.status === 'next');
+    if (next) return next;
     const defaulted = seats.find((s) => s.status === 'defaulted');
     if (defaulted) return defaulted;
-    const next = seats.find((s) => s.status === 'next');
-    return next ?? seats[0];
+    return seats[0];
   }, [seats, mySeatNumber]);
 
   const [selectedSeat, setSelectedSeat] = useState<CouncilSeatDetail>(defaultSeat);
@@ -84,6 +95,10 @@ export default function CouncilSeatsPage() {
 
   // ── Initiate seat claim modal with Anti-Sybil & SR vote pre-checks ────────
   const handleOpenClaimModal = async (seatNumber: number) => {
+    if (isMemberLoading) {
+      setMintErr('Synchronizing your on-chain membership. Please wait a moment...');
+      return;
+    }
     if (isUnderfundedMember) {
       setMintErr(`Council Seat #${memberData!.position} is registered to this wallet but underfunded. You cannot mint a second seat. Please complete Re-topup to unlock your seat.`);
       return;
@@ -128,7 +143,8 @@ export default function CouncilSeatsPage() {
     setMintErr(null);
     setMinting(true);
 
-    const seatEntryTrob = price?.seatEntryTrob ?? Math.round((300 / (price?.priceUsd || 0.056)) * 100) / 100;
+    const rawTrob = Math.round((300 / (price?.priceUsd || 0.037757)) * 100) / 100;
+    const seatEntryTrob = Math.max(5357.14, rawTrob);
     // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
     if (seatEntryTrob < 4500) {
       throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
@@ -186,9 +202,8 @@ export default function CouncilSeatsPage() {
       }
 
       // 2. Synchronize database via API with Anti-Sybil device fingerprint
-      const apiUrl = 'https://api.equorafidao.com';
       const deviceFingerprint = await getDeviceFingerprint();
-      const res = await fetch(`${apiUrl}/api/dao/claim`, {
+      let res = await fetch('/api/dao/claim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,7 +216,29 @@ export default function CouncilSeatsPage() {
           deviceFingerprint,
           termsAccepted: true,
         }),
-      });
+      }).catch(() => null);
+
+      if (!res) {
+        res = await fetch('https://api.equorafidao.com/api/dao/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-device-fingerprint': deviceFingerprint,
+          },
+          body: JSON.stringify({
+            address: activeAddr,
+            txHash: txId,
+            position: seatNumber,
+            deviceFingerprint,
+            termsAccepted: true,
+          }),
+        }).catch(() => null);
+      }
+
+      if (!res) {
+        throw new Error('Unable to contact server to synchronize membership. Your on-chain transaction succeeded: ' + txId);
+      }
+
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || 'Failed to register membership.');
@@ -235,35 +272,52 @@ export default function CouncilSeatsPage() {
       {/* Connected Wallet Status Banner — 100% Direct Blockchain Sync Indicator */}
       {wallet.isConnected && !isUnderfundedMember && (
         <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
-          isRealMember
+          isMemberLoading
+            ? 'bg-[#F7FBFF] border-blue-200 text-[#14304A]'
+            : isRealMember
             ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
             : 'bg-[#F7FBFF] border-[#E2EEF9] text-[#14304A]'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              isRealMember ? 'bg-emerald-500 text-white' : 'bg-[#0E62E4] text-white'
+              isMemberLoading ? 'bg-[#0E62E4] text-white' : isRealMember ? 'bg-emerald-500 text-white' : 'bg-[#0E62E4] text-white'
             }`}>
-              {isRealMember ? <Check className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+              {isMemberLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : isRealMember ? (
+                <Check className="w-5 h-5" />
+              ) : (
+                <ShieldCheck className="w-5 h-5" />
+              )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold font-sans">
-                  {isRealMember
+                  {isMemberLoading
+                    ? 'Verifying Council Membership...'
+                    : isRealMember
                     ? `Active Council Member (Seat #${memberData!.position})`
-                    : 'Non-Member · 0 Seats Claimed'}
+                    : 'Connected Wallet · Available for Seat Claim'}
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white border border-current/20 font-semibold">
-                  Blockchain Synced
+                  {isMemberLoading ? 'Syncing...' : 'Blockchain Synced'}
                 </span>
               </div>
               <p className="text-[11px] text-[#4F6D87] truncate">
-                {isRealMember
+                {isMemberLoading
+                  ? `Verifying on-chain sovereign seat allocation for ${activeAddress}...`
+                  : isRealMember
                   ? `Wallet ${activeAddress} is verified on the smart contract for Seat #${memberData!.position}. Limit: 1 seat per wallet/device.`
                   : `Connected: ${activeAddress}. You do not own a seat yet. You may claim 1 vacant seat below ($300 USD).`}
               </p>
             </div>
           </div>
-          {isRealMember ? (
+          {isMemberLoading ? (
+            <div className="shrink-0 text-[11px] font-semibold text-[#0E62E4] bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 text-center flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Syncing Dynamic Data...</span>
+            </div>
+          ) : isRealMember ? (
             <a
               href="/dao/lounge"
               className="shrink-0 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all text-center"
@@ -278,22 +332,39 @@ export default function CouncilSeatsPage() {
         </div>
       )}
 
-      {/* Loading overlay */}
-      {membersLoading && (
+      {/* Background refresh indicator when payload already exists */}
+      {!isSeatsLoading && membersLoading && (
         <div className="flex items-center gap-2 text-xs text-[#4F6D87] font-sans">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
-          <span>Syncing live seat state from database…</span>
+          <span>Refreshing live seat state from database…</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Council Grid */}
         <div className="lg:col-span-8 space-y-6">
-          <CouncilGrid
-            seats={seats}
-            selectedSeat={selectedSeat}
-            onSelectSeat={setSelectedSeat}
-          />
+          {isSeatsLoading ? (
+            <div className="p-8 sm:p-12 rounded-2xl bg-white border border-[#E2EEF9] shadow-[0_2px_12px_rgba(14,98,228,0.06)] flex flex-col items-center justify-center space-y-4 min-h-[480px]">
+              <div className="w-12 h-12 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shadow-xs">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+              <div className="text-center space-y-1">
+                <div className="text-sm sm:text-base font-bold text-[#14304A]">Syncing Sovereign Council Seats...</div>
+                <p className="text-xs text-[#4F6D87]">Fetching live on-chain allocations and dynamic seat ownership from blockchain.</p>
+              </div>
+              <div className="grid grid-cols-10 gap-1.5 sm:gap-2 w-full max-w-md pt-3 opacity-30">
+                {Array.from({ length: 30 }).map((_, i) => (
+                  <div key={i} className="aspect-square rounded-lg bg-[#E2EEF9] animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <CouncilGrid
+              seats={seats}
+              selectedSeat={selectedSeat}
+              onSelectSeat={setSelectedSeat}
+            />
+          )}
           <div className="hidden lg:block">
             <CouncilRecentActivity />
           </div>
@@ -321,8 +392,11 @@ export default function CouncilSeatsPage() {
           <SeatInspector
             seat={selectedSeat}
             priceData={price}
-            onMintSeat={minting || memberData?.isMember ? undefined : handleOpenClaimModal}
+            onMintSeat={minting || isMemberLoading || isSeatsLoading || memberData?.isMember ? undefined : handleOpenClaimModal}
             onRetopup={() => setRetopupModalOpen(true)}
+            isMemberLoading={isMemberLoading}
+            isSeatsLoading={isSeatsLoading}
+            walletConnected={wallet.isConnected}
           />
           <CouncilAboutCard />
 
@@ -343,17 +417,19 @@ export default function CouncilSeatsPage() {
       )}
 
       {(() => {
-        const isUnderfundedSeat = Boolean(
-          memberData?.underfunded ||
-          memberData?.status === 'underfunded' ||
-          selectedSeat.statusBadge === 'Underfunded'
-        );
+        const isUnderfundedSeat = selectedSeat.statusBadge === '5X Capped'
+          ? false
+          : Boolean(
+              selectedSeat.statusBadge === 'Underfunded' ||
+              memberData?.underfunded ||
+              memberData?.status === 'underfunded'
+            );
         return (
           <RetopupModal
             isOpen={retopupModalOpen}
             onClose={() => setRetopupModalOpen(false)}
             seatPosition={memberData?.position || selectedSeat.seatNumber}
-            retopupDeadline={memberData?.retopupDeadline}
+            retopupDeadline={memberData?.retopupDeadline || selectedSeat.retopupDeadline}
             trobPriceUsd={price?.priceUsd}
             alreadyPaidTrob={isUnderfundedSeat ? (memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? selectedSeat.alreadyPaidTrob ?? 0) : 0}
             isUnderfunded={isUnderfundedSeat}

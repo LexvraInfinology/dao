@@ -73,12 +73,12 @@ export const LandingMovement: React.FC = () => {
                 />
 
                 {/* Floating Badge Top Right: 100 SEATS ONLY */}
-                <div className="absolute top-3 right-3 sm:top-6 sm:right-6 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-[#155EEF] text-white text-[9px] sm:text-[11px] font-semibold uppercase tracking-wider shadow-[0_4px_16px_rgba(21,94,239,0.5)] border border-blue-400/50 backdrop-blur-md">
+                <div className="absolute top-3 right-3 sm:top-6 sm:right-6 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-[#155EEF] text-white text-[9px] sm:text-[11px] font-semibold uppercase tracking-wider shadow-[0_4px_16px_rgba(21,94,239,0.5)] border border-blue-400/50">
                   100 SEATS ONLY
                 </div>
 
                 {/* Floating Card Bottom Left: Multiverse */}
-                <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-white/80 shadow-[0_10px_25px_rgba(0,0,0,0.15)] flex items-center gap-2">
+                <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/95 border border-white/80 shadow-[0_10px_25px_rgba(0,0,0,0.15)] flex items-center gap-2">
                   <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-[#0052FF] flex items-center justify-center shadow-xs">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>

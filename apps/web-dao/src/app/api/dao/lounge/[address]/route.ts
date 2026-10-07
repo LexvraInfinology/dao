@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { toUtcIso } from '../../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,13 +40,22 @@ export async function GET(
         activeCount = Math.max(1, dbActive + (d.isCapped ? 1 : 0));
       } catch {}
       d.retopupCashbackUsd = parseFloat((300 / activeCount).toFixed(2));
-      d.retopupCashbackTrob = Math.round((d.retopupCashbackUsd / (d.bttPriceUsd || 0.056)) * 100) / 100;
+      d.retopupCashbackTrob = Math.round((d.retopupCashbackUsd / (d.bttPriceUsd || 0.037757)) * 100) / 100;
       d.activeMembersCount = activeCount;
     }
     return NextResponse.json(backendRes);
   }
 
-  const bttPriceUsd = 0.0572;
+  let bttPriceUsd = 0.037757;
+  try {
+    const { TROB_PRICE_API_URL } = await import('@/config/env');
+    const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
+    if (pRes.ok) {
+      const pJson = await pRes.json();
+      const pVal = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd);
+      if (Number.isFinite(pVal) && pVal > 0) bttPriceUsd = pVal;
+    }
+  } catch {}
   const earningsCapUsd = 1500;
   const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
 
@@ -84,10 +94,14 @@ export async function GET(
         data: {
           isMember: true,
           status: 'underfunded',
+          underfunded: true,
           position: m.position,
           accessGranted: false,
           totalReceivedUsd: 0,
           totalReceivedBtt: 0,
+          entryAmountTrob: entryTrob,
+          entryAmountBtt: entryTrob,
+          retopupDeadline: toUtcIso(m.retopupDeadline),
           notice: `Incomplete Entry Deposit: Council Seat #${m.position} was activated with only ${entryTrob} TROB (~$${entryUsd}). A full $300 USD deposit is required to unlock Council Governance, Matrix Pools & VIP Lounge access.`,
         },
       });
@@ -143,7 +157,7 @@ export async function GET(
       const exactPushedUsd = isUnderfunded ? 0 : (m.status === 'capped' ? earningsCapUsd : calculateMemberEarnedUsd(m.position, m.status, 93));
       const isCapped = !isUnderfunded && (m.status === 'capped' || pushedBtt >= capBtt || exactPushedUsd >= earningsCapUsd);
       const pushedUsd = isCapped ? earningsCapUsd : exactPushedUsd;
-      let retopupDeadline = m.retopupDeadline ? new Date(m.retopupDeadline).toISOString() : null;
+      let retopupDeadline = toUtcIso(m.retopupDeadline);
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
 

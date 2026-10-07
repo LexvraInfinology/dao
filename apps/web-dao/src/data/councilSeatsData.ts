@@ -16,6 +16,7 @@ export interface CouncilSeatDetail {
   claimedDate?: string;
   alreadyPaidTrob?: number;
   remainingTrob?: number;
+  retopupDeadline?: string | null;
 }
 
 export interface CouncilActivityItem {
@@ -36,6 +37,20 @@ export interface RawMemberData {
   pushedAmountUsdEstimate?: number;
   status?: string;
   joinedAt?: string;
+  retopupDeadline?: string | null;
+}
+
+/**
+ * Checks whether a seat is vacant, defaulted, blank, or has an expired 48h retopup window.
+ */
+export function isSeatExpired(m?: RawMemberData): boolean {
+  if (!m) return true;
+  const st = (m.status || '').toLowerCase();
+  if (st === 'blank' || st === 'defaulted' || st === 'vacant') return true;
+  if ((st === 'capped' || st === 'underfunded') && m.retopupDeadline) {
+    return new Date(m.retopupDeadline).getTime() <= Date.now();
+  }
+  return false;
 }
 
 /**
@@ -56,7 +71,7 @@ export function buildLiveCouncilSeats(
   let lowestVacantSeat: number | null = null;
   for (let s = 1; s <= 100; s++) {
     const m = memberMap.get(s);
-    if (!m || m.status === 'blank' || m.status === 'defaulted' || m.status === 'vacant') {
+    if (isSeatExpired(m)) {
       lowestVacantSeat = s;
       break;
     }
@@ -70,7 +85,7 @@ export function buildLiveCouncilSeats(
     const soulboundId = `#${String(seatNumber).padStart(4, '0')}`;
     const liveMember = memberMap.get(seatNumber);
 
-    const isDefaulted = !!liveMember && (liveMember.status === 'blank' || liveMember.status === 'defaulted' || liveMember.status === 'vacant');
+    const isDefaulted = !!liveMember && isSeatExpired(liveMember);
 
     if (liveMember && !isDefaulted) {
       const isMine =
@@ -79,11 +94,13 @@ export function buildLiveCouncilSeats(
       const isCapped = liveMember.status === 'capped';
       const isUnderfunded = liveMember.status === 'underfunded';
       const entryTrob = liveMember.entryAmountTrob ?? liveMember.entryAmountBtt ?? 0;
-      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.056;
-      const fullRequiredTrob = Math.round((300 / effectiveTrobPrice) * 100) / 100;
+      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.037757;
+      const rawFullRequiredTrob = Math.round((300 / effectiveTrobPrice) * 100) / 100;
+      const fullRequiredTrob = Math.max(5357.14, rawFullRequiredTrob);
       const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
-      const exactEarnedUsd = calculateMemberEarnedUsd(seatNumber, liveMember.status, 93);
+      const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 93;
+      const exactEarnedUsd = calculateMemberEarnedUsd(seatNumber, liveMember.status, activeCount);
       const earningsUsd = isUnderfunded ? 0 : isCapped ? 1500 : (exactEarnedUsd > 0 ? exactEarnedUsd : (liveMember.pushedAmountUsdEstimate ?? 0));
       const capPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((earningsUsd / 1500) * 100));
 
@@ -130,6 +147,7 @@ export function buildLiveCouncilSeats(
               year: 'numeric',
             })
           : 'Genesis',
+        retopupDeadline: liveMember.retopupDeadline ? String(liveMember.retopupDeadline) : null,
       };
     }
 
@@ -146,7 +164,7 @@ export function buildLiveCouncilSeats(
           : 'Next in Queue • Ready for Instant Mint',
         statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Next Available',
         soulboundId,
-        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
+        entryAmount: `$300 USD (≈ ${Math.max(5357.14, Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.037757))).toLocaleString()} TROB)`,
       };
     }
 
@@ -161,7 +179,7 @@ export function buildLiveCouncilSeats(
         statusText: 'Vacant Seat • 48h Retopup Expired',
         statusBadge: 'Defaulted Vacancy',
         soulboundId,
-        entryAmount: `$300 USD (≈ ${Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.056)).toLocaleString()} TROB)`,
+        entryAmount: `$300 USD (≈ ${Math.max(5357.14, Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.037757))).toLocaleString()} TROB)`,
       };
     }
 

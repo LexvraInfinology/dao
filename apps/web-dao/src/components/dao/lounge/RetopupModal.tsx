@@ -113,10 +113,15 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   const entryAmountUsd = 300;
   const price = (livePriceData?.priceUsd && livePriceData.priceUsd > 0)
     ? livePriceData.priceUsd
-    : (trobPriceUsd > 0 ? trobPriceUsd : 0.038);
+    : (trobPriceUsd > 0 ? trobPriceUsd : 0.037757);
   const fullRequiredTrob = Math.round((entryAmountUsd / price) * 100) / 100;
   const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
-  const retopupFeeTrob = Math.round((fullRequiredTrob - creditTrob) * 100) / 100;
+  const rawRetopupFeeTrob = Math.round((fullRequiredTrob - creditTrob) * 100) / 100;
+
+  // On-chain contract floor: requires msg.value >= entryFee (5,357.14 TROB)
+  const minContractDeltaTrob = isUnderfunded ? Math.max(0, 5357.14 - (creditTrob || 0)) : 5357.14;
+  const retopupFeeTrob = Math.max(minContractDeltaTrob, rawRetopupFeeTrob);
+
   const effectiveCashbackUsd = cashbackUsd && cashbackUsd > 0 && cashbackUsd < 300
     ? cashbackUsd
     : 3.53;
@@ -135,7 +140,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
 
     try {
       const contractAddress = getActiveDaoAddress();
-      const callValueSun = Math.round(retopupFeeTrob * 1_000_000);
+      const callValueSun = Math.ceil(retopupFeeTrob * 1_000_000);
       const targetFunction = isUnderfunded ? 'completeUnderfundedSeat()' : 'retopup()';
 
       // Pre-flight EVM dry-run simulation
@@ -198,7 +203,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         }),
       }).catch(() => null);
 
-      if (!res || !res.ok) {
+      if (!res) {
         res = await fetch('https://api.equorafidao.com/api/dao/retopup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -208,7 +213,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
             retopupFeeTrob,
             isUnderfunded,
           }),
-        });
+        }).catch(() => null);
+      }
+
+      if (!res) {
+        throw new Error('Unable to contact retopup synchronization server. Your on-chain transaction succeeded: ' + txId);
       }
 
       const data = await res.json();
@@ -448,7 +457,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Required Payment:</span>
                       <span className="font-mono text-sm text-[#0E62E4]">
-                        {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                        {retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${(retopupFeeTrob * price).toFixed(2)} USD)
                       </span>
                     </div>
 
@@ -492,8 +501,8 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <Zap className="w-4 h-4 fill-white" />
                     <span>
                       {isUnderfunded
-                        ? `Activate Seat #${seatPosition} (${retopupFeeTrob.toLocaleString()} TROB • $${netUsd} USD)`
-                        : `Confirm Re-topup ($300 USD ≈ ${fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)`}
+                        ? `Activate Seat #${seatPosition} (${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB • $${netUsd} USD)`
+                        : `Confirm Re-topup (${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB • $300.00 USD)`}
                     </span>
                     <ArrowRight className="w-4 h-4" />
                   </>

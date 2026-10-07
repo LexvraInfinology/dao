@@ -91,3 +91,5 @@ docs/Equora_Matrix_UI_UX_Designer_Guide.html
 packages/hardhat/scripts/fund-user.ts
 *.apk
 !apps/web-dao/public/downloads/trobsafe.apk
+equorafidocs/
+equorafidocs

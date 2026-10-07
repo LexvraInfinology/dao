@@ -30,7 +30,7 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
   const onChainBtt     = profile?.pushedAmountBtt || profile?.totalEarnedBtt || 0;
   const totalEarnedBtt = isUnderfunded ? 0 : isCapped ? Math.max(onChainBtt, 27530) : onChainBtt > 0 ? onChainBtt : (bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0);
 
-  const effectivePrice  = bttPrice > 0 ? bttPrice : 0.056;
+  const effectivePrice  = bttPrice > 0 ? bttPrice : 0.037757;
   const pushedUsd       = totalEarnedUsd;
   const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100))) : 0;
   const earningsCapBtt  = isMember ? (profile?.earningsCapBtt && profile.earningsCapBtt > 1500 ? profile.earningsCapBtt : Math.round(effectiveCapUsd / effectivePrice)) : 0;

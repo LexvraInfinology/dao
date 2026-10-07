@@ -153,7 +153,7 @@ export const MatrixRegisterModal: React.FC<MatrixRegisterModalProps> = ({
                 <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[#0E62E4]/15">
                   <span className="text-[#4F6D87]">Live TROB Rate:</span>
                   <span className="font-mono text-slate-600">
-                    ${price?.priceUsd?.toFixed(4) || '0.0560'} / TROB
+                    ${price?.priceUsd?.toFixed(4) || '0.0378'} / TROB
                   </span>
                 </div>
               </div>

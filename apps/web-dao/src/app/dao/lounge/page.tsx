@@ -10,7 +10,7 @@ import { ClaimableDividendsCard } from '@/components/dao/lounge/ClaimableDividen
 import { EarningsCapCard } from '@/components/dao/lounge/EarningsCapCard';
 import { IncomeChannelsCard } from '@/components/dao/lounge/IncomeChannelsCard';
 import { useWallet } from '@/context/WalletContext';
-import { useLounge } from '@/hooks/useApi';
+import { useLounge, useTrobPrice } from '@/hooks/useApi';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { Lock, ShieldAlert } from 'lucide-react';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
@@ -19,6 +19,11 @@ export default function MemberLoungePage() {
   const wallet     = useWallet();
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: lounge, loading } = useLounge(activeAddress);
+  const { data: priceData } = useTrobPrice(15_000);
+
+  const livePrice = priceData?.priceUsd && priceData.priceUsd > 0
+    ? priceData.priceUsd
+    : (lounge?.bttPriceUsd || 0.037757);
 
   const isUnderfunded = Boolean(
     lounge?.status === 'underfunded' ||
@@ -99,8 +104,8 @@ export default function MemberLoungePage() {
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
               pushedAmountUsd={pushedUsd}
-              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
-              priceUsd={lounge?.bttPriceUsd || 0.056}
+              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / livePrice)}
+              priceUsd={livePrice}
               walletAddress={activeAddress ?? undefined}
               isCapped={lounge?.isCapped}
             />
@@ -109,7 +114,7 @@ export default function MemberLoungePage() {
               capProgressPct={capProgressPct}
               pushedUsd={pushedUsd}
               earningsCapUsd={earningsCapUsd}
-              trobPriceUsd={lounge?.trobPriceUsd ?? lounge?.bttPriceUsd}
+              trobPriceUsd={livePrice}
               isCapped={lounge?.isCapped}
               retopupDeadline={lounge?.retopupDeadline}
               retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
@@ -132,7 +137,7 @@ export default function MemberLoungePage() {
           capProgressPct={capProgressPct}
           pushedUsd={pushedUsd}
           earningsCapUsd={earningsCapUsd}
-          trobPriceUsd={lounge?.trobPriceUsd ?? lounge?.bttPriceUsd}
+          trobPriceUsd={livePrice}
           isCapped={lounge?.isCapped}
           retopupDeadline={lounge?.retopupDeadline}
           retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
@@ -146,8 +151,8 @@ export default function MemberLoungePage() {
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
           pushedAmountUsd={pushedUsd}
-          pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / (lounge?.bttPriceUsd || 0.056))}
-          priceUsd={lounge?.bttPriceUsd || 0.056}
+          pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / livePrice)}
+          priceUsd={livePrice}
           walletAddress={activeAddress ?? undefined}
           isCapped={lounge?.isCapped}
         />

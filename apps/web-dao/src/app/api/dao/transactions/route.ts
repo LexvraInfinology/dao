@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const searchQuery = (searchParams.get('search') || '').trim().toLowerCase();
 
     // 1. Fetch live market price for accurate USD calculations
-    let trobPriceUsd = 0.0565;
+    let trobPriceUsd = 0.037757;
     try {
       const pRes = await fetch(TROB_PRICE_API_URL, {
         signal: AbortSignal.timeout(1200),

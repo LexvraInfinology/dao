@@ -160,24 +160,24 @@ export const LandingLiveActivity: React.FC = () => {
           fill
           sizes="100vw"
           loading="lazy"
-          className="object-cover object-[92%_top] sm:object-[90%_center] lg:object-[right_center] xl:object-right"
+          className="object-cover object-[88%_bottom] sm:object-[90%_center] lg:object-[right_center] xl:object-right"
         />
       </div>
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
         {/* Header Block — Clean, responsive, high contrast */}
-        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-10 lg:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-blue-200/90 shadow-sm backdrop-blur-md mb-2 sm:mb-2.5">
+        <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-10 lg:mb-12">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/90 shadow-xs mb-2 sm:mb-2.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
               LIVE ACTIVITY
             </span>
           </div>
-          <h2 className="text-xl min-[360px]:text-2xl sm:text-3xl lg:text-[42px] font-extrabold uppercase text-[#0B132B] leading-tight tracking-tight drop-shadow-[0_1px_8px_rgba(255,255,255,0.75)]">
+          <h2 className="text-xl min-[360px]:text-2xl sm:text-3xl lg:text-[42px] font-black uppercase text-[#0B132B] leading-tight tracking-tight [text-shadow:0_1px_2px_rgba(255,255,255,0.95)]">
             The Genesis Queue Is<br />
             <span className="text-[#155EEF]">Always Moving.</span>
           </h2>
-          <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-base text-[#1D2939] font-medium leading-relaxed drop-shadow-[0_1px_6px_rgba(255,255,255,0.85)] max-w-xl mx-auto">
+          <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-base text-[#0F172A] font-semibold leading-relaxed max-w-xl mx-auto [text-shadow:0_1px_1px_rgba(255,255,255,0.9)]">
             Track seat deposits, queue distributions, and Genesis DAO activity in real time.
           </p>
         </div>
@@ -186,7 +186,7 @@ export const LandingLiveActivity: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center max-w-[1400px] mx-auto">
           {/* Activity Card — Wide, luxurious layout on laptops, fully responsive on mobile */}
           <div className="lg:col-span-8 xl:col-span-8 2xl:col-span-8 relative z-20 w-full max-w-2xl lg:max-w-none mx-auto lg:mx-0">
-            <div className="bg-white/90 sm:bg-white/85 backdrop-blur-xl border border-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.08)] rounded-2xl sm:rounded-[32px] p-4 sm:p-6 lg:p-8">
+            <div className="bg-white/95 sm:bg-white/90 border border-slate-200/80 shadow-[0_12px_36px_rgba(15,23,42,0.06)] rounded-2xl sm:rounded-[32px] p-3.5 sm:p-6 lg:p-8">
               {/* Card header */}
               <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100/90">
                 <div className="flex items-center gap-2">

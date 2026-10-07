@@ -117,7 +117,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       id: 'queue_update_p2p',
       type: 'queue_update',
       title: 'Genesis Council Queue Active',
-      message: '2 / 100 Seats claimed on TrobChain. Instant 300/N cashbacks and downstream dividends active.',
+      message: 'Genesis Council seats actively claiming on TrobChain. Instant 300/N cashbacks and downstream dividends active.',
       timestamp: '3h ago',
       read: true,
       actionUrl: '/dao/seats',

@@ -1,4 +1,4 @@
-import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
 
 export type SeatStatus = 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked';
 
@@ -38,6 +38,7 @@ export interface RawMemberData {
   status?: string;
   joinedAt?: string;
   retopupDeadline?: string | null;
+  retopupCount?: number;
 }
 
 /**
@@ -99,10 +100,20 @@ export function buildLiveCouncilSeats(
       const fullRequiredTrob = Math.max(5357.14, rawFullRequiredTrob);
       const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
+      const retopupCount = liveMember.retopupCount ?? 0;
       const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 93;
-      const exactEarnedUsd = calculateMemberEarnedUsd(seatNumber, liveMember.status, activeCount);
-      const earningsUsd = isUnderfunded ? 0 : isCapped ? 1500 : (exactEarnedUsd > 0 ? exactEarnedUsd : (liveMember.pushedAmountUsdEstimate ?? 0));
-      const capPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((earningsUsd / 1500) * 100));
+
+      const eco = calculateMemberCycleAndLifetime(
+        seatNumber,
+        liveMember.status,
+        activeCount,
+        retopupCount,
+        pushedBtt,
+        effectiveTrobPrice
+      );
+
+      const capPct = isCapped ? 100 : eco.currentCycleCapPct;
+      const earningsUsd = eco.lifetimeUsd;
 
       const addr = liveMember.address;
       const shortAddr =
@@ -110,7 +121,9 @@ export function buildLiveCouncilSeats(
 
       const liveTrob = isUnderfunded ? 0 : isCapped
         ? Math.max(pushedBtt, 27530)
-        : (pushedBtt > 0 ? pushedBtt : (bttPriceUsd > 0 ? (earningsUsd / bttPriceUsd) : 0));
+        : (effectiveTrobPrice > 0 ? (earningsUsd / effectiveTrobPrice) : (pushedBtt > 0 ? pushedBtt : 0));
+
+      const cycleLabel = retopupCount > 0 ? ` (Cycle ${retopupCount + 1})` : '';
 
       return {
         seatNumber,
@@ -120,21 +133,17 @@ export function buildLiveCouncilSeats(
           ? '$0.00 USD'
           : isCapped
           ? `$1,500.00 USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
-          : liveTrob > 0
-          ? `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
-          : `$${earningsUsd.toFixed(2)} USD`,
+          : `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(earningsUsd / effectiveTrobPrice).toLocaleString()} TROB)`,
         capProgress: capPct,
         votingPower: '1.0%',
-        statusText: liveMember.status === 'capped'
+        statusText: isCapped
           ? '5X Capped • 48h Retopup Window Active'
-          : liveMember.status === 'underfunded'
+          : isUnderfunded
           ? 'Underfunded Seat • Retopup Required'
-          : liveMember.status === 'active'
-          ? 'Active & In Good Standing'
-          : liveMember.status ?? 'Active Member',
-        statusBadge: liveMember.status === 'capped'
+          : `Active & In Good Standing${cycleLabel}`,
+        statusBadge: isCapped
           ? '5X Capped'
-          : liveMember.status === 'underfunded'
+          : isUnderfunded
           ? 'Underfunded'
           : 'Active Member',
         soulboundId,
@@ -147,7 +156,7 @@ export function buildLiveCouncilSeats(
               year: 'numeric',
             })
           : 'Genesis',
-        retopupDeadline: liveMember.retopupDeadline ? String(liveMember.retopupDeadline) : null,
+        retopupDeadline: (isCapped || isUnderfunded) && liveMember.retopupDeadline ? String(liveMember.retopupDeadline) : null,
       };
     }
 

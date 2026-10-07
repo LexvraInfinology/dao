@@ -280,6 +280,8 @@ export interface MemberDetailsData {
   txHash?: string;
   underfunded?: boolean;
   entryAmountTrob?: number;
+  retopupCount?: number;
+  currentCycleUsd?: number;
   notice?: string;
 }
 
@@ -349,6 +351,8 @@ export interface LoungeData {
   bttPriceUsd: number;
   trobPriceUsd?: number;
   priceSource: string;
+  retopupCount?: number;
+  currentCycleUsd?: number;
 }
 
 export interface TransactionItem {

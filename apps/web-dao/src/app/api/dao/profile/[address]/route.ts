@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../../_lib/proxy';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
-import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
@@ -22,14 +22,47 @@ export async function GET(
   );
   if (backendRes && backendRes.success && backendRes.data && backendRes.data.isMember) {
     const d = backendRes.data;
-    const isUnderfunded = d.status === 'underfunded';
-    const isCapped = d.status === 'capped';
-    const exactPushedUsd = isUnderfunded ? 0 : isCapped ? 1500 : calculateMemberEarnedUsd(d.position, d.status, 93);
-    d.totalEarnedUsd = exactPushedUsd;
-    d.pushedAmountUsdEstimate = exactPushedUsd;
-    d.capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / 1500) * 100));
+    let dbStatus = d.status;
+    let dbDeadline = d.retopupDeadline;
+    let retopupCount = parseInt(d.retopupCount || '0', 10);
+    let pushedBtt = parseFloat(d.pushedAmountBtt || d.pushedBtt || '0');
+
+    try {
+      const dbRes = await queryNeon<any>(
+        `SELECT status, "retopupDeadline", "retopupCount", "pushedAmountBtt" FROM "DaoMember" WHERE LOWER(address) = LOWER($1) OR position = $2 LIMIT 1`,
+        [address.trim(), d.position || 0]
+      );
+      if (dbRes.rows.length > 0) {
+        const r = dbRes.rows[0];
+        dbStatus = r.status || dbStatus;
+        dbDeadline = r.retopupDeadline ? toUtcIso(r.retopupDeadline) : null;
+        retopupCount = parseInt(r.retopupCount || '0', 10);
+        pushedBtt = parseFloat(r.pushedAmountBtt || String(pushedBtt));
+      }
+    } catch {}
+
+    const isUnderfunded = dbStatus === 'underfunded';
+    const eco = calculateMemberCycleAndLifetime(
+      d.position,
+      dbStatus,
+      93,
+      retopupCount,
+      pushedBtt,
+      0.037757
+    );
+    const isCapped = !isUnderfunded && (dbStatus === 'capped' || (retopupCount === 0 ? eco.currentCycleCapPct >= 100 : eco.currentCycleCapPct >= 100));
+
+    d.status = dbStatus;
+    d.isCapped = isCapped;
+    d.retopupCount = retopupCount;
+    d.totalEarnedUsd = isCapped ? 1500 : eco.lifetimeUsd;
+    d.pushedAmountUsdEstimate = isCapped ? 1500 : eco.lifetimeUsd;
+    d.currentCycleUsd = eco.currentCycleUsd;
+    d.capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : eco.currentCycleCapPct;
+    d.retopupDeadline = (isCapped || isUnderfunded) ? dbDeadline : null;
+    d.retopupTimeRemainingSeconds = ((isCapped || isUnderfunded) && dbDeadline) ? Math.max(0, Math.floor((new Date(dbDeadline).getTime() - Date.now()) / 1000)) : null;
     if (d.poolCards && d.poolCards[0]) {
-      d.poolCards[0].pushedAmountUsd = exactPushedUsd;
+      d.poolCards[0].pushedAmountUsd = d.totalEarnedUsd;
       d.poolCards[0].progressPct = d.capProgressPct;
     }
     return NextResponse.json(backendRes);
@@ -105,11 +138,19 @@ export async function GET(
       const isCapped = m.status === 'capped';
       const pushedBtt = parseFloat(m.pushedAmountBtt || '0');
       const entryBtt = parseFloat(m.entryAmountBtt || '5357.15');
+      const retopupCount = parseInt(m.retopupCount || '0', 10);
       const earningsCapUsd = 1500;
-      const exactPushedUsd = calculateMemberEarnedUsd(m.position, m.status, 93);
-      const pushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : exactPushedUsd;
+      const eco = calculateMemberCycleAndLifetime(
+        m.position,
+        m.status,
+        93,
+        retopupCount,
+        pushedBtt,
+        bttPriceUsd
+      );
+      const pushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : eco.lifetimeUsd;
       const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
-      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((pushedUsd / earningsCapUsd) * 100));
+      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : eco.currentCycleCapPct;
 
       const nftBadges = [
         {
@@ -137,9 +178,11 @@ export async function GET(
           joinedAt: m.joinedAt,
           registrationTimestamp: m.joinedAt,
           status: isUnderfunded ? 'underfunded' : (m.status || 'active'),
-          retopupDeadline: toUtcIso(m.retopupDeadline),
-          retopupTimeRemainingSeconds: m.retopupDeadline ? Math.max(0, Math.floor((new Date(toUtcIso(m.retopupDeadline)!).getTime() - Date.now()) / 1000)) : null,
-          isExpired: m.retopupDeadline ? new Date(toUtcIso(m.retopupDeadline)!).getTime() < Date.now() : false,
+          retopupCount,
+          currentCycleUsd: eco.currentCycleUsd,
+          retopupDeadline: (isCapped || isUnderfunded) ? toUtcIso(m.retopupDeadline) : null,
+          retopupTimeRemainingSeconds: ((isCapped || isUnderfunded) && m.retopupDeadline) ? Math.max(0, Math.floor((new Date(toUtcIso(m.retopupDeadline)!).getTime() - Date.now()) / 1000)) : null,
+          isExpired: ((isCapped || isUnderfunded) && m.retopupDeadline) ? new Date(toUtcIso(m.retopupDeadline)!).getTime() < Date.now() : false,
           txHash: m.txHash,
           highestMatrixSlot: isUnderfunded ? 0 : 1,
           matrixSlots: [],

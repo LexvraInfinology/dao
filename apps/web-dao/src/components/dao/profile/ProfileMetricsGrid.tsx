@@ -16,23 +16,23 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
   const isCapped       = profile?.status === 'capped';
   const pos            = profile?.position ?? 0;
   const exactEarnedFromPos = pos > 0 ? calculateMemberEarnedUsd(pos, profile?.status, 93) : 0;
-  const rawTotalEarnedUsd = exactEarnedFromPos > 0
-    ? exactEarnedFromPos
-    : (profile?.totalEarnedUsd && profile.totalEarnedUsd > 0
-        ? profile.totalEarnedUsd
+  const rawTotalEarnedUsd = (profile?.totalEarnedUsd && profile.totalEarnedUsd > 0)
+    ? profile.totalEarnedUsd
+    : (exactEarnedFromPos > 0
+        ? exactEarnedFromPos
         : (profile?.pushedAmountUsdEstimate && profile.pushedAmountUsdEstimate > 0
             ? profile.pushedAmountUsdEstimate
             : 0));
   const totalEarnedUsd = isMember
-    ? (isUnderfunded ? 0 : isCapped ? effectiveCapUsd : Math.min(effectiveCapUsd, rawTotalEarnedUsd))
+    ? (isUnderfunded ? 0 : isCapped ? effectiveCapUsd : rawTotalEarnedUsd)
     : 0;
   const bttPrice       = profile?.bttPriceUsd    ?? 0;
   const onChainBtt     = profile?.pushedAmountBtt || profile?.totalEarnedBtt || 0;
   const totalEarnedBtt = isUnderfunded ? 0 : isCapped ? Math.max(onChainBtt, 27530) : onChainBtt > 0 ? onChainBtt : (bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0);
 
   const effectivePrice  = bttPrice > 0 ? bttPrice : 0.037757;
-  const pushedUsd       = totalEarnedUsd;
-  const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100))) : 0;
+  const pushedUsd       = (profile as any)?.currentCycleUsd ?? ((profile as any)?.retopupCount ? 0 : totalEarnedUsd);
+  const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isUnderfunded ? 0 : isCapped ? 100 : (profile?.capProgressPct !== undefined ? profile.capProgressPct : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100)))) : 0;
   const earningsCapBtt  = isMember ? (profile?.earningsCapBtt && profile.earningsCapBtt > 1500 ? profile.earningsCapBtt : Math.round(effectiveCapUsd / effectivePrice)) : 0;
   const entryAmountBtt  = isMember ? (profile?.entryAmountBtt && profile.entryAmountBtt > 300 ? profile.entryAmountBtt : Math.round(300 / effectivePrice)) : 0;
   const remainingCapUsd = isMember ? (isCapped ? 0 : Math.max(0, effectiveCapUsd - pushedUsd)) : 0;

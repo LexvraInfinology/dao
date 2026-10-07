@@ -4,7 +4,7 @@ import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
-import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
@@ -38,38 +38,54 @@ export async function GET(req: NextRequest) {
     Array.isArray(backendRes.data?.members) &&
     backendRes.data.members.length > 0
   ) {
-    const deadlineMap = new Map<number, string>();
-    const statusMap = new Map<number, string>();
+    const extraMap = new Map<number, { deadline: string | null; status: string; retopupCount: number; pushedBtt: number }>();
     try {
       const dlRes = await queryNeon<any>(
-        `SELECT position, status, "retopupDeadline" FROM "DaoMember" WHERE "retopupDeadline" IS NOT NULL OR status IN ('underfunded', 'capped', 'vacant')`
+        `SELECT position, status, "retopupDeadline", "retopupCount", "pushedAmountBtt" FROM "DaoMember"`
       );
       for (const r of dlRes.rows) {
         if (r.position) {
-          if (r.retopupDeadline) {
-            deadlineMap.set(r.position, toUtcIso(r.retopupDeadline)!);
-          }
-          if (r.status) {
-            statusMap.set(r.position, r.status);
-          }
+          extraMap.set(r.position, {
+            deadline: r.retopupDeadline ? toUtcIso(r.retopupDeadline) : null,
+            status: r.status || 'active',
+            retopupCount: parseInt(r.retopupCount || '0', 10),
+            pushedBtt: parseFloat(r.pushedAmountBtt || '0'),
+          });
         }
       }
     } catch {}
 
     // Ensure underfunded members reflect their actual provisional deposit, and all members have exact historical USD earnings
     backendRes.data.members = backendRes.data.members.map((m: any) => {
-      const effStatus = statusMap.get(m.position) || m.status;
+      const extra = extraMap.get(m.position);
+      const effStatus = extra?.status || m.status;
       const isUnderfunded = effStatus === 'underfunded';
       const trueDeposit = (m.position === 90 || m.position === 91) ? 5.0 : 1.5;
-      const exactUsd = calculateMemberEarnedUsd(m.position, effStatus, backendRes.data?.total || 93);
-      const dl = deadlineMap.get(m.position) || toUtcIso(m.retopupDeadline);
+      const retopupCount = extra?.retopupCount ?? parseInt(m.retopupCount || '0', 10);
+      const pushedBtt = extra?.pushedBtt ?? parseFloat(m.pushedAmountBtt || '0');
+
+      const eco = calculateMemberCycleAndLifetime(
+        m.position,
+        effStatus,
+        backendRes.data?.total || 93,
+        retopupCount,
+        pushedBtt,
+        cachedTrobPrice
+      );
+
+      const dl = extra ? extra.deadline : (toUtcIso(m.retopupDeadline) || null);
       return {
         ...m,
         status: effStatus,
         entryAmountBtt: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
         entryAmountTrob: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
-        pushedAmountUsdEstimate: exactUsd,
-        retopupDeadline: dl || null,
+        pushedAmountBtt: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 27529.6) : pushedBtt),
+        pushedAmountTrob: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 27529.6) : pushedBtt),
+        pushedAmountUsdEstimate: eco.lifetimeUsd,
+        currentCycleUsd: eco.currentCycleUsd,
+        currentCycleCapPct: eco.currentCycleCapPct,
+        retopupCount,
+        retopupDeadline: (effStatus === 'capped' || effStatus === 'underfunded') ? dl : null,
       };
     });
 
@@ -114,7 +130,7 @@ export async function GET(req: NextRequest) {
     ).catch(() => {});
 
     const { rows } = await queryNeon<any>(
-      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt", "retopupDeadline"
+      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt", "retopupDeadline", "retopupCount"
        FROM "DaoMember"
        WHERE LOWER(status) NOT IN ('vacant', 'blank')
        ORDER BY position ASC
@@ -130,21 +146,34 @@ export async function GET(req: NextRequest) {
     const data = {
       members: rows.map((r) => {
         const pushedAmt = parseFloat(r.pushedAmountBtt || '0');
-        const isCapped = r.status === 'capped';
-        const exactPushedUsd = calculateMemberEarnedUsd(r.position, r.status, total || 93);
-        const pushedUsd = isCapped ? 1500 : exactPushedUsd;
+        const effStatus = r.status || 'active';
+        const isCapped = effStatus === 'capped';
+        const isUnderfunded = effStatus === 'underfunded';
+        const retopupCount = parseInt(r.retopupCount || '0', 10);
+        const eco = calculateMemberCycleAndLifetime(
+          r.position,
+          effStatus,
+          total || 93,
+          retopupCount,
+          pushedAmt,
+          cachedTrobPrice
+        );
+        const dl = (isCapped || isUnderfunded) ? toUtcIso(r.retopupDeadline) : null;
         return {
           position: r.position,
           address: r.address,
           nftTokenId: r.nftTokenId,
           entryAmountBtt: parseFloat(r.entryAmountBtt || '0'),
           entryAmountTrob: parseFloat(r.entryAmountBtt || '0'),
-          pushedAmountBtt: isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt,
-          pushedAmountTrob: isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt,
-          pushedAmountUsdEstimate: pushedUsd,
-          status: r.status || 'active',
+          pushedAmountBtt: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt),
+          pushedAmountTrob: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt),
+          pushedAmountUsdEstimate: eco.lifetimeUsd,
+          currentCycleUsd: eco.currentCycleUsd,
+          currentCycleCapPct: eco.currentCycleCapPct,
+          retopupCount,
+          status: effStatus,
           joinedAt: r.joinedAt,
-          retopupDeadline: toUtcIso(r.retopupDeadline),
+          retopupDeadline: dl,
         };
       }),
       total,

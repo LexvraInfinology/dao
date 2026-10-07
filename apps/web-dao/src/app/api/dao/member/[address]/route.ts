@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from '../../../_lib/txVerifier';
 import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
-import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../../_lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
@@ -221,15 +221,26 @@ export async function GET(
       const entryBtt = parseFloat(m.entryAmountBtt || String(entryAmountBtt));
       const capBtt = entryBtt * 5;
       const isUnderfunded = m.status === 'underfunded';
-      const exactPushedUsd = isUnderfunded ? 0 : (m.status === 'capped' ? earningsCapUsd : calculateMemberEarnedUsd(onChainPos || m.position, m.status, 93));
-      const isCapped = !isUnderfunded && (m.status === 'capped' || (capBtt > 0 && pushedBtt >= capBtt) || exactPushedUsd >= earningsCapUsd);
+      const retopupCount = parseInt(m.retopupCount || '0', 10);
+
+      const eco = calculateMemberCycleAndLifetime(
+        onChainPos || m.position,
+        m.status,
+        93,
+        retopupCount,
+        pushedBtt,
+        bttPriceUsd
+      );
+
+      // Only capped if explicit status is capped, or if cycle earnings reach $1,500
+      const isCapped = !isUnderfunded && (m.status === 'capped' || (retopupCount === 0 ? (pushedBtt >= capBtt || eco.currentCycleCapPct >= 100) : eco.currentCycleCapPct >= 100));
 
       let retopupDeadline = toUtcIso(m.retopupDeadline);
       let retopupTimeRemainingSeconds: number | null = null;
       let isExpired = false;
 
-      if (isCapped && !retopupDeadline) {
-        // Start 48-hour retopup window on cap hit
+      // Start 48-hour retopup window on cap hit ONLY if the member is actually capped and not already active
+      if (isCapped && !retopupDeadline && m.status !== 'active') {
         retopupDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
         await queryNeon(
           `UPDATE "DaoMember"
@@ -239,7 +250,7 @@ export async function GET(
         );
       }
 
-      if (retopupDeadline) {
+      if (retopupDeadline && (isCapped || isUnderfunded)) {
         const diffMs = new Date(retopupDeadline).getTime() - Date.now();
         retopupTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
         if (retopupTimeRemainingSeconds === 0) {
@@ -254,7 +265,7 @@ export async function GET(
       }
 
       const isMember = !isExpired && m.status !== 'vacant' && m.status !== 'defaulted';
-      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.round((exactPushedUsd / earningsCapUsd) * 100));
+      const capProgressPct = isUnderfunded ? 0 : isCapped ? 100 : eco.currentCycleCapPct;
 
       return NextResponse.json({
         success: true,
@@ -266,15 +277,17 @@ export async function GET(
           joinedAt: m.joinedAt,
           pushedAmountBtt: isCapped ? Math.max(pushedBtt, capBtt) : (isUnderfunded ? 0 : pushedBtt),
           pushedAmountTrob: isCapped ? Math.max(pushedBtt, capBtt) : (isUnderfunded ? 0 : pushedBtt),
-          pushedAmountUsdEstimate: exactPushedUsd,
+          pushedAmountUsdEstimate: eco.lifetimeUsd,
+          currentCycleUsd: eco.currentCycleUsd,
           earningsCapBtt: capBtt,
           earningsCapTrob: capBtt,
           earningsCapUsd,
           capProgressPct,
           isCapped,
           underfunded: isUnderfunded,
-          retopupDeadline,
-          retopupTimeRemainingSeconds,
+          retopupCount,
+          retopupDeadline: (isCapped || isUnderfunded) ? retopupDeadline : null,
+          retopupTimeRemainingSeconds: (isCapped || isUnderfunded) ? retopupTimeRemainingSeconds : null,
           entryAmountBtt: entryBtt,
           entryAmountTrob: entryBtt,
           entryAmountUsdEstimate: entryAmountUsd,

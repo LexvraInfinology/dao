@@ -58,8 +58,9 @@ export default function MemberLoungePage() {
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
   const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
   const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93) : 0;
-  const pushedUsd          = isCapped ? earningsCapUsd : (exactEarnedFromPos > 0 ? exactEarnedFromPos : (lounge?.pushedUsd ?? 0));
-  const capProgressPct     = isCapped ? 100 : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (pushedUsd / earningsCapUsd) * 100)) : 0);
+  const pushedUsd          = isCapped ? earningsCapUsd : (lounge?.totalReceivedUsd ?? lounge?.pushedUsd ?? (exactEarnedFromPos > 0 ? exactEarnedFromPos : 0));
+  const cyclePushedUsd     = isCapped ? earningsCapUsd : (lounge?.currentCycleUsd ?? (lounge?.retopupCount ? 0 : pushedUsd));
+  const capProgressPct     = isCapped ? 100 : (lounge?.capProgressPct !== undefined ? lounge.capProgressPct : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (cyclePushedUsd / earningsCapUsd) * 100)) : 0));
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
@@ -112,7 +113,7 @@ export default function MemberLoungePage() {
             <EarningsCapCard
               variant="desktop"
               capProgressPct={capProgressPct}
-              pushedUsd={pushedUsd}
+              pushedUsd={cyclePushedUsd}
               earningsCapUsd={earningsCapUsd}
               trobPriceUsd={livePrice}
               isCapped={lounge?.isCapped}
@@ -135,7 +136,7 @@ export default function MemberLoungePage() {
         <EarningsCapCard
           variant="mobile"
           capProgressPct={capProgressPct}
-          pushedUsd={pushedUsd}
+          pushedUsd={cyclePushedUsd}
           earningsCapUsd={earningsCapUsd}
           trobPriceUsd={livePrice}
           isCapped={lounge?.isCapped}

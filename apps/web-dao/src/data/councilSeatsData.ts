@@ -93,13 +93,16 @@ export function buildLiveCouncilSeats(
     const soulboundId = `#${String(seatNumber).padStart(4, '0')}`;
     const liveMember = memberMap.get(seatNumber);
 
+    const memAddr = (liveMember?.address || '').toLowerCase();
+    const isMine =
+      Boolean(liveMember && rawAddr) &&
+      (memAddr === rawAddr || (myHex && memAddr === myHex) || (myB58 && memAddr === myB58));
+
     const isDefaulted = !!liveMember && isSeatExpired(liveMember);
 
-    if (liveMember && !isDefaulted) {
-      const memAddr = (liveMember.address || '').toLowerCase();
-      const isMine =
-        Boolean(rawAddr) &&
-        (memAddr === rawAddr || (myHex && memAddr === myHex) || (myB58 && memAddr === myB58));
+    // If this seat belongs to the connected wallet, show it as 'mine' even if expired,
+    // so they can see their remaining balance and claim it back before takeover.
+    if (liveMember && (!isDefaulted || isMine)) {
       const isCapped = liveMember.status === 'capped';
       const isUnderfunded = liveMember.status === 'underfunded';
       const entryTrob = liveMember.entryAmountTrob ?? liveMember.entryAmountBtt ?? 0;
@@ -146,8 +149,10 @@ export function buildLiveCouncilSeats(
         votingPower: '1.0%',
         statusText: isCapped
           ? '5X Capped • 48h Retopup Window Active'
+          : isUnderfunded && isDefaulted
+          ? 'Reservation Window Expired • Open for Takeover! Deposit Now to Reclaim'
           : isUnderfunded
-          ? 'Underfunded Seat • Retopup Required'
+          ? 'Underfunded Seat • Deposit Balance Required'
           : `Active & In Good Standing${cycleLabel}`,
         statusBadge: isCapped
           ? '5X Capped'
@@ -179,7 +184,7 @@ export function buildLiveCouncilSeats(
         statusText: isDefaulted
           ? 'Priority Vacant Seat • Ready for Instant Takeover'
           : 'Next in Queue • Ready for Instant Mint',
-        statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Next Available',
+        statusBadge: 'Next Available',
         soulboundId,
         entryAmount: '$300.00 USD (5,357.14 TROB)',
       };

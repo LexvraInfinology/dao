@@ -367,8 +367,8 @@ export async function getAndSyncMemberState(
       const dl = (isCapped || isUnderfunded) ? toUtcIso(dbMember.retopupDeadline) : null;
       const dlSec = dl ? Math.max(0, Math.floor((new Date(dl).getTime() - Date.now()) / 1000)) : null;
 
-      // Automatically transition seat to vacant if deadline has passed (12h for underfunded, 48h for capped)
-      if ((isUnderfunded || isCapped) && dlSec !== null && dlSec <= 0) {
+      // Automatically transition seat to vacant if 48h retopup deadline has passed for capped members
+      if (isCapped && dlSec !== null && dlSec <= 0) {
         await queryNeon(
           `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
           [dbMember.id]

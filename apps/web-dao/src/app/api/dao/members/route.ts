@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const expiredRes = await queryNeon<any>(
       `UPDATE "DaoMember"
        SET status = 'vacant', "updatedAt" = NOW()
-       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+       WHERE LOWER(status) = 'capped'
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()
        RETURNING id, position, status`
@@ -151,11 +151,11 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
-    // Automatically transition expired seats to vacant so queue priority fills them first
+    // Automatically transition expired capped seats to vacant so queue priority fills them first
     await queryNeon(
       `UPDATE "DaoMember"
        SET status = 'vacant', "updatedAt" = NOW()
-       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+       WHERE LOWER(status) = 'capped'
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()`
     ).catch(() => {});

@@ -57,11 +57,14 @@ export const CouncilRecentActivity: React.FC = () => {
         ) : (
           events.map((item) => {
             const isDefault = item.eventType === 'defaulted';
-            const isEarnings = item.eventType === 'earnings' || item.eventType === 'pushed';
+            const isRetopup = item.eventType === 'retopup' || (item.reason && item.reason.includes('Retopup'));
+            const isEarnings = !isRetopup && (item.eventType === 'earnings' || item.eventType === 'pushed');
             const isJoined = item.eventType === 'joined';
 
             const dotColor = isDefault
               ? 'bg-[#F04438]'
+              : isRetopup
+              ? 'bg-amber-500'
               : isEarnings
               ? 'bg-emerald-500'
               : isJoined
@@ -70,6 +73,8 @@ export const CouncilRecentActivity: React.FC = () => {
 
             const badgeClasses = isDefault
               ? 'bg-rose-50 text-[#D92D20] border-rose-200'
+              : isRetopup
+              ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
               : isEarnings
               ? 'bg-emerald-50 text-[#047857] border-emerald-200'
               : isJoined
@@ -80,6 +85,8 @@ export const CouncilRecentActivity: React.FC = () => {
               item.reason ||
               (isJoined
                 ? 'Council Seat Activated'
+                : isRetopup
+                ? '5X Cap Retopup'
                 : isDefault
                 ? 'Seat Defaulted'
                 : isEarnings

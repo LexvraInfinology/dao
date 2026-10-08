@@ -110,48 +110,57 @@ export async function GET(req: NextRequest) {
         ).catch(() => ({ rows: [] as any[], rowCount: 0 })),
       ]);
 
-      dbItems = rowsRes.rows.map((evt) => {
-        const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-        const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
-        const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * 0.056) * 100) / 100;
+      const seenRetopupRoots = new Set<string>();
+      dbItems = rowsRes.rows
+        .filter((evt) => {
+          const tx = evt.txHash || '';
+          if (tx.startsWith('retopup-1') || tx.includes('fake') || tx.includes('simulated')) {
+            return false;
+          }
+          return true;
+        })
+        .map((evt) => {
+          const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+          const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+          const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * 0.056) * 100) / 100;
 
-        let categoryBadge: string | undefined;
-        const reasonLower = (evt.reason || '').toLowerCase();
-        if (evt.eventType === 'retopup' || reasonLower.includes('retopup')) {
-          categoryBadge = '5X Retopup';
-        } else if (reasonLower.includes('cap reached') || reasonLower.includes('5x cap')) {
-          categoryBadge = '5X Cap Event';
-        } else if (reasonLower.includes('cashback')) {
-          categoryBadge = 'Instant Cashback';
-        } else if (reasonLower.includes('retopup loop') || reasonLower.includes('retopup distribution')) {
-          categoryBadge = 'Retopup Share';
-        }
+          let categoryBadge: string | undefined;
+          const reasonLower = (evt.reason || '').toLowerCase();
+          if (evt.eventType === 'retopup' || reasonLower.includes('retopup')) {
+            categoryBadge = '5X Retopup';
+          } else if (reasonLower.includes('cap reached') || reasonLower.includes('5x cap')) {
+            categoryBadge = '5X Cap Event';
+          } else if (reasonLower.includes('cashback')) {
+            categoryBadge = 'Instant Cashback';
+          } else if (reasonLower.includes('retopup loop') || reasonLower.includes('retopup distribution')) {
+            categoryBadge = 'Retopup Share';
+          }
 
-        return {
-          id: evt.id,
-          type: evt.eventType as any,
-          typeLabel:
-            evt.reason ||
-            (evt.eventType === 'joined'
-              ? `Council Seat #${evt.incomingPosition || ''} Activated`
-              : evt.eventType === 'pushed'
-              ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-              : evt.eventType === 'retopup'
-              ? '5X Cap Retopup'
-              : 'Dividend Reward Claimed'),
-          amountBtt: amtBtt,
-          amountTrob: amtBtt,
-          amountUsd: amtUsd,
-          isPositive,
-          from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-          to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-          txHash: evt.txHash || '',
-          timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-          status: 'Confirmed',
-          incomingPosition: evt.incomingPosition,
-          categoryBadge,
-        };
-      });
+          return {
+            id: evt.id,
+            type: evt.eventType as any,
+            typeLabel:
+              evt.reason ||
+              (evt.eventType === 'joined'
+                ? `Council Seat #${evt.incomingPosition || ''} Activated`
+                : evt.eventType === 'pushed'
+                ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+                : evt.eventType === 'retopup'
+                ? '5X Cap Retopup'
+                : 'Dividend Reward Claimed'),
+            amountBtt: amtBtt,
+            amountTrob: amtBtt,
+            amountUsd: amtUsd,
+            isPositive,
+            from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+            to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+            txHash: evt.txHash || '',
+            timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+            status: 'Confirmed',
+            incomingPosition: evt.incomingPosition,
+            categoryBadge,
+          };
+        });
 
       if (statsRes.rows[0]?.inflows) {
         const inf = Math.round(parseFloat(statsRes.rows[0].inflows) * 100) / 100;

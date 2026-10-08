@@ -100,35 +100,46 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
                 <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#17334F]/10 text-[#17334F] border border-[#17334F]/20">
                   Genesis Council Seat #{position}
                 </span>
-                {/* 12-Hour Live Countdown Pill */}
+                {/* Reservation Window Status Pill */}
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold border ${
                   timeLeft.isExpired
-                    ? 'bg-rose-100 text-rose-800 border-rose-300'
+                    ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
                     : 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
                 }`}>
                   <Clock className="w-3.5 h-3.5 text-amber-600" />
                   <span>
-                    12h Window:{' '}
-                    {String(timeLeft.hours).padStart(2, '0')}:
-                    {String(timeLeft.minutes).padStart(2, '0')}:
-                    {String(timeLeft.seconds).padStart(2, '0')}
+                    {timeLeft.isExpired ? 'Reservation Window Expired • Open for Takeover' : `Reservation Window: ${String(timeLeft.hours).padStart(2, '0')}:${String(timeLeft.minutes).padStart(2, '0')}:${String(timeLeft.seconds).padStart(2, '0')}`}
                   </span>
                 </span>
               </div>
 
               <h3 className="text-sm sm:text-base font-bold text-[#17334F] tracking-tight">
-                Incomplete Seat Funding: You Can Only Access Dashboard When Remaining Balance is Paid
+                {timeLeft.isExpired
+                  ? `🚨 URGENT: Seat #${position} Reservation Expired • Open for Public Takeover! Deposit Now to Claim Your Seat Back!`
+                  : `Incomplete Seat Funding: You Can Only Access Dashboard When Remaining Balance is Paid`}
               </h3>
 
               <p className="text-xs sm:text-[13px] text-[#4F6D87] leading-relaxed">
-                Your wallet holds reserved on-chain Council Seat <strong className="text-[#17334F]">#{position}</strong>, but was activated with only{' '}
-                <strong className="text-red-600">{entryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</strong> (~${entryUsd} USD) instead of the full $300 USD entry fee (~{requiredTrob.toLocaleString()} TROB). You have a <strong className="text-amber-700">12-hour reservation window</strong> to pay the remaining balance of <strong className="text-[#0E62E4]">{remainingTrob.toLocaleString()} TROB</strong>. Full Council Dashboard, VIP Lounge, governance, and matrix dividends remain strictly locked until paid.
+                {timeLeft.isExpired ? (
+                  <>
+                    Your on-chain reservation window for Council Seat <strong className="text-[#17334F]">#{position}</strong> has officially expired.
+                    On the smart contract, this seat is now designated as the <strong>priority vacant slot open to any new entrant</strong>.
+                    Your previous deposit of <strong className="text-red-600">{entryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</strong> is still credited towards your seat, but you must deposit the remaining <strong className="text-[#0E62E4]">{remainingTrob.toLocaleString()} TROB</strong> immediately to claim your seat back before another user takes it over!
+                  </>
+                ) : (
+                  <>
+                    Your wallet holds reserved on-chain Council Seat <strong className="text-[#17334F]">#{position}</strong>, but was activated with only{' '}
+                    <strong className="text-red-600">{entryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</strong> (~${entryUsd} USD) instead of the full $300 USD entry fee (~{requiredTrob.toLocaleString()} TROB). You have a reservation window to pay the remaining balance of <strong className="text-[#0E62E4]">{remainingTrob.toLocaleString()} TROB</strong>. Full Council Dashboard, VIP Lounge, governance, and matrix dividends remain strictly locked until paid.
+                  </>
+                )}
               </p>
 
               <div className="flex items-center gap-2 pt-1 text-[11px] text-[#4F6D87]/90 font-medium">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
                 <span>
-                  <strong>12h Expiration Notice:</strong> When this 12-hour timer reaches 00:00:00, unpaid seat reservations will be automatically revoked and returned to the Genesis pool.
+                  {timeLeft.isExpired
+                    ? <strong>Priority Takeover Warning: New entrants joining the DAO will automatically claim this seat unless you deposit now.</strong>
+                    : <strong>Expiration Notice: When this timer expires, unpaid seat reservations will become open for queue takeover.</strong>}
                 </span>
               </div>
             </div>
@@ -138,10 +149,10 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
             <button
               type="button"
               onClick={() => setRetopupModalOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.5)] transition-all cursor-pointer transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs sm:text-sm font-bold shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.5)] transition-all cursor-pointer transform hover:-translate-y-0.5 animate-pulse"
             >
               <Zap className="w-4 h-4 fill-white" />
-              <span>Pay Remaining Balance ({remainingTrob.toLocaleString()} TROB)</span>
+              <span>{timeLeft.isExpired ? `Deposit & Claim Seat #${position} Back (${remainingTrob.toLocaleString()} TROB)` : `Pay Remaining Balance (${remainingTrob.toLocaleString()} TROB)`}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 

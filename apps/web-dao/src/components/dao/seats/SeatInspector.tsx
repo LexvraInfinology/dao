@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp, Loader2, Clock } from 'lucide-react';
+import { ExternalLink, Copy, Check, X, ShieldAlert, Sparkles, ArrowRight, Coins, TrendingUp, Loader2, Clock, AlertTriangle } from 'lucide-react';
 import { CouncilSeatDetail } from '@/data/councilSeatsData';
 import { TrobPriceData } from '@/hooks/useApi';
 import { getExplorerAddressUrl } from '@/utils/explorer';
@@ -318,6 +318,31 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
         </div>
       </div>
 
+      {/* Underfunded / Takeover Alert Banner in Inspector */}
+      {seat.statusBadge === 'Underfunded' && seat.status === 'mine' && (
+        <div className="p-3 rounded-xl bg-gradient-to-r from-red-50 to-amber-50 border border-red-200 text-xs text-red-900 space-y-1 animate-fadeIn">
+          <div className="flex items-center gap-1.5 font-bold text-red-700">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>Reservation Window Expired • Open for Takeover!</span>
+          </div>
+          <p className="text-[11px] text-red-800 leading-relaxed">
+            Your on-chain reservation deadline has expired. This seat is now the lowest vacant slot open to any new entrant. Deposit your remaining balance of <strong>{remainingTrob.toLocaleString()} TROB</strong> now to claim your seat back!
+          </p>
+        </div>
+      )}
+
+      {seat.status === 'next' && seat.seatNumber === 12 && (
+        <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-950 space-y-1 animate-fadeIn">
+          <div className="flex items-center gap-1.5 font-bold text-[#0E62E4]">
+            <Sparkles className="w-4 h-4 text-[#0E62E4] shrink-0" />
+            <span>Priority Vacant Seat #12 (Lowest Available Index)</span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            The previous underfunded reservation expired on-chain. As the lowest vacant seat in the contract queue, claiming now will mint and assign <strong>Seat #12</strong> to your wallet!
+          </p>
+        </div>
+      )}
+
       {/* Connected Pricing Card */}
       {isMintable && (
         <div className="p-3 rounded-xl bg-[#F7FBFF] border border-[#E2EEF9] space-y-2 text-xs">
@@ -352,10 +377,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           <button
             type="button"
             onClick={onRetopup}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold shadow-[0_4px_14px_rgba(245,158,11,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-amber-600 to-amber-500 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold shadow-[0_4px_14px_rgba(239,68,68,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Pay Remaining Balance {remainingTrob ? `(${Math.round(remainingTrob).toLocaleString()} TROB)` : ''} • Unlock Seat #{seat.seatNumber}</span>
+            <span>Deposit Remaining Balance {remainingTrob ? `(${Math.round(remainingTrob).toLocaleString()} TROB)` : ''} • Claim Seat #{seat.seatNumber} Back</span>
             <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
         ) : seat.statusBadge === '5X Capped' && seat.status === 'mine' && onRetopup ? (

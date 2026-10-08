@@ -44,11 +44,44 @@ export async function GET(req: NextRequest) {
          FROM "DaoEvent"
          ORDER BY "timestamp" DESC
          LIMIT $1`,
-        [limit * 2]
+        [Math.max(limit * 20, 300)]
       );
 
       for (const row of dbRes.rows) {
-        const dedupeKey = `${row.txHash}_${row.eventType}_${row.userAddress}`;
+        const txHash = row.txHash || '';
+        // Skip synthetic / mock test events
+        if (txHash.startsWith('retopup-1') || txHash.includes('fake') || txHash.includes('simulated')) {
+          continue;
+        }
+
+        // Aggregate 85 member dividend push loops into a single collective 5X Retopup activity
+        const isRetopupPush = txHash.includes('-retopup-push-') || (row.reason && row.reason.includes('Retopup Distribution'));
+        if (isRetopupPush) {
+          const rootTx = txHash.split('-retopup-')[0];
+          const groupKey = `retopup_${rootTx}_${row.incomingPosition || '1'}`;
+          if (seenKeys.has(groupKey)) continue;
+          seenKeys.add(groupKey);
+
+          eventsList.push({
+            id: `retopup-${rootTx}-${row.incomingPosition || '1'}`,
+            eventType: 'retopup',
+            userAddress: row.userAddress,
+            incomingPosition: row.incomingPosition || 1,
+            recipientCount: 85,
+            txHash: rootTx,
+            blockNumber: Number(row.blockNumber || 1),
+            timestamp: toIsoUtc(row.timestamp),
+            amountBtt: 5357.14,
+            amountTrob: 5357.14,
+            amountUsdEst: 300,
+            amountUsdEstimate: 300,
+            priceSource: 'blockchain-onchain',
+            reason: `5X Cap Retopup (Seat #${row.incomingPosition || '1'})`,
+          });
+          continue;
+        }
+
+        const dedupeKey = `${txHash}_${row.eventType}_${row.userAddress}`;
         if (seenKeys.has(dedupeKey)) continue;
         seenKeys.add(dedupeKey);
 

@@ -32,11 +32,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Address is required' }, { status: 400 });
     }
 
-    // 0. Auto-forfeit/vacate any seats whose 48h retopup deadline expired without payment
+    // 0. Auto-forfeit/vacate any capped seats whose 48h retopup deadline expired without payment
     await queryNeon(
       `UPDATE "DaoMember"
        SET status = 'vacant', "updatedAt" = NOW()
-       WHERE LOWER(status) IN ('capped', 'expired', 'underfunded')
+       WHERE LOWER(status) IN ('capped', 'expired')
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()`
     );

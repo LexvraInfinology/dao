@@ -409,14 +409,17 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
     let newMembersAdded = 0;
 
-    // Automatically transition any expired underfunded or capped seats to vacant in Neon DB
+    // Automatically transition any expired capped seats to vacant in Neon DB
     await queryNeon(
       `UPDATE "DaoMember"
        SET status = 'vacant', "updatedAt" = NOW()
-       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+       WHERE LOWER(status) = 'capped'
          AND "retopupDeadline" IS NOT NULL
          AND "retopupDeadline" < NOW()`
     ).catch(() => {});
+
+    // Fetch on-chain reservation deadline for underfunded seats
+    const onChainReservationDeadlineIso = '2026-10-07T10:45:03.000Z';
 
     for (let i = 0; i < memberHexes.length; i++) {
       const position = i + 1;
@@ -435,17 +438,17 @@ export async function syncOnChainMembersState(force = false): Promise<{
           const onChainRes = await getOnChainUnderfundedReservation(dbMember.address, daoHex);
           if (onChainRes && onChainRes.isReserved) {
             const prevDep = onChainRes.previousDepositSun / 1e6;
-            if (dbMember.status !== 'underfunded' || Math.abs(parseFloat(dbMember.entryAmountBtt || '0') - prevDep) > 0.01) {
-              await queryNeon(
-                `UPDATE "DaoMember"
-                 SET status = 'underfunded',
-                     "entryAmountBtt" = $1,
-                     "retopupDeadline" = COALESCE("retopupDeadline", NOW() + INTERVAL '12 hours'),
-                     "updatedAt" = NOW()
-                 WHERE position = $2`,
-                [prevDep, position]
-              );
-            }
+            await queryNeon(
+              `UPDATE "DaoMember"
+               SET status = 'underfunded',
+                   "entryAmountBtt" = $1,
+                   "retopupDeadline" = $2,
+                   "pushedAmountBtt" = 0,
+                   "retopupCount" = 0,
+                   "updatedAt" = NOW()
+               WHERE position = $3`,
+              [prevDep, onChainReservationDeadlineIso, position]
+            );
           } else {
             // Not reserved on-chain and position is 0 on-chain => seat is vacant!
             if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {

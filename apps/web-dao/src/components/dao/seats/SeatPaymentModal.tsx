@@ -169,8 +169,8 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                     <BadgeDollarSign className="w-3.5 h-3.5 text-[#0E62E4]" />
                     <span>Seat Pricing Breakdown</span>
                   </span>
-                  <span className="text-[10px] text-[#059669] font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    Official Protocol Standard
+                  <span className="text-[10px] text-[#0E62E4] font-semibold bg-[#0E62E4]/10 px-2 py-0.5 rounded-full">
+                    Genesis Council Seat
                   </span>
                 </div>
 
@@ -388,7 +388,7 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
               className="flex-1 py-2.5 px-4 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-bold transition-all shadow-[0_4px_16px_rgba(14,98,228,0.3)] flex items-center justify-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Confirm & Pay {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB ($300 USD)</span>
+              <span>Confirm & Pay {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB ($300.00 USD)</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

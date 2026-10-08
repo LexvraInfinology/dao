@@ -857,8 +857,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 space-y-2 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-sans">
                   <span className="font-semibold text-[#17334F] text-[10px] sm:text-[11px]">Council Seat Entry Fee</span>
-                  <span suppressHydrationWarning className="font-mono text-[#0E62E4] font-semibold text-[10px] sm:text-[11px]">
-                    Verified Allocation
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-2 py-0.5 rounded-full">
+                    Genesis Lifetime Seat
                   </span>
                 </div>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1452,9 +1452,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 ) : isEligibleToPay ? (
                   <>
                     <span className="leading-snug">
-                      {priceData
-                        ? `Submit Entry Deposit (${priceData.seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`
-                        : 'Submit Entry Deposit (300 USD)'}
+                      {`Submit Entry Deposit (${effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
                     </span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </>
@@ -1463,7 +1461,9 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 ) : !termsAccepted ? (
                   <span>Accept Terms & Conditions to Register</span>
                 ) : (
-                  <span className="leading-snug">Submit Entry Deposit (300 USD)</span>
+                  <span className="leading-snug">
+                    {`Submit Entry Deposit (${effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
+                  </span>
                 )}
               </button>
             </div>

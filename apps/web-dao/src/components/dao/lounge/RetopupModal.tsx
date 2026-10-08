@@ -444,7 +444,6 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                       </div>
                     )}
 
-
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Remaining Payable Amount:</span>
                       <span className="font-mono text-sm text-[#0E62E4]">
@@ -460,7 +459,6 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                         $300.00 USD
                       </span>
                     </div>
-
 
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Required Payment:</span>

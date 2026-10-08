@@ -323,9 +323,14 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
               <Coins className="w-3.5 h-3.5 text-amber-500" />
               <span>Seat Entry Pricing</span>
             </span>
-            <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
-              $300.00 USD
-            </span>
+            <div className="text-right">
+              <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
+                {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+              <span className="text-[10px] text-[#4F6D87] block">
+                ($300.00 USD)
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200/60">
@@ -357,7 +362,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold shadow-[0_4px_14px_rgba(217,119,6,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Re-topup Seat #{seat.seatNumber} ($300 USD)</span>
+            <span>Re-topup Seat #{seat.seatNumber} ({Math.round(seatEntryTrob).toLocaleString()} TROB)</span>
             <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
         ) : seat.status === 'mine' ? (

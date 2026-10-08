@@ -7,6 +7,7 @@ import { TROB_PRICE_API_URL } from '@/config/env';
 import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../_lib/dateUtils';
 
+// Dynamic Next.js API route
 export const dynamic = 'force-dynamic';
 
 // In-memory cache for fast dynamic responses (3s cache for members, 30s for trob price)
@@ -19,6 +20,22 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const page = searchParams.get('page') || '1';
   const limit = searchParams.get('limit') || '100';
+
+  // Automatically transition expired seats (12h underfunded or 48h capped) to vacant in Neon DB
+  try {
+    const expiredRes = await queryNeon<any>(
+      `UPDATE "DaoMember"
+       SET status = 'vacant', "updatedAt" = NOW()
+       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+         AND "retopupDeadline" IS NOT NULL
+         AND "retopupDeadline" < NOW()
+       RETURNING id, position, status`
+    );
+    if (expiredRes?.rowCount && expiredRes.rowCount > 0) {
+      cachedMembersPayload = null;
+      cachedMembersTime = 0;
+    }
+  } catch {}
 
   const now = Date.now();
   if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 3000) {
@@ -38,10 +55,18 @@ export async function GET(req: NextRequest) {
     Array.isArray(backendRes.data?.members) &&
     backendRes.data.members.length > 0
   ) {
-    const extraMap = new Map<number, { deadline: string | null; status: string; retopupCount: number; pushedBtt: number }>();
+    const extraMap = new Map<number, {
+      deadline: string | null;
+      status: string;
+      retopupCount: number;
+      pushedBtt: number;
+      totalDepositsCount: number;
+      totalDepositsUsd: number;
+      retopupAmountBtt: number;
+    }>();
     try {
       const dlRes = await queryNeon<any>(
-        `SELECT position, status, "retopupDeadline", "retopupCount", "pushedAmountBtt" FROM "DaoMember"`
+        `SELECT position, status, "retopupDeadline", "retopupCount", "pushedAmountBtt", "totalDepositsCount", "totalDepositsUsd", "retopupAmountBtt" FROM "DaoMember"`
       );
       for (const r of dlRes.rows) {
         if (r.position) {
@@ -50,6 +75,9 @@ export async function GET(req: NextRequest) {
             status: r.status || 'active',
             retopupCount: parseInt(r.retopupCount || '0', 10),
             pushedBtt: parseFloat(r.pushedAmountBtt || '0'),
+            totalDepositsCount: parseInt(r.totalDepositsCount || '1', 10),
+            totalDepositsUsd: parseFloat(r.totalDepositsUsd || '300'),
+            retopupAmountBtt: parseFloat(r.retopupAmountBtt || '0'),
           });
         }
       }
@@ -79,8 +107,11 @@ export async function GET(req: NextRequest) {
         status: effStatus,
         entryAmountBtt: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
         entryAmountTrob: (isUnderfunded && m.entryAmountBtt > 300) ? trueDeposit : m.entryAmountBtt,
-        pushedAmountBtt: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 27529.6) : pushedBtt),
-        pushedAmountTrob: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 27529.6) : pushedBtt),
+        retopupAmountBtt: extra?.retopupAmountBtt ?? 0,
+        totalDepositsCount: extra?.totalDepositsCount ?? (1 + retopupCount),
+        totalDepositsUsd: extra?.totalDepositsUsd ?? (300 + (retopupCount * 300)),
+        pushedAmountBtt: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 26785.71) : pushedBtt),
+        pushedAmountTrob: isUnderfunded ? 0 : (effStatus === 'capped' ? Math.max(pushedBtt, 26785.71) : pushedBtt),
         pushedAmountUsdEstimate: eco.lifetimeUsd,
         currentCycleUsd: eco.currentCycleUsd,
         currentCycleCapPct: eco.currentCycleCapPct,
@@ -130,7 +161,7 @@ export async function GET(req: NextRequest) {
     ).catch(() => {});
 
     const { rows } = await queryNeon<any>(
-      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt", "retopupDeadline", "retopupCount"
+      `SELECT position, address, "nftTokenId", "entryAmountBtt", "pushedAmountBtt", status, "joinedAt", "retopupDeadline", "retopupCount", "totalDepositsCount", "totalDepositsUsd", "retopupAmountBtt"
        FROM "DaoMember"
        WHERE LOWER(status) NOT IN ('vacant', 'blank')
        ORDER BY position ASC
@@ -165,8 +196,11 @@ export async function GET(req: NextRequest) {
           nftTokenId: r.nftTokenId,
           entryAmountBtt: parseFloat(r.entryAmountBtt || '0'),
           entryAmountTrob: parseFloat(r.entryAmountBtt || '0'),
-          pushedAmountBtt: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt),
-          pushedAmountTrob: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 27529.6) : pushedAmt),
+          retopupAmountBtt: parseFloat(r.retopupAmountBtt || '0'),
+          totalDepositsCount: parseInt(r.totalDepositsCount || (1 + retopupCount).toString(), 10),
+          totalDepositsUsd: parseFloat(r.totalDepositsUsd || ((1 + retopupCount) * 300).toString()),
+          pushedAmountBtt: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 26785.71) : pushedAmt),
+          pushedAmountTrob: isUnderfunded ? 0 : (isCapped ? Math.max(pushedAmt, 26785.71) : pushedAmt),
           pushedAmountUsdEstimate: eco.lifetimeUsd,
           currentCycleUsd: eco.currentCycleUsd,
           currentCycleCapPct: eco.currentCycleCapPct,

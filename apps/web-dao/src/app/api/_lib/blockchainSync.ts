@@ -23,17 +23,13 @@ export async function getOnChainDaoTransactions(
   const now = Date.now();
   const daoAddress = getActiveDaoAddress();
 
-  // Rate-limit account polling to once every 4 seconds unless forceRefresh is set
-  if (!forceRefresh && now - lastAccountFetchTime < 4000 && cachedParsedItems.length > 0) {
+  // Rate-limit account polling to once every 30 seconds unless forceRefresh is set
+  if (!forceRefresh && now - lastAccountFetchTime < 30000 && cachedParsedItems.length > 0) {
     return filterItems(cachedParsedItems, filterAddress);
   }
 
   try {
     const addressesToQuery = [daoAddress];
-    const legacyAddress = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
-    if (legacyAddress && legacyAddress !== daoAddress) {
-      addressesToQuery.push(legacyAddress);
-    }
     if (filterAddress && filterAddress.trim()) {
       const cleanFilter = filterAddress.trim();
       if (!addressesToQuery.includes(cleanFilter)) {
@@ -85,10 +81,10 @@ export async function getOnChainDaoTransactions(
       ? new Date(process.env.DAO_SYNC_START_TIMESTAMP).getTime()
       : new Date('2026-10-02T19:00:00.000Z').getTime();
 
-    for (const tx of txList) {
-      if (tx.result !== 'SUCCESS') continue;
+    // 1. Identify DAO candidate transactions first
+    const candidateTxs = txList.filter((tx) => {
+      if (tx.result !== 'SUCCESS') return false;
 
-      // Skip historical transactions from before the fresh database reset
       let txTimeMs = 0;
       if (tx.timestamp) {
         const num = Number(tx.timestamp);
@@ -98,15 +94,47 @@ export async function getOnChainDaoTransactions(
           txTimeMs = new Date(tx.timestamp).getTime();
         }
       }
-      if (txTimeMs > 0 && txTimeMs < RESET_CUTOFF_MS) {
-        continue;
-      }
+      if (txTimeMs > 0 && txTimeMs < RESET_CUTOFF_MS) return false;
 
+      const methodName = tx.method_name || '';
+      const selector = tx.function_selector || '';
+      return (
+        methodName === 'joinDAO' || selector === 'f63d13d7' ||
+        methodName === 'completeUnderfundedSeat' || selector === '7f15ea38' || selector === '0x7f15ea38' ||
+        methodName === 'retopup' || selector === 'd7b275bf' ||
+        methodName === 'claimPoolShare' || selector === '85b736b4' ||
+        methodName === 'claimFallback' || selector === 'a04467c6' || selector === 'a3e0acca' ||
+        methodName === 'migrateGenuineMembers' || selector === '63187018'
+      );
+    });
+
+    // 2. Fetch missing transaction details in PARALLEL with low timeout
+    const missingCandidates = candidateTxs.filter((tx) => !txDetailCache.has(tx.hash));
+    if (missingCandidates.length > 0) {
+      await Promise.all(
+        missingCandidates.map(async (tx) => {
+          try {
+            const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${tx.hash}`, {
+              cache: 'no-store',
+              signal: AbortSignal.timeout(1200),
+            });
+            if (detailRes.ok) {
+              const detailJson = await detailRes.json();
+              const d = detailJson.data || tx;
+              if (d.confirmed) {
+                txDetailCache.set(tx.hash, d);
+              }
+            }
+          } catch {}
+        })
+      );
+    }
+
+    for (const tx of candidateTxs) {
       const hash = tx.hash;
       const methodName = tx.method_name || '';
       const selector = tx.function_selector || '';
 
-      // Check if this is a DAO interaction method
       const isJoin = methodName === 'joinDAO' || selector === 'f63d13d7';
       const isCompleteSeat = methodName === 'completeUnderfundedSeat' || selector === '7f15ea38' || selector === '0x7f15ea38';
       const isRetopup = methodName === 'retopup' || selector === 'd7b275bf';
@@ -119,29 +147,7 @@ export async function getOnChainDaoTransactions(
         continue;
       }
 
-      if (!isJoin && !isCompleteSeat && !isRetopup && !isClaimPool && !isClaimFallback) {
-        continue;
-      }
-
-      // Fetch transaction details with events (cached if already confirmed)
-      let detail = txDetailCache.get(hash);
-      if (!detail) {
-        try {
-          const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${hash}`, {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(1500),
-          });
-          if (detailRes.ok) {
-            const detailJson = await detailRes.json();
-            detail = detailJson.data || tx;
-            if (detail.confirmed) {
-              txDetailCache.set(hash, detail);
-            }
-          }
-        } catch {}
-      }
-
-      if (!detail) detail = tx;
+      let detail = txDetailCache.get(hash) || tx;
 
       const events: any[] = detail.events || [];
       const joinEvt = events.find((e) => e.name === 'DAOPositionJoined');
@@ -403,6 +409,15 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
     let newMembersAdded = 0;
 
+    // Automatically transition any expired underfunded or capped seats to vacant in Neon DB
+    await queryNeon(
+      `UPDATE "DaoMember"
+       SET status = 'vacant', "updatedAt" = NOW()
+       WHERE (LOWER(status) = 'capped' OR LOWER(status) = 'underfunded')
+         AND "retopupDeadline" IS NOT NULL
+         AND "retopupDeadline" < NOW()`
+    ).catch(() => {});
+
     for (let i = 0; i < memberHexes.length; i++) {
       const position = i + 1;
       const rawHex = memberHexes[i];
@@ -425,7 +440,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
                 `UPDATE "DaoMember"
                  SET status = 'underfunded',
                      "entryAmountBtt" = $1,
-                     "retopupDeadline" = COALESCE("retopupDeadline", NOW() + INTERVAL '48 hours'),
+                     "retopupDeadline" = COALESCE("retopupDeadline", NOW() + INTERVAL '12 hours'),
                      "updatedAt" = NOW()
                  WHERE position = $2`,
                 [prevDep, position]
@@ -482,7 +497,8 @@ export async function syncOnChainMembersState(force = false): Promise<{
         }
       } catch {}
 
-      const memberEffectiveStatus = isOnChainBlank ? 'vacant' : (isOnChainCapped ? 'capped' : 'active');
+      const isDlPassed = Boolean(onChainDeadlineIso && new Date(onChainDeadlineIso).getTime() <= Date.now());
+      const memberEffectiveStatus = (isOnChainBlank || (isOnChainCapped && isDlPassed)) ? 'vacant' : (isOnChainCapped ? 'capped' : 'active');
 
       if (existing.rows.length === 0) {
         const userCheck = await queryNeon<any>(
@@ -529,12 +545,19 @@ export async function syncOnChainMembersState(force = false): Promise<{
              SET address = $1,
                  status = $2,
                  "retopupDeadline" = $3,
+                 "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN 5357.14 ELSE "entryAmountBtt" END,
                  "entryAmountUsdAtJoin" = 300,
+                 "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300.00 ELSE "totalDepositsUsd" END,
+                 "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE "totalDepositsCount" END,
                  "pushedAmountBtt" = $4,
                  "updatedAt" = NOW()
              WHERE position = $5`,
             [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
           );
+          await queryNeon(
+            `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
+            [b58Addr]
+          ).catch(() => {});
         } else {
           // Synchronize status, retopup deadline, and earnings if state changed on-chain
           const dbPushed = parseFloat(dbMember.pushedAmountBtt || '0');
@@ -552,6 +575,9 @@ export async function syncOnChainMembersState(force = false): Promise<{
                    "retopupDeadline" = $2,
                    "cappedAt" = CASE WHEN $1 = 'capped' THEN COALESCE("cappedAt", NOW()) ELSE NULL END,
                    "retopupCount" = CASE WHEN $5 THEN COALESCE("retopupCount", 0) + 1 ELSE "retopupCount" END,
+                   "totalDepositsCount" = CASE WHEN $5 THEN COALESCE("totalDepositsCount", 1) + 1 ELSE "totalDepositsCount" END,
+                   "totalDepositsUsd" = CASE WHEN $5 THEN COALESCE("totalDepositsUsd", 300) + 300 ELSE "totalDepositsUsd" END,
+                   "lastRetopupAt" = CASE WHEN $5 THEN NOW() ELSE "lastRetopupAt" END,
                    "pushedAmountBtt" = $3,
                    "updatedAt" = NOW()
                WHERE position = $4`,

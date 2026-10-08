@@ -7,6 +7,7 @@ import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface TreasuryWithdrawCardProps {
   availableBalance?: number;
+  totalReceivedUsd?: number;
   onWithdrawSuccess?: (amount: number) => void;
   variant?: 'desktop' | 'mobile' | 'auto';
   walletAddress?: string;
@@ -14,6 +15,7 @@ interface TreasuryWithdrawCardProps {
 
 export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
   availableBalance = 0,
+  totalReceivedUsd,
   onWithdrawSuccess,
   variant = 'auto',
   walletAddress,
@@ -159,6 +161,21 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
           <span>{shortDest}</span>
         </div>
       </div>
+
+      {/* Confirmed Direct Push Indicator */}
+      {availableBalance <= 0 && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between gap-3 text-xs font-jakarta flex-wrap">
+          <div className="flex items-center gap-2 text-[#15803D] font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Autonomous Direct Pushes Active · Zero Claim Friction</span>
+          </div>
+          {totalReceivedUsd !== undefined && totalReceivedUsd > 0 && (
+            <span className="text-[11px] font-bold text-[#166534] shrink-0">
+              ${totalReceivedUsd.toFixed(2)} USD Pushed Directly
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Emergency Fallback (Only shown if a contract push failed) */}
       {availableBalance > 0 && (

@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
     }
 
-    let bttPriceUsd = 0.037757;
+    let bttPriceUsd = 0.056;
     try {
       const { TROB_PRICE_API_URL } = await import('@/config/env');
       const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
@@ -38,8 +38,8 @@ export async function GET(
         pushedAmountTrob: synced.totalEarnedTrob,
         pushedAmountUsdEstimate: synced.lifetimeUsd,
         currentCycleUsd: synced.currentCycleUsd,
-        earningsCapBtt: Math.round((1500 / bttPriceUsd) * 100) / 100,
-        earningsCapTrob: Math.round((1500 / bttPriceUsd) * 100) / 100,
+        earningsCapBtt: 26785.71, // Smart contract fixed 5X cap (26,785.71 TROB = $1,500.00 USD)
+        earningsCapTrob: 26785.71,
         earningsCapUsd: 1500,
         capProgressPct: synced.capProgressPct,
         isCapped: synced.isCapped,
@@ -50,6 +50,11 @@ export async function GET(
         entryAmountBtt: synced.entryAmountTrob,
         entryAmountTrob: synced.entryAmountTrob,
         entryAmountUsdEstimate: synced.entryAmountUsd,
+        poolClaimableTrob: synced.poolClaimableTrob ?? 0,
+        fallbackClaimableTrob: synced.fallbackClaimableTrob ?? 0,
+        totalClaimableTrob: Math.round(((synced.poolClaimableTrob ?? 0) + (synced.fallbackClaimableTrob ?? 0)) * 100) / 100,
+        unearnedDebtTrob: synced.unearnedDebtTrob ?? 0,
+        unearnedDebtUsd: synced.unearnedDebtTrob ? Math.round(synced.unearnedDebtTrob * 0.056 * 100) / 100 : 0,
         directReferralsCount: 0,
         isQualified: synced.isMember,
         userId: synced.userId,

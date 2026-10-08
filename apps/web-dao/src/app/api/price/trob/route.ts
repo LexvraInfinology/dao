@@ -4,11 +4,11 @@ import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
-function calculateTrobPegs(priceUsd: number) {
+function calculateTrobPegs(_priceUsd: number) {
   const seatEntryUsd = 300;
-  const seatEntryTrob = Math.ceil((seatEntryUsd / priceUsd) * 1000) / 1000;
+  const seatEntryTrob = 5357.14; // Fixed smart contract peg ($0.056 / $300)
   const earningsCapUsd = 1500;
-  const earningsCapTrob = Math.ceil((earningsCapUsd / priceUsd) * 1000) / 1000;
+  const earningsCapTrob = 26785.71; // Fixed smart contract 5X cap ($1,500)
   return { seatEntryUsd, seatEntryTrob, earningsCapUsd, earningsCapTrob };
 }
 

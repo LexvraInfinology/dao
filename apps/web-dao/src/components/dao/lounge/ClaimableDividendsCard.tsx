@@ -6,21 +6,25 @@ import { useWallet } from '@/context/WalletContext';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 
 interface ClaimableDividendsCardProps {
-  initialAmount?: number;     // Unclaimed fallback if any (normally 0)
+  initialAmount?: number;     // Total claimable USD (fallback + pool)
   pushedAmountUsd?: number;   // Total USD pushed directly to wallet
   pushedAmountTrob?: number;  // Total TROB pushed directly to wallet
   priceUsd?: number;          // Live TROB/USD market price
   walletAddress?: string;
   isCapped?: boolean;
+  poolClaimableTrob?: number;
+  fallbackClaimableTrob?: number;
 }
 
 export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   initialAmount = 0,
   pushedAmountUsd = 0,
   pushedAmountTrob = 0,
-  priceUsd,
+  priceUsd = 0.056,
   walletAddress,
   isCapped = false,
+  poolClaimableTrob = 0,
+  fallbackClaimableTrob = 0,
 }) => {
   const wallet = useWallet();
   const [balance, setBalance] = useState<number>(initialAmount);
@@ -39,27 +43,32 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
     ? `${wallet.base58Address.slice(0, 6)}…${wallet.base58Address.slice(-4)}`
     : '—';
 
-  // Only used in extreme edge-case where contract push failed to non-standard address
-  const handleClaimFallback = async () => {
+  // Claim handler for either 35% matrix pool rewards or emergency fallback buffer
+  const handleClaim = async () => {
     if (balance <= 0 || status !== 'idle') return;
     setError(null);
     setStatus('claiming');
 
     try {
       const daoAddress = getActiveDaoAddress();
-      if (daoAddress && wallet.isConnected) {
-        // claimFallback() on the EquoraDAO contract
-        const result = await wallet.callContract({
-          contract_address:  daoAddress,
-          function_selector: 'claimFallback()',
-          parameter:         '',
-          call_value:        0,
-          fee_limit:         50_000_000,
-          owner_address:     wallet.base58Address ?? wallet.hexAddress ?? '',
-        });
-        if (!result.result) throw new Error('Transaction rejected by contract.');
-        setTxHash(result.txid);
+      if (!daoAddress || !wallet.isConnected) {
+        throw new Error('Please connect your TrobSafe wallet first.');
       }
+
+      // If pool rewards are available, claim pool share; otherwise claim fallback buffer
+      const targetFunction = poolClaimableTrob > 0 ? 'claimPoolShare()' : 'claimFallback()';
+
+      const result = await wallet.callContract({
+        contract_address:  daoAddress,
+        function_selector: targetFunction,
+        parameter:         '',
+        call_value:        0,
+        fee_limit:         50_000_000,
+        owner_address:     wallet.base58Address ?? wallet.hexAddress ?? '',
+      });
+
+      if (!result.result) throw new Error('Transaction rejected by contract.');
+      setTxHash(result.txid);
 
       setStatus('success');
       setTimeout(() => {
@@ -151,25 +160,31 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
         </div>
       </div>
 
-      {/* Emergency Fallback Claim (Only visible if contract push failed) */}
+      {/* On-Chain Claimable Rewards (Matrix Pool or Fallback Buffer) */}
       {balance > 0 && (
         <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 font-jakarta">
             <Info className="w-3.5 h-3.5 text-amber-600" />
-            <span>Fallback Buffer: ${balance.toFixed(2)} USD</span>
+            <span>
+              {poolClaimableTrob > 0
+                ? `Claimable Pool Share: $${balance.toFixed(2)} USD (${poolClaimableTrob.toFixed(2)} TROB)`
+                : `Claimable Buffer: $${balance.toFixed(2)} USD`}
+            </span>
           </div>
           <p className="text-[11px] text-amber-700 font-jakarta leading-tight">
-            A direct push failed (non-standard wallet recipient). Click below to claim your reserve balance.
+            {poolClaimableTrob > 0
+              ? 'Accumulated 35% global matrix pool rewards ready to be claimed directly to your wallet.'
+              : 'A direct push was buffered on-chain. Click below to pull your dividend balance.'}
           </p>
           <button
-            onClick={handleClaimFallback}
+            onClick={handleClaim}
             disabled={status !== 'idle'}
             className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs"
           >
             {status === 'claiming' ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                <span>Claiming Fallback…</span>
+                <span>Claiming On-Chain…</span>
               </>
             ) : status === 'success' ? (
               <>
@@ -178,7 +193,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
               </>
             ) : (
               <>
-                <span>Claim Fallback Balance</span>
+                <span>Claim Available Balance</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}

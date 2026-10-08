@@ -1,4 +1,5 @@
 import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
+import { toTronHex, toTrobBase58 } from '@/utils/trobAddress';
 
 export type SeatStatus = 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked';
 
@@ -17,6 +18,10 @@ export interface CouncilSeatDetail {
   alreadyPaidTrob?: number;
   remainingTrob?: number;
   retopupDeadline?: string | null;
+  currentCycleEarningsUsd?: number;
+  lifetimeEarningsUsd?: number;
+  retopupCount?: number;
+  depositCount?: number;
 }
 
 export interface CouncilActivityItem {
@@ -79,7 +84,9 @@ export function buildLiveCouncilSeats(
   }
 
   const nextAvailableSeat = lowestVacantSeat;
-  const canonicalMyAddress = activeAddress?.toLowerCase() ?? '';
+  const rawAddr = (activeAddress || '').trim().toLowerCase();
+  const myHex = rawAddr ? toTronHex(rawAddr).toLowerCase() : '';
+  const myB58 = rawAddr ? toTrobBase58(rawAddr).toLowerCase() : '';
 
   return Array.from({ length: 100 }, (_, index) => {
     const seatNumber = index + 1;
@@ -89,20 +96,20 @@ export function buildLiveCouncilSeats(
     const isDefaulted = !!liveMember && isSeatExpired(liveMember);
 
     if (liveMember && !isDefaulted) {
+      const memAddr = (liveMember.address || '').toLowerCase();
       const isMine =
-        !!canonicalMyAddress &&
-        liveMember.address.toLowerCase() === canonicalMyAddress;
+        Boolean(rawAddr) &&
+        (memAddr === rawAddr || (myHex && memAddr === myHex) || (myB58 && memAddr === myB58));
       const isCapped = liveMember.status === 'capped';
       const isUnderfunded = liveMember.status === 'underfunded';
       const entryTrob = liveMember.entryAmountTrob ?? liveMember.entryAmountBtt ?? 0;
-      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.037757;
-      const rawFullRequiredTrob = Math.round((300 / effectiveTrobPrice) * 100) / 100;
-      const fullRequiredTrob = Math.max(5357.14, rawFullRequiredTrob);
+      const fullRequiredTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
       const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
       const retopupCount = liveMember.retopupCount ?? 0;
       const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 93;
 
+      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.056;
       const eco = calculateMemberCycleAndLifetime(
         seatNumber,
         liveMember.status,
@@ -113,15 +120,12 @@ export function buildLiveCouncilSeats(
       );
 
       const capPct = isCapped ? 100 : eco.currentCycleCapPct;
-      const earningsUsd = eco.lifetimeUsd;
+      const currentCycleEarningsUsd = isCapped ? 1500 : eco.currentCycleUsd;
+      const lifetimeEarningsUsd = eco.lifetimeUsd;
 
       const addr = liveMember.address;
       const shortAddr =
         addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
-
-      const liveTrob = isUnderfunded ? 0 : isCapped
-        ? Math.max(pushedBtt, 27530)
-        : (effectiveTrobPrice > 0 ? (earningsUsd / effectiveTrobPrice) : (pushedBtt > 0 ? pushedBtt : 0));
 
       const cycleLabel = retopupCount > 0 ? ` (Cycle ${retopupCount + 1})` : '';
 
@@ -129,11 +133,15 @@ export function buildLiveCouncilSeats(
         seatNumber,
         status: isMine ? 'mine' : 'claimed',
         ownerAddress: isMine ? `${shortAddr} (You)` : shortAddr,
+        currentCycleEarningsUsd,
+        lifetimeEarningsUsd,
+        retopupCount,
+        depositCount: 1 + retopupCount,
         lifetimeEarnings: isUnderfunded
           ? '$0.00 USD'
           : isCapped
-          ? `$1,500.00 USD (≈ ${Math.round(liveTrob).toLocaleString()} TROB)`
-          : `$${earningsUsd.toFixed(2)} USD (≈ ${Math.round(earningsUsd / effectiveTrobPrice).toLocaleString()} TROB)`,
+          ? '$1,500.00 USD'
+          : `$${currentCycleEarningsUsd.toFixed(2)} USD`,
         capProgress: capPct,
         votingPower: '1.0%',
         statusText: isCapped
@@ -173,7 +181,7 @@ export function buildLiveCouncilSeats(
           : 'Next in Queue • Ready for Instant Mint',
         statusBadge: isDefaulted ? 'Defaulted Vacancy' : 'Next Available',
         soulboundId,
-        entryAmount: `$300 USD (≈ ${Math.max(5357.14, Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.037757))).toLocaleString()} TROB)`,
+        entryAmount: '$300.00 USD (5,357.14 TROB)',
       };
     }
 
@@ -185,10 +193,10 @@ export function buildLiveCouncilSeats(
         lifetimeEarnings: '$0.00 USD',
         capProgress: 0,
         votingPower: '1.0%',
-        statusText: 'Vacant Seat • 48h Retopup Expired',
+        statusText: 'Vacant Seat • Retopup Expired',
         statusBadge: 'Defaulted Vacancy',
         soulboundId,
-        entryAmount: `$300 USD (≈ ${Math.max(5357.14, Math.round(300 / (bttPriceUsd > 0 ? bttPriceUsd : 0.037757))).toLocaleString()} TROB)`,
+        entryAmount: '$300.00 USD (5,357.14 TROB)',
       };
     }
 

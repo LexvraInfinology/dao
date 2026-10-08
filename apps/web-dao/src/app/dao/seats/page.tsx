@@ -143,8 +143,7 @@ export default function CouncilSeatsPage() {
     setMintErr(null);
     setMinting(true);
 
-    const rawTrob = Math.round((300 / (price?.priceUsd || 0.037757)) * 100) / 100;
-    const seatEntryTrob = Math.max(5357.14, rawTrob);
+    const seatEntryTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
     // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
     if (seatEntryTrob < 4500) {
       throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);

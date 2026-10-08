@@ -64,7 +64,7 @@ const SEARCH_INDEX: SearchItem[] = [
     title: 'Treasury & Pools',
     subtitle: 'Autonomous 4 Value Pools, 35% Matrix royalty stream & reserves',
     url: '/dao/treasury',
-    keywords: ['treasury', 'pools', 'vault', '35%', 'value pools', 'royalties', 'salary', 'drops'],
+    keywords: ['treasury', 'pools', 'vault', '35%', 'value pools', 'royalties', 'royalty', 'drops'],
     icon: 'pool',
   },
   {
@@ -144,12 +144,12 @@ const SEARCH_INDEX: SearchItem[] = [
     icon: 'pool',
   },
   {
-    id: 'pool_40_salary',
+    id: 'pool_40_royalty',
     category: 'Protocol & Pools',
-    title: '40% Monthly Leader Salary Pool',
+    title: '40% Monthly Leader Royalty Pool',
     subtitle: 'Automated recurring distributor incentive pool for top builders',
     url: '/dao/treasury',
-    keywords: ['40%', 'salary', 'leader pool', 'monthly rewards', 'builder pool'],
+    keywords: ['40%', 'royalty', 'salary', 'leader pool', 'monthly rewards', 'builder pool'],
     icon: 'pool',
   },
   {

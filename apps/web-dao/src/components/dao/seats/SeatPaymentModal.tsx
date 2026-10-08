@@ -45,9 +45,8 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
   // Pricing calculations pegged to $300 USD
   const entryFeeUsd = 300;
-  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.037757;
-  const rawSeatEntryTrob = Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
-  const seatEntryTrob = Math.max(5357.14, rawSeatEntryTrob);
+  const trobPriceUsd = 0.056; // Smart contract benchmark ($0.056 USD / TROB)
+  const seatEntryTrob = 5357.14; // Fixed smart contract entry fee ($300 USD)
   const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
 
   // Instant cashback formula: $300 / position
@@ -212,9 +211,9 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                   </span>
                 </div>
 
-                {/* Net Effective Cost */}
+                {/* Net Effective Entry */}
                 <div className="flex items-center justify-between text-xs pt-1">
-                  <span className="text-[#4F6D87]">Net Out-of-Pocket Cost</span>
+                  <span className="text-[#4F6D87]">Net Effective Entry</span>
                   <span className="font-bold text-[#14304A] font-mono text-xs">
                     ${netEffectiveCostUsd} USD
                   </span>

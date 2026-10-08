@@ -32,12 +32,6 @@ export const TransactionsHero: React.FC<TransactionsHeroProps> = ({
             <div className="flex items-center gap-3 pt-1 text-xs font-jakarta">
               <span className="font-black text-[#071A4A] text-base">{totalTransactions.toLocaleString()}</span>
               <span className="text-[#60739A]">total transactions</span>
-              {bttPriceUsd && (
-                <>
-                  <span className="text-[#CBD5E1]">·</span>
-                  <span className="text-[#60739A]">TROB @ <span className="font-bold text-[#071A4A]">${bttPriceUsd.toFixed(4)}</span></span>
-                </>
-              )}
             </div>
           )}
         </div>

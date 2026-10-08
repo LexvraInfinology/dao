@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
         },
         protocolPools: {
           daoTreasuryPct: 35,
+          monthlyRoyaltyPct: 40,
           monthlySalaryPct: 40,
           magicBlindBoxPct: 10,
           luckyDropsPct: 15,

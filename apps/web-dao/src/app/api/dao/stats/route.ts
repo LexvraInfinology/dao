@@ -51,8 +51,8 @@ export async function GET() {
   const bttPriceUsd = trobPriceUsd;
   const entryFeeUsd = 300;
   const earningsCapUsd = 1500;
-  const entryFeeBtt = Math.ceil((entryFeeUsd / trobPriceUsd) * 100) / 100;
-  const earningsCapBtt = Math.ceil((earningsCapUsd / trobPriceUsd) * 100) / 100;
+  const entryFeeBtt = 5357.14; // Smart contract fixed entry fee
+  const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap
 
   let memberCount = 0;
   let totalCollectedBTT = 0;

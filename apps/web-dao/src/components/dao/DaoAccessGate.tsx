@@ -211,8 +211,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
   // Fetch live TROB price for the $300 USD calculation (polls every 30s)
   const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
-  const effectiveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.037757;
-  const effectiveSeatEntryTrob = Math.max(5357.14, Math.round((300 / effectiveTrobPrice) * 100) / 100);
+  const effectiveTrobPrice = 0.056; // Smart contract benchmark ($0.056 USD / TROB)
+  const effectiveSeatEntryTrob = 5357.14; // Fixed smart contract entry fee ($300 USD)
 
   // Synchronize local membership cache and purge stale keys
   useEffect(() => {
@@ -252,14 +252,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     (memberData?.isMember === true || Number(memberData?.position) > 0)
   );
 
-  // 48-Hour Live Countdown Timer hook for underfunded members
+  // 12-Hour Live Countdown Timer hook for underfunded members
   const [underfundedTimeLeft, setUnderfundedTimeLeft] = useState<{
     hours: number;
     minutes: number;
     seconds: number;
     totalSeconds: number;
     isExpired: boolean;
-  }>({ hours: 48, minutes: 0, seconds: 0, totalSeconds: 48 * 3600, isExpired: false });
+  }>({ hours: 12, minutes: 0, seconds: 0, totalSeconds: 12 * 3600, isExpired: false });
 
   useEffect(() => {
     if (!isUnderfunded) return;
@@ -269,7 +269,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       if (memberData?.retopupDeadline) {
         targetMs = new Date(memberData.retopupDeadline).getTime();
       } else {
-        targetMs = Date.now() + 48 * 3600 * 1000;
+        targetMs = Date.now() + 12 * 3600 * 1000;
       }
       const diff = targetMs - Date.now();
       if (diff <= 0) {
@@ -602,14 +602,14 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
     window.location.href = '/';
   };
 
-  // ── Access Restricted: Underfunded 48-Hour Dashboard Barrier Screen ────────
+  // ── Access Restricted: Underfunded 12-Hour Dashboard Barrier Screen ────────
   if (isUnderfunded) {
     const underfundedPos = memberData?.position || '—';
     const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
-    const currentPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.037757;
-    const requiredTotalTrob = Math.max(5357.14, Math.round((300 / currentPriceUsd) * 100) / 100);
+    const BENCHMARK_PEG_USD = 0.056;
+    const requiredTotalTrob = 5357.14;
     const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
-    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * currentPriceUsd * 100) / 100;
+    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * BENCHMARK_PEG_USD * 100) / 100;
     const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
 
     return (
@@ -648,7 +648,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#60739A]">
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-[#0E62E4]" />
-                <span>48h Reservation Window</span>
+                <span>12h Reservation Window</span>
               </span>
               <span className="font-mono font-bold text-[#0E62E4]">
                 {underfundedTimeLeft.isExpired ? 'Expired' : 'Active'}
@@ -754,9 +754,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           onClose={() => setUnderfundedRetopupOpen(false)}
           seatPosition={typeof underfundedPos === 'number' ? underfundedPos : 1}
           retopupDeadline={memberData?.retopupDeadline}
-          trobPriceUsd={currentPriceUsd}
+          trobPriceUsd={BENCHMARK_PEG_USD}
           alreadyPaidTrob={underfundedPaidTrob}
           isUnderfunded={true}
+          unearnedDebtTrob={memberData?.unearnedDebtTrob}
           onSuccess={() => {
             setUnderfundedRetopupOpen(false);
             refetchMember();
@@ -1390,7 +1391,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                       ) : (
                         <Zap className="w-3.5 h-3.5 fill-white" />
                       )}
-                      <span>⚡ One-Click Stake & Vote</span>
+                      <span>One-Click Stake & Vote</span>
                     </button>
                     <button
                       type="button"

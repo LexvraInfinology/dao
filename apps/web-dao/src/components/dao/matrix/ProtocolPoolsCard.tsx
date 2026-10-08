@@ -8,7 +8,8 @@ export const ProtocolPoolsCard: React.FC = () => {
   const { data: matrixData } = useApi<{
     protocolPools: {
       daoTreasuryPct: number;
-      monthlySalaryPct: number;
+      monthlyRoyaltyPct?: number;
+      monthlySalaryPct?: number;
       magicBlindBoxPct: number;
       luckyDropsPct: number;
       activeDaoMemberCount: number;
@@ -67,16 +68,18 @@ export const ProtocolPoolsCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Pool 2: Monthly Salary (40%) */}
+        {/* Pool 2: Monthly Royalty (40%) */}
         <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2EEF9] shadow-xs space-y-2">
           <div className="flex items-center justify-between">
             <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
               <Trophy className="w-4 h-4" />
             </div>
-            <span className="text-lg font-black text-indigo-600">40%</span>
+            <span className="text-lg font-black text-indigo-600">
+              {pools?.monthlyRoyaltyPct ?? pools?.monthlySalaryPct ?? 40}%
+            </span>
           </div>
           <div>
-            <div className="text-xs font-bold text-[#14304A]">Monthly Leader Salary</div>
+            <div className="text-xs font-bold text-[#14304A]">Monthly Leader Royalty</div>
             <p className="text-[10.5px] text-[#4F6D87] mt-0.5 leading-relaxed">
               Automated monthly payout stream for top matrix builders and distributors.
             </p>

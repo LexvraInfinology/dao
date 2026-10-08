@@ -12,30 +12,26 @@ interface ProfileMetricsGridProps {
 export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile }) => {
   const isMember = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
   const isUnderfunded = profile?.status === 'underfunded';
-  const effectiveCapUsd = (profile?.earningsCapUsd && profile.earningsCapUsd >= 300) ? profile.earningsCapUsd : 1500;
   const isCapped       = profile?.status === 'capped';
   const pos            = profile?.position ?? 0;
-  const exactEarnedFromPos = pos > 0 ? calculateMemberEarnedUsd(pos, profile?.status, 93) : 0;
-  const rawTotalEarnedUsd = (profile?.totalEarnedUsd && profile.totalEarnedUsd > 0)
-    ? profile.totalEarnedUsd
-    : (exactEarnedFromPos > 0
-        ? exactEarnedFromPos
-        : (profile?.pushedAmountUsdEstimate && profile.pushedAmountUsdEstimate > 0
-            ? profile.pushedAmountUsdEstimate
-            : 0));
-  const totalEarnedUsd = isMember
-    ? (isUnderfunded ? 0 : isCapped ? effectiveCapUsd : rawTotalEarnedUsd)
-    : 0;
-  const bttPrice       = profile?.bttPriceUsd    ?? 0;
+  const retopupCount   = (profile as any)?.retopupCount ?? 0;
   const onChainBtt     = profile?.pushedAmountBtt || profile?.totalEarnedBtt || 0;
-  const totalEarnedBtt = isUnderfunded ? 0 : isCapped ? Math.max(onChainBtt, 27530) : onChainBtt > 0 ? onChainBtt : (bttPrice > 0 ? (totalEarnedUsd / bttPrice) : 0);
 
-  const effectivePrice  = bttPrice > 0 ? bttPrice : 0.037757;
-  const pushedUsd       = (profile as any)?.currentCycleUsd ?? ((profile as any)?.retopupCount ? 0 : totalEarnedUsd);
-  const capProgressPct  = isMember && effectiveCapUsd > 0 ? (isUnderfunded ? 0 : isCapped ? 100 : (profile?.capProgressPct !== undefined ? profile.capProgressPct : Math.min(100, Math.max(0, (pushedUsd / effectiveCapUsd) * 100)))) : 0;
-  const earningsCapBtt  = isMember ? (profile?.earningsCapBtt && profile.earningsCapBtt > 1500 ? profile.earningsCapBtt : Math.round(effectiveCapUsd / effectivePrice)) : 0;
-  const entryAmountBtt  = isMember ? (profile?.entryAmountBtt && profile.entryAmountBtt > 300 ? profile.entryAmountBtt : Math.round(300 / effectivePrice)) : 0;
-  const remainingCapUsd = isMember ? (isCapped ? 0 : Math.max(0, effectiveCapUsd - pushedUsd)) : 0;
+  // Smart contract constants from EquoraDAOv2:
+  // 5X Cap is strictly pegged on-chain at 26,785.71 TROB ($1,500.00 USD).
+  // Fixed conversion rate is $0.056 USD / TROB ($300 / 5,357.14 TROB entry fee).
+  const CONTRACT_CAP_TROB = 26785.714285;
+  const CONTRACT_PEG      = 0.056;
+
+  // Current cycle on-chain truth vs lifetime across all cycles
+  const currentCycleTrob = isUnderfunded ? 0 : isCapped ? CONTRACT_CAP_TROB : onChainBtt;
+  const currentCycleUsd  = isUnderfunded ? 0 : isCapped ? 1500 : Math.min(1500, Math.round(currentCycleTrob * CONTRACT_PEG * 100) / 100);
+  const capProgressPct   = isMember ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (currentCycleTrob / CONTRACT_CAP_TROB) * 100))) : 0;
+  const remainingCapTrob = isMember ? (isCapped ? 0 : Math.max(0, CONTRACT_CAP_TROB - currentCycleTrob)) : 0;
+  const remainingCapUsd  = isMember ? (isCapped ? 0 : Math.max(0, 1500 - currentCycleUsd)) : 0;
+
+  const totalEarnedUsd = isMember ? Math.round(((retopupCount * 1500) + currentCycleUsd) * 100) / 100 : 0;
+  const totalEarnedBtt = isMember ? Math.round(((retopupCount * CONTRACT_CAP_TROB) + currentCycleTrob) * 100) / 100 : 0;
 
   const status   = isMember ? (profile?.status ?? 'active') : 'unclaimed';
   const isActive = isMember && status === 'active';
@@ -67,10 +63,10 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
             </div>
           </div>
           <div className="text-2xl font-black font-jakarta text-[#071A4A] tracking-tight">
-            ${totalEarnedUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            ${totalEarnedUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-[11px] text-[#64748B] font-jakarta truncate pt-0.5">
-            ≈ {totalEarnedBtt.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB (${bttPrice.toFixed(4)}/TROB)
+            ≈ {totalEarnedBtt.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB (On-Chain Direct)
           </div>
         </div>
 
@@ -78,8 +74,16 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
         <div className="bg-white border border-[#E2ECF9] rounded-2xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(15,23,42,0.02)] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold font-jakarta text-[#64748B] uppercase tracking-wider">5X CAP PROGRESS</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#047857]">
-              {capProgressPct >= 90 ? 'NEAR CAP' : capProgressPct >= 70 ? 'CAUTION' : 'SAFE ZONE'}
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              capProgressPct >= 100
+                ? 'bg-rose-100 border border-rose-300 text-rose-700'
+                : capProgressPct >= 90
+                ? 'bg-red-50 border border-red-200 text-red-600'
+                : capProgressPct >= 70
+                ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                : 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#047857]'
+            }`}>
+              {capProgressPct >= 100 ? '5X CAPPED' : capProgressPct >= 90 ? 'NEAR CAP' : capProgressPct >= 70 ? 'CAUTION' : 'SAFE ZONE'}
             </span>
           </div>
           <div className="text-2xl font-black font-jakarta text-[#071A4A] tracking-tight">
@@ -87,10 +91,15 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
           </div>
           <div className="space-y-1 pt-0.5">
             <div className="h-1.5 w-full bg-[#EEF2FE] rounded-full overflow-hidden">
-              <div className="h-full bg-[#155EEF] rounded-full transition-all" style={{ width: `${Math.min(100, capProgressPct)}%` }} />
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  capProgressPct >= 100 ? 'bg-rose-500' : 'bg-[#155EEF]'
+                }`}
+                style={{ width: `${Math.min(100, capProgressPct)}%` }}
+              />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-1 text-[9px] xl:text-[10px] text-[#64748B] font-jakarta">
-              <span>Cap: {earningsCapBtt.toLocaleString()} TROB ($1,500 max)</span>
+              <span>Cap: 26,786 TROB ($1,500 max)</span>
               <span>${remainingCapUsd.toFixed(2)} USD remaining</span>
             </div>
           </div>

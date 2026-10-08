@@ -50,6 +50,9 @@ export interface SyncedMemberState {
   joinedAt?: string;
   txHash?: string;
   userId?: string | number | null;
+  fallbackClaimableTrob?: number;
+  poolClaimableTrob?: number;
+  unearnedDebtTrob?: number;
 }
 
 const iface = new Interface([
@@ -131,6 +134,8 @@ export async function getAndSyncMemberState(
     isCapped: boolean;
     retopupDeadlineIso: string | null;
     isBlank: boolean;
+    fallbackClaimableTrob: number;
+    poolClaimableTrob: number;
   } | null = null;
 
   if (resolvedHex) {
@@ -160,6 +165,8 @@ export async function getAndSyncMemberState(
             isCapped: Boolean(decoded.isCapped),
             retopupDeadlineIso: dlSec > 0 ? new Date(dlSec * 1000).toISOString() : null,
             isBlank: Boolean(decoded.isBlank),
+            fallbackClaimableTrob: parseFloat(formatUnits(decoded.fallbackClaimable, 6)),
+            poolClaimableTrob: parseFloat(formatUnits(decoded.poolClaimable, 6)),
           };
         }
       }
@@ -174,18 +181,20 @@ export async function getAndSyncMemberState(
     const canonicalAddr = resolvedB58 || resolvedAddr;
     const isCapped = onChainDetails.isCapped;
     const isBlank = onChainDetails.isBlank;
-    const onChainStatus: 'active' | 'capped' | 'vacant' = isBlank ? 'vacant' : (isCapped ? 'capped' : 'active');
     const deadlineIso = onChainDetails.retopupDeadlineIso;
+    const isDeadlinePassed = Boolean(deadlineIso && new Date(deadlineIso).getTime() <= Date.now());
+    const onChainStatus: 'active' | 'capped' | 'vacant' = (isBlank || (isCapped && isDeadlinePassed)) ? 'vacant' : (isCapped ? 'capped' : 'active');
     const earnedTrob = onChainDetails.totalEarnedTrob;
 
     // Check existing DB record
     let dbMember: any = null;
     try {
       const dbCheck = await queryNeon<any>(
-        `SELECT id, status, "retopupDeadline", "retopupCount", "pushedAmountBtt", "entryAmountBtt", "joinedAt", "txHash"
-         FROM "DaoMember"
-         WHERE position = $1 OR LOWER(address) = LOWER($2)
-         ORDER BY CASE WHEN position = $1 THEN 0 ELSE 1 END
+        `SELECT m.id, m.status, m."retopupDeadline", m."retopupCount", m."pushedAmountBtt", m."entryAmountBtt", m."joinedAt", m."txHash", u."userId"
+         FROM "DaoMember" m
+         LEFT JOIN "User" u ON LOWER(u.address) = LOWER(m.address)
+         WHERE m.position = $1 OR LOWER(m.address) = LOWER($2)
+         ORDER BY CASE WHEN m.position = $1 THEN 0 ELSE 1 END
          LIMIT 1`,
         [pos, canonicalAddr]
       );
@@ -212,6 +221,11 @@ export async function getAndSyncMemberState(
                "retopupDeadline" = $3,
                "cappedAt" = CASE WHEN $4 THEN COALESCE("cappedAt", NOW()) ELSE NULL END,
                "retopupCount" = $5,
+               "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE 1 + $5 END,
+               "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300.00 ELSE 300.00 + ($5 * 300.00) END,
+               "lastRetopupAt" = CASE WHEN $5 > 0 THEN COALESCE("lastRetopupAt", NOW()) ELSE NULL END,
+               "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN 5357.14 ELSE "entryAmountBtt" END,
+               "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300.00 ELSE "entryAmountUsdAtJoin" END,
                "pushedAmountBtt" = $6,
                "updatedAt" = NOW()
            WHERE id = $7`,
@@ -225,6 +239,10 @@ export async function getAndSyncMemberState(
             dbMember.id,
           ]
         );
+        await queryNeon(
+          `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
+          [canonicalAddr]
+        ).catch(() => {});
       } else {
         // Auto-insert member into User and DaoMember
         const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
@@ -254,10 +272,11 @@ export async function getAndSyncMemberState(
       console.warn('[onChainMemberSync] DB update error:', dbErr);
     }
 
-    // Compute cycle earnings vs lifetime
-    const trobPrice = await getLiveTrobPrice();
-    const cycleEarnedUsd = isCapped ? 1500 : Math.min(1499.99, Math.round(earnedTrob * trobPrice * 100) / 100);
-    const capPct = isCapped ? 100 : Math.min(99, Math.round((cycleEarnedUsd / 1500) * 100));
+    // Compute cycle earnings vs lifetime according to smart contract parameters
+    const CAP_TROB = 26785.714285;
+    const CONTRACT_PEG = 0.056;
+    const cycleEarnedUsd = isCapped ? 1500 : Math.min(1499.99, Math.round((earnedTrob * CONTRACT_PEG) * 100) / 100);
+    const capPct = isCapped ? 100 : Math.min(99.9, Math.round((earnedTrob / CAP_TROB) * 1000) / 10);
     const lifetimeUsd = Math.round(((retopupCount * 1500) + cycleEarnedUsd) * 100) / 100;
 
     let timeRemainingSec: number | null = null;
@@ -266,16 +285,16 @@ export async function getAndSyncMemberState(
     }
 
     return {
-      isMember: true,
+      isMember: onChainStatus !== 'vacant',
       position: pos,
       nftTokenId: pos,
       address: canonicalAddr,
       status: onChainStatus,
-      isCapped,
-      retopupDeadline: isCapped ? deadlineIso : null,
-      retopupTimeRemainingSeconds: isCapped ? timeRemainingSec : null,
+      isCapped: onChainStatus === 'capped',
+      retopupDeadline: onChainStatus === 'capped' ? deadlineIso : null,
+      retopupTimeRemainingSeconds: onChainStatus === 'capped' ? timeRemainingSec : null,
       retopupCount,
-      entryAmountTrob: parseFloat(dbMember?.entryAmountBtt || '5357.14'),
+      entryAmountTrob: (onChainStatus === 'active' || onChainStatus === 'capped') ? 5357.14 : parseFloat(dbMember?.entryAmountBtt || '5357.14'),
       entryAmountUsd: 300,
       totalEarnedTrob: earnedTrob,
       currentCycleUsd: cycleEarnedUsd,
@@ -284,7 +303,9 @@ export async function getAndSyncMemberState(
       source: 'onchain',
       joinedAt: dbMember?.joinedAt,
       txHash: dbMember?.txHash,
-      userId: dbMember?.id,
+      userId: dbMember?.userId ? String(dbMember.userId) : String(pos),
+      fallbackClaimableTrob: onChainDetails.fallbackClaimableTrob,
+      poolClaimableTrob: onChainDetails.poolClaimableTrob,
     };
   }
 
@@ -324,7 +345,7 @@ export async function getAndSyncMemberState(
           : null,
         retopupCount: 0,
         entryAmountTrob: prevDep,
-        entryAmountUsd: Math.round(prevDep * 0.037757 * 100) / 100,
+        entryAmountUsd: Math.round(prevDep * 0.056 * 100) / 100,
         totalEarnedTrob: 0,
         currentCycleUsd: 0,
         lifetimeUsd: 0,
@@ -333,28 +354,64 @@ export async function getAndSyncMemberState(
         joinedAt: dbMember?.joinedAt,
         txHash: dbMember?.txHash,
         userId: dbMember?.id,
+        unearnedDebtTrob: reservation.unearnedDebtSun / 1e6,
       };
     }
 
     if (dbMember) {
-      const isUnderfunded = dbMember.status === 'underfunded';
-      const isCapped = dbMember.status === 'capped';
+      let currentStatus = dbMember.status || 'active';
+      const isUnderfunded = currentStatus === 'underfunded';
+      const isCapped = currentStatus === 'capped';
       const retopupCount = parseInt(dbMember.retopupCount || '0', 10);
       const pushedBtt = parseFloat(dbMember.pushedAmountBtt || '0');
       const dl = (isCapped || isUnderfunded) ? toUtcIso(dbMember.retopupDeadline) : null;
       const dlSec = dl ? Math.max(0, Math.floor((new Date(dl).getTime() - Date.now()) / 1000)) : null;
 
-      const trobPrice = await getLiveTrobPrice();
-      const cycleEarnedUsd = isUnderfunded ? 0 : (isCapped ? 1500 : Math.min(1499.99, Math.round(pushedBtt * trobPrice * 100) / 100));
-      const capPct = isUnderfunded ? 0 : (isCapped ? 100 : Math.min(99, Math.round((cycleEarnedUsd / 1500) * 100)));
+      // Automatically transition seat to vacant if deadline has passed (12h for underfunded, 48h for capped)
+      if ((isUnderfunded || isCapped) && dlSec !== null && dlSec <= 0) {
+        await queryNeon(
+          `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
+          [dbMember.id]
+        ).catch(() => {});
+        currentStatus = 'vacant';
+      }
+
+      if (currentStatus === 'vacant' || currentStatus === 'blank') {
+        return {
+          isMember: false,
+          position: dbMember.position,
+          nftTokenId: dbMember.nftTokenId || dbMember.position,
+          address: dbMember.address,
+          status: 'vacant',
+          isCapped: false,
+          retopupDeadline: null,
+          retopupTimeRemainingSeconds: 0,
+          retopupCount,
+          entryAmountTrob: 0,
+          entryAmountUsd: 0,
+          totalEarnedTrob: 0,
+          currentCycleUsd: 0,
+          lifetimeUsd: 0,
+          capProgressPct: 0,
+          source: 'database',
+          joinedAt: dbMember.joinedAt,
+          txHash: dbMember.txHash,
+          userId: dbMember.id,
+        };
+      }
+
+      const CAP_TROB = 26785.714285;
+      const CONTRACT_PEG = 0.056;
+      const cycleEarnedUsd = isUnderfunded ? 0 : (isCapped ? 1500 : Math.min(1499.99, Math.round(pushedBtt * CONTRACT_PEG * 100) / 100));
+      const capPct = isUnderfunded ? 0 : (isCapped ? 100 : Math.min(99.9, Math.round((pushedBtt / CAP_TROB) * 1000) / 10));
       const lifetimeUsd = isUnderfunded ? 0 : Math.round(((retopupCount * 1500) + cycleEarnedUsd) * 100) / 100;
 
       return {
-        isMember: dbMember.status !== 'vacant' && dbMember.status !== 'blank',
+        isMember: true,
         position: dbMember.position,
         nftTokenId: dbMember.nftTokenId || dbMember.position,
         address: dbMember.address,
-        status: dbMember.status || 'active',
+        status: currentStatus,
         isCapped,
         retopupDeadline: dl,
         retopupTimeRemainingSeconds: dlSec,

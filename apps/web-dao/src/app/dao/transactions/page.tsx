@@ -35,7 +35,7 @@ export default function DaoTransactionsPage() {
   const totalRecords = txData?.total        ?? transactions.length;
   const trobPrice    = priceData?.priceUsd && priceData.priceUsd > 0
     ? priceData.priceUsd
-    : (txData?.trobPriceUsd ?? txData?.bttPriceUsd ?? 0.037757);
+    : (txData?.trobPriceUsd ?? txData?.bttPriceUsd ?? 0.056);
 
   const handleScopeChange = (scope: 'all' | 'my') => {
     setViewScope(scope);
@@ -95,6 +95,8 @@ export default function DaoTransactionsPage() {
           transactions={transactions}
           totalTransactions={totalRecords}
           bttPriceUsd={trobPrice}
+          protocolInflowsUsd={txData?.protocolInflowsUsd}
+          protocolOutflowsUsd={txData?.protocolOutflowsUsd}
         />
         <TransactionsMobileList
           transactions={transactions}

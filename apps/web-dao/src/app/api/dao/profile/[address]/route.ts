@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 import { getAndSyncMemberState } from '../../../_lib/onChainMemberSync';
 
+// Dynamic profile route
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -13,7 +14,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
   }
 
-  let bttPriceUsd = 0.037757;
+  let bttPriceUsd = 0.056;
   try {
     const { TROB_PRICE_API_URL } = await import('@/config/env');
     const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
@@ -25,7 +26,7 @@ export async function GET(
   } catch {}
 
   const earningsCapUsd = 1500;
-  const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
+  const earningsCapBtt = 26785.71; // Smart contract on-chain 5X cap (26,785.71 TROB = $1,500.00 USD)
 
   try {
     const synced = await getAndSyncMemberState(address);
@@ -92,6 +93,10 @@ export async function GET(
           remainingCapTrob: Math.max(0, earningsCapBtt - synced.totalEarnedTrob),
           capProgressPct: synced.capProgressPct,
           isCapped: synced.isCapped,
+          unearnedDebtTrob: synced.unearnedDebtTrob ?? 0,
+          unearnedDebtUsd: synced.unearnedDebtTrob ? Math.round(synced.unearnedDebtTrob * bttPriceUsd * 100) / 100 : 0,
+          poolClaimableTrob: synced.poolClaimableTrob ?? 0,
+          fallbackClaimableTrob: synced.fallbackClaimableTrob ?? 0,
           bttPriceUsd,
           trobPriceUsd: bttPriceUsd,
         },

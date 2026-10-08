@@ -282,6 +282,11 @@ export interface MemberDetailsData {
   entryAmountTrob?: number;
   retopupCount?: number;
   currentCycleUsd?: number;
+  unearnedDebtTrob?: number;
+  unearnedDebtUsd?: number;
+  poolClaimableTrob?: number;
+  fallbackClaimableTrob?: number;
+  totalClaimableTrob?: number;
   notice?: string;
 }
 
@@ -302,6 +307,8 @@ export interface ProfileData extends MemberDetailsData {
   poolCards: Array<{ tier: number; tierName: string; unlockedAt: string }>;
   totalEarnedBtt: number;
   totalEarnedUsd: number;
+  remainingCapUsd?: number;
+  remainingCapTrob?: number;
   bttPriceUsd: number;
   priceSource: string;
 }
@@ -323,7 +330,13 @@ export interface LoungeData {
     joinedAt: string;
   };
   claimableDividendsBtt: number;
+  claimableDividendsTrob?: number;
   claimableDividendsUsd: number;
+  poolClaimableTrob?: number;
+  fallbackClaimableTrob?: number;
+  totalClaimableTrob?: number;
+  unearnedDebtTrob?: number;
+  unearnedDebtUsd?: number;
   totalReceivedBtt: number;
   totalReceivedUsd: number;
   earningsCapBtt: number;
@@ -383,6 +396,8 @@ export interface TransactionsData {
   bttPriceUsd: number;
   trobPriceUsd?: number;
   priceSource: string;
+  protocolInflowsUsd?: number;
+  protocolOutflowsUsd?: number;
 }
 
 // ─── Convenience wrappers ─────────────────────────────────────────────────────
@@ -392,14 +407,14 @@ export function useDaoStats(pollMs?: number) {
 }
 
 export const DEFAULT_TROB_PRICE: TrobPriceData = {
-  priceUsd: 0.037757,
-  priceSource: 'trobchain-live',
+  priceUsd: 0.056,
+  priceSource: 'contract-peg',
   updatedAt: new Date().toISOString(),
   isStale: false,
   seatEntryUsd: 300,
-  seatEntryTrob: 7945.55,
+  seatEntryTrob: 5357.14,
   earningsCapUsd: 1500,
-  earningsCapTrob: 39727.73,
+  earningsCapTrob: 26785.71,
 };
 
 export function useTrobPrice(pollMs?: number) {
@@ -413,7 +428,7 @@ export function useDaoEvents(limit = 20, pollMs?: number) {
   return useApi<DaoEventData[]>(`/api/dao/events?limit=${limit}`, { pollMs });
 }
 
-export function useDaoMember(address: string | null, pollMs?: number) {
+export function useDaoMember(address: string | null, pollMs: number = 10_000) {
   return useApi<MemberDetailsData>(
     address ? `/api/dao/member/${address}` : null,
     { enabled: !!address, pollMs }
@@ -427,10 +442,10 @@ export function useDaoProfile(address: string | null) {
   );
 }
 
-export function useLounge(address: string | null) {
+export function useLounge(address: string | null, pollMs: number = 15_000) {
   return useApi<LoungeData>(
     address ? `/api/dao/lounge/${address}` : null,
-    { enabled: !!address }
+    { enabled: !!address, pollMs }
   );
 }
 

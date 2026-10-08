@@ -4,6 +4,13 @@
  * Zero npm dependencies, 100% compatible with Vercel Serverless & Edge.
  */
 
+try {
+  const dns = require('dns');
+  if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch {}
+
 export function getNeonSqlEndpoint(dbUrl: string): string {
   try {
     const match = dbUrl.match(/@([^/:]+)/);

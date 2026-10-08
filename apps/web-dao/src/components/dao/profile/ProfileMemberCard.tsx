@@ -22,7 +22,9 @@ export const ProfileMemberCard: React.FC<ProfileMemberCardProps> = ({ profile, l
     ? `${displayAddr.slice(0, 8)}…${displayAddr.slice(-4)}`
     : displayAddr;
 
-  const memberId  = profile?.userId  ? `#${profile.userId}`  : '—';
+  const rawId = profile?.userId ? String(profile.userId) : '';
+  const isUuid = rawId.length > 15;
+  const memberId  = !isUuid && rawId ? `#${rawId}` : profile?.position ? `#${String(profile.position).padStart(4, '0')}` : '—';
   const seatNum   = profile?.position ? `#${profile.position}` : '—';
   const isUnderfunded = Boolean(profile?.status === 'underfunded' || profile?.underfunded);
   const isActive  = profile?.status === 'active' && !isUnderfunded;

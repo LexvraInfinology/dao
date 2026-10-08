@@ -23,12 +23,11 @@ export default function MemberLoungePage() {
 
   const livePrice = priceData?.priceUsd && priceData.priceUsd > 0
     ? priceData.priceUsd
-    : (lounge?.bttPriceUsd || 0.037757);
+    : (lounge?.bttPriceUsd || 0.056);
 
   const isUnderfunded = Boolean(
     lounge?.status === 'underfunded' ||
-    lounge?.accessGranted === false ||
-    (lounge?.isMember && lounge?.entryAmountBtt && lounge.entryAmountBtt < 1000)
+    lounge?.accessGranted === false
   );
 
   // If member is underfunded, display dedicated locked portal view
@@ -109,6 +108,8 @@ export default function MemberLoungePage() {
               priceUsd={livePrice}
               walletAddress={activeAddress ?? undefined}
               isCapped={lounge?.isCapped}
+              poolClaimableTrob={lounge?.poolClaimableTrob}
+              fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
             />
             <EarningsCapCard
               variant="desktop"
@@ -156,6 +157,8 @@ export default function MemberLoungePage() {
           priceUsd={livePrice}
           walletAddress={activeAddress ?? undefined}
           isCapped={lounge?.isCapped}
+          poolClaimableTrob={lounge?.poolClaimableTrob}
+          fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
         />
         <IncomeChannelsCard loungeData={lounge} />
       </div>

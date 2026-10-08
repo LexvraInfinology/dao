@@ -13,7 +13,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
   }
 
-  let bttPriceUsd = 0.037757;
+  let bttPriceUsd = 0.056;
   try {
     const { TROB_PRICE_API_URL } = await import('@/config/env');
     const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
@@ -25,7 +25,7 @@ export async function GET(
   } catch {}
 
   const earningsCapUsd = 1500;
-  const earningsCapBtt = Math.round((earningsCapUsd / bttPriceUsd) * 100) / 100;
+  const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap (26,785.71 TROB = $1,500.00 USD)
 
   try {
     const synced = await getAndSyncMemberState(address);
@@ -58,6 +58,12 @@ export async function GET(
       const displayPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : synced.lifetimeUsd;
       const displayRemainingCapUsd = isUnderfunded ? earningsCapUsd : isCapped ? 0 : Math.max(0, earningsCapUsd - synced.currentCycleUsd);
       const displayRemainingCapBtt = isCapped ? 0 : Math.max(0, earningsCapBtt - synced.totalEarnedTrob);
+      const poolClaimable = synced.poolClaimableTrob ?? 0;
+      const fallbackClaimable = synced.fallbackClaimableTrob ?? 0;
+      const totalClaimableTrob = Math.round((poolClaimable + fallbackClaimable) * 100) / 100;
+      const totalClaimableUsd = Math.round(totalClaimableTrob * bttPriceUsd * 100) / 100;
+      const unearnedDebtTrob = synced.unearnedDebtTrob ?? 0;
+      const unearnedDebtUsd = Math.round(unearnedDebtTrob * bttPriceUsd * 100) / 100;
 
       return NextResponse.json({
         success: true,
@@ -67,8 +73,14 @@ export async function GET(
           position: pos,
           nftTokenId: synced.nftTokenId || pos,
           status: synced.status,
-          claimableDividendsBtt: 0,
-          claimableDividendsUsd: 0,
+          claimableDividendsBtt: totalClaimableTrob,
+          claimableDividendsTrob: totalClaimableTrob,
+          claimableDividendsUsd: totalClaimableUsd,
+          poolClaimableTrob: poolClaimable,
+          fallbackClaimableTrob: fallbackClaimable,
+          totalClaimableTrob,
+          unearnedDebtTrob,
+          unearnedDebtUsd,
           totalReceivedBtt: isCapped ? earningsCapBtt : synced.totalEarnedTrob,
           totalReceivedUsd: displayPushedUsd,
           earningsCapBtt,

@@ -14,6 +14,20 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/transaction',
+        destination: '/dao/transactions',
+        permanent: true,
+      },
+      {
+        source: '/transactions',
+        destination: '/dao/transactions',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

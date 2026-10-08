@@ -14,6 +14,13 @@
  * 5. Underfunded / vacant seats receive $0.00 until funded.
  */
 
+// Smart contract constants from EquoraDAOv2
+export const CONTRACT_ENTRY_FEE_TROB    = 5357.142857;  // 5,357.14 TROB ($300 USD fixed deposit)
+export const CONTRACT_EARNINGS_CAP_TROB = 26785.714285; // 26,785.71 TROB ($1,500 USD 5X cap)
+export const CONTRACT_TROB_PEG          = 0.056;        // $0.056 USD per TROB (lastTrobPriceUsd6 in contract)
+export const CONTRACT_EARNINGS_CAP_USD  = 1500;
+export const CONTRACT_ENTRY_FEE_USD     = 300;
+
 export interface MemberEarningsBreakdown {
   currentCycleUsd: number;
   currentCycleCapPct: number;
@@ -27,7 +34,7 @@ export function calculateMemberCycleAndLifetime(
   totalActiveSeats: number = 93,
   retopupCount: number = 0,
   currentCyclePushedTrob: number = 0,
-  trobPriceUsd: number = 0.037757
+  trobPriceUsd: number = CONTRACT_TROB_PEG
 ): MemberEarningsBreakdown {
   if (!position || position <= 0) {
     return { currentCycleUsd: 0, currentCycleCapPct: 0, lifetimeUsd: 0, isCapped: false };
@@ -41,19 +48,19 @@ export function calculateMemberCycleAndLifetime(
 
   if (retopupCount > 0) {
     // Member has re-topuped at least once!
-    // Each past retopup cycle completed earned $1,500.00 USD.
+    // Smart contract resets lifetimeEarnings to 0, starting a new cycle towards 26,785.71 TROB ($1,500).
     const cycleEarnedUsd = isCappedStatus
       ? 1500
-      : Math.min(1500, Math.round(currentCyclePushedTrob * trobPriceUsd * 100) / 100);
+      : Math.min(1500, Math.round(currentCyclePushedTrob * CONTRACT_TROB_PEG * 100) / 100);
     const capPct = isCappedStatus
       ? 100
-      : Math.min(99, Math.round((cycleEarnedUsd / 1500) * 100));
+      : Math.min(99.9, Math.round((currentCyclePushedTrob / CONTRACT_EARNINGS_CAP_TROB) * 1000) / 10);
     const lifetimeUsd = Math.round(((retopupCount * 1500) + cycleEarnedUsd) * 100) / 100;
     return {
       currentCycleUsd: cycleEarnedUsd,
       currentCycleCapPct: capPct,
       lifetimeUsd,
-      isCapped: isCappedStatus || cycleEarnedUsd >= 1500,
+      isCapped: isCappedStatus || currentCyclePushedTrob >= CONTRACT_EARNINGS_CAP_TROB,
     };
   }
 
@@ -63,17 +70,23 @@ export function calculateMemberCycleAndLifetime(
   }
 
   // Active member in initial cycle
-  let totalTheoretical = 0;
-  const maxK = Math.max(position, totalActiveSeats);
-  for (let k = position; k <= maxK; k++) {
-    totalTheoretical += 300 / k;
+  let cycleEarnedUsd = 0;
+  let capPct = 0;
+
+  if (currentCyclePushedTrob > 0) {
+    // Exact smart contract earnings truth
+    cycleEarnedUsd = Math.min(1499.99, Math.round(currentCyclePushedTrob * CONTRACT_TROB_PEG * 100) / 100);
+    capPct = Math.min(99.9, Math.round((currentCyclePushedTrob / CONTRACT_EARNINGS_CAP_TROB) * 1000) / 10);
+  } else {
+    // Theoretical 300 / N model
+    let totalTheoretical = 0;
+    const maxK = Math.max(position, totalActiveSeats);
+    for (let k = position; k <= maxK; k++) {
+      totalTheoretical += 300 / k;
+    }
+    cycleEarnedUsd = Math.min(1499.99, Math.round(totalTheoretical * 100) / 100);
+    capPct = Math.min(99.9, Math.round((cycleEarnedUsd / 1500) * 1000) / 10);
   }
-
-  const cycleEarnedUsd = currentCyclePushedTrob > 0
-    ? Math.min(1499.99, Math.round(currentCyclePushedTrob * trobPriceUsd * 100) / 100)
-    : Math.min(1499.99, Math.round(totalTheoretical * 100) / 100);
-
-  const capPct = Math.min(99, Math.round((cycleEarnedUsd / 1500) * 100));
 
   return {
     currentCycleUsd: cycleEarnedUsd,
@@ -89,7 +102,7 @@ export function calculateMemberEarnedUsd(
   totalActiveSeats: number = 93,
   retopupCount: number = 0,
   currentCyclePushedTrob: number = 0,
-  trobPriceUsd: number = 0.037757
+  trobPriceUsd: number = CONTRACT_TROB_PEG
 ): number {
   const result = calculateMemberCycleAndLifetime(
     position,

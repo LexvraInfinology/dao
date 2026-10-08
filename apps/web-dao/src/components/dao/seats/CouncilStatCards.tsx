@@ -95,7 +95,7 @@ export const CouncilStatCards: React.FC = () => {
             </div>
           </div>
           <div className="pt-2 border-t border-[#E2EEF9]/60 flex items-center justify-between text-[10px]">
-            <span className="text-[#4F6D87]">≈ {entryTrob} TROB</span>
+            <span className="text-[#4F6D87]">Fixed Pegged Cost</span>
             <span className="text-[#0E62E4] font-medium">300/N Return</span>
           </div>
         </div>

@@ -32,13 +32,13 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
   const { data: price } = useTrobPrice(30_000);
   const [retopupModalOpen, setRetopupModalOpen] = useState(false);
 
-  // 48h live countdown timer
+  // 12h live countdown timer
   const [timeLeft, setTimeLeft] = useState<{
     hours: number;
     minutes: number;
     seconds: number;
     isExpired: boolean;
-  }>({ hours: 48, minutes: 0, seconds: 0, isExpired: false });
+  }>({ hours: 12, minutes: 0, seconds: 0, isExpired: false });
 
   useEffect(() => {
     function calc() {
@@ -46,7 +46,7 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
       if (memberData?.retopupDeadline) {
         targetMs = new Date(memberData.retopupDeadline).getTime();
       } else {
-        targetMs = Date.now() + 48 * 3600 * 1000;
+        targetMs = Date.now() + 12 * 3600 * 1000;
       }
       const diff = targetMs - Date.now();
       if (diff <= 0) {
@@ -69,9 +69,9 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
 
   const position = memberData.position || '—';
   const entryTrob = memberData.entryAmountTrob ?? memberData.entryAmountBtt ?? 1.5;
-  const priceUsd = price?.priceUsd || 0.037757;
-  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * priceUsd * 100) / 100;
-  const requiredTrob = Math.max(5357.14, Math.round((300 / priceUsd) * 100) / 100);
+  const BENCHMARK_PEG_USD = 0.056;
+  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * BENCHMARK_PEG_USD * 100) / 100;
+  const requiredTrob = 5357.14;
   const remainingTrob = Math.max(0, Math.round((requiredTrob - entryTrob) * 100) / 100);
 
   return (
@@ -98,7 +98,7 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
                 <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#17334F]/10 text-[#17334F] border border-[#17334F]/20">
                   Genesis Council Seat #{position}
                 </span>
-                {/* 48-Hour Live Countdown Pill */}
+                {/* 12-Hour Live Countdown Pill */}
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold border ${
                   timeLeft.isExpired
                     ? 'bg-rose-100 text-rose-800 border-rose-300'
@@ -106,7 +106,7 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
                 }`}>
                   <Clock className="w-3.5 h-3.5 text-amber-600" />
                   <span>
-                    48h Window:{' '}
+                    12h Window:{' '}
                     {String(timeLeft.hours).padStart(2, '0')}:
                     {String(timeLeft.minutes).padStart(2, '0')}:
                     {String(timeLeft.seconds).padStart(2, '0')}
@@ -120,13 +120,13 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
 
               <p className="text-xs sm:text-[13px] text-[#4F6D87] leading-relaxed">
                 Your wallet holds reserved on-chain Council Seat <strong className="text-[#17334F]">#{position}</strong>, but was activated with only{' '}
-                <strong className="text-red-600">{entryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</strong> (~${entryUsd} USD) instead of the full $300 USD entry fee (~{requiredTrob.toLocaleString()} TROB). You have a <strong className="text-amber-700">48-hour reservation window</strong> to pay the remaining balance of <strong className="text-[#0E62E4]">{remainingTrob.toLocaleString()} TROB</strong>. Full Council Dashboard, VIP Lounge, governance, and matrix dividends remain strictly locked until paid.
+                <strong className="text-red-600">{entryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB</strong> (~${entryUsd} USD) instead of the full $300 USD entry fee (~{requiredTrob.toLocaleString()} TROB). You have a <strong className="text-amber-700">12-hour reservation window</strong> to pay the remaining balance of <strong className="text-[#0E62E4]">{remainingTrob.toLocaleString()} TROB</strong>. Full Council Dashboard, VIP Lounge, governance, and matrix dividends remain strictly locked until paid.
               </p>
 
               <div className="flex items-center gap-2 pt-1 text-[11px] text-[#4F6D87]/90 font-medium">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
                 <span>
-                  <strong>48h Expiration Notice:</strong> When this 48-hour timer reaches 00:00:00, unpaid seat reservations will be automatically revoked and returned to the Genesis pool.
+                  <strong>12h Expiration Notice:</strong> When this 12-hour timer reaches 00:00:00, unpaid seat reservations will be automatically revoked and returned to the Genesis pool.
                 </span>
               </div>
             </div>
@@ -164,9 +164,10 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
         onClose={() => setRetopupModalOpen(false)}
         seatPosition={typeof position === 'number' ? position : 1}
         retopupDeadline={memberData?.retopupDeadline}
-        trobPriceUsd={priceUsd}
+        trobPriceUsd={BENCHMARK_PEG_USD}
         alreadyPaidTrob={entryTrob}
         isUnderfunded={true}
+        unearnedDebtTrob={memberData?.unearnedDebtTrob}
         onSuccess={() => {
           setRetopupModalOpen(false);
           refetch();

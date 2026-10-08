@@ -9,18 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const backendRes = await fetchFromBackend<{ success: boolean; data?: any; error?: string; message?: string }>(
-      '/api/dao/retopup',
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }
-    );
-    if (backendRes) {
-      return NextResponse.json(backendRes, { status: backendRes.success ? 200 : 400 });
-    }
-
-    // Direct Serverless Neon Retopup
+    // Direct Serverless Neon Retopup with on-chain verification
     const { address, txHash } = body;
     if (!address) {
       return NextResponse.json({ success: false, error: 'Member address is required' }, { status: 400 });
@@ -79,13 +68,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: isUnderfunded
-          ? '48-Hour Seat Reservation Window has expired. Your Council seat reservation has expired and is reopened for the Genesis pool.'
+          ? '12-Hour Seat Reservation Window has expired. Your Council seat reservation has expired and is reopened for the Genesis pool.'
           : '48-Hour Retopup Window has expired. Your Council seat is now vacant and open for queue takeover.',
       }, { status: 410 });
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
-    let trobPriceUsd = 0.037757;
+    let trobPriceUsd = 0.056;
     try {
       const { TROB_PRICE_API_URL } = await import('@/config/env');
       const priceRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
@@ -109,14 +98,24 @@ export async function POST(req: NextRequest) {
            status = 'active',
            "retopupDeadline" = NULL,
            "cappedAt" = NULL,
-           "retopupCount" = COALESCE("retopupCount", 0) + 1,
-           "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN COALESCE("entryAmountBtt", 0) + $2 ELSE "entryAmountBtt" END,
+           "retopupCount" = CASE WHEN status = 'underfunded' THEN "retopupCount" ELSE COALESCE("retopupCount", 0) + 1 END,
+           "retopupAmountBtt" = CASE WHEN status = 'underfunded' THEN 0 ELSE $2 END,
+           "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE COALESCE("totalDepositsCount", 1) + 1 END,
+           "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300 ELSE COALESCE("totalDepositsUsd", 300) + 300 END,
+           "lastRetopupAt" = CASE WHEN status = 'underfunded' THEN NULL ELSE NOW() END,
+           "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN GREATEST(5357.14, COALESCE("entryAmountBtt", 0) + $2) ELSE "entryAmountBtt" END,
            "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300 ELSE "entryAmountUsdAtJoin" END,
            "txHash" = $3,
            "updatedAt" = NOW()
        WHERE id = $1`,
       [m.id, retopupTrob, cleanTx]
     );
+
+    // Update User table qualification
+    await queryNeon(
+      `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
+      [m.address]
+    ).catch(() => {});
 
     // 3. Record retopup event in DaoEvent
     const eventReason = isUnderfunded

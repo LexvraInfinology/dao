@@ -36,7 +36,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   }, []);
 
   const formatCountdown = (deadlineIso?: string | null) => {
-    if (!deadlineIso) return '48h 00m 00s';
+    if (!deadlineIso) return '12h 00m 00s';
     const diffMs = new Date(deadlineIso).getTime() - Date.now();
     if (diffMs <= 0) return 'Window Expired';
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -76,9 +76,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
 
   const entryFeeUsd = 300;
-  const trobPriceUsd = priceData?.priceUsd && priceData.priceUsd > 0 ? priceData.priceUsd : 0.037757;
-  const rawSeatEntryTrob = Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
-  const seatEntryTrob = Math.max(5357.14, rawSeatEntryTrob);
+  const seatEntryTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
   const alreadyPaidTrob = seat.alreadyPaidTrob ?? 0;
   const remainingTrob = seat.remainingTrob && seat.remainingTrob > 0
@@ -177,8 +175,8 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {seat.status === 'mine'
-              ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} at today's rate to activate your seat and unlock full governance & dividends.`
-              : 'This seat was reserved with a provisional deposit. The owner must complete the remaining deposit before the 48-hour window closes, after which it reopens for queue takeover.'}
+              ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} (fixed at contract $0.056 benchmark) to activate your seat and unlock full governance & dividends.`
+              : 'This seat was reserved with a provisional deposit. The owner must complete the remaining deposit before the 12-hour window closes, after which it reopens for queue takeover.'}
           </p>
           {alreadyPaidTrob > 0 && (
             <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-amber-200/70 font-semibold text-amber-900">
@@ -232,13 +230,41 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
         </div>
 
-        {/* Lifetime Earnings */}
+        {/* Cycle Earnings */}
         <div className="flex items-center justify-between">
-          <span className="text-[#4F6D87]">Lifetime Earnings</span>
+          <span className="text-[#4F6D87]">Cycle Earnings</span>
           <span className="text-sm font-bold text-[#14304A]">
             {seat.lifetimeEarnings}
           </span>
         </div>
+
+        {/* Retopup / Deposit Cycles */}
+        {seat.status !== 'next' && seat.status !== 'defaulted' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE]/70 text-xs">
+              <div className="space-y-0.5">
+                <div className="text-[10px] uppercase font-bold text-[#155EEF] tracking-wider">Deposit Cycles</div>
+                <div className="font-extrabold text-[#071A4A]">
+                  {(seat.retopupCount ?? 0) > 0
+                    ? `Cycle #${(seat.retopupCount ?? 0) + 1} (${seat.retopupCount} Retopup Done)`
+                    : `Cycle #1 (Initial Deposit)`}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-[#60739A] font-medium">Deposits Count</div>
+                <div className="font-black text-[#0E62E4]">
+                  {1 + (seat.retopupCount ?? 0)} Deposits (${(1 + (seat.retopupCount ?? 0)) * 300} USD)
+                </div>
+              </div>
+            </div>
+            {(seat.retopupCount ?? 0) > 0 && seat.lifetimeEarningsUsd !== undefined && (
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 text-xs">
+                <span className="text-[11px] font-medium text-emerald-800">Lifetime Settled (All Cycles)</span>
+                <span className="font-bold text-emerald-700">${seat.lifetimeEarningsUsd.toFixed(2)} USD</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 5X Cap Progress */}
         <div className="space-y-1">
@@ -299,13 +325,6 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             </span>
             <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
               $300.00 USD
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-[#4F6D87]">
-            <span>Live TROB Equivalent (at ${trobPriceUsd.toFixed(4)})</span>
-            <span className="font-mono font-bold text-[#14304A]">
-              ≈ {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
             </span>
           </div>
 

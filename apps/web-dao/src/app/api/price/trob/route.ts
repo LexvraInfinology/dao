@@ -4,11 +4,12 @@ import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
-function calculateTrobPegs(_priceUsd: number) {
+function calculateTrobPegs(priceUsd: number) {
   const seatEntryUsd = 300;
-  const seatEntryTrob = 5357.14; // Fixed smart contract peg ($0.056 / $300)
+  const effectivePrice = Number.isFinite(priceUsd) && priceUsd > 0 ? priceUsd : 0.042431;
+  const seatEntryTrob = Math.round((seatEntryUsd / effectivePrice) * 100) / 100;
   const earningsCapUsd = 1500;
-  const earningsCapTrob = 26785.71; // Fixed smart contract 5X cap ($1,500)
+  const earningsCapTrob = Math.round((earningsCapUsd / effectivePrice) * 100) / 100;
   return { seatEntryUsd, seatEntryTrob, earningsCapUsd, earningsCapTrob };
 }
 
@@ -105,7 +106,7 @@ export async function GET() {
   }
 
   // 3. Graceful fallback for offline development
-  const priceUsd = 0.037757;
+  const priceUsd = 0.042431;
   const pegs = calculateTrobPegs(priceUsd);
 
   return NextResponse.json(

@@ -43,10 +43,12 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Pricing calculations pegged to $300 USD
+  // Pricing calculations pegged to $300 USD at live market rate
   const entryFeeUsd = 300;
-  const trobPriceUsd = 0.056; // Smart contract benchmark ($0.056 USD / TROB)
-  const seatEntryTrob = 5357.14; // Fixed smart contract entry fee ($300 USD)
+  const trobPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.042431;
+  const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+    ? priceData.seatEntryTrob
+    : Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
   const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
 
   // Instant cashback formula: $300 / position
@@ -164,13 +166,14 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
               {/* Connected Pricing Breakdown */}
               <div className="rounded-xl border border-[#E2EEF9] bg-[#F7FBFF] p-3.5 sm:p-4 space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold text-[#14304A] pb-2 border-b border-[#E2EEF9]">
+                <div className="flex items-center justify-between text-xs font-bold text-[#14304A] pb-2 border-b border-[#E2EEF9] flex-wrap gap-1">
                   <span className="flex items-center gap-1.5">
                     <BadgeDollarSign className="w-3.5 h-3.5 text-[#0E62E4]" />
-                    <span>Seat Pricing Breakdown</span>
+                    <span>Seat Pricing Breakdown ($300 USD)</span>
                   </span>
-                  <span className="text-[10px] text-[#0E62E4] font-semibold bg-[#0E62E4]/10 px-2 py-0.5 rounded-full">
-                    Genesis Council Seat
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 font-mono font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Live: ${trobPriceUsd.toFixed(4)} USD / TROB</span>
                   </span>
                 </div>
 

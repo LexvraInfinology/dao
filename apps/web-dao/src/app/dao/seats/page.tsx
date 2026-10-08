@@ -143,10 +143,13 @@ export default function CouncilSeatsPage() {
     setMintErr(null);
     setMinting(true);
 
-    const seatEntryTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
-    // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
-    if (seatEntryTrob < 4500) {
-      throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
+    const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : 0.042431;
+    const seatEntryTrob = (price?.seatEntryTrob && price.seatEntryTrob > 0)
+      ? price.seatEntryTrob
+      : Math.round((300 / livePriceUsd) * 100) / 100;
+    // Security floor: Entry fee is strictly pegged to $300 USD (minimum 3,000 TROB)
+    if (seatEntryTrob < 3000) {
+      throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD is strictly required.`);
     }
     const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
     const daoAddress = getActiveDaoAddress();

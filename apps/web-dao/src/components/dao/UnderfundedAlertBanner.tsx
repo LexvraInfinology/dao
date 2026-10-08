@@ -69,9 +69,11 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
 
   const position = memberData.position || '—';
   const entryTrob = memberData.entryAmountTrob ?? memberData.entryAmountBtt ?? 1.5;
-  const BENCHMARK_PEG_USD = 0.056;
-  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * BENCHMARK_PEG_USD * 100) / 100;
-  const requiredTrob = 5357.14;
+  const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : 0.042431;
+  const requiredTrob = (price?.seatEntryTrob && price.seatEntryTrob > 0)
+    ? price.seatEntryTrob
+    : Math.round((300 / livePriceUsd) * 100) / 100;
+  const entryUsd = memberData.entryAmountUsdEstimate ?? Math.round(entryTrob * livePriceUsd * 100) / 100;
   const remainingTrob = Math.max(0, Math.round((requiredTrob - entryTrob) * 100) / 100);
 
   return (
@@ -164,7 +166,7 @@ export const UnderfundedAlertBanner: React.FC<UnderfundedAlertBannerProps> = ({
         onClose={() => setRetopupModalOpen(false)}
         seatPosition={typeof position === 'number' ? position : 1}
         retopupDeadline={memberData?.retopupDeadline}
-        trobPriceUsd={BENCHMARK_PEG_USD}
+        trobPriceUsd={livePriceUsd}
         alreadyPaidTrob={entryTrob}
         isUnderfunded={true}
         unearnedDebtTrob={memberData?.unearnedDebtTrob}

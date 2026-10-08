@@ -103,7 +103,7 @@ export function buildLiveCouncilSeats(
       const isCapped = liveMember.status === 'capped';
       const isUnderfunded = liveMember.status === 'underfunded';
       const entryTrob = liveMember.entryAmountTrob ?? liveMember.entryAmountBtt ?? 0;
-      const fullRequiredTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
+      const fullRequiredTrob = bttPriceUsd > 0 ? Math.round((300 / bttPriceUsd) * 100) / 100 : 5357.14;
       const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
       const retopupCount = liveMember.retopupCount ?? 0;

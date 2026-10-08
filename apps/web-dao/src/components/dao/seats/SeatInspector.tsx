@@ -76,7 +76,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
 
   const entryFeeUsd = 300;
-  const seatEntryTrob = 5357.14; // Fixed smart contract benchmark ($0.056 / $300)
+  const livePriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.042431;
+  const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+    ? priceData.seatEntryTrob
+    : Math.round((entryFeeUsd / livePriceUsd) * 100) / 100;
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
   const alreadyPaidTrob = seat.alreadyPaidTrob ?? 0;
   const remainingTrob = seat.remainingTrob && seat.remainingTrob > 0
@@ -325,10 +328,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             </span>
             <div className="text-right">
               <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
-                {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+                {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
               </span>
-              <span className="text-[10px] text-[#4F6D87] block">
-                ($300.00 USD)
+              <span className="text-[10px] text-[#4F6D87] font-mono block">
+                $300 USD (@ ${livePriceUsd.toFixed(4)})
               </span>
             </div>
           </div>

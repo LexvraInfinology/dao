@@ -407,17 +407,17 @@ export function useDaoStats(pollMs?: number) {
 }
 
 export const DEFAULT_TROB_PRICE: TrobPriceData = {
-  priceUsd: 0.056,
-  priceSource: 'contract-peg',
+  priceUsd: 0.042431,
+  priceSource: 'live-market-api',
   updatedAt: new Date().toISOString(),
   isStale: false,
   seatEntryUsd: 300,
-  seatEntryTrob: 5357.14,
+  seatEntryTrob: 7070.30,
   earningsCapUsd: 1500,
-  earningsCapTrob: 26785.71,
+  earningsCapTrob: 35351.51,
 };
 
-export function useTrobPrice(pollMs?: number) {
+export function useTrobPrice(pollMs: number = 15_000) {
   return useApi<TrobPriceData>('/api/price/trob', {
     pollMs,
     fallback: DEFAULT_TROB_PRICE,

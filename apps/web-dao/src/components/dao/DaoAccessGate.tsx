@@ -209,10 +209,12 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   const { data: memberData, loading: memberLoading, refetch: refetchMember } =
     useDaoMember(effectiveAddress);
 
-  // Fetch live TROB price for the $300 USD calculation (polls every 30s)
-  const { data: priceData, loading: priceLoading } = useTrobPrice(30_000);
-  const effectiveTrobPrice = 0.056; // Smart contract benchmark ($0.056 USD / TROB)
-  const effectiveSeatEntryTrob = 5357.14; // Fixed smart contract entry fee ($300 USD)
+  // Fetch live TROB market price for the $300 USD calculation (polls every 15s)
+  const { data: priceData, loading: priceLoading } = useTrobPrice(15_000);
+  const liveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.042431;
+  const liveSeatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+    ? priceData.seatEntryTrob
+    : Math.round((300 / liveTrobPrice) * 100) / 100;
 
   // Synchronize local membership cache and purge stale keys
   useEffect(() => {
@@ -513,11 +515,11 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
       const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
         ? priceData.seatEntryTrob
-        : effectiveSeatEntryTrob;
+        : liveSeatEntryTrob;
 
-      // Security hard-floor: Entry fee is strictly pegged to $300 USD (minimum 4,500 TROB)
-      if (seatEntryTrob < 4500) {
-        throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD (at least 4,500 TROB) is strictly required.`);
+      // Security floor: Entry fee is strictly pegged to $300 USD (minimum 3,000 TROB)
+      if (seatEntryTrob < 3000) {
+        throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD is strictly required.`);
       }
       const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
 
@@ -606,10 +608,10 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   if (isUnderfunded) {
     const underfundedPos = memberData?.position || '—';
     const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
-    const BENCHMARK_PEG_USD = 0.056;
-    const requiredTotalTrob = 5357.14;
+    const liveRateUsd = liveTrobPrice > 0 ? liveTrobPrice : 0.042431;
+    const requiredTotalTrob = liveSeatEntryTrob > 0 ? liveSeatEntryTrob : Math.round((300 / liveRateUsd) * 100) / 100;
     const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
-    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * BENCHMARK_PEG_USD * 100) / 100;
+    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? Math.round(underfundedPaidTrob * liveRateUsd * 100) / 100;
     const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
 
     return (
@@ -754,7 +756,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
           onClose={() => setUnderfundedRetopupOpen(false)}
           seatPosition={typeof underfundedPos === 'number' ? underfundedPos : 1}
           retopupDeadline={memberData?.retopupDeadline}
-          trobPriceUsd={BENCHMARK_PEG_USD}
+          trobPriceUsd={liveRateUsd}
           alreadyPaidTrob={underfundedPaidTrob}
           isUnderfunded={true}
           unearnedDebtTrob={memberData?.unearnedDebtTrob}
@@ -853,23 +855,37 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 </p>
               </div>
 
-              {/* ── Council Seat Entry Price Box ($300 Peg) ────────────────────── */}
-              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 space-y-2 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-sans">
-                  <span className="font-semibold text-[#17334F] text-[10px] sm:text-[11px]">Council Seat Entry Fee</span>
-                  <span className="text-[10px] sm:text-[11px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-2 py-0.5 rounded-full">
-                    Genesis Lifetime Seat
+              {/* ── Council Seat Entry Price Box ($300 Worth Pegged to Live Rate) ── */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/25 space-y-2.5 shadow-xs">
+                {/* Header row: Title + Live Market Price badge */}
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-sans">
+                  <span className="font-bold text-[#17334F] text-[11px] sm:text-xs">
+                    Council Seat Entry Fee ($300 USD)
+                  </span>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-800 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-mono">1 TROB = ${liveTrobPrice.toFixed(4)} USD</span>
+                  </div>
+                </div>
+
+                {/* Primary numbers row: Live TROB amount required for $300 USD */}
+                <div className="flex flex-wrap items-baseline justify-between gap-2 pt-0.5">
+                  <div className="flex items-baseline gap-1.5 min-w-0">
+                    <span suppressHydrationWarning className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-black font-sora text-[#17334F] tracking-tight">
+                      {liveSeatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-[#0E62E4] font-sans shrink-0">TROB</span>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold bg-[#0E62E4]/10 text-[#0E62E4] border border-[#0E62E4]/25 font-sans shrink-0">
+                    $300.00 USD Worth
                   </span>
                 </div>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="flex items-baseline gap-1.5">
-                    <span suppressHydrationWarning className="text-xl sm:text-2xl lg:text-3xl font-black font-sora text-[#17334F] tracking-tight">
-                      {effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-[#0E62E4] font-sans">TROB</span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-[#0E62E4]/10 text-[#0E62E4] border border-[#0E62E4]/25 font-sans">
-                    Fixed $300.00 USD
+
+                {/* Micro note: Real-time calculation */}
+                <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-[#4F6D87] pt-1.5 border-t border-[#0E62E4]/15 flex-wrap gap-1 font-sans">
+                  <span>Payable via connected TrobSafe wallet</span>
+                  <span className="font-mono text-[10px] sm:text-[11px] text-[#0E62E4] font-semibold">
+                    ($300.00 ÷ ${liveTrobPrice.toFixed(4)})
                   </span>
                 </div>
               </div>
@@ -1451,8 +1467,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                   </>
                 ) : isEligibleToPay ? (
                   <>
-                    <span className="leading-snug">
-                      {`Submit Entry Deposit (${effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
+                    <span className="leading-snug break-words">
+                      {`Submit Entry Deposit (${liveSeatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)`}
                     </span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </>
@@ -1461,8 +1477,8 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 ) : !termsAccepted ? (
                   <span>Accept Terms & Conditions to Register</span>
                 ) : (
-                  <span className="leading-snug">
-                    {`Submit Entry Deposit (${effectiveSeatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
+                  <span className="leading-snug break-words">
+                    {`Submit Entry Deposit (${liveSeatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)`}
                   </span>
                 )}
               </button>

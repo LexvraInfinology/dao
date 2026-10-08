@@ -858,7 +858,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                 <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-sans">
                   <span className="font-semibold text-[#17334F] text-[10px] sm:text-[11px]">Council Seat Entry Fee</span>
                   <span suppressHydrationWarning className="font-mono text-[#0E62E4] font-semibold text-[10px] sm:text-[11px]">
-                    {`@ $${effectiveTrobPrice.toFixed(4)} / TROB`}
+                    Verified Allocation
                   </span>
                 </div>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">

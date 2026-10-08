@@ -263,7 +263,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       console.error('Deposit execution error:', err);
       let rawMsg = err?.message || 'Error executing deposit transaction.';
       if (rawMsg.includes('Validate InternalTransfer error') || rawMsg.includes('balance is not sufficient')) {
-        rawMsg = `Insufficient TROB Balance: Your wallet requires ${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$${isUnderfunded ? netUsd : entryAmountUsd} USD at $${CONTRACT_PEG.toFixed(3)}/TROB) to complete this transaction. Please add TROB to your connected wallet.`;
+        rawMsg = `Insufficient TROB Balance: Your wallet requires ${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$${isUnderfunded ? netUsd : entryAmountUsd} USD) to complete this transaction. Please add TROB to your connected wallet.`;
       }
       setError(rawMsg);
     } finally {
@@ -444,15 +444,6 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/60 p-2 rounded-lg border border-blue-200/60">
-                      <span className="flex items-center gap-1.5">
-                        <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>Smart Contract Benchmark:</span>
-                      </span>
-                      <span className="font-mono font-bold">
-                        1 TROB = $0.056 USD (Fixed Contract Peg)
-                      </span>
-                    </div>
 
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Remaining Payable Amount:</span>
@@ -470,15 +461,6 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-blue-700 bg-blue-50/60 p-2 rounded-lg border border-blue-200/60">
-                      <span className="flex items-center gap-1.5">
-                        <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>Smart Contract Benchmark:</span>
-                      </span>
-                      <span className="font-mono font-bold">
-                        1 TROB = $0.056 USD (Fixed Contract Peg)
-                      </span>
-                    </div>
 
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Required Payment:</span>

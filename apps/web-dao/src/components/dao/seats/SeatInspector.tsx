@@ -175,7 +175,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {seat.status === 'mine'
-              ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} (fixed at contract $0.056 benchmark) to activate your seat and unlock full governance & dividends.`
+              ? `Your seat was reserved with an initial deposit. Pay the remaining ${remainingTrob ? `${Math.round(remainingTrob).toLocaleString()} TROB` : 'balance'} to activate your seat and unlock full governance & dividends.`
               : 'This seat was reserved with a provisional deposit. The owner must complete the remaining deposit before the 12-hour window closes, after which it reopens for queue takeover.'}
           </p>
           {alreadyPaidTrob > 0 && (

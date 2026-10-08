@@ -86,19 +86,6 @@ export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
           </div>
         )}
       </div>
-
-      {/* Stable Benchmark Note (Replaces fluctuating rate) */}
-      <div className="pt-3 sm:pt-4 border-t border-[#F8FAFC] flex items-center justify-between gap-3 text-xs flex-wrap">
-        <div className="flex items-center gap-1.5 text-[#60739A] font-jakarta">
-          <span className="text-[11px] font-semibold text-[#071A4A]">Smart Contract Peg:</span>
-          <span className="font-bold text-[#155EEF]">$0.0560 USD / TROB</span>
-          <span className="text-[10px] text-[#60739A]">(Zero Slippage)</span>
-        </div>
-        <div className="shrink-0 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[11px] text-[#047857] font-semibold font-jakarta flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-          <span>Live On-Chain Direct Sync</span>
-        </div>
-      </div>
     </div>
   );
 };

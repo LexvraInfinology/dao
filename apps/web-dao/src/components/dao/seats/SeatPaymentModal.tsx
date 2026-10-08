@@ -169,8 +169,8 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                     <BadgeDollarSign className="w-3.5 h-3.5 text-[#0E62E4]" />
                     <span>Seat Pricing Breakdown</span>
                   </span>
-                  <span className="text-[10px] text-[#4F6D87] font-normal">
-                    Oracle Rate: 1 TROB = ${trobPriceUsd.toFixed(4)} USD
+                  <span className="text-[10px] text-[#059669] font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Official Protocol Standard
                   </span>
                 </div>
 

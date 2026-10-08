@@ -134,17 +134,18 @@ git checkout -B "$DEPLOY_BRANCH" "$target_commit"
 test "$(git rev-parse HEAD)" = "$target_commit"
 test -f .env
 
-for service in "${EXPECTED_SERVICES[@]}"; do
-  compose config --services | grep -Fxq "$service" || {
-    echo "Deployment failed: expected Compose service '$service' is missing."
-    rollback "$previous_commit"
-  }
-done
-
 if ! compose config --quiet; then
   echo 'Deployment failed: Docker Compose configuration is invalid.'
   rollback "$previous_commit"
 fi
+
+actual_services="$(compose config --services)"
+for service in "${EXPECTED_SERVICES[@]}"; do
+  echo "$actual_services" | grep -Fxq "$service" || {
+    echo "Deployment failed: expected Compose service '$service' is missing."
+    rollback "$previous_commit"
+  }
+done
 
 if ! compose build; then
   echo 'Deployment failed: Docker image build failed.'

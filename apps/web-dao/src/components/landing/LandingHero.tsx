@@ -17,7 +17,7 @@ export const LandingHero: React.FC = () => {
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData, loading: memberLoading } = useDaoMember(activeAddress);
 
-  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
   const isUnderfunded = Boolean(memberData?.status === 'underfunded' || memberData?.underfunded);
   const isMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0 && !isUnderfunded);
   const seatPos = memberData?.position ?? null;

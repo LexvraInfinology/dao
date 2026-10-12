@@ -90,9 +90,16 @@ jobs:
         run: |
           set -Eeuo pipefail
           install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$UTHO_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/utho_deploy_key"
-          printf '%s\n' "$UTHO_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$RUNNER_TEMP/utho_deploy_key" "$HOME/.ssh/known_hosts"
+          printf '%b\n' "$UTHO_SSH_PRIVATE_KEY" | tr -d '\r' > "$RUNNER_TEMP/utho_deploy_key"
+          sed -i -e '$a\' "$RUNNER_TEMP/utho_deploy_key"
+          chmod 600 "$RUNNER_TEMP/utho_deploy_key"
+          printf '%b\n' "$UTHO_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
+          sed -i -e '$a\' "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$RUNNER_TEMP/utho_deploy_key" >/dev/null || {
+            echo "::error::SSH private key could not be parsed by OpenSSH/libcrypto. Check secret formatting."
+            exit 1
+          }
 
       - name: Deploy and verify on Utho VM
         env:

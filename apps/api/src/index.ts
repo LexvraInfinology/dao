@@ -1,3 +1,10 @@
+import dns from "node:dns";
+try {
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch {}
+
 import { createApp } from "./app";
 import { config } from "./config";
 import prisma from "@equora/database";

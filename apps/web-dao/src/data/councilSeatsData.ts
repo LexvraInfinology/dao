@@ -1,4 +1,4 @@
-import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime, CONTRACT_TROB_PEG, CONTRACT_EARNINGS_CAP_USD, CONTRACT_ENTRY_FEE_USD } from '@/utils/daoEconomics';
 import { toTronHex, toTrobBase58 } from '@/utils/trobAddress';
 
 export type SeatStatus = 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked';
@@ -112,14 +112,15 @@ export function buildLiveCouncilSeats(
       const retopupCount = liveMember.retopupCount ?? 0;
       const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 93;
 
-      const effectiveTrobPrice = bttPriceUsd > 0 ? bttPriceUsd : 0.056;
+      // Stable accounting: USD parameters and cap calculations pegged to CONTRACT_TROB_PEG ($0.056)
+      // so member inflow, earnings, and cap progress do NOT fluctuate with live market coin rates.
       const eco = calculateMemberCycleAndLifetime(
         seatNumber,
         liveMember.status,
         activeCount,
         retopupCount,
         pushedBtt,
-        effectiveTrobPrice
+        CONTRACT_TROB_PEG
       );
 
       const capPct = isCapped ? 100 : eco.currentCycleCapPct;

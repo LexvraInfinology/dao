@@ -93,3 +93,4 @@ packages/hardhat/scripts/fund-user.ts
 !apps/web-dao/public/downloads/trobsafe.apk
 equorafidocs/
 equorafidocs
+utho_deploy_key*

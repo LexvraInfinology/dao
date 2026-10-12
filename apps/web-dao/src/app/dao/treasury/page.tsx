@@ -17,9 +17,12 @@ export default function DaoTreasuryPage() {
   const { data: profile } = useDaoProfile(activeAddress);
   const { data: lounge } = useLounge(activeAddress);
 
-  // Exact on-chain earned/received payouts
-  const totalReceivedUsd = profile?.totalEarnedUsd ?? lounge?.totalReceivedUsd ?? (lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93) : 0);
-  const totalReceivedTrob = profile?.totalEarnedBtt ?? lounge?.totalReceivedBtt ?? (totalReceivedUsd / 0.056);
+  // Exact on-chain earned/received payouts (current cycle resets on retopup; lifetime tracks all cycles)
+  const cycleReceivedUsd = (typeof lounge?.currentCycleUsd === 'number')
+    ? lounge.currentCycleUsd
+    : (lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93, lounge?.retopupCount ?? 0, lounge?.pushedBtt ?? 0) : 0);
+  const totalReceivedUsd = profile?.totalEarnedUsd ?? lounge?.totalReceivedUsd ?? cycleReceivedUsd;
+  const totalReceivedTrob = profile?.totalEarnedBtt ?? lounge?.totalReceivedBtt ?? Math.round((totalReceivedUsd / 0.056) * 100) / 100;
   const fallbackBalance = lounge?.claimableDividendsUsd ?? 0;
 
   const [claimableBalance, setClaimableBalance] = useState<number>(fallbackBalance);
@@ -52,7 +55,7 @@ export default function DaoTreasuryPage() {
           totalReceivedUsd={totalReceivedUsd}
           totalReceivedTrob={totalReceivedTrob}
           earningsCapUsd={profile?.earningsCapUsd ?? 1500}
-          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - totalReceivedUsd)}
+          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - cycleReceivedUsd)}
           contractAddress={getActiveDaoAddress()}
         />
         <TreasuryWithdrawCard

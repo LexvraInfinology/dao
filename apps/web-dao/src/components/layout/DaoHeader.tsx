@@ -178,7 +178,7 @@ export const DaoHeader: React.FC = () => {
 
   const shortDisplay   = shortenAddress(displayAddress);
   const { data: memberData, loading: memberLoading, refetch: refetchMember } = useDaoMember(displayAddress);
-  const isMemberLoading = Boolean(isConnected && displayAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(isConnected && displayAddress && memberLoading && !memberData);
 
   // Listen for global 'dao:open-retopup' event
   useEffect(() => {

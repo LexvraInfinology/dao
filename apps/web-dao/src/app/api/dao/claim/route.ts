@@ -5,6 +5,7 @@ import { checkServerlessEligibility } from '../../_lib/eligibility';
 import { getActiveDaoAddress, getActiveDaoHex, toTronHex } from '@/utils/trobAddress';
 import { TROB_PRICE_API_URL } from '@/config/env';
 import { verifyOnChainTransaction, getOnChainMemberPosition } from '../../_lib/txVerifier';
+import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -340,6 +341,7 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+    invalidateMemberSyncCache();
 
     return NextResponse.json({
       success: true,

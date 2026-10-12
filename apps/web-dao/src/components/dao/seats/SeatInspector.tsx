@@ -51,7 +51,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (isSeatsLoading) {
+  if (isSeatsLoading && !seat) {
     return (
       <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
         <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EEF9]">

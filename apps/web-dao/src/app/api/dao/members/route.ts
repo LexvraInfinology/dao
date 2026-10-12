@@ -4,7 +4,7 @@ import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
-import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime } from '@/utils/daoEconomics';
+import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime, CONTRACT_TROB_PEG } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../_lib/dateUtils';
 
 // Dynamic Next.js API route
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   } catch {}
 
   const now = Date.now();
-  if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 3000) {
+  if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 10000) {
     return NextResponse.json({ success: true, data: cachedMembersPayload });
   }
 
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         backendRes.data?.total || 93,
         retopupCount,
         pushedBtt,
-        cachedTrobPrice
+        CONTRACT_TROB_PEG
       );
 
       const dl = extra ? extra.deadline : (toUtcIso(m.retopupDeadline) || null);
@@ -187,7 +187,7 @@ export async function GET(req: NextRequest) {
           total || 93,
           retopupCount,
           pushedAmt,
-          cachedTrobPrice
+          CONTRACT_TROB_PEG
         );
         const dl = (isCapped || isUnderfunded) ? toUtcIso(r.retopupDeadline) : null;
         return {

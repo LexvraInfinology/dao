@@ -9,6 +9,7 @@ const BACKEND_EXPLORER_API = EXPLORER_API_URL;
 // In-memory cache for detailed transactions to avoid repeating HTTP requests for immutable confirmed blocks
 const txDetailCache = new Map<string, any>();
 let lastAccountFetchTime = 0;
+let lastExplorerFailureTime = 0;
 let cachedAccountTxs: any[] = [];
 let cachedParsedItems: TransactionItem[] = [];
 
@@ -25,6 +26,11 @@ export async function getOnChainDaoTransactions(
 
   // Rate-limit account polling to once every 30 seconds unless forceRefresh is set
   if (!forceRefresh && now - lastAccountFetchTime < 30000 && cachedParsedItems.length > 0) {
+    return filterItems(cachedParsedItems, filterAddress);
+  }
+
+  // Circuit breaker: if backend explorer API recently failed or timed out, do not block callers
+  if (!forceRefresh && now - lastExplorerFailureTime < 60000 && cachedParsedItems.length > 0) {
     return filterItems(cachedParsedItems, filterAddress);
   }
 
@@ -55,6 +61,10 @@ export async function getOnChainDaoTransactions(
           txMap.set(tx.hash, tx);
         }
       }
+    }
+
+    if (txMap.size === 0) {
+      lastExplorerFailureTime = now;
     }
 
     const txList = Array.from(txMap.values()).sort((a, b) => {
@@ -360,7 +370,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
   newMembersAdded: number;
 }> {
   const now = Date.now();
-  if (!force && (now - lastOnChainSyncTime < 4000 || isSyncingOnChain)) {
+  if (!force && (now - lastOnChainSyncTime < 15000 || isSyncingOnChain)) {
     return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
   }
 
@@ -421,42 +431,29 @@ export async function syncOnChainMembersState(force = false): Promise<{
     // Fetch on-chain reservation deadline for underfunded seats
     const onChainReservationDeadlineIso = '2026-10-07T10:45:03.000Z';
 
+    // Batch query all existing members once from DB instead of 93 sequential queries
+    const existingDbMembersRes = await queryNeon<any>(
+      `SELECT id, address, position, status, "entryAmountBtt", "retopupDeadline", "retopupCount", "pushedAmountBtt", "cappedAt" FROM "DaoMember"`
+    ).catch(() => ({ rows: [] as any[] }));
+    const existingMap = new Map<number, any>();
+    for (const r of (existingDbMembersRes.rows || [])) {
+      if (r.position) existingMap.set(r.position, r);
+    }
+
     for (let i = 0; i < memberHexes.length; i++) {
       const position = i + 1;
       const rawHex = memberHexes[i];
       const isZero = !rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000';
-
-      const existing = await queryNeon<any>(
-        `SELECT id, address, position, status, "entryAmountBtt", "retopupDeadline", "retopupCount", "pushedAmountBtt", "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
-        [position]
-      );
+      const dbMember = existingMap.get(position);
 
       if (isZero) {
         // Seat position is zero on-chain (quarantined underfunded reservation or vacant)
-        if (existing.rows.length > 0) {
-          const dbMember = existing.rows[0];
-          const onChainRes = await getOnChainUnderfundedReservation(dbMember.address, daoHex);
-          if (onChainRes && onChainRes.isReserved) {
-            const prevDep = onChainRes.previousDepositSun / 1e6;
+        if (dbMember) {
+          if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {
             await queryNeon(
-              `UPDATE "DaoMember"
-               SET status = 'underfunded',
-                   "entryAmountBtt" = $1,
-                   "retopupDeadline" = $2,
-                   "pushedAmountBtt" = 0,
-                   "retopupCount" = 0,
-                   "updatedAt" = NOW()
-               WHERE position = $3`,
-              [prevDep, onChainReservationDeadlineIso, position]
-            );
-          } else {
-            // Not reserved on-chain and position is 0 on-chain => seat is vacant!
-            if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {
-              await queryNeon(
-                `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE position = $1`,
-                [position]
-              );
-            }
+              `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE position = $1`,
+              [position]
+            ).catch(() => {});
           }
         }
         continue;
@@ -465,6 +462,15 @@ export async function syncOnChainMembersState(force = false): Promise<{
       // Seat position has a verified genuine member on-chain
       const b58Addr = toTrobBase58(rawHex);
       if (!b58Addr || b58Addr === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') {
+        continue;
+      }
+
+      // Fast path: if DB already tracks this exact member as active or capped, skip expensive fullnode RPC spam
+      const isAlreadySynced = dbMember &&
+        dbMember.address.toLowerCase() === b58Addr.toLowerCase() &&
+        (dbMember.status === 'active' || dbMember.status === 'capped');
+
+      if (isAlreadySynced) {
         continue;
       }
 
@@ -483,6 +489,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
             function_selector: 'getMemberDetails(address)',
             parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
           }),
+          signal: AbortSignal.timeout(2000),
           cache: 'no-store',
         });
         if (detailRes.ok) {
@@ -503,7 +510,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
       const isDlPassed = Boolean(onChainDeadlineIso && new Date(onChainDeadlineIso).getTime() <= Date.now());
       const memberEffectiveStatus = (isOnChainBlank || (isOnChainCapped && isDlPassed)) ? 'vacant' : (isOnChainCapped ? 'capped' : 'active');
 
-      if (existing.rows.length === 0) {
+      if (!dbMember) {
         const userCheck = await queryNeon<any>(
           `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
           [b58Addr]
@@ -537,7 +544,6 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
         newMembersAdded++;
       } else {
-        const dbMember = existing.rows[0];
         if (
           dbMember.status === 'underfunded' ||
           dbMember.address.toLowerCase() !== b58Addr.toLowerCase()

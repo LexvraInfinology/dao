@@ -45,24 +45,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 1. Fetch live market price with 30s cache
-    let trobPriceUsd = cachedTrobPrice;
-    if (now - cachedTrobPriceTime > 30000) {
-      try {
-        const pRes = await fetch(TROB_PRICE_API_URL, {
-          signal: AbortSignal.timeout(1000),
-        });
-        if (pRes.ok) {
-          const pj = await pRes.json();
-          const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
-          if (Number.isFinite(p) && p > 0) {
-            cachedTrobPrice = p;
-            cachedTrobPriceTime = now;
-            trobPriceUsd = p;
-          }
-        }
-      } catch {}
-    }
+    const trobPriceUsd = 0.056;
 
     // 2. Fetch direct on-chain smart contract transactions from TrobChain (uses cached on-chain events)
     let onChainItems: TransactionItem[] = [];
@@ -74,8 +57,8 @@ export async function GET(req: NextRequest) {
 
     // 3. Query Neon DB for confirmed protocol ledger events and stats concurrently
     let dbItems: TransactionItem[] = [];
-    let protocolInflowsUsd = 25800;
-    let protocolOutflowsUsd = 21930;
+    let protocolInflowsUsd = 0;
+    let protocolOutflowsUsd = 0;
 
     try {
       let whereClauses: string[] = [];
@@ -103,8 +86,8 @@ export async function GET(req: NextRequest) {
         ),
         queryNeon<any>(
           `SELECT 
-             COALESCE(SUM("totalDepositsUsd"), 25800) as inflows,
-             COALESCE(SUM("pushedAmountBtt") * 0.056, 21930) as raw_outflows
+             COALESCE(SUM("totalDepositsUsd"), 0) as inflows,
+             COALESCE(SUM("pushedAmountBtt") * 0.056, 0) as raw_outflows
            FROM "DaoMember"
            WHERE LOWER(status) NOT IN ('vacant', 'blank')`
         ).catch(() => ({ rows: [] as any[], rowCount: 0 })),
@@ -167,7 +150,7 @@ export async function GET(req: NextRequest) {
         if (inf > 0) protocolInflowsUsd = inf;
       }
       // Outflows represent dividends distributed from the collected deposits (85% distributed, 15% protocol reserve)
-      const rawOut = parseFloat(statsRes.rows[0]?.raw_outflows || '21930');
+      const rawOut = parseFloat(statsRes.rows[0]?.raw_outflows || '0');
       protocolOutflowsUsd = Math.round(Math.min(protocolInflowsUsd * 0.85, rawOut) * 100) / 100;
     } catch (dbErr) {
       console.warn('[Transactions API] DB fetch warning:', dbErr);

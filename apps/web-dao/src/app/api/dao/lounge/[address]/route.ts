@@ -13,16 +13,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
   }
 
-  let bttPriceUsd = 0.056;
-  try {
-    const { TROB_PRICE_API_URL } = await import('@/config/env');
-    const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
-    if (pRes.ok) {
-      const pj = await pRes.json();
-      const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
-      if (Number.isFinite(p) && p > 0) bttPriceUsd = p;
-    }
-  } catch {}
+  const bttPriceUsd = 0.056; // Smart contract fixed peg
 
   const earningsCapUsd = 1500;
   const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap (26,785.71 TROB = $1,500.00 USD)
@@ -51,8 +42,25 @@ export async function GET(
       let bypassedToCouncilUsd = 0;
       let newActivationsSinceCap = 0;
       if (isCapped) {
-        bypassedToCouncilUsd = 6.49;
-        newActivationsSinceCap = 2;
+        try {
+          const capTimeRes = await queryNeon<any>(
+            `SELECT "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+            [pos]
+          );
+          const cappedAt = capTimeRes.rows[0]?.cappedAt;
+          if (cappedAt) {
+            const evtsRes = await queryNeon<any>(
+              `SELECT COUNT(*) as cnt, COALESCE(SUM("amountUsdEst"), 0) as total_usd
+               FROM "DaoEvent"
+               WHERE "eventType" IN ('joined', 'retopup')
+                 AND ("timestamp" > $1 OR "createdAt" > $1)`,
+              [cappedAt]
+            );
+            newActivationsSinceCap = parseInt(evtsRes.rows[0]?.cnt || '0', 10);
+            const totalInflows = parseFloat(evtsRes.rows[0]?.total_usd || '0');
+            bypassedToCouncilUsd = activeCount > 0 ? Math.round((totalInflows / activeCount) * 100) / 100 : 0;
+          }
+        } catch {}
       }
 
       const displayPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : synced.lifetimeUsd;

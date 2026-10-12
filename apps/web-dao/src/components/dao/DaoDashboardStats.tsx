@@ -57,7 +57,7 @@ export function DaoDashboardStats() {
   const wallet = useWallet();
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData, loading: memberLoading } = useDaoMember(activeAddress);
-  const isMemberLoading = Boolean(activeAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(activeAddress && memberLoading && !memberData);
 
   const cd = useCountdown();
 

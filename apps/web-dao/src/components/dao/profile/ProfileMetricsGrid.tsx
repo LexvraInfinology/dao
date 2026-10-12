@@ -24,9 +24,9 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile 
   const CONTRACT_PEG      = 0.056;
 
   // Current cycle on-chain truth vs lifetime across all cycles
-  const currentCycleTrob = isUnderfunded ? 0 : isCapped ? CONTRACT_CAP_TROB : onChainBtt;
-  const currentCycleUsd  = isUnderfunded ? 0 : isCapped ? 1500 : Math.min(1500, Math.round(currentCycleTrob * CONTRACT_PEG * 100) / 100);
-  const capProgressPct   = isMember ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (currentCycleTrob / CONTRACT_CAP_TROB) * 100))) : 0;
+  const currentCycleUsd  = isUnderfunded ? 0 : isCapped ? 1500 : (typeof (profile as any)?.currentCycleUsd === 'number' ? (profile as any).currentCycleUsd : Math.min(1500, Math.round(onChainBtt * CONTRACT_PEG * 100) / 100));
+  const currentCycleTrob = isUnderfunded ? 0 : isCapped ? CONTRACT_CAP_TROB : Math.round((currentCycleUsd / CONTRACT_PEG) * 100) / 100;
+  const capProgressPct   = isMember ? (isUnderfunded ? 0 : isCapped ? 100 : Math.min(100, Math.max(0, (currentCycleUsd / 1500) * 100))) : 0;
   const remainingCapTrob = isMember ? (isCapped ? 0 : Math.max(0, CONTRACT_CAP_TROB - currentCycleTrob)) : 0;
   const remainingCapUsd  = isMember ? (isCapped ? 0 : Math.max(0, 1500 - currentCycleUsd)) : 0;
 

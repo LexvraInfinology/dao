@@ -33,8 +33,8 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   position = 1,
   retopupCashbackUsd,
   activeMembersCount = 85,
-  bypassedToCouncilUsd = 6.49,
-  newActivationsSinceCap = 2,
+  bypassedToCouncilUsd = 0,
+  newActivationsSinceCap = 0,
   cappedAt,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -229,7 +229,7 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
                 • <strong>At Capping Point:</strong> Payouts stopped immediately upon reaching the $1,500 cap. Any surplus from that triggering transaction was automatically pushed on-chain to active members.
               </p>
               <p>
-                • <strong>While In 48h Capping Window:</strong> New seat activations (Seats #92 and #93) arrived after capping. To enforce the 5X limit, your seat received $0.00 from these inflows, and the full ~$6.49 USD was split equally among your active council peers (~${cashbackDisplayUsd} USD each).
+                • <strong>While In 48h Capping Window:</strong> All protocol inflows arriving while capped bypass this seat to enforce the 5X limit. {newActivationsSinceCap > 0 ? `${newActivationsSinceCap} inflow(s) totaling ~$${bypassedToCouncilUsd.toFixed(2)} USD were redirected equally to active peers (~$${cashbackDisplayUsd} USD each).` : 'Any subsequent incoming inflows before re-topup are redirected equally to active peers.'}
               </p>
               <p>
                 • <strong>Upon Re-topup ($300 USD):</strong> Your $300 deposit will be split equally among all active council members, you will receive instant cashback (~${cashbackDisplayUsd} USD), and your 5X cap will reset to $0.00 to unlock your next $1,500.00 USD earning cycle.

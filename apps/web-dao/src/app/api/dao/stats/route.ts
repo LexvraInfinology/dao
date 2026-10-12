@@ -14,40 +14,15 @@ let cachedTrobPriceTime = 0;
 
 export async function GET() {
   const now = Date.now();
-  if (cachedStatsData && now - cachedStatsTime < 3000) {
+  if (cachedStatsData && now - cachedStatsTime < 10000) {
     return NextResponse.json({ success: true, data: cachedStatsData });
   }
 
-  const backendRes = await fetchFromBackend<{ success: boolean; data: any }>('/api/dao/stats');
-  if (backendRes && backendRes.success && backendRes.data && (backendRes.data.memberCount || 0) > 0) {
-    cachedStatsData = backendRes.data;
-    cachedStatsTime = now;
-    return NextResponse.json(backendRes);
-  }
-
-  // Trigger real-time on-chain state sync in background
+  // Trigger real-time on-chain state sync in background (throttled)
   syncOnChainMembersState().catch(() => {});
   getOnChainDaoTransactions().catch(() => {});
 
-  // Live market price with 30s cache
-  if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {
-    try {
-      const pRes = await fetch(TROB_PRICE_API_URL, {
-        headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(1200),
-      });
-      if (pRes.ok) {
-        const pJson = await pRes.json();
-        const pVal = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd);
-        if (Number.isFinite(pVal) && pVal > 0) {
-          cachedTrobPrice = pVal;
-          cachedTrobPriceTime = now;
-        }
-      }
-    } catch {}
-  }
-
-  const trobPriceUsd = cachedTrobPrice;
+  const trobPriceUsd = 0.056;
   const bttPriceUsd = trobPriceUsd;
   const entryFeeUsd = 300;
   const earningsCapUsd = 1500;

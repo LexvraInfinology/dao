@@ -778,7 +778,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
   }
 
   // If verifying membership on load, display clean loader instead of gate window
-  if (wallet.isConnected && activeAddress && (memberLoading || memberData === null)) {
+  if (wallet.isConnected && activeAddress && memberLoading && !memberData) {
     return (
       <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

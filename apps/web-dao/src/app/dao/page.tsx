@@ -71,8 +71,7 @@ export default function DaoDashboardPage() {
   const { data: stats } = useDaoStats(30_000);
   const { data: events } = useDaoEvents(5, 15_000);
 
-  // ── Derived values ──────────────────────────────────────────────────────────
-  const isMemberChecking = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
+  const isMemberChecking = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
   const isMember = memberData?.isMember ?? false;
   const myPosition = memberData?.position ?? null;
   const myNftId = memberData?.nftTokenId ?? null;
@@ -486,25 +485,43 @@ export default function DaoDashboardPage() {
 
                 {/* 3. Total Inflow */}
                 <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#1F8A5B]">
-                    TOTAL INFLOW
+                  <div className="flex items-center justify-between">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-[#1F8A5B]">
+                      TOTAL INFLOW
+                    </div>
+                    {memberData?.retopupCount && memberData.retopupCount > 0 ? (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] uppercase">
+                        Cycle {memberData.retopupCount + 1}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
                     {(() => {
                       if (!isMember || !myPosition) return 'Total Return';
                       if (memberData?.status === 'underfunded') return '+$0.00';
                       if (memberData?.status === 'capped') return '+$1,500.00';
-                      const calculated = calculateMemberEarnedUsd(myPosition, memberData?.status, 93);
+                      if (typeof memberData?.currentCycleUsd === 'number') {
+                        return `+$${memberData.currentCycleUsd.toFixed(2)}`;
+                      }
+                      const calculated = calculateMemberEarnedUsd(
+                        myPosition,
+                        memberData?.status,
+                        93,
+                        memberData?.retopupCount ?? 0,
+                        memberData?.pushedAmountBtt ?? 0
+                      );
                       const exactUsd = calculated > 0
                         ? calculated
-                        : (memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0
+                        : (memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0 && !memberData?.retopupCount
                             ? memberData.pushedAmountUsdEstimate
                             : 0);
                       return `+$${exactUsd.toFixed(2)}`;
                     })()}
                   </div>
                   <div className="text-[9px] text-[#4F6D87] font-medium leading-tight truncate">
-                    Cashback + Pool Dividends
+                    {memberData?.retopupCount && memberData.retopupCount > 0
+                      ? `Cycle ${memberData.retopupCount + 1} • Reset from $0`
+                      : 'Cashback + Pool Dividends'}
                   </div>
                 </div>
 

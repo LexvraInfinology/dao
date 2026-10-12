@@ -206,6 +206,7 @@ export async function getOnChainMemberPosition(
         function_selector: 'memberPosition(address)',
         parameter: hexOwner.replace(/^41/, '').padStart(64, '0'),
       }),
+      signal: AbortSignal.timeout(6000),
       cache: 'no-store',
     });
 
@@ -268,6 +269,7 @@ export async function getOnChainUnderfundedReservation(
         function_selector: 'underfundedReservations(address)',
         parameter: hexOwner.replace(/^41/, '').padStart(64, '0'),
       }),
+      signal: AbortSignal.timeout(6000),
       cache: 'no-store',
     });
 

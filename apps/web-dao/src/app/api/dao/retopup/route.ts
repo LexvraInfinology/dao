@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { verifyOnChainTransaction } from '../../_lib/txVerifier';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -270,6 +270,7 @@ export async function POST(req: NextRequest) {
 
     const callerPayout = memberPayouts.find(p => p.id === m.id);
     const callerCashbackUsd = parseFloat(((callerPayout?.payoutTrob || 0) * trobPriceUsd).toFixed(2));
+    invalidateMemberSyncCache();
 
     return NextResponse.json({
       success: true,

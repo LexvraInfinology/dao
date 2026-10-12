@@ -56,9 +56,9 @@ export default function MemberLoungePage() {
   const isCapped           = Boolean(lounge?.isCapped);
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
   const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
-  const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93) : 0;
+  const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93, lounge?.retopupCount ?? 0, lounge?.pushedBtt ?? 0) : 0;
   const pushedUsd          = isCapped ? earningsCapUsd : (lounge?.totalReceivedUsd ?? lounge?.pushedUsd ?? (exactEarnedFromPos > 0 ? exactEarnedFromPos : 0));
-  const cyclePushedUsd     = isCapped ? earningsCapUsd : (lounge?.currentCycleUsd ?? (lounge?.retopupCount ? 0 : pushedUsd));
+  const cyclePushedUsd     = isCapped ? earningsCapUsd : (typeof lounge?.currentCycleUsd === 'number' ? lounge.currentCycleUsd : (lounge?.retopupCount ? 0 : pushedUsd));
   const capProgressPct     = isCapped ? 100 : (lounge?.capProgressPct !== undefined ? lounge.capProgressPct : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (cyclePushedUsd / earningsCapUsd) * 100)) : 0));
 
   return (
@@ -103,9 +103,9 @@ export default function MemberLoungePage() {
           <div className="xl:col-span-5 space-y-6">
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
-              pushedAmountUsd={pushedUsd}
-              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / livePrice)}
-              priceUsd={livePrice}
+              pushedAmountUsd={cyclePushedUsd}
+              pushedAmountTrob={lounge?.pushedBtt ?? Math.round((cyclePushedUsd / 0.056) * 100) / 100}
+              priceUsd={0.056}
               walletAddress={activeAddress ?? undefined}
               isCapped={lounge?.isCapped}
               poolClaimableTrob={lounge?.poolClaimableTrob}
@@ -116,7 +116,7 @@ export default function MemberLoungePage() {
               capProgressPct={capProgressPct}
               pushedUsd={cyclePushedUsd}
               earningsCapUsd={earningsCapUsd}
-              trobPriceUsd={livePrice}
+              trobPriceUsd={0.056}
               isCapped={lounge?.isCapped}
               retopupDeadline={lounge?.retopupDeadline}
               retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
@@ -139,7 +139,7 @@ export default function MemberLoungePage() {
           capProgressPct={capProgressPct}
           pushedUsd={cyclePushedUsd}
           earningsCapUsd={earningsCapUsd}
-          trobPriceUsd={livePrice}
+          trobPriceUsd={0.056}
           isCapped={lounge?.isCapped}
           retopupDeadline={lounge?.retopupDeadline}
           retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}

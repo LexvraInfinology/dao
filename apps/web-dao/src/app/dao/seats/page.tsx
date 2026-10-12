@@ -42,8 +42,8 @@ export default function CouncilSeatsPage() {
   const { data: membersPayload, loading: membersLoading, refetch: refetchMembers } =
     useApi<ApiMembersPayload>('/api/dao/members?page=1&limit=100', { pollMs: 15_000 });
 
-  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
-  const isSeatsLoading  = Boolean(membersLoading || !membersPayload);
+  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
+  const isSeatsLoading  = Boolean(!membersPayload && membersLoading);
 
   // Live real-time tick to auto-evaluate 48h expiration in real time
   const [clockTick, setClockTick] = useState(Date.now());

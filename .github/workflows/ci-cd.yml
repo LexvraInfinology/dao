@@ -69,6 +69,8 @@ jobs:
     steps:
       - name: Check out deployment commit
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Validate deployment secrets
         env:

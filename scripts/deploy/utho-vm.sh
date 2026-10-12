@@ -95,7 +95,7 @@ rollback() {
     exit 1
   fi
 
-  git checkout -B "$DEPLOY_BRANCH" "$rollback_commit"
+  git checkout -f -B "$DEPLOY_BRANCH" "$rollback_commit"
 
   if ! compose config --quiet; then
     echo 'Rollback failed: previous Compose configuration is invalid.'
@@ -130,7 +130,7 @@ git fetch --prune origin "$DEPLOY_BRANCH"
 previous_commit="$(git rev-parse HEAD)"
 target_commit="$(git rev-parse "origin/${DEPLOY_BRANCH}")"
 
-git checkout -B "$DEPLOY_BRANCH" "$target_commit"
+git checkout -f -B "$DEPLOY_BRANCH" "$target_commit"
 test "$(git rev-parse HEAD)" = "$target_commit"
 test -f .env
 

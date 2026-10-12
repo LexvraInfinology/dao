@@ -108,14 +108,19 @@ jobs:
           UTHO_SSH_PORT: ${{ secrets.UTHO_SSH_PORT }}
         run: |
           set -Eeuo pipefail
+          CLEAN_HOST=$(echo "$UTHO_HOST" | sed -e 's|^https*://||' -e 's|:[0-9]*$||' | tr -d '[:space:]')
+          CLEAN_USER=$(echo "$UTHO_USER" | tr -d '[:space:]')
+          CLEAN_PORT="${UTHO_SSH_PORT:-22}"
+          CLEAN_PORT=$(echo "$CLEAN_PORT" | tr -d '[:space:]')
+
           ssh \
             -i "$RUNNER_TEMP/utho_deploy_key" \
-            -p "${UTHO_SSH_PORT:-22}" \
+            -p "$CLEAN_PORT" \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
+            -o StrictHostKeyChecking=accept-new \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            "$UTHO_USER@$UTHO_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" < scripts/deploy/utho-vm.sh
+            "$CLEAN_USER@$CLEAN_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" < scripts/deploy/utho-vm.sh
 
       - name: Remove temporary SSH credentials
         if: always()

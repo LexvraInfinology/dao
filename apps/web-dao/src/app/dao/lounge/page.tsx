@@ -83,7 +83,7 @@ export default function MemberLoungePage() {
                 </span>
               </div>
               <p className="text-xs text-[#4F6184] leading-relaxed">
-                You have reached the maximum 5X return ($1,500.00 USD). While capped, new dividends bypass this seat and are automatically split among the other {lounge?.activeMembersCount ? lounge.activeMembersCount - 1 : 84} active council members. Any surplus beyond $1,500 was redistributed on-chain. Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend payouts.
+                You have reached the maximum 5X return ($1,500.00 USD). While capped, new dividends bypass this seat and are automatically split among the other {lounge?.activeMembersCount ? lounge.activeMembersCount - 1 : 86} active council members. Any surplus beyond $1,500 was redistributed on-chain. Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend payouts.
               </p>
             </div>
           </div>

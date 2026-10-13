@@ -110,7 +110,7 @@ export function buildLiveCouncilSeats(
       const remainingTrob = isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - entryTrob) * 100) / 100) : 0;
       const pushedBtt = liveMember.pushedAmountBtt ?? 0;
       const retopupCount = liveMember.retopupCount ?? 0;
-      const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 93;
+      const activeCount = members.filter((m) => m.status !== 'blank' && m.status !== 'defaulted' && m.status !== 'vacant').length || 87;
 
       // Stable accounting: USD parameters and cap calculations pegged to CONTRACT_TROB_PEG ($0.056)
       // so member inflow, earnings, and cap progress do NOT fluctuate with live market coin rates.

@@ -27,13 +27,13 @@ export async function GET(
       const pos = synced.position;
 
       // Count active members for equal cashback calculation
-      let activeCount = 85;
+      let activeCount = 87;
       try {
         const countRes = await queryNeon<any>(
-          `SELECT COUNT(*) as cnt FROM "DaoMember" WHERE LOWER(status) = 'active'`
+          `SELECT COUNT(*) as cnt FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
         );
-        const dbActive = parseInt(countRes.rows[0]?.cnt || '84', 10);
-        activeCount = Math.max(1, dbActive + (isCapped ? 1 : 0));
+        const dbActive = parseInt(countRes.rows[0]?.cnt || '87', 10);
+        activeCount = Math.max(1, dbActive);
       } catch {}
 
       const retopupCashbackUsd = parseFloat((300 / activeCount).toFixed(2));

@@ -73,7 +73,7 @@ export default function DaoTreasuryPage() {
           totalReceivedUsd={totalReceivedUsd}
           totalReceivedTrob={totalReceivedTrob}
           earningsCapUsd={profile?.earningsCapUsd ?? 1500}
-          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - totalReceivedUsd)}
+          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - cycleReceivedUsd)}
           contractAddress={getActiveDaoAddress()}
         />
         <TreasuryWithdrawCard

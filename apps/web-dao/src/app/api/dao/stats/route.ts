@@ -30,6 +30,7 @@ export async function GET() {
   const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap
 
   let memberCount = 0;
+  let nextAvailableSeat = 79;
   let totalCollectedBTT = 0;
   let totalDistributedBTT = 0;
 
@@ -40,16 +41,19 @@ export async function GET() {
       active_count: string;
       total_collected: string;
       total_distributed: string;
+      next_seat: number;
     }>(
       `SELECT 
         COUNT(*) as total_count,
         COUNT(*) FILTER (WHERE LOWER(status) NOT IN ('vacant', 'blank')) as active_count,
         COALESCE(SUM("entryAmountBtt"), 0) as total_collected,
-        COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed
+        COALESCE(SUM("pushedAmountBtt"), 0) as total_distributed,
+        COALESCE(MIN(position) FILTER (WHERE LOWER(status) IN ('vacant', 'blank')), MAX(position) + 1, 1) as next_seat
        FROM "DaoMember"`
     );
     if (combinedRes.rows.length > 0) {
       memberCount = parseInt(combinedRes.rows[0].active_count || combinedRes.rows[0].total_count, 10) || 0;
+      nextAvailableSeat = Number(combinedRes.rows[0].next_seat) || 79;
       totalCollectedBTT = parseFloat(combinedRes.rows[0].total_collected) || 0;
       totalDistributedBTT = parseFloat(combinedRes.rows[0].total_distributed) || 0;
     }
@@ -99,6 +103,7 @@ export async function GET() {
     activeMembers: memberCount,
     capacity: 100,
     remainingPositions,
+    nextAvailableSeat,
     entryFeeUsd,
     earningsCapUsd,
     entryFeeBtt,

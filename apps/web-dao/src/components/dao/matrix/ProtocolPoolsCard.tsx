@@ -20,7 +20,7 @@ export const ProtocolPoolsCard: React.FC = () => {
   }>('/api/dao/matrix', { pollMs: 15_000 });
 
   const pools = matrixData?.protocolPools;
-  const activeCount = pools?.activeDaoMemberCount ?? 2;
+  const activeCount = pools?.activeDaoMemberCount ?? 87;
   const perSeatPct = pools?.perSeatSharePct ?? (35 / activeCount);
 
   return (

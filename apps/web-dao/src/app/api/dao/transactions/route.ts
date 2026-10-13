@@ -156,18 +156,18 @@ export async function GET(req: NextRequest) {
       console.warn('[Transactions API] DB fetch warning:', dbErr);
     }
 
-    // 4. Merge and deduplicate by transaction hash / ID
+    // 4. Merge and deduplicate by transaction hash / ID and recipient
     const mergedMap = new Map<string, TransactionItem>();
     
     // Put DB items first (they have verified timestamps and USD values)
     for (const item of dbItems) {
-      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}` : item.id;
+      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}-${item.to || ''}` : item.id;
       mergedMap.set(key, item);
     }
 
     // Overlay on-chain items
     for (const item of onChainItems) {
-      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}` : item.id;
+      const key = (item.txHash && item.txHash.length > 10) ? `${item.txHash}-${item.type}-${item.to || ''}` : item.id;
       if (!mergedMap.has(key)) {
         mergedMap.set(key, item);
       }

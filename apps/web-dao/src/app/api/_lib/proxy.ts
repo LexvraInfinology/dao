@@ -17,7 +17,7 @@ export async function fetchFromBackend<T>(
     return null;
   }
   const controller = new AbortController();
-  const timeoutMs = BACKEND_URL.startsWith('https://') ? 3500 : 1500;
+  const timeoutMs = BACKEND_URL.startsWith('https://') ? 3000 : 800;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {

@@ -133,23 +133,7 @@ export async function GET(req: NextRequest) {
     const limitNum = parseInt(limit, 10);
     const offset = (pageNum - 1) * limitNum;
 
-    // Use cached TROB price or fetch with strict 1.2s timeout
-    if (now - cachedTrobPriceTime > 30_000 || cachedTrobPrice <= 0) {
-      try {
-        const pRes = await fetch(TROB_PRICE_API_URL, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(1200),
-        });
-        if (pRes.ok) {
-          const pJson = await pRes.json();
-          const pVal = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd);
-          if (Number.isFinite(pVal) && pVal > 0) {
-            cachedTrobPrice = pVal;
-            cachedTrobPriceTime = now;
-          }
-        }
-      } catch {}
-    }
+    const trobPriceUsd = 0.056;
 
     // Automatically transition expired capped seats to vacant so queue priority fills them first
     await queryNeon(

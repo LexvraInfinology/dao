@@ -45,11 +45,11 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
 
   // Pricing calculations pegged to $300 USD at live market rate
   const entryFeeUsd = 300;
-  const trobPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.042431;
+  const trobPriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : null;
   const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
     ? priceData.seatEntryTrob
-    : Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100;
-  const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
+    : (trobPriceUsd ? Math.round((entryFeeUsd / trobPriceUsd) * 100) / 100 : null);
+  const callValueSun = seatEntryTrob ? Math.ceil(seatEntryTrob * 1_000_000) : 0;
 
   // Instant cashback formula: $300 / position
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
@@ -59,6 +59,10 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
   const handleProceed = async () => {
     if (!wallet.isConnected) {
       setErrorMessage('Please connect your TrobSafe wallet to proceed.');
+      return;
+    }
+    if (!seatEntryTrob || !trobPriceUsd) {
+      setErrorMessage('Live TROB market rate is currently loading. Please wait for real-time oracle price.');
       return;
     }
 
@@ -173,7 +177,7 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                   </span>
                   <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 font-mono font-semibold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Live: ${trobPriceUsd.toFixed(4)} USD / TROB</span>
+                    <span>{trobPriceUsd ? `Live: $${trobPriceUsd.toFixed(4)} USD / TROB` : 'Fetching Live Price…'}</span>
                   </span>
                 </div>
 
@@ -194,12 +198,21 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
                     <span>Payable in TROB</span>
                   </span>
                   <div className="text-right">
-                    <span className="font-mono font-bold text-sm text-[#0E62E4]">
-                      {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
-                    </span>
-                    <div className="text-[10px] text-[#4F6D87] font-mono">
-                      ({callValueSun.toLocaleString()} TROBI / SUN)
-                    </div>
+                    {seatEntryTrob ? (
+                      <>
+                        <span className="font-mono font-bold text-sm text-[#0E62E4]">
+                          {seatEntryTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+                        </span>
+                        <div className="text-[10px] text-[#4F6D87] font-mono">
+                          ({callValueSun.toLocaleString()} TROBI / SUN)
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
+                        <span>Connecting to oracle…</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -284,7 +297,7 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
               <div className="p-3 rounded-xl bg-[#F7FBFF] border border-[#E2EEF9] text-xs text-[#4F6D87] max-w-sm mx-auto text-left space-y-1">
                 <div className="flex items-center gap-2 text-[#14304A] font-semibold">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#0E62E4] animate-ping" />
-                  <span>Amount: {seatEntryTrob.toLocaleString()} TROB ($300 USD)</span>
+                  <span>Amount: {seatEntryTrob ? `${seatEntryTrob.toLocaleString()} TROB` : 'Calculating…'} ($300 USD)</span>
                 </div>
                 <p className="text-[11px]">
                   Please confirm the <span className="font-mono font-bold text-[#0E62E4]">joinDAO()</span> contract call inside your TrobSafe extension popup.
@@ -349,7 +362,7 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-[#4F6D87] text-left space-y-1">
                 <p className="font-semibold text-[#14304A]">Troubleshooting Tips:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
-                  <li>Ensure your TrobSafe wallet has sufficient TROB balance (~{seatEntryTrob} TROB).</li>
+                  <li>Ensure your TrobSafe wallet has sufficient TROB balance {seatEntryTrob ? `(~${seatEntryTrob} TROB)` : ''}.</li>
                   <li>Verify that TrobSafe is unlocked and on the TrobChain network.</li>
                   <li>Click "Approve" when the TrobSafe contract prompt appears.</li>
                 </ul>
@@ -388,11 +401,25 @@ export const SeatPaymentModal: React.FC<SeatPaymentModalProps> = ({
             <button
               type="button"
               onClick={handleProceed}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-bold transition-all shadow-[0_4px_16px_rgba(14,98,228,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+              disabled={!seatEntryTrob || !trobPriceUsd}
+              className={`flex-1 py-2.5 px-4 rounded-xl text-white text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                seatEntryTrob && trobPriceUsd
+                  ? 'bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_16px_rgba(14,98,228,0.3)] cursor-pointer'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Confirm & Pay {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB ($300.00 USD)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              {seatEntryTrob ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Confirm & Pay {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB ($300.00 USD)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Fetching Live Market Rate…</span>
+                </>
+              )}
             </button>
           </div>
         )}

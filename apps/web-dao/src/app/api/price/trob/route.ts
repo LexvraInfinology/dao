@@ -4,41 +4,19 @@ import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
-function calculateTrobPegs(priceUsd: number) {
-  const seatEntryUsd = 300;
-  const effectivePrice = Number.isFinite(priceUsd) && priceUsd > 0 ? priceUsd : 0.042431;
-  const seatEntryTrob = Math.round((seatEntryUsd / effectivePrice) * 100) / 100;
-  const earningsCapUsd = 1500;
-  const earningsCapTrob = Math.round((earningsCapUsd / effectivePrice) * 100) / 100;
-  return { seatEntryUsd, seatEntryTrob, earningsCapUsd, earningsCapTrob };
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
-}
-
 let cachedTrobPayload: any = null;
 let lastTrobFetchTime = 0;
 let inFlightPromise: Promise<any> | null = null;
 
-function getFallbackTrobPayload(): any {
-  // Real-time market benchmark (~$0.0422 USD/TROB = ~7,108 TROB for $300)
-  const priceUsd = 0.042206;
-  const pegs = calculateTrobPegs(priceUsd);
-  return {
-    priceUsd,
-    priceSource: 'live-market-api',
-    updatedAt: new Date().toISOString(),
-    isStale: false,
-    ...pegs,
-  };
+function calculateTrobPegs(priceUsd: number) {
+  const seatEntryUsd = 300;
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    return { seatEntryUsd, seatEntryTrob: 0, earningsCapUsd: 1500, earningsCapTrob: 0 };
+  }
+  const seatEntryTrob = Math.round((seatEntryUsd / priceUsd) * 100) / 100;
+  const earningsCapUsd = 1500;
+  const earningsCapTrob = Math.round((earningsCapUsd / priceUsd) * 100) / 100;
+  return { seatEntryUsd, seatEntryTrob, earningsCapUsd, earningsCapTrob };
 }
 
 async function fetchLiveTrobPrice(): Promise<any> {
@@ -93,10 +71,21 @@ async function fetchLiveTrobPrice(): Promise<any> {
       return { ...cachedTrobPayload, isStale: true };
     }
 
-    return getFallbackTrobPayload();
+    return null;
   })();
 
   return inFlightPromise;
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
 
 export async function GET() {
@@ -108,7 +97,7 @@ export async function GET() {
 
   const payload = await fetchLiveTrobPrice();
   return NextResponse.json(
-    { success: true, data: payload },
+    { success: Boolean(payload), data: payload },
     { headers: corsHeaders }
   );
 }

@@ -143,12 +143,19 @@ export default function CouncilSeatsPage() {
     setMintErr(null);
     setMinting(true);
 
-    const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : 0.042431;
+    const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : null;
     const seatEntryTrob = (price?.seatEntryTrob && price.seatEntryTrob > 0)
       ? price.seatEntryTrob
-      : Math.round((300 / livePriceUsd) * 100) / 100;
+      : (livePriceUsd ? Math.round((300 / livePriceUsd) * 100) / 100 : null);
+
+    if (!seatEntryTrob || !livePriceUsd) {
+      setMinting(false);
+      return { success: false, error: 'Live TROB market rate is currently loading. Please wait for real-time oracle price.' };
+    }
+
     // Security floor: Entry fee is strictly pegged to $300 USD (minimum 3,000 TROB)
     if (seatEntryTrob < 3000) {
+      setMinting(false);
       throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD is strictly required.`);
     }
     const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);

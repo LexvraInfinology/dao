@@ -76,15 +76,15 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
   const isMintable = seat.status === 'next' || seat.status === 'defaulted';
 
   const entryFeeUsd = 300;
-  const livePriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : 0.042431;
+  const livePriceUsd = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : null;
   const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
     ? priceData.seatEntryTrob
-    : Math.round((entryFeeUsd / livePriceUsd) * 100) / 100;
+    : (livePriceUsd ? Math.round((entryFeeUsd / livePriceUsd) * 100) / 100 : null);
   const instantCashbackUsd = (300 / Math.max(1, seat.seatNumber)).toFixed(2);
   const alreadyPaidTrob = seat.alreadyPaidTrob ?? 0;
   const remainingTrob = seat.remainingTrob && seat.remainingTrob > 0
     ? seat.remainingTrob
-    : Math.max(0, Math.round((seatEntryTrob - alreadyPaidTrob) * 100) / 100);
+    : (seatEntryTrob ? Math.max(0, Math.round((seatEntryTrob - alreadyPaidTrob) * 100) / 100) : null);
 
   return (
     <div className="rounded-2xl bg-white border border-[#E2EEF9] p-3 xs:p-3.5 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3.5 sm:space-y-4 font-sans">
@@ -325,7 +325,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             <span>Reservation Window Expired • Open for Takeover!</span>
           </div>
           <p className="text-[11px] text-red-800 leading-relaxed">
-            Your on-chain reservation deadline has expired. This seat is now the lowest vacant slot open to any new entrant. Deposit your remaining balance of <strong>{remainingTrob.toLocaleString()} TROB</strong> now to claim your seat back!
+            Your on-chain reservation deadline has expired. This seat is now the lowest vacant slot open to any new entrant. Deposit your remaining balance of <strong>{remainingTrob !== null ? `${remainingTrob.toLocaleString()} TROB` : 'calculating…'}</strong> now to claim your seat back!
           </p>
         </div>
       )}
@@ -352,10 +352,10 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             </span>
             <div className="text-right">
               <span className="font-mono text-xs text-[#0E62E4] font-extrabold">
-                {seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
+                {seatEntryTrob !== null ? `${seatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : 'Fetching…'}
               </span>
               <span className="text-[10px] text-[#4F6D87] font-mono block">
-                $300 USD (@ ${livePriceUsd.toFixed(4)})
+                $300 USD {livePriceUsd !== null ? `(@ $${livePriceUsd.toFixed(4)})` : ''}
               </span>
             </div>
           </div>
@@ -389,7 +389,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-bold shadow-[0_4px_14px_rgba(217,119,6,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Re-topup Seat #{seat.seatNumber} ({Math.round(seatEntryTrob).toLocaleString()} TROB)</span>
+            <span>Re-topup Seat #{seat.seatNumber} ({seatEntryTrob ? `${Math.round(seatEntryTrob).toLocaleString()} TROB` : 'Live Oracle Rate'})</span>
             <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
           </button>
         ) : seat.status === 'mine' ? (

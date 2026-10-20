@@ -41,7 +41,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   onClose,
   seatPosition,
   retopupDeadline,
-  trobPriceUsd = 0.056,
+  trobPriceUsd,
   alreadyPaidTrob = 0,
   isUnderfunded = false,
   cashbackUsd,
@@ -139,28 +139,31 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   if (!isOpen || !mounted) return null;
 
   const entryAmountUsd = 300;
-  const CONTRACT_PEG = 0.056;
-  // Use live market price for new re-topup transaction, fallback to contract benchmark rate ($0.056)
+  // Use live market price for re-topup transaction without hardcoded fallbacks
   const activeTrobPrice = (livePriceData?.priceUsd && livePriceData.priceUsd > 0)
     ? livePriceData.priceUsd
-    : (trobPriceUsd > 0 ? trobPriceUsd : CONTRACT_PEG);
-  const fullRequiredTrob = Math.round((entryAmountUsd / activeTrobPrice) * 100) / 100;
-  const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
-  const retopupFeeTrob = isUnderfunded
-    ? Math.max(0, Math.round((fullRequiredTrob - creditTrob) * 100) / 100)
-    : fullRequiredTrob;
+    : (trobPriceUsd && trobPriceUsd > 0 ? trobPriceUsd : null);
+  const fullRequiredTrob = activeTrobPrice ? Math.round((entryAmountUsd / activeTrobPrice) * 100) / 100 : null;
+  const creditTrob = isUnderfunded && alreadyPaidTrob > 0 && fullRequiredTrob ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
+  const retopupFeeTrob = fullRequiredTrob !== null
+    ? (isUnderfunded ? Math.max(0, Math.round((fullRequiredTrob - creditTrob) * 100) / 100) : fullRequiredTrob)
+    : null;
 
   const effectiveCashbackUsd = cashbackUsd && cashbackUsd > 0 && cashbackUsd < 300
     ? cashbackUsd
     : 3.53;
-  const cashbackTrob = Math.round((effectiveCashbackUsd / activeTrobPrice) * 100) / 100;
-  const netUsd = isUnderfunded
+  const cashbackTrob = activeTrobPrice ? Math.round((effectiveCashbackUsd / activeTrobPrice) * 100) / 100 : null;
+  const netUsd = isUnderfunded && activeTrobPrice
     ? parseFloat(Math.max(0, entryAmountUsd - (creditTrob * activeTrobPrice)).toFixed(2))
     : 300;
 
   const handleRetopup = async () => {
     if (!wallet.isConnected) {
       setError('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    if (!retopupFeeTrob || !activeTrobPrice) {
+      setError('Live TROB market rate is currently loading. Please wait for real-time oracle price.');
       return;
     }
 
@@ -266,7 +269,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
       console.error('Deposit execution error:', err);
       let rawMsg = err?.message || 'Error executing deposit transaction.';
       if (rawMsg.includes('Validate InternalTransfer error') || rawMsg.includes('balance is not sufficient')) {
-        rawMsg = `Insufficient TROB Balance: Your wallet requires ${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$${isUnderfunded ? netUsd : entryAmountUsd} USD) to complete this transaction. Please add TROB to your connected wallet.`;
+        rawMsg = `Insufficient TROB Balance: Your wallet requires ${retopupFeeTrob ? retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'} TROB (~$${isUnderfunded ? netUsd : entryAmountUsd} USD) to complete this transaction. Please add TROB to your connected wallet.`;
       }
       setError(rawMsg);
     } finally {
@@ -427,7 +430,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <div className="flex items-center justify-between text-[#4F6D87]">
                       <span>Seat Entry Value:</span>
                       <span className="font-mono font-bold text-[#14304A]">
-                        $300.00 USD (≈ {fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+                        $300.00 USD (≈ {fullRequiredTrob ? `${fullRequiredTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : 'Connecting…'})
                       </span>
                     </div>
 
@@ -435,7 +438,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                       <div className="flex items-center justify-between text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 font-medium">
                         <span>Credited Initial Deposit:</span>
                         <span className="font-mono font-bold text-emerald-700">
-                          -{creditTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${(creditTrob * CONTRACT_PEG).toFixed(2)} USD)
+                          -{creditTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${activeTrobPrice ? (creditTrob * activeTrobPrice).toFixed(2) : '—'} USD)
                         </span>
                       </div>
                     ) : (
@@ -450,7 +453,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Remaining Payable Amount:</span>
                       <span className="font-mono text-sm text-[#0E62E4]">
-                        {retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~${netUsd} USD)
+                        {retopupFeeTrob ? `${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$${netUsd} USD)` : 'Connecting to live oracle…'}
                       </span>
                     </div>
                   </>
@@ -466,7 +469,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                     <div className="flex items-center justify-between text-[#14304A] pt-1 border-t border-[#E7EEF8] font-bold">
                       <span>Required Payment:</span>
                       <span className="font-mono text-sm text-[#0E62E4]">
-                        {retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$300.00 USD)
+                        {retopupFeeTrob ? `${retopupFeeTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (~$300.00 USD)` : 'Connecting to live oracle…'}
                       </span>
                     </div>
 
@@ -482,7 +485,7 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
               {walletBalanceTrob !== null && (
                 <div
                   className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
-                    walletBalanceTrob >= retopupFeeTrob
+                    retopupFeeTrob !== null && walletBalanceTrob >= retopupFeeTrob
                       ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
                       : 'bg-rose-50/70 border-rose-200 text-rose-900'
                   }`}
@@ -490,9 +493,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   <span className="font-medium">Connected TROB Balance:</span>
                   <span className="font-mono font-bold">
                     {walletBalanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB
-                    {walletBalanceTrob >= retopupFeeTrob
-                      ? ' (Sufficient)'
-                      : ` (Need ${(retopupFeeTrob - walletBalanceTrob).toFixed(2)} more)`}
+                    {retopupFeeTrob !== null
+                      ? walletBalanceTrob >= retopupFeeTrob
+                        ? ' (Sufficient)'
+                        : ` (Need ${(retopupFeeTrob - walletBalanceTrob).toFixed(2)} more)`
+                      : ''}
                   </span>
                 </div>
               )}
@@ -531,9 +536,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                 onClick={handleRetopup}
                 disabled={
                   loading ||
+                  !retopupFeeTrob ||
+                  !activeTrobPrice ||
                   (!isUnderfunded && timeLeft.isExpired) ||
                   !wallet.isConnected ||
-                  (walletBalanceTrob !== null && walletBalanceTrob < retopupFeeTrob)
+                  (walletBalanceTrob !== null && retopupFeeTrob !== null && walletBalanceTrob < retopupFeeTrob)
                 }
                 className="w-full min-h-[46px] py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-center leading-snug"
               >
@@ -541,6 +548,11 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
                     <span>Processing Re-topup Transaction…</span>
+                  </>
+                ) : !retopupFeeTrob ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Fetching Live Market Rate…</span>
                   </>
                 ) : walletBalanceTrob !== null && walletBalanceTrob < retopupFeeTrob ? (
                   <span>

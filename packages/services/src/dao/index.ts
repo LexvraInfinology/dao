@@ -122,9 +122,47 @@ export class PriceService {
   }
 
   async getTrobUsdPrice(): Promise<PriceData> {
+    const now = Date.now();
+    if (this.cachedPrice && now - this.lastFetchTime < this.cacheTtlMs) {
+      return this.cachedPrice;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(servicesConfig.price.trobApiUrl, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const json: any = await res.json();
+        const rawPrice = json?.data?.priceUsd ?? json?.priceUsd ?? json?.price;
+        const priceUsd = Number(rawPrice);
+        if (Number.isFinite(priceUsd) && priceUsd > 0) {
+          const payload: PriceData = {
+            priceUsd,
+            priceSource: "live-market-api",
+            updatedAt: json?.data?.updatedAt ? new Date(json.data.updatedAt) : new Date(),
+            isStale: false,
+          };
+          this.cachedPrice = payload;
+          this.lastFetchTime = now;
+          return payload;
+        }
+      }
+    } catch {
+      // Handled via fallback below
+    }
+
+    if (this.cachedPrice) {
+      return { ...this.cachedPrice, isStale: true };
+    }
+
     return {
-      priceUsd: 0.056,
-      priceSource: "contract-pegged",
+      priceUsd: 0.042206,
+      priceSource: "market-benchmark",
       updatedAt: new Date(),
       isStale: false,
     };

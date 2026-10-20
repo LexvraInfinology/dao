@@ -139,20 +139,23 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
   if (!isOpen || !mounted) return null;
 
   const entryAmountUsd = 300;
-  // Fixed smart contract benchmark rate ($0.056 USD / TROB)
   const CONTRACT_PEG = 0.056;
-  const fullRequiredTrob = 5357.14;
+  // Use live market price for new re-topup transaction, fallback to contract benchmark rate ($0.056)
+  const activeTrobPrice = (livePriceData?.priceUsd && livePriceData.priceUsd > 0)
+    ? livePriceData.priceUsd
+    : (trobPriceUsd > 0 ? trobPriceUsd : CONTRACT_PEG);
+  const fullRequiredTrob = Math.round((entryAmountUsd / activeTrobPrice) * 100) / 100;
   const creditTrob = isUnderfunded && alreadyPaidTrob > 0 ? Math.min(alreadyPaidTrob, fullRequiredTrob) : 0;
   const retopupFeeTrob = isUnderfunded
     ? Math.max(0, Math.round((fullRequiredTrob - creditTrob) * 100) / 100)
-    : 5357.14;
+    : fullRequiredTrob;
 
   const effectiveCashbackUsd = cashbackUsd && cashbackUsd > 0 && cashbackUsd < 300
     ? cashbackUsd
     : 3.53;
-  const cashbackTrob = Math.round((effectiveCashbackUsd / CONTRACT_PEG) * 100) / 100;
+  const cashbackTrob = Math.round((effectiveCashbackUsd / activeTrobPrice) * 100) / 100;
   const netUsd = isUnderfunded
-    ? parseFloat(Math.max(0, entryAmountUsd - (creditTrob * CONTRACT_PEG)).toFixed(2))
+    ? parseFloat(Math.max(0, entryAmountUsd - (creditTrob * activeTrobPrice)).toFixed(2))
     : 300;
 
   const handleRetopup = async () => {

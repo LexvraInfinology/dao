@@ -31,17 +31,21 @@ export default function ConnectedWalletCard() {
 
   const explorerUrl = getExplorerAddressUrl(wallet.base58Address || wallet.hexAddress);
 
-  const isConnected = wallet.isConnected;
+  const isConnected = Boolean(wallet.isConnected || wallet.base58Address || wallet.hexAddress || auth.isAuthenticated);
 
   const AddressRow = ({ mono = true }: { mono?: boolean }) => (
     <div className={`flex items-center gap-1.5 mt-0.5 ${mono ? 'font-mono text-sm font-bold' : 'font-mono text-xs font-bold'} text-[#071A4A]`}>
       <span>{shortAddress}</span>
-      <button onClick={handleCopy} className="text-[#64748B] hover:text-[#155EEF] transition-colors" title="Copy address">
-        {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-      </button>
-      <a href={explorerUrl} target="_blank" rel="noreferrer" className="text-[#64748B] hover:text-[#155EEF] transition-colors">
-        <ExternalLink className="w-3.5 h-3.5" />
-      </a>
+      {isConnected && displayAddress !== '—' && (
+        <>
+          <button onClick={handleCopy} className="text-[#64748B] hover:text-[#155EEF] transition-colors" title="Copy address">
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <a href={explorerUrl} target="_blank" rel="noreferrer" className="text-[#64748B] hover:text-[#155EEF] transition-colors">
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </>
+      )}
     </div>
   );
 
@@ -95,21 +99,31 @@ export default function ConnectedWalletCard() {
 
         {/* Action buttons */}
         <div className="flex flex-wrap items-center gap-3 pt-1">
-          <button onClick={handleCopy}
-            className="px-4 py-2.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            Copy Address
-          </button>
-          <a href={explorerUrl} target="_blank" rel="noreferrer"
-            className="px-4 py-2.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <ExternalLink className="w-3.5 h-3.5" />
-            View on Explorer
-          </a>
-          {isConnected && (
-            <button onClick={handleDisconnect}
-              className="px-4 py-2.5 rounded-xl bg-[#FEE2E2]/60 border border-[#FECACA]/60 text-[#DC2626] hover:bg-red-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-              <LogOut className="w-3.5 h-3.5" />
-              Disconnect Wallet
+          {isConnected ? (
+            <>
+              <button onClick={handleCopy}
+                className="px-4 py-2.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                Copy Address
+              </button>
+              <a href={explorerUrl} target="_blank" rel="noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] hover:bg-blue-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                <ExternalLink className="w-3.5 h-3.5" />
+                View on Explorer
+              </a>
+              <button onClick={handleDisconnect}
+                className="px-4 py-2.5 rounded-xl bg-[#FEE2E2]/60 border border-[#FECACA]/60 text-[#DC2626] hover:bg-red-100/70 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+                <LogOut className="w-3.5 h-3.5" />
+                Disconnect Wallet
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => wallet.connect().catch(() => {})}
+              className="px-5 py-2.5 rounded-xl bg-[#155EEF] text-white hover:bg-[#124bbf] text-xs font-semibold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+            >
+              <Wallet className="w-4 h-4" />
+              Connect TrobSafe Wallet
             </button>
           )}
         </div>
@@ -136,20 +150,30 @@ export default function ConnectedWalletCard() {
         </div>
 
         <div className="space-y-2 sm:space-y-2.5">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5">
-            <button onClick={handleCopy} className="flex-1 py-2.5 px-3 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold flex items-center justify-center gap-1.5">
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              Copy Address
-            </button>
-            <a href={explorerUrl} target="_blank" rel="noreferrer" className="flex-1 py-2.5 px-3 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold flex items-center justify-center gap-1.5">
-              <ExternalLink className="w-3.5 h-3.5" />
-              View Explorer
-            </a>
-          </div>
-          {isConnected && (
-            <button onClick={handleDisconnect} className="w-full py-2.5 rounded-xl bg-[#FEE2E2]/70 border border-[#FECACA]/60 text-[#DC2626] text-xs font-semibold flex items-center justify-center gap-1.5">
-              <LogOut className="w-3.5 h-3.5" />
-              Disconnect Wallet
+          {isConnected ? (
+            <>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5">
+                <button onClick={handleCopy} className="flex-1 py-2.5 px-3 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold flex items-center justify-center gap-1.5">
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  Copy Address
+                </button>
+                <a href={explorerUrl} target="_blank" rel="noreferrer" className="flex-1 py-2.5 px-3 rounded-xl bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold flex items-center justify-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View Explorer
+                </a>
+              </div>
+              <button onClick={handleDisconnect} className="w-full py-2.5 rounded-xl bg-[#FEE2E2]/70 border border-[#FECACA]/60 text-[#DC2626] text-xs font-semibold flex items-center justify-center gap-1.5">
+                <LogOut className="w-3.5 h-3.5" />
+                Disconnect Wallet
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => wallet.connect().catch(() => {})}
+              className="w-full py-2.5 rounded-xl bg-[#155EEF] text-white hover:bg-[#124bbf] text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors"
+            >
+              <Wallet className="w-4 h-4" />
+              Connect TrobSafe Wallet
             </button>
           )}
         </div>

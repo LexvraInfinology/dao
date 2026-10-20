@@ -4,7 +4,7 @@ import React from 'react';
 
 export const CouncilSeatsHero: React.FC = () => {
   return (
-    <div className="relative rounded-2xl overflow-hidden bg-white border border-[#E2EEF9] p-4 sm:p-6 shadow-[0_2px_12px_rgba(14,98,228,0.06)] font-sans">
+    <div className="relative rounded-2xl overflow-hidden bg-white border border-[#E2EEF9] p-3 xs:p-3.5 sm:p-4 md:p-6 shadow-[0_2px_12px_rgba(14,98,228,0.06)] font-sans">
       {/* Soft Ambient Radial Backdrop */}
       <div className="absolute top-1/2 right-10 -translate-y-1/2 w-48 h-48 bg-[#0E62E4]/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -52,24 +52,24 @@ export const CouncilSeatsHero: React.FC = () => {
       </div>
 
       {/* ===================== MOBILE VERSION (Visible only on Mobile) ===================== */}
-      <div className="md:hidden flex items-center justify-between gap-3 relative z-10">
+      <div className="md:hidden flex items-center justify-between gap-2.5 xs:gap-3 relative z-10">
         {/* Left Side */}
-        <div className="space-y-1 flex-1 min-w-0">
+        <div className="space-y-0.5 xs:space-y-1 flex-1 min-w-0">
           <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EFF6FF] border border-[#0E62E4]/20">
-            <span className="text-[10px] font-bold text-[#0E62E4] uppercase tracking-wider">
+            <span className="text-[9px] xs:text-[10px] font-bold text-[#0E62E4] uppercase tracking-wider">
               GENESIS COUNCIL
             </span>
           </div>
-          <h1 className="text-lg font-bold text-[#14304A] tracking-tight">
+          <h1 className="text-base xs:text-lg font-bold text-[#14304A] tracking-tight">
             Council Seats
           </h1>
-          <p className="text-[11px] text-[#4F6D87] leading-relaxed">
-            <span className="font-semibold text-[#0E62E4]">100</span> sovereign seats. Transparent. On-chain. Immutable.
+          <p className="text-[10px] xs:text-[11px] text-[#4F6D87] leading-relaxed truncate xs:whitespace-normal">
+            <span className="font-semibold text-[#0E62E4]">100</span> sovereign seats. Transparent. On-chain.
           </p>
         </div>
 
         {/* Right 3D Emblem */}
-        <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+        <div className="relative w-12 h-12 xs:w-14 xs:h-14 shrink-0 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-[#EFF6FF] blur-xs pointer-events-none" />
           <img
             src="/dao/equoranewlogo.png"

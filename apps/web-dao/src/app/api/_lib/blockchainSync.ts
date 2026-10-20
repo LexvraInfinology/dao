@@ -35,7 +35,8 @@ export async function getOnChainDaoTransactions(
   }
 
   try {
-    const addressesToQuery = [daoAddress];
+    const v1DaoAddress = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+    const addressesToQuery = [daoAddress, v1DaoAddress];
     if (filterAddress && filterAddress.trim()) {
       const cleanFilter = filterAddress.trim();
       if (!addressesToQuery.includes(cleanFilter)) {
@@ -196,6 +197,8 @@ export async function getOnChainDaoTransactions(
         const depositTime = new Date(baseMs - 2000).toISOString();
         const cashbackTime = new Date(baseMs - 1000).toISOString();
 
+        const txBlock = tx.blockNumber || detail.blockNumber || tx.block || detail.block;
+
         // 1. Council Seat Activated / Fully Funded
         parsedItems.push({
           id: `${hash}-joined`,
@@ -213,6 +216,10 @@ export async function getOnChainDaoTransactions(
           timestamp: depositTime,
           status: 'Confirmed',
           incomingPosition: pos,
+          blockNumber: txBlock ? String(txBlock) : undefined,
+          contractAddress: daoAddress,
+          distributionFormula: 'Rule: Fixed $300 USD deposit with 35% instant automated push to preceding council seats',
+          note: `Council Seat #${pos} activated on TrobChain Mainnet. Soulbound Council NFT #${pos} minted.`,
         });
 
         discoveredMembers.push({
@@ -266,6 +273,14 @@ export async function getOnChainDaoTransactions(
               timestamp: itemTime,
               status: 'Confirmed',
               incomingPosition: pushFromPos,
+              blockNumber: txBlock ? String(txBlock) : undefined,
+              contractAddress: daoAddress,
+              distributionFormula: isCashback
+                ? `Rule: Instant Cashback of $${usdValue} (${pAmt} TROB)`
+                : `Rule: 300 / ${pushFromPos} USD ($${usdValue} = ${pAmt} TROB) automated on-chain push`,
+              note: isCashback
+                ? `Instant cashback returned directly to activating member.`
+                : `Automated on-chain dividend distribution pushed from Seat #${pushFromPos} on TrobChain.`,
             });
           }
         } else {

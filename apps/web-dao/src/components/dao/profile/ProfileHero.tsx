@@ -36,11 +36,15 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, loading }) =>
           </p>
           {profile?.isMember && (
             <div className="flex items-center gap-2 pt-1 text-xs font-jakarta flex-wrap">
-              {profile.userId && (
+              {profile.position ? (
                 <span className="px-2 py-0.5 rounded-md bg-[#EEF4FF] text-[#155EEF] font-mono font-bold">
-                  User #{profile.userId}
+                  Council Member #{String(profile.position).padStart(4, '0')}
                 </span>
-              )}
+              ) : profile.userId ? (
+                <span className="px-2 py-0.5 rounded-md bg-[#EEF4FF] text-[#155EEF] font-mono font-bold">
+                  Member #{profile.userId}
+                </span>
+              ) : null}
               {profile.position && (
                 <span className="text-[#60739A]">· Seat #{profile.position}</span>
               )}

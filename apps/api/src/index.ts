@@ -21,6 +21,16 @@ async function bootstrap() {
     console.log(`========================================================`);
   });
 
+  server.on("error", (err: any) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`⚠️ Port ${config.port} is already in use by another process.`);
+      console.error(`   Ensure no other API or background dev server instance is running on port ${config.port}.`);
+    } else {
+      console.error("❌ API server error:", err);
+    }
+    process.exit(1);
+  });
+
   const handleShutdown = async (signal: string) => {
     console.log(`🛑 Received ${signal}, gracefully shutting down API...`);
     server.close(async () => {

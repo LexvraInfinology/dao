@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #cbd5e1;
+    font-size: 7.9pt;
+    line-height: 1.32;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    padding: 9.5mm 11.5mm 9.5mm 11.5mm;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0 auto 10px auto;
+  }
+  @media print {
+    body { background: transparent; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* LEXVRA WATERMARK */
+  .page-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 94pt;
+    font-weight: 900;
+    color: #0f172a;
+    opacity: 0.045;
+    letter-spacing: 16px;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .page-watermark.dark {
+    color: #ffffff;
+    opacity: 0.038;
+  }
+
+  /* HEADER & FOOTER */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.2px solid #e2e8f0;
+    padding-bottom: 3.5px;
+    margin-bottom: 1px;
+    height: 26px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-brand img {
+    height: 19px;
+    object-fit: contain;
+  }
+  .header-brand-title {
+    font-size: 8.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 3.5px;
+    margin-top: auto;
+    height: 18px;
+    font-size: 6.6pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADINGS */
+  .section-title {
+    font-size: 11.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 1px 0;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    display: inline-block;
+    width: 3.5px;
+    height: 13px;
+    background: #1d4ed8;
+    border-radius: 2px;
+  }
+  .section-subtitle {
+    font-size: 7.3pt;
+    color: #64748b;
+    margin: 0 0 3px 0;
+    font-weight: 500;
+  }
+
+  /* CONTENT BLOCKS */
+  p {
+    margin: 0 0 2.5px 0;
+    color: #334155;
+    text-align: justify;
+    line-height: 1.31;
+    font-size: 7.7pt;
+  }
+  .card-grid {
+    display: grid;
+    gap: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4.5px 7px;
+  }
+  .info-card.highlight {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+  .info-card.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .info-card.warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .info-card.purple {
+    background: #faf5ff;
+    border-color: #e9d5ff;
+  }
+  .info-card.rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .info-card-title {
+    font-size: 7.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .info-card-desc {
+    font-size: 6.6pt;
+    color: #475569;
+    line-height: 1.28;
+  }
+
+  /* INSTITUTIONAL TABLES */
+  .institutional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.6pt;
+    margin: 1px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .institutional-table th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 3.5px 5.5px;
+    text-align: left;
+    border: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 6.1pt;
+    letter-spacing: 0.3px;
+  }
+  .institutional-table td {
+    padding: 2.8px 5px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  .institutional-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+  .institutional-table tr.total-row {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+  }
+  .institutional-table tr.total-row td {
+    color: #ffffff !important;
+    border-color: #1e293b;
+  }
+
+  /* THEORETICAL CALLOUT */
+  .theory-box {
+    background: #f1f5f9;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 0 5px 5px 0;
+    padding: 4.5px 7.5px;
+    font-size: 7pt;
+    color: #1e293b;
+    line-height: 1.30;
+    position: relative;
+    z-index: 2;
+  }
+  .theory-box code {
+    background: #e2e8f0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.6pt;
+    color: #0f172a;
+  }
+
+  /* CODE BOX */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.3pt;
+    line-height: 1.25;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* COVER STYLING - INSTITUTIONAL EDITION */
+  .cover {
+    background: #090e17;
+    color: #ffffff;
+    padding: 12mm 14mm 10mm 14mm;
+    justify-content: space-between;
+    position: relative;
+    border: 2px solid #1e293b;
+    outline: 1px solid #334155;
+    outline-offset: -5px;
+  }
+  .cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-badge {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .cover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-emblem-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 7px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 40px;
+    padding: 5px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(56, 189, 248, 0.15);
+  }
+  .cover-emblem-icon {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.55));
+  }
+  .cover-emblem-x {
+    color: #38bdf8;
+    font-size: 13pt;
+    font-weight: 800;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .cover-cube {
+    height: 56px;
+    margin-bottom: 6px;
+  }
+  /* COVER PAGE TECHNICAL SPEC TABLE (EXPLICIT DARK STYLING - NEVER LIGHT ZEBRA) */
+  .cover-spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.4pt;
+    margin-top: 3px;
+    background: #0f172a !important;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-spec-table tr {
+    background: #0f172a !important;
+  }
+  .cover-spec-table tr:nth-child(even) {
+    background: #111d38 !important;
+  }
+  .cover-spec-table td {
+    padding: 3.5px 7px;
+    border: 1px solid #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+  .cover-spec-label {
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    width: 22%;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .cover-spec-val {
+    color: #f8fafc !important;
+    font-weight: 600;
+    width: 28%;
+  }
+  .cover-spec-val.peg-highlight {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-left: 2px solid #38bdf8 !important;
+  }
+  .cover-h1 {
+    font-size: 23pt;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+    line-height: 1.12;
+    margin-bottom: 2px;
+  }
+  .cover-h2 {
+    font-size: 8.3pt;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cover-desc {
+    max-width: 620px;
+    font-size: 7.4pt;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .cover-pill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 6.6pt;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+  .cover-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .cover-stat-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-top: 2.5px solid #0284c7;
+    border-radius: 4px;
+    padding: 6px 5px;
+    text-align: center;
+  }
+  .cover-stat-val {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 1px;
+  }
+  .cover-stat-lbl {
+    font-size: 6.1pt;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .cover-abstract-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 3.5px solid #38bdf8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 6.8pt;
+    color: #cbd5e1;
+    line-height: 1.33;
+    text-align: justify;
+    margin-bottom: 5px;
+  }
+  .cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    font-size: 6.4pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+    body { background: transparent; padding: 0; margin: 0; }
+    .page { margin: 0; }
+  </style>
+</head>
+<body>
+  
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">14-NODE ENGINE | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">2. The 14-Node Matrix Topology &amp; Settlement Blueprint</div>
+    <div class="section-subtitle">P4-P5 Tier Escalation, 2-Referral Qualification Logic &amp; 6-Node Cashflow Architecture</div>
+  </div>
+
+  <p>
+    The Equora board is structured as a <strong>15-position binary-trinary recursive tree</strong>: 1 Apex Seat (YOU, the Board Owner) surrounded by 14 operational node positions distributed across 3 geometric tiers (2 nodes on Tier 1, 4 nodes on Tier 2, and 8 nodes on Tier 3).
+  </p>
+
+  <!-- FULL SVG 14-NODE MATRIX BOARD WITH ACCURATE NODE LOGIC -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Exact 14-Node Settlement Routing &amp; Multi-Tier Execution Diagram
+    </div>
+    <svg width="100%" height="205" viewBox="0 0 680 205" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <!-- YOU NODE -->
+      <circle cx="340" cy="18" r="15" fill="#1d4ed8" stroke="#0284c7" stroke-width="2.5" />
+      <text x="340" y="22" fill="#ffffff" font-size="8.5" font-weight="bold" text-anchor="middle">YOU</text>
+
+      <!-- TIER 1 CONNECTOR LINES -->
+      <line x1="340" y1="33" x2="210" y2="65" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="340" y1="33" x2="470" y2="65" stroke="#94a3b8" stroke-width="1.5" />
+
+      <!-- TIER 1 BADGE PILL -->
+      <rect x="235" y="39" width="210" height="15" rx="7.5" fill="#fff7ed" stroke="#fdba74" stroke-width="1.2" />
+      <text x="340" y="50" fill="#c2410c" font-size="6.8" font-weight="bold" text-anchor="middle">TIER 1 &bull; 100% to Upline Sponsor (P1 + P2 = $60)</text>
+
+      <!-- TIER 1: P1, P2 (ORANGE - UPLINE) -->
+      <circle cx="210" cy="69" r="12.5" fill="#ea580c" />
+      <text x="210" y="73" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P1</text>
+      <circle cx="470" cy="69" r="12.5" fill="#ea580c" />
+      <text x="470" y="73" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P2</text>
+
+      <!-- TIER 2 CONNECTOR LINES -->
+      <line x1="210" y1="82" x2="140" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="210" y1="82" x2="280" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="470" y1="82" x2="540" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+
+      <!-- TIER 2 BADGE PILL -->
+      <rect x="180" y="91" width="320" height="15" rx="7.5" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" />
+      <text x="340" y="102" fill="#15803d" font-size="6.7" font-weight="bold" text-anchor="middle">TIER 2 &bull; P3, P6 to YOU ($60) | P4, P5 to Pools ($60) &amp; UNLOCKS/RESERVES SLOT 2</text>
+
+      <!-- TIER 2: P3 (YOU), P4 (POOLS/UNLOCK), P5 (POOLS/UNLOCK), P6 (YOU) -->
+      <circle cx="140" cy="123" r="12.5" fill="#059669" />
+      <text x="140" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P3</text>
+      <circle cx="280" cy="123" r="12.5" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="280" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P4</text>
+      <circle cx="400" cy="123" r="12.5" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="400" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P5</text>
+      <circle cx="540" cy="123" r="12.5" fill="#059669" />
+      <text x="540" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P6</text>
+
+      <!-- TIER 3 CONNECTOR LINES -->
+      <line x1="140" y1="136" x2="60" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="140" y1="136" x2="130" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="280" y1="136" x2="200" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="280" y1="136" x2="270" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="400" y1="136" x2="410" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="400" y1="136" x2="480" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="540" y1="136" x2="550" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="540" y1="136" x2="620" y2="169" stroke="#cbd5e1" stroke-width="1" />
+
+      <!-- TIER 3 NODES: P7 to P14 -->
+      <!-- P7: PURPLE (CHECKS P1/P2) -->
+      <circle cx="60" cy="174" r="11.5" fill="#7c3aed" />
+      <text x="60" y="178" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">P7</text>
+      <!-- P8: GREEN (YOU) -->
+      <circle cx="130" cy="174" r="11.5" fill="#059669" />
+      <text x="130" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P8</text>
+      <!-- P9: GREEN (YOU) -->
+      <circle cx="200" cy="174" r="11.5" fill="#059669" />
+      <text x="200" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P9</text>
+      <!-- P10: PURPLE (CHECKS P1/P2) -->
+      <circle cx="270" cy="174" r="11.5" fill="#7c3aed" />
+      <text x="270" y="178" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">P10</text>
+      <!-- P11: GREEN (YOU) -->
+      <circle cx="410" cy="174" r="11.5" fill="#059669" />
+      <text x="410" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P11</text>
+      <!-- P12: GREEN (YOU) -->
+      <circle cx="480" cy="174" r="11.5" fill="#059669" />
+      <text x="480" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P12</text>
+      <!-- P13: MAGENTA (CHECKS P3-P6 WATERFALL) -->
+      <circle cx="550" cy="174" r="11.5" fill="#db2777" />
+      <text x="550" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P13</text>
+      <!-- P14: RUBY (POOLS + RECYCLE) -->
+      <circle cx="620" cy="174" r="11.5" fill="#dc2626" />
+      <text x="620" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P14</text>
+
+      <!-- TIER 3 SUBTEXT -->
+      <text x="95" y="195" fill="#581c87" font-size="6.3" font-weight="bold" text-anchor="middle">P7: Check P1/P2 | P8: YOU</text>
+      <text x="235" y="195" fill="#065f46" font-size="6.3" font-weight="bold" text-anchor="middle">P9: YOU | P10: Check P1/P2</text>
+      <text x="445" y="195" fill="#065f46" font-size="6.3" font-weight="bold" text-anchor="middle">P11: YOU | P12: YOU</text>
+      <text x="585" y="195" fill="#991b1b" font-size="6.3" font-weight="bold" text-anchor="middle">P13: Waterfall P3-P6 | P14: Recycle &amp; Launch</text>
+    </svg>
+  </div>
+
+  <!-- 14-NODE MASTER CASHFLOW SUMMARY TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th>Beneficiary Designation</th>
+        <th>Node Identifiers</th>
+        <th>Allocation Rules &amp; Operational Triggers</th>
+        <th>Slot 1 Value</th>
+        <th>% Volume</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background: #f0fdf4;">
+        <td><strong style="color:#059669;">YOU (Board Owner Cashflow)</strong></td>
+        <td>P3, P6, P8, P9, P11, P12</td>
+        <td>100% Direct to YOU. Requires &ge; 2 direct referrals to claim.</td>
+        <td><strong>$180.00 USD</strong></td>
+        <td><strong>42.86% (600% ROI)</strong></td>
+      </tr>
+      <tr>
+        <td>Immediate Upline Sponsor</td>
+        <td>P1, P2</td>
+        <td>100% Direct to immediate inviter/sponsor (200% commission).</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (200%)</td>
+      </tr>
+      <tr style="background: #eff6ff;">
+        <td><strong style="color:#0284c7;">Auto-Unlock Next Slot (4 Pools)</strong></td>
+        <td>P4, P5</td>
+        <td>100% to 4 Protocol Pools + <strong>AUTONOMOUSLY UNLOCKS &amp; RESERVES NEXT SLOT</strong> ($0 out-of-pocket).</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (Reserved)</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong style="color:#7c3aed;">Downline 1 Meritocratic Check</strong></td>
+        <td>P7, P10</td>
+        <td>Checks P1 (&ge;2 refs? pay) else P2; splits 50/50 if both; else <strong>routes to 4 Pools</strong>.</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (or 4 Pools)</td>
+      </tr>
+      <tr style="background: #fdf2f8;">
+        <td><strong style="color:#db2777;">Downline 2 Depth Waterfall</strong></td>
+        <td>P13</td>
+        <td>Waterfall checks P3 &rarr; P4 &rarr; P5 &rarr; P6 (&ge;2 refs); else <strong>routes to 4 Pools</strong>.</td>
+        <td>$30.00 USD</td>
+        <td>7.14% (or 4 Pools)</td>
+      </tr>
+      <tr style="background: #fef2f2;">
+        <td><strong style="color:#b91c1c;">Board Recycle &amp; Slot 2 Activation</strong></td>
+        <td>P14</td>
+        <td>100% to 4 Pools + <strong>COMPLETES BOARD (14/14) &amp; FORMALLY ACTIVATES NEXT SLOT LIVE!</strong></td>
+        <td>$30.00 USD</td>
+        <td>7.14% (Recycle &amp; Live)</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL FULL BOARD CYCLE</td>
+        <td>All 14 Node Positions</td>
+        <td>Deterministic Closed-Loop Conservation: Zero Stuck Funds</td>
+        <td>$420.00 USD</td>
+        <td>100.00% BALANCED</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- RIGOROUS STEP-BY-STEP DOWNLINE & POOL ROUTING SPECIFICATION -->
+  <div class="card-grid grid-3">
+    <div class="info-card purple">
+      <div class="info-card-title">&#9874; P7 &amp; P10 Downline Check Engine</div>
+      <div class="info-card-desc">
+        <strong>Tier 1 Downline Verification:</strong><br>
+        &bull; <strong>Rule 1 (P1 Eligible):</strong> If P1 has &ge; 2 referrals and P2 does not &rarr; 100% ($30) pays P1.<br>
+        &bull; <strong>Rule 2 (P2 Eligible):</strong> If P2 has &ge; 2 referrals and P1 does not &rarr; 100% ($30) pays P2.<br>
+        &bull; <strong>Rule 3 (Both Eligible):</strong> If both have &ge; 2 referrals &rarr; 50/50 split ($15 to P1, $15 to P2).<br>
+        &bull; <strong>Rule 4 (Neither Eligible):</strong> If neither has 2 referrals &rarr; 100% ($30) is swept directly into the <strong>4 Automated Protocol Pools Vault</strong>!
+      </div>
+    </div>
+    <div class="info-card rose">
+      <div class="info-card-title">&#9874; P13 Depth Waterfall Cascade</div>
+      <div class="info-card-desc">
+        <strong>Tier 2 Depth Cascade [P3 &rarr; P4 &rarr; P5 &rarr; P6]:</strong><br>
+        &bull; Sequentially checks downline's downlines for &ge; 2 referrals.<br>
+        &bull; <strong>Priority:</strong> P3 checked first; if unqualified, checks P4; then P5; then P6.<br>
+        &bull; First qualified member receives 100% ($30).<br>
+        &bull; If all are qualified, spills over; if <strong>none are qualified</strong>, 100% routes straight into the <strong>4 Protocol Pools Vault</strong>!
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">&#9874; P14 Recycle &amp; Slot 2 Launch</div>
+      <div class="info-card-desc">
+        <strong>Board Completion &amp; Live Activation:</strong><br>
+        &bull; 100% of P14 deposit ($30) fuels the 4 Protocol Pools.<br>
+        &bull; Board clears atomically ($180 net cashflow collected); YOU re-enters under sponsor.<br>
+        &bull; <strong>Simultaneously activates Slot 2 for live earning:</strong> YOU is placed into sponsor's Slot 2 board, and downlines following from Slot 1 populate YOU's Slot 2 tree ($360 cashflow per cycle)!
+      </div>
+    </div>
+  </div>
+
+  <!-- SOLIDITY PSEUDOCODE SPECIFICATION -->
+  <div class="code-block">
+    <strong>SMART CONTRACT ROUTING LOGIC SPECIFICATION:</strong><br>
+    function settleNode(uint256 slot, uint8 idx, address user) external {<br>
+    &nbsp;&nbsp;if (idx == 1 || idx == 2) transfer(sponsor, val);<br>
+    &nbsp;&nbsp;else if (idx == 3 || idx == 6 || idx == 8 || idx == 9 || idx == 11 || idx == 12) { require(refs[owner] >= 2); transfer(owner, val); }<br>
+    &nbsp;&nbsp;else if (idx == 4 || idx == 5) { transfer(protocolPools, val); reserveNextSlot(owner, slot + 1); }<br>
+    &nbsp;&nbsp;else if (idx == 7 || idx == 10) settleDownlineTier1(slot, val); // checks P1/P2 refs >= 2; split or route to pools vault<br>
+    &nbsp;&nbsp;else if (idx == 13) settleDownlineTier2Waterfall(slot, val); // priority P3->P4->P5->P6; fail-safe to pools vault<br>
+    &nbsp;&nbsp;else if (idx == 14) { transfer(protocolPools, val); recycleBoard(owner, slot); activateNextSlot(owner, slot + 1); }<br>
+    }
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 3 OF 10</div>
+    </div>
+    
+</div>
+
+</body>
+</html>

@@ -14,6 +14,7 @@ interface ClaimableDividendsCardProps {
   isCapped?: boolean;
   poolClaimableTrob?: number;
   fallbackClaimableTrob?: number;
+  loading?: boolean;
 }
 
 export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
@@ -25,6 +26,7 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   isCapped = false,
   poolClaimableTrob = 0,
   fallbackClaimableTrob = 0,
+  loading = false,
 }) => {
   const wallet = useWallet();
   const [balance, setBalance] = useState<number>(initialAmount);
@@ -36,6 +38,22 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
   React.useEffect(() => {
     setBalance(initialAmount);
   }, [initialAmount]);
+
+  if (loading && pushedAmountUsd === 0) {
+    return (
+      <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-40 bg-slate-200 rounded" />
+          <div className="h-4 w-24 bg-emerald-50 rounded" />
+        </div>
+        <div className="space-y-2 py-2">
+          <div className="h-9 w-48 bg-slate-200 rounded-lg" />
+          <div className="h-4 w-60 bg-blue-100 rounded" />
+        </div>
+        <div className="h-20 bg-slate-100 rounded-2xl" />
+      </div>
+    );
+  }
 
   const shortAddr = walletAddress
     ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`
@@ -110,6 +128,9 @@ export const ClaimableDividendsCard: React.FC<ClaimableDividendsCardProps> = ({
         </div>
         <div className="text-3xl sm:text-4xl font-black font-jakarta text-[#071A4A] tracking-tight">
           ${displayPushedUsd.toFixed(2)} <span className="text-lg font-normal text-slate-400">USD</span>
+        </div>
+        <div className="text-xs sm:text-sm font-bold font-jakarta text-[#155EEF]">
+          ≈ {(pushedAmountTrob > 0 ? pushedAmountTrob : displayPushedUsd / 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB (Live On-Chain Push)
         </div>
         <div className={`text-xs font-semibold font-jakarta flex items-center gap-1.5 ${
           isCapHit ? 'text-amber-700' : 'text-[#10B981]'

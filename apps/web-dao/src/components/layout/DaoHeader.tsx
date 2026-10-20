@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   Search,
@@ -65,7 +66,7 @@ export const DaoHeader: React.FC = () => {
 
   const [mounted, setMounted]               = useState(false);
   const [mobileNavOpen, setMobileNavOpen]   = useState(false);
-  const [walletDropOpen, setWalletDropOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<'none' | 'wallet' | 'notifications'>('none');
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied]                 = useState(false);
   const [storedAddr, setStoredAddr]         = useState<string | null>(null);
@@ -76,27 +77,83 @@ export const DaoHeader: React.FC = () => {
 
   const walletDropRef = useRef<HTMLDivElement>(null);
   const walletBtnRef  = useRef<HTMLButtonElement>(null);
+  const mobileAvatarBtnRef = useRef<HTMLButtonElement>(null);
+  const desktopAvatarBtnRef = useRef<HTMLButtonElement>(null);
+
+  const [walletCoords, setWalletCoords] = useState<{ top: number; right: number; isMobile: boolean }>({
+    top: 64,
+    right: 12,
+    isMobile: true,
+  });
+
+  const isWalletOpen = activeDropdown === 'wallet';
+  const isNotificationsOpen = activeDropdown === 'notifications';
+
+  const updateWalletPosition = () => {
+    if (typeof window === 'undefined') return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setWalletCoords({ top: 64, right: 12, isMobile: true });
+      return;
+    }
+    const trigger = walletBtnRef.current || desktopAvatarBtnRef.current;
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      setWalletCoords({
+        top: Math.round(rect.bottom + 8),
+        right: Math.round(Math.max(12, window.innerWidth - rect.right)),
+        isMobile: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isWalletOpen) return;
+    updateWalletPosition();
+    window.addEventListener('resize', updateWalletPosition);
+    window.addEventListener('scroll', updateWalletPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateWalletPosition);
+      window.removeEventListener('scroll', updateWalletPosition, true);
+    };
+  }, [isWalletOpen]);
+
+  const toggleWallet = () => {
+    setActiveDropdown((prev) => (prev === 'wallet' ? 'none' : 'wallet'));
+  };
+
+  const toggleNotifications = () => {
+    setActiveDropdown((prev) => (prev === 'notifications' ? 'none' : 'notifications'));
+  };
+
+  const closeAllDropdowns = () => {
+    setActiveDropdown('none');
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Close wallet dropdown when clicking anywhere outside or pressing Escape
+  // Close dropdowns when clicking anywhere outside or pressing Escape
   useEffect(() => {
-    if (!walletDropOpen) return;
+    if (activeDropdown !== 'wallet') return;
     const handleClickOutside = (e: MouseEvent | TouchEvent | PointerEvent) => {
       const target = e.target as Node;
       if (
         walletDropRef.current &&
         !walletDropRef.current.contains(target) &&
         walletBtnRef.current &&
-        !walletBtnRef.current.contains(target)
+        !walletBtnRef.current.contains(target) &&
+        mobileAvatarBtnRef.current &&
+        !mobileAvatarBtnRef.current.contains(target) &&
+        desktopAvatarBtnRef.current &&
+        !desktopAvatarBtnRef.current.contains(target)
       ) {
-        setWalletDropOpen(false);
+        setActiveDropdown('none');
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setWalletDropOpen(false);
+      if (e.key === 'Escape') setActiveDropdown('none');
     };
 
     document.addEventListener('pointerdown', handleClickOutside);
@@ -105,7 +162,13 @@ export const DaoHeader: React.FC = () => {
       document.removeEventListener('pointerdown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [walletDropOpen]);
+  }, [activeDropdown]);
+
+  // Route change auto-dismiss for all dropdowns & navigation drawer
+  useEffect(() => {
+    setActiveDropdown('none');
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   // Lock body scroll and handle Escape for mobile navigation drawer
   useEffect(() => {
@@ -217,7 +280,7 @@ export const DaoHeader: React.FC = () => {
   };
 
   const handleDisconnect = () => {
-    setWalletDropOpen(false);
+    closeAllDropdowns();
     auth.signOut();
     wallet.disconnect();
     setStoredAddr(null);
@@ -264,52 +327,105 @@ export const DaoHeader: React.FC = () => {
             <span>Protocol Live</span>
           </div>
 
+          {/* Mobile Search Button (triggers mobile search modal) */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search'))}
+            className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] hover:bg-slate-100 flex items-center justify-center transition-all shadow-xs shrink-0 cursor-pointer"
+            aria-label="Search DAO"
+            title="Search DAO"
+          >
+            <Search className="w-4 h-4 text-[#60739A]" />
+          </button>
+
           {/* Notification Center with Web Audio chime & priority alerts */}
           <DaoNotificationCenter
             userSeat={memberData?.position ?? auth.user?.daoPosition ?? null}
             userAddress={displayAddress}
+            isOpen={isNotificationsOpen}
+            onToggle={toggleNotifications}
+            onClose={closeAllDropdowns}
           />
 
-          {/* ── Wallet pill / connect button ───────────────────────────── */}
+          {/* ── Wallet / Profile: Mobile Avatar Circle Icon & Desktop Pill ── */}
           {isConnected ? (
             <div className="relative">
+              {/* Desktop Pill (md+) */}
               <button
                 ref={walletBtnRef}
-                onClick={() => setWalletDropOpen((v) => !v)}
-                className="flex items-center gap-1 sm:gap-2 px-2 min-[360px]:px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-[10px] min-[360px]:text-[10.5px] sm:text-xs font-mono font-semibold shadow-sm transition-all duration-200"
+                onClick={toggleWallet}
+                className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#0B1528] text-white border border-[#1E293B] hover:border-[#38BDF8]/50 hover:bg-[#0F1D36] text-xs font-mono font-semibold shadow-sm transition-all duration-200 cursor-pointer"
                 aria-label="Wallet menu"
+                aria-expanded={isWalletOpen}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-2 sm:ring-4 ring-emerald-400/20" />
-                <span className="hidden sm:inline font-mono tracking-tight text-slate-100">{shortDisplay}</span>
-                <span className="sm:hidden font-mono text-[10px] min-[360px]:text-[10.5px] max-w-[55px] min-[360px]:max-w-[70px] truncate">
-                  {displayAddress ? displayAddress.slice(0, 4) + '…' : 'Wallet'}
-                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ring-4 ring-emerald-400/20" />
+                <span className="font-mono tracking-tight text-slate-100">{shortDisplay}</span>
                 {isSeatMember ? (
-                  <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     Seat #{memberData!.position}
                   </span>
                 ) : isMemberLoading ? (
-                  <span className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-500/20 text-blue-200 border border-blue-500/30">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-500/20 text-blue-200 border border-blue-500/30">
                     <Loader2 className="w-2.5 h-2.5 animate-spin" />
                     <span>Syncing</span>
                   </span>
                 ) : null}
-                <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 ${walletDropOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isWalletOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Dropdown */}
-              {walletDropOpen && (
+              {/* Mobile Profile Avatar Circle Icon (< md) */}
+              <button
+                ref={mobileAvatarBtnRef}
+                onClick={toggleWallet}
+                className="md:hidden relative w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-[#0E62E4]/25 hover:ring-[#0E62E4] p-0.5 bg-gradient-to-tr from-[#0B1528] to-[#1E293B] flex items-center justify-center transition-all shadow-xs shrink-0 cursor-pointer"
+                aria-label="Open Profile & Wallet Menu"
+                aria-expanded={isWalletOpen}
+                title={displayAddress ? `Seat #${memberData?.position || '?'}: ${shortDisplay}` : 'Profile'}
+              >
+                <UserAvatar
+                  address={displayAddress}
+                  userId={auth.user?.userId || memberData?.userId}
+                  size={30}
+                  roundedClassName="rounded-full"
+                />
+                {/* Active status emerald dot */}
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute -bottom-0.5 -right-0.5" />
+                {/* Seat badge chip if member */}
+                {isSeatMember && (
+                  <span className="absolute -top-1 -left-1 px-1 py-0.2 rounded-full bg-[#0E62E4] text-white text-[8px] font-black leading-none border border-white shadow-xs">
+                    #{memberData!.position}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Popover Portaled to document.body to avoid header backdrop-filter clipping & left-side offset */}
+              {mounted && isWalletOpen && typeof document !== 'undefined' && createPortal(
                 <>
+                  {/* Full-screen backdrop covering the entire viewport */}
                   <div
-                    className="fixed inset-0 z-40 bg-black/25 sm:bg-transparent backdrop-blur-[1px] sm:backdrop-blur-none cursor-pointer"
-                    onClick={() => setWalletDropOpen(false)}
+                    className="fixed inset-0 z-[9990] bg-black/30 md:bg-transparent backdrop-blur-[1px] md:backdrop-blur-none cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeAllDropdowns();
+                    }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      closeAllDropdowns();
+                    }}
+                    aria-label="Close wallet menu"
                   />
                   <div
                     ref={walletDropRef}
-                    className="fixed sm:absolute left-2.5 right-2.5 sm:left-auto sm:right-0 top-14 sm:top-[calc(100%+8px)] z-50 w-auto sm:w-80 max-w-[calc(100vw-20px)] sm:max-w-none bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-2.5 animate-fadeIn"
+                    style={!walletCoords.isMobile ? { top: walletCoords.top, right: walletCoords.right } : undefined}
+                    className={
+                      walletCoords.isMobile
+                        ? "fixed z-[9995] top-16 left-3 right-3 max-w-[360px] mx-auto bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.22)] p-2.5 animate-fadeIn font-sans"
+                        : "fixed z-[9995] w-80 max-w-[360px] bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.22)] p-2.5 animate-fadeIn font-sans"
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     {/* Header info card */}
-                    <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#0B1528] to-[#111C33] border border-[#1E293B] text-white mb-2 shadow-sm">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-[#0B1528] to-[#111C33] border border-[#1E293B] text-white mb-2 shadow-sm">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -317,63 +433,72 @@ export const DaoHeader: React.FC = () => {
                             TrobSafe Connected
                           </span>
                         </div>
-                        <a
-                          href={getExplorerAddressUrl(displayAddress)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
-                          title="View on Trobium Explorer"
-                        >
-                          <span>Explorer</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={getExplorerAddressUrl(displayAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
+                            title="View on Trobium Explorer"
+                          >
+                            <span>Explorer</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <button
+                            onClick={closeAllDropdowns}
+                            className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors ml-1 cursor-pointer"
+                            title="Close"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 bg-black/40 rounded-lg p-2 border border-white/10">
-                        <p className="text-xs font-mono font-semibold text-slate-100 truncate" title={displayAddress}>
-                          {displayAddress}
-                        </p>
-                        <button
-                          onClick={handleCopyAddress}
-                          className="p-1 rounded-md hover:bg-white/10 text-slate-300 hover:text-white transition-colors shrink-0 flex items-center gap-1 text-[10px]"
-                          title="Copy address"
-                        >
-                          {copied ? (
-                            <>
-                              <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-emerald-400 font-sans">Copied</span>
-                            </>
+                      <div className="flex items-center justify-between gap-2 bg-black/40 rounded-lg px-2.5 py-1.5 border border-white/10">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="text-xs font-mono font-semibold text-slate-100 truncate" title={displayAddress}>
+                            {shortDisplay}
+                          </p>
+                          <button
+                            onClick={handleCopyAddress}
+                            className="p-1 rounded-md hover:bg-white/10 text-slate-300 hover:text-white transition-colors shrink-0 flex items-center gap-1 text-[10px]"
+                            title="Copy full address"
+                          >
+                            {copied ? (
+                              <>
+                                <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-400 font-sans text-[9px]">Copied</span>
+                              </>
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        <div>
+                          {isMemberLoading ? (
+                            <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30 flex items-center gap-1 text-[10px]">
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              <span>Syncing</span>
+                            </span>
+                          ) : isSeatMember ? (
+                            <span className="font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 text-[10px]">
+                              Seat #{memberData!.position}
+                            </span>
                           ) : (
-                            <Copy className="w-3.5 h-3.5" />
+                            <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30 text-[10px]">
+                              Explorer
+                            </span>
                           )}
-                        </button>
-                      </div>
-
-                      {/* Council Tier indicator */}
-                      <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400 text-[10px]">Membership Tier</span>
-                        {isMemberLoading ? (
-                          <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30 flex items-center gap-1">
-                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                            <span>Syncing...</span>
-                          </span>
-                        ) : isSeatMember ? (
-                          <span className="font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                            Council Seat #{memberData!.position}
-                          </span>
-                        ) : (
-                          <span className="font-medium text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30">
-                            Genesis Explorer
-                          </span>
-                        )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Navigation shortcuts */}
+                    {/* Navigation shortcuts — concise essential items */}
                     <div className="space-y-0.5 py-1">
                       <Link
                         href="/dao/lounge"
-                        onClick={() => setWalletDropOpen(false)}
+                        onClick={closeAllDropdowns}
                         className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
@@ -385,7 +510,7 @@ export const DaoHeader: React.FC = () => {
 
                       <Link
                         href="/dao/profile"
-                        onClick={() => setWalletDropOpen(false)}
+                        onClick={closeAllDropdowns}
                         className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
@@ -397,14 +522,14 @@ export const DaoHeader: React.FC = () => {
 
                       <Link
                         href="/dao/settings"
-                        onClick={() => setWalletDropOpen(false)}
+                        onClick={closeAllDropdowns}
                         className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-[#3E6180] hover:bg-[#EFF6FF] hover:text-[#0E62E4] transition-colors group"
                       >
                         <div className="flex items-center gap-2.5">
                           <Settings className="w-4 h-4 text-[#60A5FA] group-hover:text-[#0E62E4] transition-colors" />
-                          <span>Settings & Keys</span>
+                          <span>Settings & Preferences</span>
                         </div>
-                        <span className="text-[10px] text-slate-400 group-hover:text-[#0E62E4]">Security →</span>
+                        <span className="text-[10px] text-slate-400 group-hover:text-[#0E62E4]">Security & Alerts →</span>
                       </Link>
 
                       {isSeatMember && (
@@ -412,7 +537,7 @@ export const DaoHeader: React.FC = () => {
                           href={WHATSAPP_DAO_GROUP_URL}
                           onClick={(e) => {
                             e.preventDefault();
-                            setWalletDropOpen(false);
+                            closeAllDropdowns();
                             joinWhatsApp(WHATSAPP_DAO_GROUP_URL);
                           }}
                           className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors border border-emerald-200/80 group cursor-pointer"
@@ -435,13 +560,14 @@ export const DaoHeader: React.FC = () => {
                     {/* Sign Out / Disconnect Button */}
                     <button
                       onClick={handleDisconnect}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border border-rose-100 transition-colors shadow-xs"
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border border-rose-100 transition-colors shadow-xs cursor-pointer"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out / Disconnect</span>
                     </button>
                   </div>
-                </>
+                </>,
+                document.body
               )}
             </div>
           ) : (
@@ -458,8 +584,9 @@ export const DaoHeader: React.FC = () => {
           {/* User avatar sphere — desktop only, shown when connected */}
           {isConnected && (
             <button
-              onClick={() => setWalletDropOpen((v) => !v)}
-              className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#0E62E4]/30 shrink-0 hidden lg:block hover:ring-2 hover:ring-[#0E62E4]/40 transition-all"
+              ref={desktopAvatarBtnRef}
+              onClick={toggleWallet}
+              className="relative w-9 h-9 rounded-full overflow-hidden shadow-xs border border-[#0E62E4]/30 shrink-0 hidden lg:block hover:ring-2 hover:ring-[#0E62E4]/40 transition-all cursor-pointer"
               title="Open Wallet Menu"
             >
               <UserAvatar
@@ -473,8 +600,11 @@ export const DaoHeader: React.FC = () => {
 
           {/* Mobile hamburger */}
           <button
-            onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="lg:hidden p-1.5 rounded-lg text-[#17334F] hover:bg-[#EFF6FF] transition-colors"
+            onClick={() => {
+              closeAllDropdowns();
+              setMobileNavOpen(!mobileNavOpen);
+            }}
+            className="lg:hidden p-1.5 rounded-lg text-[#17334F] hover:bg-[#EFF6FF] transition-colors cursor-pointer"
             aria-label="Toggle Navigation Drawer"
           >
             {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -484,7 +614,7 @@ export const DaoHeader: React.FC = () => {
 
       {/* 5X Earnings Cap Reached Retopup Urgent Warning Banner */}
       {memberData?.isCapped && (
-        <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
+        <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
           <div className="flex items-center gap-2 font-semibold min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
             <span className="font-bold shrink-0">5X Cap Reached (Seat #{memberData.position}):</span>
@@ -498,7 +628,7 @@ export const DaoHeader: React.FC = () => {
               setRetopupDeadline(memberData.retopupDeadline || null);
               setRetopupModalOpen(true);
             }}
-            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-amber-950 font-bold hover:bg-amber-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto"
+            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-amber-950 font-bold hover:bg-amber-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-stretch sm:self-auto"
           >
             <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
             <span>Re-topup Seat #{memberData.position} ($300)</span>
@@ -509,7 +639,7 @@ export const DaoHeader: React.FC = () => {
 
       {/* Incomplete Funding (Underfunded) Urgent Warning Banner */}
       {(memberData?.status === 'underfunded' || memberData?.underfunded) && (
-        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-red-700 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
+        <div className="bg-gradient-to-r from-red-600 via-amber-600 to-red-700 text-white px-3 sm:px-6 py-2 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs sticky top-14 sm:top-16 z-20">
           <div className="flex items-center gap-2 font-semibold min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
             <span className="font-bold shrink-0">Incomplete Seat Funding (Seat #{memberData.position}):</span>
@@ -523,7 +653,7 @@ export const DaoHeader: React.FC = () => {
               setRetopupDeadline(memberData.retopupDeadline || null);
               setRetopupModalOpen(true);
             }}
-            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-red-950 font-bold hover:bg-red-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-start sm:self-auto"
+            className="px-3 py-1.5 sm:py-1 rounded-lg bg-white text-red-950 font-bold hover:bg-red-50 shadow-xs transition-all text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 self-stretch sm:self-auto"
           >
             <Zap className="w-3.5 h-3.5 text-red-600 fill-red-600" />
             <span>Complete Re-topup (Seat #{memberData.position})</span>

@@ -6,16 +6,19 @@ import { TreasuryBalanceCard } from '@/components/dao/treasury/TreasuryBalanceCa
 import { TreasuryWithdrawCard } from '@/components/dao/treasury/TreasuryWithdrawCard';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 import { useWallet } from '@/context/WalletContext';
+import { useAuthContext } from '@/context/AuthContext';
 import { useLounge, useDaoProfile } from '@/hooks/useApi';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
 export default function DaoTreasuryPage() {
   const wallet = useWallet();
-  const activeAddress = wallet.base58Address || wallet.hexAddress;
+  const auth = useAuthContext();
+  const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || null;
 
-  const { data: profile } = useDaoProfile(activeAddress);
-  const { data: lounge } = useLounge(activeAddress);
+  const { data: profile, loading: profileLoading } = useDaoProfile(activeAddress);
+  const { data: lounge, loading: loungeLoading } = useLounge(activeAddress);
+  const isLoading = (profileLoading || loungeLoading) && !profile && !lounge;
 
   // Exact on-chain earned/received payouts (current cycle resets on retopup; lifetime tracks all cycles)
   const cycleReceivedUsd = (typeof lounge?.currentCycleUsd === 'number')
@@ -24,6 +27,12 @@ export default function DaoTreasuryPage() {
   const totalReceivedUsd = profile?.totalEarnedUsd ?? lounge?.totalReceivedUsd ?? cycleReceivedUsd;
   const totalReceivedTrob = profile?.totalEarnedBtt ?? lounge?.totalReceivedBtt ?? Math.round((totalReceivedUsd / 0.056) * 100) / 100;
   const fallbackBalance = lounge?.claimableDividendsUsd ?? 0;
+
+  const CONTRACT_CAP_TROB = 26785.714285;
+  const earningsCapUsd = profile?.earningsCapUsd ?? 1500;
+  const remainingCapUsd = profile?.remainingCapUsd ?? Math.max(0, 1500 - cycleReceivedUsd);
+  const earningsCapTrob = profile?.earningsCapBtt ?? CONTRACT_CAP_TROB;
+  const remainingCapTrob = (profile as any)?.remainingCapBtt ?? Math.max(0, Math.round((CONTRACT_CAP_TROB - totalReceivedTrob) * 100) / 100);
 
   const [claimableBalance, setClaimableBalance] = useState<number>(fallbackBalance);
 
@@ -39,13 +48,14 @@ export default function DaoTreasuryPage() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden pb-12">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden pb-28 sm:pb-28 md:pb-16">
       <UnderfundedAlertBanner />
       <TreasuryHero
         balance={claimableBalance}
         totalReceivedUsd={totalReceivedUsd}
         totalReceivedTrob={totalReceivedTrob}
         loungeData={{ ...lounge, totalReceivedUsd } as any}
+        loading={isLoading}
       />
 
       {/* Desktop */}
@@ -54,9 +64,12 @@ export default function DaoTreasuryPage() {
           balance={claimableBalance}
           totalReceivedUsd={totalReceivedUsd}
           totalReceivedTrob={totalReceivedTrob}
-          earningsCapUsd={profile?.earningsCapUsd ?? 1500}
-          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - cycleReceivedUsd)}
+          earningsCapUsd={earningsCapUsd}
+          earningsCapTrob={earningsCapTrob}
+          remainingCapUsd={remainingCapUsd}
+          remainingCapTrob={remainingCapTrob}
           contractAddress={getActiveDaoAddress()}
+          loading={isLoading}
         />
         <TreasuryWithdrawCard
           availableBalance={claimableBalance}
@@ -72,9 +85,12 @@ export default function DaoTreasuryPage() {
           balance={claimableBalance}
           totalReceivedUsd={totalReceivedUsd}
           totalReceivedTrob={totalReceivedTrob}
-          earningsCapUsd={profile?.earningsCapUsd ?? 1500}
-          remainingCapUsd={profile?.remainingCapUsd ?? Math.max(0, 1500 - cycleReceivedUsd)}
+          earningsCapUsd={earningsCapUsd}
+          earningsCapTrob={earningsCapTrob}
+          remainingCapUsd={remainingCapUsd}
+          remainingCapTrob={remainingCapTrob}
           contractAddress={getActiveDaoAddress()}
+          loading={isLoading}
         />
         <TreasuryWithdrawCard
           availableBalance={claimableBalance}

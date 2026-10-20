@@ -260,29 +260,42 @@ export default function DaoDashboardPage() {
           </div>
         </div>
 
-        {/* --- MOBILE HERO --- */}
+        {/* --- MOBILE HERO with Big Floating Equora & Trobium Emblem --- */}
         <div className="lg:hidden text-center space-y-3 relative z-10">
-          <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg inline-flex">
-            Genesis DAO Council
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#17334F] tracking-tight uppercase">
+          <div className="flex items-center justify-center gap-2">
+            <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg inline-flex">
+              Genesis DAO Council
+            </span>
+            {isMember && myPosition ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1F8A5B] animate-pulse" />
+                <span>Seat #{myPosition}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0E62E4]/10 border border-[#0E62E4]/25 text-[#0E62E4] text-[10px] font-semibold">
+                <span>100 Seats</span>
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-xl min-[380px]:text-2xl font-bold text-[#17334F] tracking-tight uppercase leading-tight">
             Genesis <span className="text-[#0E62E4]">DAO</span> Council
           </h1>
           <p className="text-xs font-medium text-[#3E6180] max-w-xs mx-auto leading-snug">
             100 sovereign seats. One protocol. A stronger tomorrow.
           </p>
 
+          {/* Floating Big Equora Logo & Trobium Badge */}
           <div className="relative py-2 flex flex-col items-center justify-center">
             <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
               <div className="absolute w-32 h-32 rounded-full bg-[#0E62E4]/15 blur-xl pointer-events-none" />
-              {/* Floating Big Equora Logo */}
               <div className="relative w-28 h-28 sm:w-36 sm:h-36 animate-float flex items-center justify-center">
                 <img
                   src="/dao/equoranewlogo.png"
                   alt="EQUORA DAO Official Emblem"
                   className="w-full h-full object-contain drop-shadow-[0_10px_24px_rgba(14,98,228,0.25)]"
                 />
-                {/* Secondary Small Trobium Logo Badge */}
+                {/* Secondary Trobium Logo Badge */}
                 <div
                   className="absolute -bottom-1 -right-1 w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white/95 backdrop-blur-md p-1.5 border border-blue-200/90 shadow-[0_4px_14px_rgba(14,98,228,0.18)] flex items-center justify-center"
                   title="Powered by Trobchain"
@@ -295,14 +308,10 @@ export default function DaoDashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase">
+            <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase select-none">
               DECENTRALIZED &bull; TRANSPARENT
             </div>
           </div>
-
-          <p className="text-[11px] text-[#4F6D87] leading-relaxed max-w-sm mx-auto">
-            Be part of the founding 100 governing members. View council governance, live distributions, and treasury performance.
-          </p>
 
           {/* Mobile CTA */}
           <div className="pt-1">
@@ -359,19 +368,22 @@ export default function DaoDashboardPage() {
                     </button>
                   </div>
                 ) : (
-                  <>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
-                      <CheckCircle2 className="w-3 h-3 text-[#1F8A5B]" />
-                      <span>Seat #{myPosition} &bull; Active Member</span>
-                    </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <Link
                       href="/dao/lounge"
-                      className="btn-primary w-full py-2.5 px-4 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1.5"
+                      className="btn-primary py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1 shadow-xs"
                     >
                       <Wallet className="w-3.5 h-3.5" />
-                      <span>Open Member Lounge</span>
+                      <span>Member Lounge</span>
                     </Link>
-                  </>
+                    <Link
+                      href="/dao/seats"
+                      className="btn-ghost py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1"
+                    >
+                      <span>Council Grid</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 )}
               </div>
             ) : (
@@ -518,10 +530,10 @@ export default function DaoDashboardPage() {
                       return `+$${exactUsd.toFixed(2)}`;
                     })()}
                   </div>
-                  <div className="text-[9px] text-[#4F6D87] font-medium leading-tight truncate">
+                  <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
                     {memberData?.retopupCount && memberData.retopupCount > 0
-                      ? `Cycle ${memberData.retopupCount + 1} • Reset from $0`
-                      : 'Cashback + Pool Dividends'}
+                      ? `Cycle ${memberData.retopupCount + 1} • Reset`
+                      : 'Cashback + Dividends'}
                   </div>
                 </div>
 
@@ -539,28 +551,30 @@ export default function DaoDashboardPage() {
                 </div>
               </div>
 
-              {/* Status bar — 100% contained, no text clipping or overflow */}
-              <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              {/* Status bar — 100% contained, no text clipping or overlap on ANY screen size */}
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+                {/* Row 1 on mobile, left on desktop */}
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2 h-2 rounded-full bg-[#1F8A5B] animate-pulse shrink-0" />
-                  <span className="font-semibold text-[#17334F] text-[11px] truncate">
+                  <span className="font-bold text-[#17334F] text-xs whitespace-nowrap">
                     {isMember && myPosition ? `Council Seat #${myPosition}:` : 'Council Status:'}
                   </span>
-                  <span className="text-[11px] text-[#4F6D87] truncate">
+                  <span className="text-xs text-[#4F6D87] font-medium truncate">
                     {isMember && myPosition
                       ? `Active Member • ${myNftId ? `SBT #${myNftId}` : 'Pass'}`
                       : (stats?.memberCount && stats.memberCount >= 100 ? 'Queue Complete' : 'Seats Available')}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#0E62E4]/10">
-                  <span className="text-[10px] font-semibold text-[#1F8A5B] bg-[#1F8A5B]/10 px-2 py-0.5 rounded border border-[#1F8A5B]/20">
+                {/* Row 2 on mobile, right on desktop */}
+                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#0E62E4]/10">
+                  <span className="text-[10px] font-semibold text-[#1F8A5B] bg-[#1F8A5B]/10 px-2 py-0.5 rounded border border-[#1F8A5B]/20 shrink-0">
                     1.0% Vote Weight
                   </span>
                   {isMember ? (
                     <Link
                       href="/dao/lounge"
-                      className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-[#0E62E4] hover:underline flex items-center gap-1 shrink-0"
                     >
                       <span>Member Lounge</span>
                       <ArrowRight className="w-3 h-3" />
@@ -568,7 +582,7 @@ export default function DaoDashboardPage() {
                   ) : (
                     <Link
                       href="/dao/seats"
-                      className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-[#0E62E4] hover:underline flex items-center gap-1 shrink-0"
                     >
                       <span>Inspect Grid</span>
                       <ArrowRight className="w-3 h-3" />
@@ -634,40 +648,49 @@ export default function DaoDashboardPage() {
           </div>
           <div className="divide-y divide-[#0E62E4]/10">
             {events.map((event) => {
-              const isJoined = event.eventType === 'joined';
-              const isCashback = event.eventType === 'pushed' || event.eventType === 'seat_distribution';
+              const isJoined = event.eventType === 'joined' || event.reason?.toLowerCase().includes('activated');
+              const isRetopup = event.eventType === 'retopup' || event.reason?.toLowerCase().includes('retopup');
+              const isDistribution = event.eventType === 'seat_distribution' || event.reason?.toLowerCase().includes('distribution');
 
-              const title = event.reason || (
-                isJoined
-                  ? 'Council Seat Activated'
-                  : isCashback
-                  ? 'Instant 300/N Cashback'
-                  : 'Dividend Reward Claimed'
-              );
+              let badgeText = event.incomingPosition ? `Seat #${event.incomingPosition}` : 'Council';
+              let titleText = 'Instant 300/N Cashback';
+              if (isJoined) {
+                titleText = 'Council Seat Activated';
+              } else if (isRetopup) {
+                titleText = '5X Cap Re-topup';
+              } else if (isDistribution) {
+                titleText = 'Instant 300/N Cashback';
+              } else if (event.reason) {
+                titleText = event.reason.replace(/\s*\(Seat\s*#\d+\)/i, '').replace(/Dividend push from Seat #\d+/i, 'Instant 300/N Dividend');
+              }
+
+              const subtitleText = event.recipientCount && event.recipientCount > 1
+                ? `${event.recipientCount} Council seats distributed`
+                : event.userAddress ? truncateAddress(event.userAddress, 8) : 'Council Member';
 
               return (
-                <div key={event.id} className="flex items-center justify-between py-2.5 hover:bg-[#EFF6FF]/60 transition-colors px-1 rounded-lg">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-7 h-7 rounded-lg ${
-                      isJoined ? 'bg-[#0E62E4]/10 text-[#0E62E4]' : 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
-                    } flex items-center justify-center shrink-0 border border-[#0E62E4]/15`}>
-                      {isJoined ? <ShieldCheck className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                <div key={event.id} className="flex items-center justify-between py-2.5 hover:bg-[#EFF6FF]/60 transition-colors px-1 sm:px-2 rounded-xl">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <div className={`w-8 h-8 rounded-xl ${
+                      isJoined ? 'bg-[#0E62E4]/10 text-[#0E62E4]' : isRetopup ? 'bg-amber-500/10 text-amber-600' : 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
+                    } flex items-center justify-center shrink-0 border border-current/15`}>
+                      {isJoined ? <ShieldCheck className="w-4 h-4" /> : isRetopup ? <Zap className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold text-[#17334F] flex items-center gap-1.5 truncate">
-                        <span className="truncate">{title}</span>
+                      <div className="text-xs font-bold text-[#17334F] flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                        <span className="truncate">{titleText}</span>
                         {event.incomingPosition && (
-                          <span className="text-[9px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-1.5 py-0.2 rounded shrink-0">
-                            Seat #{event.incomingPosition}
+                          <span className="text-[9px] font-bold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-1.5 py-0.2 rounded-md shrink-0">
+                            {badgeText}
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-[#5E7B94] font-mono mt-0.5">
-                        {event.userAddress ? truncateAddress(event.userAddress, 8) : 'Council Member'}
+                      <div className="text-[10px] text-[#5E7B94] font-mono mt-0.5 truncate">
+                        {subtitleText}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right shrink-0 pl-2">
+                  <div className="text-right shrink-0">
                     <div className={`text-xs font-bold tabular-nums ${isJoined ? 'text-[#17334F]' : 'text-[#1F8A5B]'}`}>
                       {isJoined ? '' : '+'}{event.amountBtt ? Number(event.amountBtt).toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} TROB
                     </div>
@@ -691,10 +714,10 @@ export default function DaoDashboardPage() {
          ======================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Card 1: The Vision */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4">
           <button
             onClick={() => setVideoOpen(true)}
-            className="relative w-full sm:w-24 h-24 sm:h-20 rounded-xl overflow-hidden bg-[#17334F] shrink-0 flex items-center justify-center group shadow-xs border border-[#0E62E4]/20 cursor-pointer"
+            className="relative w-full md:w-24 h-24 md:h-20 rounded-xl overflow-hidden bg-[#17334F] shrink-0 flex items-center justify-center group shadow-xs border border-[#0E62E4]/20 cursor-pointer"
             aria-label="Play Vision Video"
           >
             <img

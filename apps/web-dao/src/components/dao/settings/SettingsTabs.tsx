@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { User, ShieldCheck, Bell, Wallet, Shield } from 'lucide-react';
+import { User, ShieldCheck, Bell, Wallet } from 'lucide-react';
 
-export type SettingsTabType = 'account' | 'security' | 'notifications' | 'wallet' | 'privacy';
+export type SettingsTabType = 'account' | 'security' | 'notifications' | 'wallet';
 
 interface SettingsTabsProps {
   activeTab: SettingsTabType;
@@ -16,7 +16,6 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
     { id: 'security', label: 'Security', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'wallet', label: 'Wallet', icon: <Wallet className="w-4 h-4" /> },
-    { id: 'privacy', label: 'Privacy', icon: <Shield className="w-4 h-4" /> },
   ];
 
   const mobileTabs: { id: SettingsTabType; label: string }[] = [
@@ -24,7 +23,6 @@ export default function SettingsTabs({ activeTab, onTabChange }: SettingsTabsPro
     { id: 'security', label: 'Security' },
     { id: 'notifications', label: 'Notifications' },
     { id: 'wallet', label: 'Wallet' },
-    { id: 'privacy', label: 'Privacy' },
   ];
 
   const activeMobileTabRef = React.useRef<HTMLButtonElement | null>(null);

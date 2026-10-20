@@ -84,22 +84,33 @@ async function queryNeonDirect<T = any>(sql: string, params: any[] = []): Promis
     process.env.DATABASE_URL ||
     "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
   const match = dbUrl.match(/@([^/:]+)/);
-  if (!match || !match[1]) return { rows: [] };
-  const endpoint = `https://${match[1]}/sql`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Neon-Connection-String": dbUrl,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query: sql, params }),
-    signal: AbortSignal.timeout(6000),
-  });
-  if (!res.ok) {
-    throw new Error(`Neon SQL error: ${res.statusText}`);
+  if (match && match[1]) {
+    const endpoint = `https://${match[1]}/sql`;
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Neon-Connection-String": dbUrl,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: sql, params }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as any;
+        return { rows: (json.rows || []) as T[] };
+      }
+    } catch {
+      // Fall through to Prisma queryRaw if HTTP endpoint is unavailable or times out
+    }
   }
-  const json = (await res.json()) as any;
-  return { rows: (json.rows || []) as T[] };
+
+  try {
+    const rows = await prisma.$queryRawUnsafe<T[]>(sql, ...params);
+    return { rows: Array.isArray(rows) ? rows : [] };
+  } catch (prismaErr) {
+    throw prismaErr;
+  }
 }
 
 export class BlockchainIndexer {
@@ -109,6 +120,7 @@ export class BlockchainIndexer {
   private lastOfflineNotification = 0;
   private hasLoggedOnline = false;
   private lastTrobMembersCount = 0;
+  private lastProcessedBlock = 0n;
 
   constructor() {
     this.client = createPublicClient({
@@ -125,7 +137,7 @@ export class BlockchainIndexer {
     logger.info("📡 EQUORA Blockchain Event Indexer Starting");
     logger.info(`🔗 RPC: ${config.rpcUrl}`);
     logger.info(`🌍 Chain ID: ${config.chainId}`);
-    logger.info(`⏱️ Poll Interval: ${config.pollIntervalMs}ms`);
+    logger.info(`⏱️ Poll Interval: ${Math.max(3000, config.pollIntervalMs)}ms`);
     logger.info("========================================================");
 
     this.isRunning = true;
@@ -139,6 +151,7 @@ export class BlockchainIndexer {
 
   private async pollLoop() {
     while (this.isRunning) {
+      let sleepTime = Math.max(3000, config.pollIntervalMs);
       try {
         if (this.isTrobChain()) {
           await this.syncTrobChain();
@@ -150,23 +163,35 @@ export class BlockchainIndexer {
           this.wasOffline = false;
         }
       } catch (err: any) {
+        const msg = String(err?.message || err || "").toLowerCase();
+        const errName = String(err?.name || "");
         const isConnectionError =
-          err?.message?.includes("fetch failed") ||
-          err?.message?.includes("ECONNREFUSED") ||
-          err?.name === "HttpRequestError";
+          errName === "TimeoutError" ||
+          errName === "AbortError" ||
+          errName === "HttpRequestError" ||
+          msg.includes("timeout") ||
+          msg.includes("aborted") ||
+          msg.includes("fetch failed") ||
+          msg.includes("econnrefused") ||
+          msg.includes("econnreset") ||
+          msg.includes("etimedout") ||
+          msg.includes("enotfound") ||
+          msg.includes("und_err_connect_timeout") ||
+          msg.includes("network error");
 
         if (isConnectionError) {
           const now = Date.now();
-          if (!this.wasOffline || now - this.lastOfflineNotification > 15000) {
-            logger.warn(`Waiting for blockchain RPC at ${config.rpcUrl} (node offline, will auto-resume when online)`);
+          if (!this.wasOffline || now - this.lastOfflineNotification > 30000) {
+            logger.warn(`Waiting for blockchain RPC at ${config.rpcUrl} (node slow/offline, will auto-resume)`);
             this.lastOfflineNotification = now;
           }
           this.wasOffline = true;
+          sleepTime = 8000;
         } else {
           logger.error("Indexer polling error:", err?.message || err);
         }
       }
-      await new Promise((r) => setTimeout(r, config.pollIntervalMs));
+      await new Promise((r) => setTimeout(r, sleepTime));
     }
   }
 
@@ -187,6 +212,11 @@ export class BlockchainIndexer {
       logger.info(`🔗 TrobChain Mainnet Connected (Block #${currentBlock})`);
       this.hasLoggedOnline = true;
       this.wasOffline = false;
+    }
+
+    // Skip heavy member contract call if block has not changed
+    if (this.lastProcessedBlock > 0n && currentBlock === this.lastProcessedBlock) {
+      return;
     }
 
     // 2. Query DAO contract members
@@ -217,6 +247,14 @@ export class BlockchainIndexer {
     }) as string[];
 
     const onChainCount = memberAddresses.length;
+    const isZeroAddr = (hex: string) =>
+      !hex ||
+      /^0x0+$/.test(hex) ||
+      /^410+$/.test(hex) ||
+      hex === "0x0000000000000000000000000000000000000000";
+    const activeMembersCount = memberAddresses.filter((addr) => !isZeroAddr(addr)).length;
+    const vacantCount = onChainCount - activeMembersCount;
+    const remainingSeats = 100 - activeMembersCount;
 
     // Check DB max position across all tracked seats (active, capped, vacant)
     const dbRes = await queryNeonDirect<{ count: string; max_pos: string }>(
@@ -235,7 +273,7 @@ export class BlockchainIndexer {
       const startIndex = Math.max(0, maxDbPos);
       for (let i = startIndex; i < memberAddresses.length; i++) {
         const rawHex = memberAddresses[i];
-        const isZero = !rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === "0x0000000000000000000000000000000000000000";
+        const isZero = isZeroAddr(rawHex);
         const b58Addr = hexToTrobBase58(rawHex);
         const position = i + 1;
 
@@ -269,7 +307,7 @@ export class BlockchainIndexer {
               function_selector: "getMemberDetails(address)",
               parameter: rawHex.replace(/^0x/, "").padStart(64, "0"),
             }),
-            signal: AbortSignal.timeout(3000),
+            signal: AbortSignal.timeout(8000),
           });
           if (detailRes.ok) {
             const dJson = (await detailRes.json()) as any;
@@ -315,26 +353,22 @@ export class BlockchainIndexer {
 
       await queryNeonDirect(
         `UPDATE "DaoInstance" SET capacity = 100, "isClosed" = $1, "updatedAt" = NOW() WHERE id = 1`,
-        [onChainCount >= 100]
+        [activeMembersCount >= 100]
       );
 
-      logger.info(`✅ [TrobChain] Synchronized ${added} new members. Total active: ${onChainCount}/100.`);
+      logger.info(`✅ [TrobChain] Synchronized ${added} new members. Active: ${activeMembersCount}/100, Vacant/Underfunded: ${vacantCount}.`);
     }
 
-    if (this.lastTrobMembersCount !== onChainCount) {
-      this.lastTrobMembersCount = onChainCount;
-      logger.info(`📊 [TrobChain] Active Council Seats: ${onChainCount}/100 | Remaining: ${Math.max(0, 100 - onChainCount)} | Block #${currentBlock}`);
+    if (this.lastTrobMembersCount !== activeMembersCount) {
+      this.lastTrobMembersCount = activeMembersCount;
+      logger.info(`📊 [TrobChain] Active Council Seats: ${activeMembersCount}/100 | Vacant/Underfunded: ${vacantCount} | Total Remaining: ${remainingSeats} | Block #${currentBlock}`);
     }
+
+    this.lastProcessedBlock = currentBlock;
 
     // Update cursor
     try {
-      await queryNeonDirect(
-        `INSERT INTO "IndexerCursor" (id, "contractName", "chainId", "lastIndexedBlock", "updatedAt")
-         VALUES (gen_random_uuid(), 'EquoraDAO', $1, $2, NOW())
-         ON CONFLICT ("contractName", "chainId") DO UPDATE
-         SET "lastIndexedBlock" = $2, "updatedAt" = NOW()`,
-        [config.chainId, currentBlock.toString()]
-      );
+      await this.updateCursor("EquoraDAO", currentBlock);
     } catch {}
   }
 

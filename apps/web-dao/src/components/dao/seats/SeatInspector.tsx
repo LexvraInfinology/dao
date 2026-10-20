@@ -87,7 +87,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
     : Math.max(0, Math.round((seatEntryTrob - alreadyPaidTrob) * 100) / 100);
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-4 font-sans">
+    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-3 xs:p-3.5 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3.5 sm:space-y-4 font-sans">
       {/* Top Header Row (Desktop has SEAT INSPECTOR + X; Mobile has Seat # + Badges) */}
       <div className="hidden md:flex items-center justify-between pb-2.5 border-b border-[#E2EEF9]">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#4F6D87]">
@@ -97,7 +97,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-100 text-[#4F6D87] transition-colors"
+            className="p-1 rounded-lg hover:bg-slate-100 text-[#4F6D87] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -105,8 +105,8 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
       </div>
 
       {/* Main Title Row */}
-      <div className="flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 xs:gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 xs:gap-2">
           <h3 className="text-base sm:text-lg font-bold text-[#14304A]">
             Council Seat #{seat.seatNumber}
           </h3>
@@ -133,7 +133,7 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </span>
         </div>
 
-        <span className="md:hidden text-[10px] text-[#4F6D87]">
+        <span className="md:hidden text-[10px] text-[#4F6D87] font-medium">
           Genesis Council
         </span>
       </div>
@@ -191,20 +191,20 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
       )}
 
       {/* Soulbound NFT Card (Dark Navy Midnight Card from Figma) */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#071437] to-[#0D2057] p-4 text-white shadow-md">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 shrink-0 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center p-2.5 backdrop-blur-sm">
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#071437] to-[#0D2057] p-3 sm:p-4 text-white shadow-md">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center p-2 backdrop-blur-sm">
             <img
               src="/dao/equoranewlogo.png"
               alt="Soulbound NFT EQUORA Emblem"
               className="w-full h-full object-contain animate-float drop-shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
             />
           </div>
-          <div>
-            <div className="text-xs font-medium text-blue-200/90 font-jakarta">
+          <div className="min-w-0">
+            <div className="text-[11px] sm:text-xs font-medium text-blue-200/90 font-jakarta">
               Soulbound NFT
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-white">
+            <div className="text-base xs:text-lg sm:text-xl font-black font-mono tracking-tight text-white truncate">
               {seat.soulboundId}
             </div>
           </div>
@@ -214,14 +214,16 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
       {/* Metadata Detail Rows */}
       <div className="space-y-3 text-xs">
         {/* Owner Address */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 min-w-0">
           <span className="text-[#4F6D87] shrink-0">Owner Address</span>
-          <div className="flex items-center gap-1.5 font-mono font-bold text-[#14304A] truncate">
-            <span className="truncate">{seat.ownerAddress}</span>
+          <div className="flex items-center gap-1.5 font-mono font-bold text-[#14304A] min-w-0">
+            <span className="truncate max-w-[130px] xs:max-w-[170px] sm:max-w-none">
+              {seat.ownerAddress ? `${seat.ownerAddress.slice(0, 6)}…${seat.ownerAddress.slice(-4)}` : '—'}
+            </span>
             <button
               type="button"
               onClick={handleCopyAddress}
-              className="p-1 hover:bg-slate-100 rounded text-[#4F6D87] hover:text-[#0E62E4] transition-colors"
+              className="p-1 hover:bg-slate-100 rounded text-[#4F6D87] hover:text-[#0E62E4] transition-colors shrink-0 cursor-pointer"
               title="Copy Address"
             >
               {copied ? (
@@ -233,33 +235,30 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
         </div>
 
-        {/* Cycle Earnings */}
-        <div className="flex items-center justify-between">
-          <span className="text-[#4F6D87]">Cycle Earnings</span>
-          <span className="text-sm font-bold text-[#14304A]">
-            {seat.lifetimeEarnings}
-          </span>
-        </div>
-
-        {/* Retopup / Deposit Cycles */}
+        {/* Member Inflow vs Outflow Ledger */}
         {seat.status !== 'next' && seat.status !== 'defaulted' && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE]/70 text-xs">
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-50 border border-[#E2EEF9]">
               <div className="space-y-0.5">
-                <div className="text-[10px] uppercase font-bold text-[#155EEF] tracking-wider">Deposit Cycles</div>
-                <div className="font-extrabold text-[#071A4A]">
-                  {(seat.retopupCount ?? 0) > 0
-                    ? `Cycle #${(seat.retopupCount ?? 0) + 1} (${seat.retopupCount} Retopup Done)`
-                    : `Cycle #1 (Initial Deposit)`}
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#0284C7]">Seat Inflow (Paid)</div>
+                <div className="text-xs sm:text-sm font-black text-[#0369A1]">
+                  ${(1 + (seat.retopupCount ?? 0)) * 300} USD
+                </div>
+                <div className="text-[10px] text-[#60739A]">
+                  {1 + (seat.retopupCount ?? 0)} {(seat.retopupCount ?? 0) > 0 ? 'Deposits' : 'Deposit ($300)'}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-[10px] text-[#60739A] font-medium">Deposits Count</div>
-                <div className="font-black text-[#0E62E4]">
-                  {1 + (seat.retopupCount ?? 0)} Deposits (${(1 + (seat.retopupCount ?? 0)) * 300} USD)
+              <div className="space-y-0.5 text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#155EEF]">Seat Outflow (Earned)</div>
+                <div className="text-xs sm:text-sm font-black text-[#071A4A]">
+                  {seat.lifetimeEarnings}
+                </div>
+                <div className="text-[10px] text-[#60739A]">
+                  Pushed Direct to Wallet
                 </div>
               </div>
             </div>
+
             {(seat.retopupCount ?? 0) > 0 && seat.lifetimeEarningsUsd !== undefined && (
               <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 text-xs">
                 <span className="text-[11px] font-medium text-emerald-800">Lifetime Settled (All Cycles)</span>
@@ -422,25 +421,28 @@ export const SeatInspector: React.FC<SeatInspectorProps> = ({
           </div>
         ) : null}
 
-        {/* View on Explorer Button */}
-        <a
-          href={getExplorerAddressUrl(seat.ownerAddress)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-2.5 rounded-xl bg-[#F7FBFF] hover:bg-[#EFF6FF] border border-[#E2EEF9] text-[#0E62E4] text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-          title="View on Trobium Explorer"
-        >
-          <span>View on Explorer</span>
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
+        {/* Secondary Buttons in 2-Column Grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* View on Explorer Button */}
+          <a
+            href={getExplorerAddressUrl(seat.ownerAddress)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="py-2 px-2.5 rounded-xl bg-[#F7FBFF] hover:bg-[#EFF6FF] border border-[#E2EEF9] text-[#0E62E4] text-[11px] xs:text-xs font-semibold transition-all flex items-center justify-center gap-1.5 truncate cursor-pointer"
+            title="View on Trobium Explorer"
+          >
+            <span className="truncate">Explorer</span>
+            <ExternalLink className="w-3 h-3 xs:w-3.5 xs:h-3.5 shrink-0" />
+          </a>
 
-        {/* View Member Profile Button */}
-        <a
-          href="/dao/profile"
-          className="w-full py-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5"
-        >
-          <span>View Member Profile</span>
-        </a>
+          {/* View Member Profile Button */}
+          <a
+            href="/dao/profile"
+            className="py-2 px-2.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] active:bg-[#0A3F9A] text-white text-[11px] xs:text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 truncate cursor-pointer"
+          >
+            <span className="truncate">Profile</span>
+          </a>
+        </div>
       </div>
     </div>
   );

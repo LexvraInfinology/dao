@@ -110,13 +110,14 @@ export default function MemberLoungePage() {
               isCapped={lounge?.isCapped}
               poolClaimableTrob={lounge?.poolClaimableTrob}
               fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
+              loading={loading}
             />
             <EarningsCapCard
               variant="desktop"
               capProgressPct={capProgressPct}
               pushedUsd={cyclePushedUsd}
               earningsCapUsd={earningsCapUsd}
-              trobPriceUsd={0.056}
+              trobPriceUsd={livePrice}
               isCapped={lounge?.isCapped}
               retopupDeadline={lounge?.retopupDeadline}
               retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
@@ -126,6 +127,7 @@ export default function MemberLoungePage() {
               bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
               newActivationsSinceCap={lounge?.newActivationsSinceCap}
               cappedAt={lounge?.cappedAt}
+              loading={loading}
             />
           </div>
         </div>
@@ -139,7 +141,7 @@ export default function MemberLoungePage() {
           capProgressPct={capProgressPct}
           pushedUsd={cyclePushedUsd}
           earningsCapUsd={earningsCapUsd}
-          trobPriceUsd={0.056}
+          trobPriceUsd={livePrice}
           isCapped={lounge?.isCapped}
           retopupDeadline={lounge?.retopupDeadline}
           retopupTimeRemainingSeconds={lounge?.retopupTimeRemainingSeconds}
@@ -149,6 +151,7 @@ export default function MemberLoungePage() {
           bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
           newActivationsSinceCap={lounge?.newActivationsSinceCap}
           cappedAt={lounge?.cappedAt}
+          loading={loading}
         />
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
@@ -159,6 +162,7 @@ export default function MemberLoungePage() {
           isCapped={lounge?.isCapped}
           poolClaimableTrob={lounge?.poolClaimableTrob}
           fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
+          loading={loading}
         />
         <IncomeChannelsCard loungeData={lounge} />
       </div>

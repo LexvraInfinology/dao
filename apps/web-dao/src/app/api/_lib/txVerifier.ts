@@ -181,6 +181,8 @@ export async function verifyOnChainTransaction(
   };
 }
 
+const memberPositionCache = new Map<string, { pos: number; time: number }>();
+
 /**
  * Queries memberPosition(address) directly from the EquoraDAO smart contract on TrobChain.
  * Returns 1 to 100 if the wallet is a verified member on-chain, or 0 if not a member.
@@ -195,6 +197,12 @@ export async function getOnChainMemberPosition(
   const hexOwner = toTronHex(cleanAddr);
   const targetContract = contractAddress || getActiveDaoAddress();
   const hexContract = toTronHex(targetContract);
+  const cacheKey = `${hexOwner.toLowerCase()}-${hexContract.toLowerCase()}`;
+
+  const cached = memberPositionCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < 300000) {
+    return cached.pos;
+  }
 
   try {
     const res = await fetch(`${FULLNODE_RPC_URL}/wallet/triggerconstantcontract`, {
@@ -215,6 +223,7 @@ export async function getOnChainMemberPosition(
       if (data?.constant_result?.[0]) {
         const pos = parseInt(data.constant_result[0], 16);
         if (Number.isFinite(pos) && pos > 0 && pos <= 100) {
+          memberPositionCache.set(cacheKey, { pos, time: Date.now() });
           return pos;
         }
       }
@@ -223,6 +232,7 @@ export async function getOnChainMemberPosition(
     console.warn('[txVerifier] Failed to query on-chain memberPosition:', err);
   }
 
+  memberPositionCache.set(cacheKey, { pos: 0, time: Date.now() });
   return 0;
 }
 

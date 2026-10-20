@@ -20,6 +20,7 @@ interface EarningsCapCardProps {
   bypassedToCouncilUsd?: number;
   newActivationsSinceCap?: number;
   cappedAt?: string | null;
+  loading?: boolean;
 }
 
 export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
@@ -36,10 +37,29 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   bypassedToCouncilUsd = 0,
   newActivationsSinceCap = 0,
   cappedAt,
+  loading = false,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [retopupModalOpen, setRetopupModalOpen] = useState(false);
   const wallet = useWallet();
+
+  if (loading && pushedUsd === 0) {
+    return (
+      <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-4 w-20 bg-slate-100 rounded" />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-full bg-slate-100 shrink-0" />
+          <div className="space-y-2 flex-1">
+            <div className="h-6 w-36 bg-slate-200 rounded" />
+            <div className="h-4 w-48 bg-blue-100 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Normalize effective cap: fixed $300 deposit with 5X earnings cap ($1,500 USD)
   const effectiveCapUsd = earningsCapUsd && earningsCapUsd >= 300 ? earningsCapUsd : 1500;
@@ -139,10 +159,17 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
               / ${effectiveCapUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
             </span>
           </div>
-          <div className="text-xs font-medium font-jakarta text-[#60739A]">5X Cap hits at ${effectiveCapUsd.toLocaleString()} earned</div>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold ${zoneColor}`}>
-            {zone}
-          </span>
+          <div className="text-[11px] font-bold font-jakarta text-[#155EEF]">
+            ≈ {(Math.round((effectivePushedUsd / 0.056) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / 26,785.71 TROB
+          </div>
+          <div className="text-[10px] font-medium font-jakarta text-[#60739A]">
+            Contract hard stop: 26,785.71 TROB ({(Math.max(0, Math.round(((effectiveCapUsd - effectivePushedUsd) / 0.056) * 100) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB left)
+          </div>
+          <div className="pt-0.5">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold ${zoneColor}`}>
+              {zone}
+            </span>
+          </div>
         </div>
       </div>
 

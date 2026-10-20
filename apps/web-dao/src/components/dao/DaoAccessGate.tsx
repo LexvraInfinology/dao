@@ -1209,7 +1209,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
 
               {/* ── 3. Official WhatsApp Channel ───────────────────────────────── */}
               <div className="space-y-2">
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A] p-3 sm:p-4 text-slate-950 shadow-xs border border-[#F59E0B]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A] p-3 sm:p-4 text-slate-950 shadow-xs border border-[#F59E0B]/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
                   {/* WhatsApp Icon + Titles */}
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1FAF51] text-white flex items-center justify-center shrink-0 shadow-sm ring-2 ring-white/60">

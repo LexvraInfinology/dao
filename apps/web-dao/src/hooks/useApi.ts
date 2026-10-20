@@ -262,6 +262,7 @@ export interface DaoEventData {
   eventType: string;
   userAddress: string | null;
   incomingPosition: number | null;
+  recipientCount?: number | null;
   amountBtt: number;
   amountTrob?: number;
   amountUsdEstimate: number;
@@ -410,6 +411,10 @@ export interface TransactionItem {
   categoryBadge?: string;
   sourceSeat?: number;
   note?: string;
+  blockNumber?: number | string;
+  contractAddress?: string;
+  distributionFormula?: string;
+  rawType?: string;
 }
 
 export interface TransactionsData {
@@ -423,6 +428,34 @@ export interface TransactionsData {
   priceSource: string;
   protocolInflowsUsd?: number;
   protocolOutflowsUsd?: number;
+  userInflowUsd?: number;
+  userInflowTrob?: number;
+  userOutflowUsd?: number;
+  userOutflowTrob?: number;
+  userNetReturnUsd?: number;
+  userMultiplier?: number;
+  memberFinancials?: {
+    address: string;
+    position: number | null;
+    isMember: boolean;
+    status: 'active' | 'capped' | 'vacant' | 'non-member';
+    userInflowUsd: number;
+    userInflowTrob: number;
+    userOutflowUsd: number;
+    userOutflowTrob: number;
+    userNetReturnUsd: number;
+    userMultiplier: number;
+    retopupCount: number;
+    underfundedAudit?: {
+      wasUnderfunded: boolean;
+      unearnedDebtTrob: number;
+      initialV1DepositTrob: number;
+      completionDepositTrob?: number;
+      cashbackReceivedTrob?: number;
+      recovered: boolean;
+      note: string;
+    };
+  };
 }
 
 // ─── Convenience wrappers ─────────────────────────────────────────────────────
@@ -431,21 +464,9 @@ export function useDaoStats(pollMs?: number) {
   return useApi<DaoStatsData>('/api/dao/stats', { pollMs });
 }
 
-export const DEFAULT_TROB_PRICE: TrobPriceData = {
-  priceUsd: 0.042431,
-  priceSource: 'live-market-api',
-  updatedAt: new Date().toISOString(),
-  isStale: false,
-  seatEntryUsd: 300,
-  seatEntryTrob: 7070.30,
-  earningsCapUsd: 1500,
-  earningsCapTrob: 35351.51,
-};
-
 export function useTrobPrice(pollMs: number = 15_000) {
   return useApi<TrobPriceData>('/api/price/trob', {
     pollMs,
-    fallback: DEFAULT_TROB_PRICE,
   });
 }
 
@@ -479,16 +500,19 @@ export function useTransactions(
   page = 1,
   limit = 20,
   type?: string,
-  search?: string
+  search?: string,
+  pollMs: number = 8000,
+  userWallet: string | null = null
 ) {
   const params = new URLSearchParams();
   if (address) params.set('address', address);
+  if (userWallet) params.set('userWallet', userWallet);
   params.set('page', String(page));
   params.set('limit', String(limit));
   if (type && type !== 'all') params.set('type', type);
   if (search && search.trim()) params.set('search', search.trim());
 
-  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`);
+  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`, { pollMs });
 }
 
 export function useDaoProposals(limit = 20) {

@@ -140,37 +140,40 @@ export const TreasuryWithdrawCard: React.FC<TreasuryWithdrawCardProps> = ({
       </div>
 
       {/* Wallet Settlement Verification */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] border border-[#86EFAC] flex items-center justify-center text-[#15803D] shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#DCFCE7] border border-[#86EFAC] flex items-center justify-center text-[#15803D] shrink-0 mt-0.5 sm:mt-0">
+            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div className="space-y-0.5 min-w-0">
-            <div className="text-xs font-bold text-[#166534] font-jakarta flex items-center gap-1.5">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="text-xs sm:text-sm font-bold text-[#166534] font-jakarta flex items-center gap-1.5 flex-wrap">
               <span>Direct-to-Wallet Blockchain Settlement</span>
-              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse shrink-0" />
             </div>
-            <div className="text-xs text-[#15803D] font-jakarta">
+            <p className="text-[11px] sm:text-xs text-[#15803D] font-jakarta leading-relaxed">
               Funds are never held on the frontend. Smart contracts push tokens directly to your connected address.
-            </div>
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#BBF7D0] text-xs font-mono font-bold text-[#071A4A] shrink-0">
-          <Wallet className="w-3.5 h-3.5 text-[#155EEF]" />
-          <span>{shortDest}</span>
+        <div className="flex items-center justify-between md:justify-end gap-2 px-3 py-2 rounded-xl bg-white border border-[#BBF7D0] text-xs font-mono font-bold text-[#071A4A] shrink-0 self-stretch md:self-auto shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <Wallet className="w-3.5 h-3.5 text-[#155EEF] shrink-0" />
+            <span className="text-[11px] text-[#4F6D87] font-sans md:hidden">Destination:</span>
+          </div>
+          <span className="truncate">{shortDest}</span>
         </div>
       </div>
 
       {/* Confirmed Direct Push Indicator */}
       {availableBalance <= 0 && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between gap-3 text-xs font-jakarta flex-wrap">
-          <div className="flex items-center gap-2 text-[#15803D] font-semibold">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-jakarta">
+          <div className="flex items-center gap-2 text-[#15803D] font-semibold min-w-0">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Autonomous Direct Pushes Active · Zero Claim Friction</span>
+            <span className="truncate">Autonomous Direct Pushes Active · Zero Claim Friction</span>
           </div>
           {totalReceivedUsd !== undefined && totalReceivedUsd > 0 && (
-            <span className="text-[11px] font-bold text-[#166534] shrink-0">
+            <span className="text-[11px] font-bold text-[#166534] shrink-0 self-end sm:self-auto bg-emerald-100/60 px-2 py-0.5 rounded-md">
               ${totalReceivedUsd.toFixed(2)} USD Pushed Directly
             </span>
           )}

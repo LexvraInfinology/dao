@@ -14,7 +14,7 @@ import "../interfaces/IEquoraRegistry.sol";
  *   It splits the incoming TROB into 4 buckets:
  *
  *     35%  → Ecosystem & DAO Pool  (EquoraDAO — distributed to 100 Genesis DAO Seat holders)
- *     40%  → Salary Pool           (EquoraSalaryPool — paid out on 11th of each month)
+ *     40%  → Royalty Pool           (EquoraSalaryPool / Leadership Royalty Pool — paid out on 11th of each month)
  *     10%  → Magic Blind Box       (EquoraMagicBox — quarterly shared lottery pool)
  *     15%  → Level Rewards         (EquoraRewardPool — instant one-time milestone payouts)
  *
@@ -36,7 +36,8 @@ contract EquoraVault is ReentrancyGuard {
     uint256 public constant TIER_DAO      = 300 * 10 ** 18; // 300 TROB (DAO tier per logics.xlsx)
 
     uint256 public constant DAO_BPS      = 3500;  // 35%
-    uint256 public constant SALARY_BPS   = 4000;  // 40%
+    uint256 public constant ROYALTY_BPS  = 4000;  // 40% (Leadership Royalty Pool)
+    uint256 public constant SALARY_BPS   = 4000;  // 40% (backward compatibility alias)
     uint256 public constant MAGICBOX_BPS = 1000;  // 10%
     uint256 public constant REWARDS_BPS  = 1500;  // 15%
     uint256 public constant BPS_BASE     = 10000;
@@ -148,6 +149,13 @@ contract EquoraVault is ReentrancyGuard {
         require(_matrix != address(0), "EquoraVault: Invalid matrix");
         matrixContract = _matrix;
         emit MatrixContractSet(_matrix);
+    }
+
+    /**
+     * @dev Alias getter for salaryPool pointing to the Leadership Royalty Pool.
+     */
+    function royaltyPool() external view returns (address) {
+        return salaryPool;
     }
 
     // ─── Primary Entry Point: User Registration ────────────────────────────────

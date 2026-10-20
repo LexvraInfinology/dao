@@ -94,3 +94,6 @@ packages/hardhat/scripts/fund-user.ts
 equorafidocs/
 equorafidocs
 utho_deploy_key*
+__pycache__/
+**/__pycache__/
+scratch_*.png

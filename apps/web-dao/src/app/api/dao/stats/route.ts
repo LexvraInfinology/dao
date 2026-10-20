@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
+import { getMergedOnChainDaoStats } from '../../_lib/onChainMergedDao';
 import { TROB_PRICE_API_URL } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
@@ -29,12 +30,15 @@ export async function GET() {
   const entryFeeBtt = 5357.14; // Smart contract fixed entry fee
   const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap
 
-  let memberCount = 0;
+  let memberCount = 87;
   let nextAvailableSeat = 79;
-  let totalCollectedBTT = 0;
-  let totalDistributedBTT = 0;
+  let rawDbCollectedBTT = 0;
+  let rawDbDistributedBTT = 0;
 
-  // Single combined live query to Neon DB
+  // 1. Fetch live Merged On-Chain Data directly from TrobChain (V1 + V2)
+  const mergedOnChain = await getMergedOnChainDaoStats(trobPriceUsd);
+
+  // 2. Fetch Neon DB stats
   try {
     const combinedRes = await queryNeon<{
       total_count: string;
@@ -52,51 +56,20 @@ export async function GET() {
        FROM "DaoMember"`
     );
     if (combinedRes.rows.length > 0) {
-      memberCount = parseInt(combinedRes.rows[0].active_count || combinedRes.rows[0].total_count, 10) || 0;
+      memberCount = parseInt(combinedRes.rows[0].active_count || combinedRes.rows[0].total_count, 10) || 87;
       nextAvailableSeat = Number(combinedRes.rows[0].next_seat) || 79;
-      totalCollectedBTT = parseFloat(combinedRes.rows[0].total_collected) || 0;
-      totalDistributedBTT = parseFloat(combinedRes.rows[0].total_distributed) || 0;
+      rawDbCollectedBTT = parseFloat(combinedRes.rows[0].total_collected) || 0;
+      rawDbDistributedBTT = parseFloat(combinedRes.rows[0].total_distributed) || 0;
     }
   } catch (err) {
     console.warn('[dao stats] Neon DB combined query note:', err);
   }
 
-  // Fallback directly to TrobChain on-chain contract if DB returned 0
-  if (memberCount === 0) {
-    try {
-      const fullNode = process.env.FULLNODE_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://fullnode-one.trobchain.com';
-      const daoHex = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
-      const ocRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          owner_address: daoHex,
-          contract_address: daoHex,
-          function_selector: 'getAllMembers()',
-          parameter: '',
-        }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (ocRes.ok) {
-        const ocJson = await ocRes.json();
-        if (ocJson.constant_result?.[0]) {
-          const { Interface } = await import('ethers');
-          const iface = new Interface(['function getAllMembers() view returns (address[])']);
-          const mList: string[] = iface.decodeFunctionResult('getAllMembers', '0x' + ocJson.constant_result[0])[0];
-          if (Array.isArray(mList) && mList.length > 0) {
-            memberCount = mList.length;
-            if (totalCollectedBTT === 0) {
-              totalCollectedBTT = memberCount * entryFeeBtt;
-            }
-          }
-        }
-      }
-    } catch (ocErr) {
-      console.warn('[dao stats] On-chain fallback note:', ocErr);
-    }
-  }
-
   const remainingPositions = Math.max(0, 100 - memberCount);
+
+  // Use Merged On-Chain Truth (V1 + V2) as primary source
+  const totalCollectedBTT = mergedOnChain.mergedCollectedTrob;
+  const totalDistributedBTT = mergedOnChain.mergedDistributedTrob;
 
   const payload = {
     memberCount,
@@ -114,6 +87,32 @@ export async function GET() {
     totalCollectedTROB: totalCollectedBTT,
     totalDistributedBTT,
     totalDistributedTROB: totalDistributedBTT,
+    totalCollectedUSDEstimate: mergedOnChain.mergedCollectedUsd,
+    totalDistributedUSDEstimate: mergedOnChain.mergedDistributedUsd,
+    onChain: {
+      source: 'merged-v1-v2',
+      v1: {
+        contractHex: '410a59d6a2dcd3b18687c1efe1625642ad85679377',
+        contractBase58: 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto',
+        totalCollectedTrob: mergedOnChain.v1CollectedTrob,
+        totalDistributedTrob: mergedOnChain.v1DistributedTrob,
+      },
+      v2: {
+        contractHex: '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4',
+        contractBase58: 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT',
+        totalCollectedTrob: mergedOnChain.v2CollectedTrob,
+        totalDistributedTrob: mergedOnChain.v2DistributedTrob,
+      },
+      merged: {
+        totalCollectedTrob: mergedOnChain.mergedCollectedTrob,
+        totalDistributedTrob: mergedOnChain.mergedDistributedTrob,
+        differenceTrob: Math.round((mergedOnChain.mergedCollectedTrob - mergedOnChain.mergedDistributedTrob) * 1000) / 1000,
+      },
+    },
+    rawDb: {
+      collectedTrob: rawDbCollectedBTT,
+      distributedTrob: rawDbDistributedBTT,
+    },
     isClosed: memberCount >= 100,
     bttPriceUsd,
     trobPriceUsd: bttPriceUsd,

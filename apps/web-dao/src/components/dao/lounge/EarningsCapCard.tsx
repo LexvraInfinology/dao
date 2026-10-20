@@ -43,24 +43,6 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
   const [retopupModalOpen, setRetopupModalOpen] = useState(false);
   const wallet = useWallet();
 
-  if (loading && pushedUsd === 0) {
-    return (
-      <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4 animate-pulse">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-32 bg-slate-200 rounded" />
-          <div className="h-4 w-20 bg-slate-100 rounded" />
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-slate-100 shrink-0" />
-          <div className="space-y-2 flex-1">
-            <div className="h-6 w-36 bg-slate-200 rounded" />
-            <div className="h-4 w-48 bg-blue-100 rounded" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Normalize effective cap: fixed $300 deposit with 5X earnings cap ($1,500 USD)
   const effectiveCapUsd = earningsCapUsd && earningsCapUsd >= 300 ? earningsCapUsd : 1500;
   // If isCapped or cap hit, display 100% and clamp effectivePushedUsd to $1,500
@@ -120,6 +102,24 @@ export const EarningsCapCard: React.FC<EarningsCapCardProps> = ({
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [isCapReached, retopupDeadline]);
+
+  if (loading && pushedUsd === 0) {
+    return (
+      <div className="bg-white border border-[#E2ECF9] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-4 w-20 bg-slate-100 rounded" />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-full bg-slate-100 shrink-0" />
+          <div className="space-y-2 flex-1">
+            <div className="h-6 w-36 bg-slate-200 rounded" />
+            <div className="h-4 w-48 bg-blue-100 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-white border rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(15,23,42,0.03)] space-y-4 sm:space-y-5 transition-all ${

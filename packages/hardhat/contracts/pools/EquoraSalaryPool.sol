@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title EquoraSalaryPool
- * @dev Monthly salary distribution across 4 exclusive pool tiers:
+ * @title EquoraSalaryPool (Equora Leadership Royalty Pool)
+ * @dev Monthly Leadership Royalty distribution across 4 exclusive pool tiers:
  *        Alpha: 10% (1,000 BPS)
  *        Prime: 15% (1,500 BPS)
  *        Elite: 25% (2,500 BPS)
@@ -123,6 +123,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
         uint256 timestamp
     );
     event MonthlySettlementRollover(uint256 rolloverAmount, uint256 timestamp);
+    event RoyaltyClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event SalaryClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event RewardPoolSet(address indexed rewardPool);
 
@@ -388,9 +389,20 @@ contract EquoraSalaryPool is ReentrancyGuard {
     // ─── User Claim ────────────────────────────────────────────────────────────
 
     /**
-     * @dev User claims their accumulated salary. Pull-based, permissionless.
+     * @dev User claims their accumulated monthly leadership royalty. Pull-based, permissionless.
+     */
+    function claimRoyalty() external nonReentrant {
+        _claimRoyaltyInternal();
+    }
+
+    /**
+     * @dev Backward compatibility alias for claimRoyalty().
      */
     function claimSalary() external nonReentrant {
+        _claimRoyaltyInternal();
+    }
+
+    function _claimRoyaltyInternal() internal {
         uint256 amount = pendingBalance[msg.sender];
         if (amount == 0) revert NothingToClaim();
 
@@ -400,6 +412,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
         bool ok = paymentToken.transfer(msg.sender, amount);
         if (!ok) revert TransferFailed();
 
+        emit RoyaltyClaimed(msg.sender, amount, block.timestamp);
         emit SalaryClaimed(msg.sender, amount, block.timestamp);
     }
 
@@ -426,6 +439,10 @@ contract EquoraSalaryPool is ReentrancyGuard {
 
     function getClaimable(address user) external view returns (uint256) {
         return pendingBalance[user];
+    }
+
+    function totalRoyaltyClaimed(address user) external view returns (uint256) {
+        return totalSalaryClaimed[user];
     }
 
     function getPoolStats()

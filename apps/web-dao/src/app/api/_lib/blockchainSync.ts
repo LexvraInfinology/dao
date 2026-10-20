@@ -9,6 +9,7 @@ const BACKEND_EXPLORER_API = EXPLORER_API_URL;
 // In-memory cache for detailed transactions to avoid repeating HTTP requests for immutable confirmed blocks
 const txDetailCache = new Map<string, any>();
 let lastAccountFetchTime = 0;
+let lastExplorerFailureTime = 0;
 let cachedAccountTxs: any[] = [];
 let cachedParsedItems: TransactionItem[] = [];
 
@@ -28,8 +29,14 @@ export async function getOnChainDaoTransactions(
     return filterItems(cachedParsedItems, filterAddress);
   }
 
+  // Circuit breaker: if backend explorer API recently failed or timed out, do not block callers
+  if (!forceRefresh && now - lastExplorerFailureTime < 60000 && cachedParsedItems.length > 0) {
+    return filterItems(cachedParsedItems, filterAddress);
+  }
+
   try {
-    const addressesToQuery = [daoAddress];
+    const v1DaoAddress = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+    const addressesToQuery = [daoAddress, v1DaoAddress];
     if (filterAddress && filterAddress.trim()) {
       const cleanFilter = filterAddress.trim();
       if (!addressesToQuery.includes(cleanFilter)) {
@@ -55,6 +62,10 @@ export async function getOnChainDaoTransactions(
           txMap.set(tx.hash, tx);
         }
       }
+    }
+
+    if (txMap.size === 0) {
+      lastExplorerFailureTime = now;
     }
 
     const txList = Array.from(txMap.values()).sort((a, b) => {
@@ -186,6 +197,8 @@ export async function getOnChainDaoTransactions(
         const depositTime = new Date(baseMs - 2000).toISOString();
         const cashbackTime = new Date(baseMs - 1000).toISOString();
 
+        const txBlock = tx.blockNumber || detail.blockNumber || tx.block || detail.block;
+
         // 1. Council Seat Activated / Fully Funded
         parsedItems.push({
           id: `${hash}-joined`,
@@ -203,6 +216,10 @@ export async function getOnChainDaoTransactions(
           timestamp: depositTime,
           status: 'Confirmed',
           incomingPosition: pos,
+          blockNumber: txBlock ? String(txBlock) : undefined,
+          contractAddress: daoAddress,
+          distributionFormula: 'Rule: Fixed $300 USD deposit with 35% instant automated push to preceding council seats',
+          note: `Council Seat #${pos} activated on TrobChain Mainnet. Soulbound Council NFT #${pos} minted.`,
         });
 
         discoveredMembers.push({
@@ -256,6 +273,14 @@ export async function getOnChainDaoTransactions(
               timestamp: itemTime,
               status: 'Confirmed',
               incomingPosition: pushFromPos,
+              blockNumber: txBlock ? String(txBlock) : undefined,
+              contractAddress: daoAddress,
+              distributionFormula: isCashback
+                ? `Rule: Instant Cashback of $${usdValue} (${pAmt} TROB)`
+                : `Rule: 300 / ${pushFromPos} USD ($${usdValue} = ${pAmt} TROB) automated on-chain push`,
+              note: isCashback
+                ? `Instant cashback returned directly to activating member.`
+                : `Automated on-chain dividend distribution pushed from Seat #${pushFromPos} on TrobChain.`,
             });
           }
         } else {
@@ -360,7 +385,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
   newMembersAdded: number;
 }> {
   const now = Date.now();
-  if (!force && (now - lastOnChainSyncTime < 4000 || isSyncingOnChain)) {
+  if (!force && (now - lastOnChainSyncTime < 15000 || isSyncingOnChain)) {
     return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };
   }
 
@@ -421,42 +446,29 @@ export async function syncOnChainMembersState(force = false): Promise<{
     // Fetch on-chain reservation deadline for underfunded seats
     const onChainReservationDeadlineIso = '2026-10-07T10:45:03.000Z';
 
+    // Batch query all existing members once from DB instead of 93 sequential queries
+    const existingDbMembersRes = await queryNeon<any>(
+      `SELECT id, address, position, status, "entryAmountBtt", "retopupDeadline", "retopupCount", "pushedAmountBtt", "cappedAt" FROM "DaoMember"`
+    ).catch(() => ({ rows: [] as any[] }));
+    const existingMap = new Map<number, any>();
+    for (const r of (existingDbMembersRes.rows || [])) {
+      if (r.position) existingMap.set(r.position, r);
+    }
+
     for (let i = 0; i < memberHexes.length; i++) {
       const position = i + 1;
       const rawHex = memberHexes[i];
       const isZero = !rawHex || /^0x0+$/.test(rawHex) || /^410+$/.test(rawHex) || rawHex === '0x0000000000000000000000000000000000000000';
-
-      const existing = await queryNeon<any>(
-        `SELECT id, address, position, status, "entryAmountBtt", "retopupDeadline", "retopupCount", "pushedAmountBtt", "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
-        [position]
-      );
+      const dbMember = existingMap.get(position);
 
       if (isZero) {
         // Seat position is zero on-chain (quarantined underfunded reservation or vacant)
-        if (existing.rows.length > 0) {
-          const dbMember = existing.rows[0];
-          const onChainRes = await getOnChainUnderfundedReservation(dbMember.address, daoHex);
-          if (onChainRes && onChainRes.isReserved) {
-            const prevDep = onChainRes.previousDepositSun / 1e6;
+        if (dbMember) {
+          if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {
             await queryNeon(
-              `UPDATE "DaoMember"
-               SET status = 'underfunded',
-                   "entryAmountBtt" = $1,
-                   "retopupDeadline" = $2,
-                   "pushedAmountBtt" = 0,
-                   "retopupCount" = 0,
-                   "updatedAt" = NOW()
-               WHERE position = $3`,
-              [prevDep, onChainReservationDeadlineIso, position]
-            );
-          } else {
-            // Not reserved on-chain and position is 0 on-chain => seat is vacant!
-            if (dbMember.status !== 'vacant' && dbMember.status !== 'blank') {
-              await queryNeon(
-                `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE position = $1`,
-                [position]
-              );
-            }
+              `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE position = $1`,
+              [position]
+            ).catch(() => {});
           }
         }
         continue;
@@ -465,6 +477,15 @@ export async function syncOnChainMembersState(force = false): Promise<{
       // Seat position has a verified genuine member on-chain
       const b58Addr = toTrobBase58(rawHex);
       if (!b58Addr || b58Addr === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') {
+        continue;
+      }
+
+      // Fast path: if DB already tracks this exact member as active or capped, skip expensive fullnode RPC spam
+      const isAlreadySynced = dbMember &&
+        dbMember.address.toLowerCase() === b58Addr.toLowerCase() &&
+        (dbMember.status === 'active' || dbMember.status === 'capped');
+
+      if (isAlreadySynced) {
         continue;
       }
 
@@ -483,6 +504,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
             function_selector: 'getMemberDetails(address)',
             parameter: rawHex.replace(/^0x/, '').padStart(64, '0'),
           }),
+          signal: AbortSignal.timeout(2000),
           cache: 'no-store',
         });
         if (detailRes.ok) {
@@ -503,7 +525,7 @@ export async function syncOnChainMembersState(force = false): Promise<{
       const isDlPassed = Boolean(onChainDeadlineIso && new Date(onChainDeadlineIso).getTime() <= Date.now());
       const memberEffectiveStatus = (isOnChainBlank || (isOnChainCapped && isDlPassed)) ? 'vacant' : (isOnChainCapped ? 'capped' : 'active');
 
-      if (existing.rows.length === 0) {
+      if (!dbMember) {
         const userCheck = await queryNeon<any>(
           `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
           [b58Addr]
@@ -537,7 +559,6 @@ export async function syncOnChainMembersState(force = false): Promise<{
 
         newMembersAdded++;
       } else {
-        const dbMember = existing.rows[0];
         if (
           dbMember.status === 'underfunded' ||
           dbMember.address.toLowerCase() !== b58Addr.toLowerCase()
@@ -707,14 +728,16 @@ async function syncOnChainMembersToDb(
       if (existingEvt.rows.length === 0) {
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, $4, NOW(), $5, 300, 'blockchain-onchain', $6)`,
+           VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, $4, NOW(), $5, 300, 'blockchain-onchain', $6)
+           ON CONFLICT DO NOTHING`,
           [m.user, m.position, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${m.position} Activated`]
         );
 
         // Insert instant cashback event (autonomously transferred by smart contract)
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)`,
+           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, $4, NOW(), $5, $6, 'blockchain-onchain', $7)
+           ON CONFLICT DO NOTHING`,
           [
             m.user,
             m.position,

@@ -1,3 +1,10 @@
+import dns from "node:dns";
+try {
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch {}
+
 import { createPublicClient, http, Address, Log, decodeFunctionResult, parseAbi } from "viem";
 import crypto from "node:crypto";
 import prisma from "@equora/database";
@@ -77,21 +84,33 @@ async function queryNeonDirect<T = any>(sql: string, params: any[] = []): Promis
     process.env.DATABASE_URL ||
     "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
   const match = dbUrl.match(/@([^/:]+)/);
-  if (!match || !match[1]) return { rows: [] };
-  const endpoint = `https://${match[1]}/sql`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Neon-Connection-String": dbUrl,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query: sql, params }),
-  });
-  if (!res.ok) {
-    throw new Error(`Neon SQL error: ${res.statusText}`);
+  if (match && match[1]) {
+    const endpoint = `https://${match[1]}/sql`;
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Neon-Connection-String": dbUrl,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: sql, params }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as any;
+        return { rows: (json.rows || []) as T[] };
+      }
+    } catch {
+      // Fall through to Prisma queryRaw if HTTP endpoint is unavailable or times out
+    }
   }
-  const json = (await res.json()) as any;
-  return { rows: (json.rows || []) as T[] };
+
+  try {
+    const rows = await prisma.$queryRawUnsafe<T[]>(sql, ...params);
+    return { rows: Array.isArray(rows) ? rows : [] };
+  } catch (prismaErr) {
+    throw prismaErr;
+  }
 }
 
 export class BlockchainIndexer {
@@ -101,6 +120,7 @@ export class BlockchainIndexer {
   private lastOfflineNotification = 0;
   private hasLoggedOnline = false;
   private lastTrobMembersCount = 0;
+  private lastProcessedBlock = 0n;
 
   constructor() {
     this.client = createPublicClient({
@@ -117,7 +137,7 @@ export class BlockchainIndexer {
     logger.info("📡 EQUORA Blockchain Event Indexer Starting");
     logger.info(`🔗 RPC: ${config.rpcUrl}`);
     logger.info(`🌍 Chain ID: ${config.chainId}`);
-    logger.info(`⏱️ Poll Interval: ${config.pollIntervalMs}ms`);
+    logger.info(`⏱️ Poll Interval: ${Math.max(3000, config.pollIntervalMs)}ms`);
     logger.info("========================================================");
 
     this.isRunning = true;
@@ -131,6 +151,7 @@ export class BlockchainIndexer {
 
   private async pollLoop() {
     while (this.isRunning) {
+      let sleepTime = Math.max(3000, config.pollIntervalMs);
       try {
         if (this.isTrobChain()) {
           await this.syncTrobChain();
@@ -142,23 +163,35 @@ export class BlockchainIndexer {
           this.wasOffline = false;
         }
       } catch (err: any) {
+        const msg = String(err?.message || err || "").toLowerCase();
+        const errName = String(err?.name || "");
         const isConnectionError =
-          err?.message?.includes("fetch failed") ||
-          err?.message?.includes("ECONNREFUSED") ||
-          err?.name === "HttpRequestError";
+          errName === "TimeoutError" ||
+          errName === "AbortError" ||
+          errName === "HttpRequestError" ||
+          msg.includes("timeout") ||
+          msg.includes("aborted") ||
+          msg.includes("fetch failed") ||
+          msg.includes("econnrefused") ||
+          msg.includes("econnreset") ||
+          msg.includes("etimedout") ||
+          msg.includes("enotfound") ||
+          msg.includes("und_err_connect_timeout") ||
+          msg.includes("network error");
 
         if (isConnectionError) {
           const now = Date.now();
-          if (!this.wasOffline || now - this.lastOfflineNotification > 15000) {
-            logger.warn(`Waiting for blockchain RPC at ${config.rpcUrl} (node offline, will auto-resume when online)`);
+          if (!this.wasOffline || now - this.lastOfflineNotification > 30000) {
+            logger.warn(`Waiting for blockchain RPC at ${config.rpcUrl} (node slow/offline, will auto-resume)`);
             this.lastOfflineNotification = now;
           }
           this.wasOffline = true;
+          sleepTime = 8000;
         } else {
           logger.error("Indexer polling error:", err?.message || err);
         }
       }
-      await new Promise((r) => setTimeout(r, config.pollIntervalMs));
+      await new Promise((r) => setTimeout(r, sleepTime));
     }
   }
 
@@ -167,6 +200,7 @@ export class BlockchainIndexer {
     const blockRes = await fetch(`${config.rpcUrl}/wallet/getnowblock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(15000),
     });
     if (!blockRes.ok) {
       throw new Error(`TrobChain getnowblock HTTP ${blockRes.status}`);
@@ -178,6 +212,11 @@ export class BlockchainIndexer {
       logger.info(`🔗 TrobChain Mainnet Connected (Block #${currentBlock})`);
       this.hasLoggedOnline = true;
       this.wasOffline = false;
+    }
+
+    // Skip heavy member contract call if block has not changed
+    if (this.lastProcessedBlock > 0n && currentBlock === this.lastProcessedBlock) {
+      return;
     }
 
     // 2. Query DAO contract members
@@ -193,6 +232,7 @@ export class BlockchainIndexer {
         function_selector: "getAllMembers()",
         parameter: "",
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!contractRes.ok) return;
@@ -207,69 +247,37 @@ export class BlockchainIndexer {
     }) as string[];
 
     const onChainCount = memberAddresses.length;
+    const isZeroAddr = (hex: string) =>
+      !hex ||
+      /^0x0+$/.test(hex) ||
+      /^410+$/.test(hex) ||
+      hex === "0x0000000000000000000000000000000000000000";
+    const activeMembersCount = memberAddresses.filter((addr) => !isZeroAddr(addr)).length;
+    const vacantCount = onChainCount - activeMembersCount;
+    const remainingSeats = 100 - activeMembersCount;
 
-    // Check DB count (include underfunded to match all on-chain seats)
+    // Check DB max position across all tracked seats (active, capped, vacant)
     const dbRes = await queryNeonDirect<{ count: string; max_pos: string }>(
-      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember" WHERE LOWER(status) IN ('active', 'capped', 'underfunded')`
+      `SELECT COUNT(*) as count, COALESCE(MAX(position), 0) as max_pos FROM "DaoMember"`
     );
-    const dbCount = parseInt(dbRes.rows[0]?.count || "0", 10);
     const maxDbPos = parseInt(dbRes.rows[0]?.max_pos || "0", 10);
 
-    if (onChainCount > dbCount || onChainCount > maxDbPos) {
-      logger.info(`⚡ [TrobChain] Detected ${onChainCount} on-chain members vs ${dbCount} in DB. Syncing new members...`);
+    if (onChainCount > maxDbPos) {
+      logger.info(`⚡ [TrobChain] Detected ${onChainCount} on-chain members vs max position ${maxDbPos} in DB. Syncing new members...`);
 
       const detailsAbi = parseAbi([
         "function getMemberDetails(address) view returns (bool isMember, uint256 position, uint256 nftTokenId, uint256 fallbackClaimable, uint256 totalEarned, bool isCapped, uint256 retopupDeadline, bool isBlank, uint256 poolClaimable)"
       ]);
 
       let added = 0;
-      for (let i = 0; i < memberAddresses.length; i++) {
+      const startIndex = Math.max(0, maxDbPos);
+      for (let i = startIndex; i < memberAddresses.length; i++) {
         const rawHex = memberAddresses[i];
+        const isZero = isZeroAddr(rawHex);
         const b58Addr = hexToTrobBase58(rawHex);
         const position = i + 1;
 
-        const checkRes = await queryNeonDirect(
-          `SELECT id, address FROM "DaoMember" WHERE position = $1 LIMIT 1`,
-          [position]
-        );
-
-        if (checkRes.rows.length === 0 || checkRes.rows[0].address.toLowerCase() !== b58Addr.toLowerCase()) {
-          let totalEarnedTrob = 0;
-          try {
-            const detailRes = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                owner_address: daoHex,
-                contract_address: daoHex,
-                function_selector: "getMemberDetails(address)",
-                parameter: rawHex.replace(/^0x/, "").padStart(64, "0"),
-              }),
-            });
-            if (detailRes.ok) {
-              const dJson = (await detailRes.json()) as any;
-              if (dJson.constant_result?.[0]) {
-                const dec = decodeFunctionResult({
-                  abi: detailsAbi,
-                  functionName: "getMemberDetails",
-                  data: ("0x" + dJson.constant_result[0]) as `0x${string}`,
-                }) as any;
-                const earnedBN = dec[4] || 0n;
-                totalEarnedTrob = Number(earnedBN) / 1e6;
-              }
-            }
-          } catch {}
-
-          const maxIdRes = await queryNeonDirect(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
-          const nextUserId = parseInt(maxIdRes.rows[0]?.next_id || "10001", 10);
-
-          await queryNeonDirect(
-            `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-             VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
-             ON CONFLICT (address) DO NOTHING`,
-            [b58Addr, nextUserId]
-          );
-
+        if (isZero) {
           await queryNeonDirect(
             `INSERT INTO "DaoMember" (
                id, address, position, "joinedAt", "txHash", "blockNumber",
@@ -278,39 +286,89 @@ export class BlockchainIndexer {
              )
              VALUES (
                gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-               5084.75, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
+               0, 0, $2, 'trobchain-mainnet', 0, 'vacant', NOW(), NOW()
              )
              ON CONFLICT (position) DO UPDATE
-             SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,
-            [b58Addr, position, totalEarnedTrob]
+             SET status = 'vacant', "updatedAt" = NOW()`,
+            [b58Addr, position]
           );
-
           added++;
+          continue;
         }
+
+        let totalEarnedTrob = 0;
+        try {
+          const detailRes = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              owner_address: daoHex,
+              contract_address: daoHex,
+              function_selector: "getMemberDetails(address)",
+              parameter: rawHex.replace(/^0x/, "").padStart(64, "0"),
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+          if (detailRes.ok) {
+            const dJson = (await detailRes.json()) as any;
+            if (dJson.constant_result?.[0]) {
+              const dec = decodeFunctionResult({
+                abi: detailsAbi,
+                functionName: "getMemberDetails",
+                data: ("0x" + dJson.constant_result[0]) as `0x${string}`,
+              }) as any;
+              const earnedBN = dec[4] || 0n;
+              totalEarnedTrob = Number(earnedBN) / 1e6;
+            }
+          }
+        } catch {}
+
+        const maxIdRes = await queryNeonDirect(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
+        const nextUserId = parseInt(maxIdRes.rows[0]?.next_id || "10001", 10);
+
+        await queryNeonDirect(
+          `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+           ON CONFLICT (address) DO NOTHING`,
+          [b58Addr, nextUserId]
+        );
+
+        await queryNeonDirect(
+          `INSERT INTO "DaoMember" (
+             id, address, position, "joinedAt", "txHash", "blockNumber",
+             "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId",
+             "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt"
+           )
+           VALUES (
+             gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
+             5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
+           )
+           ON CONFLICT (position) DO UPDATE
+           SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,
+          [b58Addr, position, totalEarnedTrob]
+        );
+
+        added++;
       }
 
       await queryNeonDirect(
         `UPDATE "DaoInstance" SET capacity = 100, "isClosed" = $1, "updatedAt" = NOW() WHERE id = 1`,
-        [onChainCount >= 100]
+        [activeMembersCount >= 100]
       );
 
-      logger.info(`✅ [TrobChain] Synchronized ${added} new members. Total active: ${onChainCount}/100.`);
+      logger.info(`✅ [TrobChain] Synchronized ${added} new members. Active: ${activeMembersCount}/100, Vacant/Underfunded: ${vacantCount}.`);
     }
 
-    if (this.lastTrobMembersCount !== onChainCount) {
-      this.lastTrobMembersCount = onChainCount;
-      logger.info(`📊 [TrobChain] Active Council Seats: ${onChainCount}/100 | Remaining: ${Math.max(0, 100 - onChainCount)} | Block #${currentBlock}`);
+    if (this.lastTrobMembersCount !== activeMembersCount) {
+      this.lastTrobMembersCount = activeMembersCount;
+      logger.info(`📊 [TrobChain] Active Council Seats: ${activeMembersCount}/100 | Vacant/Underfunded: ${vacantCount} | Total Remaining: ${remainingSeats} | Block #${currentBlock}`);
     }
+
+    this.lastProcessedBlock = currentBlock;
 
     // Update cursor
     try {
-      await queryNeonDirect(
-        `INSERT INTO "IndexerCursor" (id, "contractName", "chainId", "lastIndexedBlock", "updatedAt")
-         VALUES (gen_random_uuid(), 'EquoraDAO', $1, $2, NOW())
-         ON CONFLICT ("contractName", "chainId") DO UPDATE
-         SET "lastIndexedBlock" = $2, "updatedAt" = NOW()`,
-        [config.chainId, currentBlock.toString()]
-      );
+      await this.updateCursor("EquoraDAO", currentBlock);
     } catch {}
   }
 

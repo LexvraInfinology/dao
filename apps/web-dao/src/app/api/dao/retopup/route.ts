@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { verifyOnChainTransaction } from '../../_lib/txVerifier';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
-    let trobPriceUsd = 0.056;
+    let trobPriceUsd: number | null = null;
     try {
       const { TROB_PRICE_API_URL } = await import('@/config/env');
       const priceRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
@@ -88,7 +88,9 @@ export async function POST(req: NextRequest) {
     const entryAmountUsd = 300;
     const retopupTrob = body.retopupFeeTrob && Number(body.retopupFeeTrob) > 0
       ? Number(body.retopupFeeTrob)
-      : (txReceipt.callValueSun ? Math.round((txReceipt.callValueSun / 1e6) * 100) / 100 : Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100);
+      : (txReceipt.callValueSun
+          ? Math.round((txReceipt.callValueSun / 1e6) * 100) / 100
+          : (trobPriceUsd ? Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100 : 0));
     const pos = m.position || 1;
 
     // 2. Reset member's earnings counter to 0 (unless underfunded, where past earnings count towards cap!), unlock underfunded status to 'active', update entry amounts if underfunded
@@ -124,7 +126,8 @@ export async function POST(req: NextRequest) {
 
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-       VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-live-oracle', $5)`,
+       VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-live-oracle', $5)
+       ON CONFLICT DO NOTHING`,
       [
         m.address,
         pos,
@@ -251,11 +254,13 @@ export async function POST(req: NextRequest) {
         const eventReason = isCaller
           ? `Instant Cashback on Retopup Loop (Seat #${pos})`
           : `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`;
-        const actualUsd = parseFloat((item.payoutTrob * trobPriceUsd).toFixed(2));
+        const effectivePriceUsd = trobPriceUsd ?? (retopupTrob > 0 ? 300 / retopupTrob : 0.044);
+        const actualUsd = parseFloat((item.payoutTrob * effectivePriceUsd).toFixed(2));
 
         await queryNeon(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,
+           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)
+           ON CONFLICT DO NOTHING`,
           [
             item.address,
             pos,
@@ -269,7 +274,9 @@ export async function POST(req: NextRequest) {
     }
 
     const callerPayout = memberPayouts.find(p => p.id === m.id);
-    const callerCashbackUsd = parseFloat(((callerPayout?.payoutTrob || 0) * trobPriceUsd).toFixed(2));
+    const effectivePriceUsd = trobPriceUsd ?? (retopupTrob > 0 ? 300 / retopupTrob : 0.044);
+    const callerCashbackUsd = parseFloat(((callerPayout?.payoutTrob || 0) * effectivePriceUsd).toFixed(2));
+    invalidateMemberSyncCache();
 
     return NextResponse.json({
       success: true,

@@ -8,6 +8,7 @@ interface TreasuryHeroProps {
   totalReceivedUsd?: number;
   totalReceivedTrob?: number;
   loungeData?: LoungeData | null;
+  loading?: boolean;
 }
 
 export const TreasuryHero: React.FC<TreasuryHeroProps> = ({
@@ -15,6 +16,7 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({
   totalReceivedUsd,
   totalReceivedTrob,
   loungeData,
+  loading = false,
 }) => {
   const displayUsd = totalReceivedUsd ?? loungeData?.totalReceivedUsd ?? balance ?? 0;
   const displayTrob = totalReceivedTrob ?? (displayUsd / 0.056);
@@ -36,20 +38,28 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({
           <p className="text-sm text-[#4F6184] leading-relaxed font-jakarta">
             Track DAO treasury inflows and automated distributions. All cashbacks and pool earnings are pushed directly into member wallets on-chain with zero gas fees.
           </p>
-          <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-jakarta">
-            <span className="text-[#60739A]">Total Received On-Chain:</span>
-            <span className="font-black text-[#059669] text-base">
-              ${displayUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-            </span>
-            <span className="text-[#CBD5E1]">·</span>
-            <span className="font-semibold text-[#155EEF]">
-              ≈ {displayTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
-            </span>
-            <span className="text-[#CBD5E1]">·</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#047857]">
-              Pushed Directly to Wallet
-            </span>
-          </div>
+          {loading && (!totalReceivedUsd && !totalReceivedTrob) ? (
+            <div className="flex items-center gap-2 pt-1.5 animate-pulse">
+              <div className="h-6 w-36 bg-slate-200 rounded-md" />
+              <div className="h-6 w-32 bg-blue-100 rounded-md" />
+              <div className="h-6 w-36 bg-emerald-100 rounded-md" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-jakarta">
+              <span className="text-[#60739A]">Total Received On-Chain:</span>
+              <span className="font-black text-[#059669] text-base">
+                ${displayUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </span>
+              <span className="text-[#CBD5E1]">·</span>
+              <span className="font-semibold text-[#155EEF]">
+                ≈ {displayTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+              <span className="text-[#CBD5E1]">·</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[10px] font-bold text-[#047857]">
+                Pushed Directly to Wallet
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-8 shrink-0">
@@ -87,14 +97,21 @@ export const TreasuryHero: React.FC<TreasuryHeroProps> = ({
           <h1 className="text-xl sm:text-2xl font-black font-jakarta text-[#071A4A] tracking-tight leading-tight">
             Transparent Funds.<br />On-Chain.
           </h1>
-          <div className="space-y-0.5 pt-0.5">
-            <div className="text-lg min-[360px]:text-xl font-black text-[#059669] font-jakarta tracking-tight">
-              +${displayUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+          {loading && (!totalReceivedUsd && !totalReceivedTrob) ? (
+            <div className="space-y-1.5 pt-0.5 animate-pulse">
+              <div className="h-6 w-32 bg-slate-200 rounded-md" />
+              <div className="h-4 w-44 bg-blue-100 rounded-md" />
             </div>
-            <div className="text-[11px] font-semibold text-[#155EEF] font-jakarta truncate">
-              ≈ {displayTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB (Direct On-Chain Push)
+          ) : (
+            <div className="space-y-0.5 pt-0.5">
+              <div className="text-lg min-[360px]:text-xl font-black text-[#059669] font-jakarta tracking-tight">
+                +${displayUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </div>
+              <div className="text-[11px] font-semibold text-[#155EEF] font-jakarta truncate">
+                ≈ {displayTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB (Direct On-Chain Push)
+              </div>
             </div>
-          </div>
+          )}
           <p className="text-[11px] text-[#4F6184] leading-relaxed font-jakarta pt-0.5">
             Pushed directly into your connected wallet with zero gas fees.
           </p>

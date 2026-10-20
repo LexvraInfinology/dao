@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #cbd5e1;
+    font-size: 7.9pt;
+    line-height: 1.32;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    padding: 9.5mm 11.5mm 9.5mm 11.5mm;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0 auto 10px auto;
+  }
+  @media print {
+    body { background: transparent; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* LEXVRA WATERMARK */
+  .page-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 94pt;
+    font-weight: 900;
+    color: #0f172a;
+    opacity: 0.045;
+    letter-spacing: 16px;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .page-watermark.dark {
+    color: #ffffff;
+    opacity: 0.038;
+  }
+
+  /* HEADER & FOOTER */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.2px solid #e2e8f0;
+    padding-bottom: 3.5px;
+    margin-bottom: 1px;
+    height: 26px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-brand img {
+    height: 19px;
+    object-fit: contain;
+  }
+  .header-brand-title {
+    font-size: 8.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 3.5px;
+    margin-top: auto;
+    height: 18px;
+    font-size: 6.6pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADINGS */
+  .section-title {
+    font-size: 11.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 1px 0;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    display: inline-block;
+    width: 3.5px;
+    height: 13px;
+    background: #1d4ed8;
+    border-radius: 2px;
+  }
+  .section-subtitle {
+    font-size: 7.3pt;
+    color: #64748b;
+    margin: 0 0 3px 0;
+    font-weight: 500;
+  }
+
+  /* CONTENT BLOCKS */
+  p {
+    margin: 0 0 2.5px 0;
+    color: #334155;
+    text-align: justify;
+    line-height: 1.31;
+    font-size: 7.7pt;
+  }
+  .card-grid {
+    display: grid;
+    gap: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4.5px 7px;
+  }
+  .info-card.highlight {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+  .info-card.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .info-card.warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .info-card.purple {
+    background: #faf5ff;
+    border-color: #e9d5ff;
+  }
+  .info-card.rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .info-card-title {
+    font-size: 7.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .info-card-desc {
+    font-size: 6.6pt;
+    color: #475569;
+    line-height: 1.28;
+  }
+
+  /* INSTITUTIONAL TABLES */
+  .institutional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.6pt;
+    margin: 1px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .institutional-table th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 3.5px 5.5px;
+    text-align: left;
+    border: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 6.1pt;
+    letter-spacing: 0.3px;
+  }
+  .institutional-table td {
+    padding: 2.8px 5px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  .institutional-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+  .institutional-table tr.total-row {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+  }
+  .institutional-table tr.total-row td {
+    color: #ffffff !important;
+    border-color: #1e293b;
+  }
+
+  /* THEORETICAL CALLOUT */
+  .theory-box {
+    background: #f1f5f9;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 0 5px 5px 0;
+    padding: 4.5px 7.5px;
+    font-size: 7pt;
+    color: #1e293b;
+    line-height: 1.30;
+    position: relative;
+    z-index: 2;
+  }
+  .theory-box code {
+    background: #e2e8f0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.6pt;
+    color: #0f172a;
+  }
+
+  /* CODE BOX */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.3pt;
+    line-height: 1.25;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* COVER STYLING - INSTITUTIONAL EDITION */
+  .cover {
+    background: #090e17;
+    color: #ffffff;
+    padding: 12mm 14mm 10mm 14mm;
+    justify-content: space-between;
+    position: relative;
+    border: 2px solid #1e293b;
+    outline: 1px solid #334155;
+    outline-offset: -5px;
+  }
+  .cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-badge {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .cover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-emblem-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 7px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 40px;
+    padding: 5px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(56, 189, 248, 0.15);
+  }
+  .cover-emblem-icon {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.55));
+  }
+  .cover-emblem-x {
+    color: #38bdf8;
+    font-size: 13pt;
+    font-weight: 800;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .cover-cube {
+    height: 56px;
+    margin-bottom: 6px;
+  }
+  /* COVER PAGE TECHNICAL SPEC TABLE (EXPLICIT DARK STYLING - NEVER LIGHT ZEBRA) */
+  .cover-spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.4pt;
+    margin-top: 3px;
+    background: #0f172a !important;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-spec-table tr {
+    background: #0f172a !important;
+  }
+  .cover-spec-table tr:nth-child(even) {
+    background: #111d38 !important;
+  }
+  .cover-spec-table td {
+    padding: 3.5px 7px;
+    border: 1px solid #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+  .cover-spec-label {
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    width: 22%;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .cover-spec-val {
+    color: #f8fafc !important;
+    font-weight: 600;
+    width: 28%;
+  }
+  .cover-spec-val.peg-highlight {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-left: 2px solid #38bdf8 !important;
+  }
+  .cover-h1 {
+    font-size: 23pt;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+    line-height: 1.12;
+    margin-bottom: 2px;
+  }
+  .cover-h2 {
+    font-size: 8.3pt;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cover-desc {
+    max-width: 620px;
+    font-size: 7.4pt;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .cover-pill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 6.6pt;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+  .cover-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .cover-stat-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-top: 2.5px solid #0284c7;
+    border-radius: 4px;
+    padding: 6px 5px;
+    text-align: center;
+  }
+  .cover-stat-val {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 1px;
+  }
+  .cover-stat-lbl {
+    font-size: 6.1pt;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .cover-abstract-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 3.5px solid #38bdf8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 6.8pt;
+    color: #cbd5e1;
+    line-height: 1.33;
+    text-align: justify;
+    margin-bottom: 5px;
+  }
+  .cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    font-size: 6.4pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+    body { background: transparent; padding: 0; margin: 0; }
+    .page { margin: 0; }
+  </style>
+</head>
+<body>
+  
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">40% ROYALTY POOL | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">5. Leadership Royalty Engine (40% Pool &bull; Monthly on the 11th)</div>
+    <div class="section-subtitle">Decentralized Monthly Depth Royalty Replacing Centralized Corporate Salaries</div>
+  </div>
+
+  <p>
+    In place of legacy centralized "salaries" that depend on corporate discretionary payrolls, Equora introduces the <strong>Leadership Royalty Engine</strong>. Fueled by a massive <strong>40% allocation</strong> of all protocol pool collections, the Royalty Engine dispatches automated recurring monthly rewards directly into qualified leader wallets on the <strong>11th of every month</strong>.
+  </p>
+
+  <!-- ROYALTY DISTRIBUTION DIAGRAM -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Monthly Leadership Royalty Depth Distribution Hierarchy (11th of Every Month)
+    </div>
+    <svg width="100%" height="135" viewBox="0 0 680 135" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <rect x="20" y="10" width="640" height="22" rx="4" fill="#0f172a" />
+      <text x="340" y="24" fill="#ffffff" font-size="7.8" font-weight="bold" text-anchor="middle">TOTAL MONTHLY ROYALTY POOL (100% = 40% OF PROTOCOL TURNOVER)</text>
+
+      <!-- ALPHA: 10% -->
+      <rect x="20" y="40" width="100" height="38" rx="4" fill="#0284c7" />
+      <text x="70" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">ALPHA</text>
+      <text x="70" y="69" fill="#e0f2fe" font-size="7" font-weight="bold" text-anchor="middle">10% SHARE</text>
+
+      <!-- PRIME: 15% -->
+      <rect x="130" y="40" width="120" height="38" rx="4" fill="#059669" />
+      <text x="190" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PRIME</text>
+      <text x="190" y="69" fill="#d1fae5" font-size="7" font-weight="bold" text-anchor="middle">15% SHARE</text>
+
+      <!-- ELITE: 25% -->
+      <rect x="260" y="40" width="150" height="38" rx="4" fill="#d97706" />
+      <text x="335" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">ELITE</text>
+      <text x="335" y="69" fill="#fef3c7" font-size="7" font-weight="bold" text-anchor="middle">25% SHARE</text>
+
+      <!-- CROWN: 50% -->
+      <rect x="420" y="40" width="240" height="38" rx="4" fill="#7c3aed" />
+      <text x="540" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">CROWN ACHIEVER (APEX)</text>
+      <text x="540" y="69" fill="#ede9fe" font-size="7" font-weight="bold" text-anchor="middle">50% DOMINANT SHARE</text>
+
+      <text x="70" y="93" fill="#0369a1" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 3 (Stops at Prime)</text>
+      <text x="190" y="93" fill="#047857" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 6 (Stops at Elite)</text>
+      <text x="335" y="93" fill="#b45309" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 9 (Stops at Crown)</text>
+      <text x="540" y="93" fill="#6d28d9" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 12 (Apex Master Exclusive)</text>
+
+      <rect x="20" y="105" width="640" height="18" rx="3" fill="#f1f5f9" />
+      <text x="340" y="117" fill="#475569" font-size="6.5" font-weight="bold" text-anchor="middle">
+        CLEAN PROMOTION INVARIANT: PAST RANK SHARES DISCONTINUE UPON ADVANCEMENT &bull; SETTLED 11TH MONTHLY
+      </text>
+    </svg>
+  </div>
+
+  <!-- 4 ROYALTY TIERS TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Royalty Rank</th>
+        <th style="width: 12%;">Pool Share</th>
+        <th style="width: 24%;">Slot Qualification</th>
+        <th style="width: 26%;">Monthly Settlement Invariant</th>
+        <th style="width: 18%;">Depth Benefit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Alpha Leader</strong></td>
+        <td>10.00%</td>
+        <td>Slot 3 (Auto-Unlocked via Slot 2)</td>
+        <td>Even split. <strong>Stops when promoted to Prime!</strong></td>
+        <td>Entry monthly dividend</td>
+      </tr>
+      <tr>
+        <td><strong>2. Prime Commander</strong></td>
+        <td>15.00%</td>
+        <td>Slot 6 (Auto-Unlocked via Slot 5)</td>
+        <td>Even split. <strong>Alpha share stops (no double-dipping)!</strong></td>
+        <td>Mid-tier regional equity</td>
+      </tr>
+      <tr>
+        <td><strong>3. Elite Pioneer</strong></td>
+        <td>25.00%</td>
+        <td>Slot 9 (Auto-Unlocked via Slot 8)</td>
+        <td>Even split. <strong>Prime &amp; Alpha shares stop!</strong></td>
+        <td>Executive revenue tier</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong style="color: #7c3aed;">4. Crown Achiever (Apex)</strong></td>
+        <td>50.00%</td>
+        <td>Slot 12 (Auto-Unlocked via Slot 11)</td>
+        <td>Even split. <strong>Earns exclusively apex 50% pool!</strong></td>
+        <td>Apex protocol wealth</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="theory-box">
+    <strong>MONTHLY ROYALTY FORMULA &amp; STEP-BY-STEP CALCULATION EXAMPLE:</strong><br>
+    Every month on the 11th, <strong>40% of all protocol pool funds</strong> (<code>P_royalty</code>) are split across the 4 leadership ranks. Each qualified leader receives an equal split of their rank's pool:<br>
+    <code>Your Monthly Payout = (Rank Pool Share &times; Total Monthly Royalty Pool) &divide; Number of Active Leaders in That Rank</code><br>
+    <strong>Concrete Example (Assuming a Total Monthly Royalty Pool of $36,000 USD):</strong><br>
+    &bull; <strong>Alpha Pool (10% = $3,600):</strong> If 10 Alpha leaders &rarr; <code>$3,600 &divide; 10 = $360.00 USD each</code>.<br>
+    &bull; <strong>Prime Pool (15% = $5,400):</strong> If 5 Prime leaders &rarr; <code>$5,400 &divide; 5 = $1,080.00 USD each</code>.<br>
+    &bull; <strong>Elite Pool (25% = $9,000):</strong> If 3 Elite leaders &rarr; <code>$9,000 &divide; 3 = $3,000.00 USD each</code>.<br>
+    &bull; <strong>Crown Pool (50% = $18,000):</strong> If 2 Crown leaders &rarr; <code>$18,000 &divide; 2 = $9,000.00 USD each</code>!<br>
+    <strong>Clean Promotion Invariant:</strong> Advancing to a higher rank discontinues earlier shares, preventing dilution and keeping entry pools full for rising builders!
+  </div>
+
+  <div class="card-grid grid-3">
+    <div class="info-card highlight">
+      <div class="info-card-title">11th Monthly Payout Cycle</div>
+      <div class="info-card-desc">
+        Every calendar month on the 11th at 00:00 UTC, the smart contract executes an immutable balance snapshot and streams rewards non-custodially to verified leaders.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Zero Upkeep Fees</div>
+      <div class="info-card-desc">
+        Unlike legacy platforms requiring perpetual monthly subscription payments, rank qualification is permanent once unlocked via the P4 and P5 auto-progression engine.
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title">Clean Promotion (Non-Stacking)</div>
+      <div class="info-card-desc">
+        Upon promotion, previous rank dividends stop, directing rewards exclusively into the newly unlocked tier. This ensures earlier pools remain deeply lucrative for upcoming regional builders!
+      </div>
+    </div>
+  </div>
+
+  <!-- GOVERNANCE PARTICIPATION INTEGRATION -->
+  <div class="info-card warning">
+    <div class="info-card-title">Apex Leadership Governance Weighting</div>
+    <div class="info-card-desc">
+      In addition to the 40% monthly equity dividend, members achieving Prime (Slot 6), Elite (Slot 9), and Crown (Slot 12) automatically receive cryptographic governance voting weight multipliers in the Equora Genesis DAO, allowing them to propose, sponsor, and ratify protocol liquidity parameters directly on TrobChain.
+    </div>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 6 OF 10</div>
+    </div>
+    
+</div>
+
+</body>
+</html>

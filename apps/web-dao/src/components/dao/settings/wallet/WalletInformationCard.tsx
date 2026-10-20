@@ -6,7 +6,7 @@ import { useWallet } from '@/context/WalletContext';
 
 export default function WalletInformationCard() {
   const wallet = useWallet();
-  const isConnected = wallet.isConnected;
+  const isConnected = Boolean(wallet.isConnected || wallet.base58Address || wallet.hexAddress);
 
   return (
     <>
@@ -62,10 +62,10 @@ export default function WalletInformationCard() {
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
               isConnected
                 ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669]'
-                : 'bg-slate-100 border border-slate-200 text-slate-500'
+                : 'bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF]'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-slate-400'}`} />
-              <span>{isConnected ? 'Active & Connected' : 'Disconnected'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-[#155EEF]'}`} />
+              <span>{isConnected ? 'Active & Connected' : 'Ready to Connect'}</span>
             </span>
           </div>
         </div>
@@ -114,10 +114,10 @@ export default function WalletInformationCard() {
             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
               isConnected
                 ? 'bg-[#ECFDF5] border border-[#A7F3D0]/60 text-[#059669]'
-                : 'bg-slate-100 border border-slate-200 text-slate-500'
+                : 'bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF]'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-slate-400'}`} />
-              <span>{isConnected ? 'Active & Connected' : 'Disconnected'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#059669]' : 'bg-[#155EEF]'}`} />
+              <span>{isConnected ? 'Active & Connected' : 'Ready to Connect'}</span>
             </span>
           </div>
         </div>

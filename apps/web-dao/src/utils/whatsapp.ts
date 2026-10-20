@@ -15,11 +15,13 @@
 
 import { WHATSAPP_DAO_GROUP_URL } from '@/config/env';
 
-export const WHATSAPP_GROUP = WHATSAPP_DAO_GROUP_URL || 'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
+export const WHATSAPP_GROUP =
+  WHATSAPP_DAO_GROUP_URL ||
+  'https://chat.whatsapp.com/CncHdH2u76s95lRSURuKaW?s=cl&p=a&mlu=4&ilr=4';
 
 export function getWhatsAppInviteCode(url: string = WHATSAPP_GROUP): string {
   const match = url.match(/chat\.whatsapp\.com\/([a-zA-Z0-9_-]+)/);
-  return match && match[1] ? match[1] : 'GR19373Pgq7LezBKtXC0ng';
+  return match && match[1] ? match[1] : 'CncHdH2u76s95lRSURuKaW';
 }
 
 export function joinWhatsApp(groupUrl: string = WHATSAPP_GROUP): void {
@@ -27,19 +29,17 @@ export function joinWhatsApp(groupUrl: string = WHATSAPP_GROUP): void {
 
   const ua = navigator.userAgent || '';
   const isAndroid = /Android/i.test(ua);
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isMobile = isAndroid || isIOS;
+  const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isMobileOrTablet = isAndroid || isIOS || /Mobile|Tablet/i.test(ua);
   const inviteCode = getWhatsAppInviteCode(groupUrl);
 
-  if (isMobile) {
+  if (isMobileOrTablet) {
     if (isAndroid) {
-      // ── Android Mobile Flow ────────────────────────────────────────────────
-      // Standard Android Intent targeting "com.whatsapp" package with https scheme.
-      // This tells Android OS to launch native WhatsApp directly, completely bypassing
-      // the web page redirect that causes "net::ERR_UNKNOWN_URL_SCHEME" in in-app WebViews.
+      // ── Android Mobile & Tablet Flow ───────────────────────────────────────
+      // Android Intent targeting "com.whatsapp" package with https scheme.
+      // Launches native WhatsApp directly, displaying the native "Join group" bottom sheet.
       const androidIntentUrl = `intent://chat.whatsapp.com/${inviteCode}#Intent;package=com.whatsapp;scheme=https;S.browser_fallback_url=${encodeURIComponent(groupUrl)};end`;
 
-      // 1. Try launching through a temporary hidden anchor to prevent top-level WebView crash
       try {
         const link = document.createElement('a');
         link.href = androidIntentUrl;
@@ -53,44 +53,47 @@ export function joinWhatsApp(groupUrl: string = WHATSAPP_GROUP): void {
         window.location.href = androidIntentUrl;
       }
 
-      // 2. Safe fallback: If user is still on page after 800ms (e.g. in some custom WebViews),
-      // try the direct deep link scheme or open the group URL
+      // Safe fallback if intent doesn't fire
       setTimeout(() => {
         try {
           window.location.href = `whatsapp://chat?code=${inviteCode}`;
         } catch {
           window.location.href = groupUrl;
         }
-      }, 800);
+      }, 700);
     } else if (isIOS) {
-      // ── iOS Mobile Flow ───────────────────────────────────────────────────
-      // On iOS, universal link and whatsapp:// deep link trigger native app prompt
+      // ── iOS iPhone & iPad Flow ─────────────────────────────────────────────
+      // Universal deep link scheme triggers native iOS WhatsApp prompt
       try {
         window.location.href = `whatsapp://chat?code=${inviteCode}`;
         setTimeout(() => {
           window.location.href = groupUrl;
-        }, 1000);
+        }, 800);
       } catch {
         window.location.href = groupUrl;
       }
     } else {
-      // Other mobile devices
-      window.location.href = groupUrl;
-    }
-  } else {
-    // ── Laptop / Desktop Flow (User Reference Workflow) ────────────────────
-    // 1. Open WhatsApp Web in a new tab so the session initializes
-    try {
-      window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
-    } catch {}
-
-    // 2. Keep the invite available and open the group invite after 1000ms
-    setTimeout(() => {
+      // Other mobile / tablet browsers
       try {
-        window.open(groupUrl, '_blank', 'noopener,noreferrer');
+        window.location.href = `whatsapp://chat?code=${inviteCode}`;
+        setTimeout(() => {
+          window.location.href = groupUrl;
+        }, 800);
       } catch {
         window.location.href = groupUrl;
       }
-    }, 1000);
+    }
+  } else {
+    // ── Laptop / PC / Desktop Flow ──────────────────────────────────────────
+    // Open the official group invite page directly in a clean new tab.
+    // The WhatsApp official page provides "Join Chat" with 1-click open in WhatsApp Desktop or WhatsApp Web.
+    try {
+      const win = window.open(groupUrl, '_blank', 'noopener,noreferrer');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.location.href = groupUrl;
+      }
+    } catch {
+      window.location.href = groupUrl;
+    }
   }
 }

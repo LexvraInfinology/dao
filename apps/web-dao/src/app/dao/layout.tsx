@@ -19,7 +19,7 @@ export default function DaoLayout({
         {/* Main content area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
           <DaoHeader />
-          <main className="flex-1 p-3 sm:p-5 lg:p-6 max-w-[1400px] w-full mx-auto overflow-x-hidden">
+          <main className="flex-1 p-2.5 xs:p-3 sm:p-3.5 md:p-5 lg:p-6 pb-24 sm:pb-24 md:pb-14 max-w-[1400px] w-full mx-auto overflow-x-hidden">
             {children}
           </main>
         </div>

@@ -5,29 +5,10 @@ import { queryNeon } from './neonDb';
 import { toUtcIso } from './dateUtils';
 import { getOnChainUnderfundedReservation } from './txVerifier';
 
-let cachedTrobPrice = 0.037757;
-let cachedTrobPriceTime = 0;
+let cachedTrobPrice = 0.056;
 
 async function getLiveTrobPrice(): Promise<number> {
-  const now = Date.now();
-  if (now - cachedTrobPriceTime < 30_000 && cachedTrobPrice > 0) {
-    return cachedTrobPrice;
-  }
-  try {
-    const res = await fetch(TROB_PRICE_API_URL, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(1500),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const p = Number(data?.data?.priceUsd ?? data?.priceUsd);
-      if (Number.isFinite(p) && p > 0) {
-        cachedTrobPrice = p;
-        cachedTrobPriceTime = now;
-      }
-    }
-  } catch {}
-  return cachedTrobPrice;
+  return 0.056;
 }
 
 export interface SyncedMemberState {
@@ -61,13 +42,77 @@ const iface = new Interface([
   'function daoMembers(uint256) view returns (address)',
 ]);
 
+interface MemberSyncCacheEntry {
+  data: SyncedMemberState;
+  expiresAt: number;
+}
+
+// In-memory cache with 10s TTL to prevent repeated expensive on-chain RPC queries
+const memberSyncMemoryCache = new Map<string, MemberSyncCacheEntry>();
+// In-flight promise deduplication: concurrent requests for the same address share a single RPC query
+const inFlightMemberSyncs = new Map<string, Promise<SyncedMemberState>>();
+
+/**
+ * Manually invalidate cached member state when actions occur (e.g. claim, retopup).
+ */
+export function invalidateMemberSyncCache(addressOrPosition?: string | number): void {
+  if (!addressOrPosition) {
+    memberSyncMemoryCache.clear();
+    return;
+  }
+  const key = String(addressOrPosition).trim().toLowerCase();
+  memberSyncMemoryCache.delete(key);
+}
+
 /**
  * Checks on-chain smart contract FIRST as the absolute single source of truth.
  * Automatically updates Neon database (DaoMember) to match on-chain state instantly.
- * If data is not on-chain (e.g. underfunded provisional reservations or RPC issues),
- * seamlessly falls back to the database.
+ * Deduplicates in-flight requests and caches for 10s to ensure instantaneous <1ms responses.
  */
 export async function getAndSyncMemberState(
+  addressOrPosition: string | number
+): Promise<SyncedMemberState> {
+  const cacheKey = String(addressOrPosition).trim().toLowerCase();
+  const now = Date.now();
+  const cached = memberSyncMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
+  const existingPromise = inFlightMemberSyncs.get(cacheKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const syncPromise = executeGetAndSyncMemberState(addressOrPosition)
+    .then((result) => {
+      const ttl = 10_000; // 10s TTL
+      const expiresAt = Date.now() + ttl;
+      memberSyncMemoryCache.set(cacheKey, { data: result, expiresAt });
+      if (result.position) {
+        memberSyncMemoryCache.set(String(result.position), { data: result, expiresAt });
+      }
+      if (result.address) {
+        const addrLower = result.address.trim().toLowerCase();
+        memberSyncMemoryCache.set(addrLower, { data: result, expiresAt });
+        try {
+          const hex = toTronHex(result.address).toLowerCase();
+          memberSyncMemoryCache.set(hex, { data: result, expiresAt });
+          const b58 = toTrobBase58(result.address).toLowerCase();
+          memberSyncMemoryCache.set(b58, { data: result, expiresAt });
+        } catch {}
+      }
+      return result;
+    })
+    .finally(() => {
+      inFlightMemberSyncs.delete(cacheKey);
+    });
+
+  inFlightMemberSyncs.set(cacheKey, syncPromise);
+  return syncPromise;
+}
+
+async function executeGetAndSyncMemberState(
   addressOrPosition: string | number
 ): Promise<SyncedMemberState> {
   const isPosInput = typeof addressOrPosition === 'number' || /^\d+$/.test(String(addressOrPosition).trim());
@@ -150,7 +195,7 @@ export async function getAndSyncMemberState(
           parameter: resolvedHex.replace(/^41/, '').padStart(64, '0'),
         }),
         cache: 'no-store',
-        signal: AbortSignal.timeout(3500),
+        signal: AbortSignal.timeout(8000),
       });
 
       if (detailRes.ok) {
@@ -327,8 +372,9 @@ export async function getAndSyncMemberState(
       dbMember = res.rows[0];
     }
 
-    // Check if user has an underfunded reservation on-chain
-    const reservation = resolvedAddr ? await getOnChainUnderfundedReservation(resolvedAddr) : null;
+    // Check if user has an underfunded reservation on-chain (only if not already an active/capped member in DB)
+    const isAlreadyFullyTracked = dbMember && (dbMember.status === 'active' || dbMember.status === 'capped');
+    const reservation = (!isAlreadyFullyTracked && resolvedAddr) ? await getOnChainUnderfundedReservation(resolvedAddr) : null;
     if (reservation && reservation.isReserved) {
       const prevDep = reservation.previousDepositSun / 1e6;
       const pos = reservation.reservedSeat;

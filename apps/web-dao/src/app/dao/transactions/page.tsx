@@ -27,7 +27,9 @@ export default function DaoTransactionsPage() {
     page,
     limit,
     typeFilter,
-    searchQuery
+    searchQuery,
+    8000,
+    activeAddress
   );
 
   const transactions = txData?.transactions ?? [];
@@ -86,6 +88,13 @@ export default function DaoTransactionsPage() {
           activeAddress={activeAddress}
           bttPriceUsd={trobPrice}
           trobPriceUsd={trobPrice}
+          userInflowUsd={txData?.userInflowUsd}
+          userInflowTrob={txData?.userInflowTrob}
+          userOutflowUsd={txData?.userOutflowUsd}
+          userOutflowTrob={txData?.userOutflowTrob}
+          userNetReturnUsd={txData?.userNetReturnUsd}
+          userMultiplier={txData?.userMultiplier}
+          memberFinancials={txData?.memberFinancials}
         />
       </div>
 
@@ -95,8 +104,24 @@ export default function DaoTransactionsPage() {
           transactions={transactions}
           totalTransactions={totalRecords}
           bttPriceUsd={trobPrice}
-          protocolInflowsUsd={txData?.protocolInflowsUsd}
-          protocolOutflowsUsd={txData?.protocolOutflowsUsd}
+          userInflowUsd={txData?.userInflowUsd}
+          userInflowTrob={txData?.userInflowTrob}
+          userOutflowUsd={txData?.userOutflowUsd}
+          userOutflowTrob={txData?.userOutflowTrob}
+          userNetReturnUsd={txData?.userNetReturnUsd}
+          userMultiplier={txData?.userMultiplier}
+          memberFinancials={txData?.memberFinancials}
+          activeAddress={activeAddress}
+          onFilterDividends={() => {
+            setViewScope('my');
+            setTypeFilter('pushed');
+            setPage(1);
+          }}
+          onFilterDeposits={() => {
+            setViewScope('my');
+            setTypeFilter('joined');
+            setPage(1);
+          }}
         />
         <TransactionsMobileList
           transactions={transactions}

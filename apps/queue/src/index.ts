@@ -1,3 +1,10 @@
+import dns from "node:dns";
+try {
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch {}
+
 import { createLogger } from "@equora/logger";
 import { QueueWorker } from "./worker";
 import { config } from "./config";

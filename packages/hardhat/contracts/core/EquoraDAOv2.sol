@@ -527,10 +527,8 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
     function receivePoolDeposit(uint256 amount) external nonReentrant {
         require(msg.sender == vaultContract, "Only vault");
-        require(amount > 0, "Amount must be > 0");
-
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), amount);
-        if (!ok) revert TransferFailed();
+        // Tokens are already transferred to this contract by EquoraVault via transfer()
+        // Accounting update for 35% pool share:
 
         uint256 activeCount = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {

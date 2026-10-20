@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Equora Matrix Master Specification V6.2</title>
+  <style>
+
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #cbd5e1;
+    font-size: 7.9pt;
+    line-height: 1.32;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    padding: 9.5mm 11.5mm 9.5mm 11.5mm;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0 auto 10px auto;
+  }
+  @media print {
+    body { background: transparent; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* LEXVRA WATERMARK */
+  .page-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 94pt;
+    font-weight: 900;
+    color: #0f172a;
+    opacity: 0.045;
+    letter-spacing: 16px;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .page-watermark.dark {
+    color: #ffffff;
+    opacity: 0.038;
+  }
+
+  /* HEADER & FOOTER */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.2px solid #e2e8f0;
+    padding-bottom: 3.5px;
+    margin-bottom: 1px;
+    height: 26px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-brand img {
+    height: 19px;
+    object-fit: contain;
+  }
+  .header-brand-title {
+    font-size: 8.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 3.5px;
+    margin-top: auto;
+    height: 18px;
+    font-size: 6.6pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADINGS */
+  .section-title {
+    font-size: 11.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 1px 0;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    display: inline-block;
+    width: 3.5px;
+    height: 13px;
+    background: #1d4ed8;
+    border-radius: 2px;
+  }
+  .section-subtitle {
+    font-size: 7.3pt;
+    color: #64748b;
+    margin: 0 0 3px 0;
+    font-weight: 500;
+  }
+
+  /* CONTENT BLOCKS */
+  p {
+    margin: 0 0 2.5px 0;
+    color: #334155;
+    text-align: justify;
+    line-height: 1.31;
+    font-size: 7.7pt;
+  }
+  .card-grid {
+    display: grid;
+    gap: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4.5px 7px;
+  }
+  .info-card.highlight {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+  .info-card.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .info-card.warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .info-card.purple {
+    background: #faf5ff;
+    border-color: #e9d5ff;
+  }
+  .info-card.rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .info-card-title {
+    font-size: 7.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .info-card-desc {
+    font-size: 6.6pt;
+    color: #475569;
+    line-height: 1.28;
+  }
+
+  /* INSTITUTIONAL TABLES */
+  .institutional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.6pt;
+    margin: 1px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .institutional-table th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 3.5px 5.5px;
+    text-align: left;
+    border: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 6.1pt;
+    letter-spacing: 0.3px;
+  }
+  .institutional-table td {
+    padding: 2.8px 5px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  .institutional-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+  .institutional-table tr.total-row {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+  }
+  .institutional-table tr.total-row td {
+    color: #ffffff !important;
+    border-color: #1e293b;
+  }
+
+  /* THEORETICAL CALLOUT */
+  .theory-box {
+    background: #f1f5f9;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 0 5px 5px 0;
+    padding: 4.5px 7.5px;
+    font-size: 7pt;
+    color: #1e293b;
+    line-height: 1.30;
+    position: relative;
+    z-index: 2;
+  }
+  .theory-box code {
+    background: #e2e8f0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.6pt;
+    color: #0f172a;
+  }
+
+  /* CODE BOX */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.3pt;
+    line-height: 1.25;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* COVER STYLING - INSTITUTIONAL EDITION */
+  .cover {
+    background: #090e17;
+    color: #ffffff;
+    padding: 12mm 14mm 10mm 14mm;
+    justify-content: space-between;
+    position: relative;
+    border: 2px solid #1e293b;
+    outline: 1px solid #334155;
+    outline-offset: -5px;
+  }
+  .cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-badge {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .cover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-emblem-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 7px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 40px;
+    padding: 5px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(56, 189, 248, 0.15);
+  }
+  .cover-emblem-icon {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.55));
+  }
+  .cover-emblem-x {
+    color: #38bdf8;
+    font-size: 13pt;
+    font-weight: 800;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .cover-cube {
+    height: 56px;
+    margin-bottom: 6px;
+  }
+  /* COVER PAGE TECHNICAL SPEC TABLE (EXPLICIT DARK STYLING - NEVER LIGHT ZEBRA) */
+  .cover-spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.4pt;
+    margin-top: 3px;
+    background: #0f172a !important;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-spec-table tr {
+    background: #0f172a !important;
+  }
+  .cover-spec-table tr:nth-child(even) {
+    background: #111d38 !important;
+  }
+  .cover-spec-table td {
+    padding: 3.5px 7px;
+    border: 1px solid #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+  .cover-spec-label {
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    width: 22%;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .cover-spec-val {
+    color: #f8fafc !important;
+    font-weight: 600;
+    width: 28%;
+  }
+  .cover-spec-val.peg-highlight {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-left: 2px solid #38bdf8 !important;
+  }
+  .cover-h1 {
+    font-size: 23pt;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+    line-height: 1.12;
+    margin-bottom: 2px;
+  }
+  .cover-h2 {
+    font-size: 8.3pt;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cover-desc {
+    max-width: 620px;
+    font-size: 7.4pt;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .cover-pill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 6.6pt;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+  .cover-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .cover-stat-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-top: 2.5px solid #0284c7;
+    border-radius: 4px;
+    padding: 6px 5px;
+    text-align: center;
+  }
+  .cover-stat-val {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 1px;
+  }
+  .cover-stat-lbl {
+    font-size: 6.1pt;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .cover-abstract-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 3.5px solid #38bdf8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 6.8pt;
+    color: #cbd5e1;
+    line-height: 1.33;
+    text-align: justify;
+    margin-bottom: 5px;
+  }
+  .cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    font-size: 6.4pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  </style>
+</head>
+<body>
+
+<div class="page cover">
+  <div class="page-watermark dark">LEXVRA</div>
+  <div class="cover-header">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; gap:7px; background:rgba(15,23,42,0.8); border:1px solid #1e293b; padding:3px 10px; border-radius:6px;">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:22px; width:22px; object-fit:contain; filter:drop-shadow(0 0 6px rgba(56,189,248,0.7));" alt="Equora" />
+        <span style="font-size:9pt; font-weight:900; color:#ffffff; letter-spacing:0.8px;">EQUORA<span style="color:#38bdf8;">MATRIX</span></span>
+        <span style="color:#334155; font-size:8pt; margin:0 1px;">|</span>
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idG9wRmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMxRDRFRDgiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsZWZ0RmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwQTFFNEEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJyaWdodEZhY2VUcm9iIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYwQTVGQSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idEhpZ2hsaWdodFRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRkZGRkZGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNCQUU2RkQiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDYgOTAsMjggOTAsNzIgNTAsOTQgMTAsNzIgMTAsMjgiIGZpbGw9IiMwNzFBNEEiIHN0cm9rZT0iIzI1NjNFQiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCwxMSA4NSwyOS41IDUwLDQ4IDE1LDI5LjUiIGZpbGw9InVybCgjdG9wRmFjZVRyb2IpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIxNSwzMS41IDQ5LDQ5LjUgNDksODkgMTUsNzAiIGZpbGw9InVybCgjbGVmdEZhY2VUcm9iKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNTEsNDkuNSA4NSwzMS41IDg1LDcwIDUxLDg5IiBmaWxsPSJ1cmwoI3JpZ2h0RmFjZVRyb2IpIi8+CiAgPHBhdGggZD0iTTMwIDMyIEw3MCAzMiBMNzAgNDIgTDU2IDQyIEw1NiA3NiBMNDQgNzYgTDQ0IDQyIEwzMCA0MiBaIiBmaWxsPSJ1cmwoI3RIaWdobGlnaHRUcm9iKSIgZmlsdGVyPSJkcm9wLXNoYWRvdygwcHggMnB4IDRweCByZ2JhKDAsMCwwLDAuNCkpIi8+Cjwvc3ZnPgo=" style="height:17px; width:17px; object-fit:contain;" alt="TrobChain" />
+        <span style="font-size:7pt; font-weight:700; color:#94a3b8; letter-spacing:0.5px;">TROBCHAIN L1</span>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+      <div class="cover-badge" style="background:#0f172a; border-color:#334155; color:#94a3b8;">DOC REF: EQ-MTX-V6.2</div>
+      <div class="cover-badge">MAINNET MASTER SPECIFICATION</div>
+    </div>
+  </div>
+
+  <div class="cover-hero">
+    <div class="cover-emblem-badge">
+      <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" class="cover-emblem-icon" alt="Equora Protocol" />
+      <div class="cover-emblem-x">&times;</div>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idG9wRmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMxRDRFRDgiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsZWZ0RmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwQTFFNEEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJyaWdodEZhY2VUcm9iIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYwQTVGQSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idEhpZ2hsaWdodFRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRkZGRkZGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNCQUU2RkQiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDYgOTAsMjggOTAsNzIgNTAsOTQgMTAsNzIgMTAsMjgiIGZpbGw9IiMwNzFBNEEiIHN0cm9rZT0iIzI1NjNFQiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCwxMSA4NSwyOS41IDUwLDQ4IDE1LDI5LjUiIGZpbGw9InVybCgjdG9wRmFjZVRyb2IpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIxNSwzMS41IDQ5LDQ5LjUgNDksODkgMTUsNzAiIGZpbGw9InVybCgjbGVmdEZhY2VUcm9iKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNTEsNDkuNSA4NSwzMS41IDg1LDcwIDUxLDg5IiBmaWxsPSJ1cmwoI3JpZ2h0RmFjZVRyb2IpIi8+CiAgPHBhdGggZD0iTTMwIDMyIEw3MCAzMiBMNzAgNDIgTDU2IDQyIEw1NiA3NiBMNDQgNzYgTDQ0IDQyIEwzMCA0MiBaIiBmaWxsPSJ1cmwoI3RIaWdobGlnaHRUcm9iKSIgZmlsdGVyPSJkcm9wLXNoYWRvdygwcHggMnB4IDRweCByZ2JhKDAsMCwwLDAuNCkpIi8+Cjwvc3ZnPgo=" class="cover-emblem-icon" alt="TrobChain Network" />
+    </div>
+    <div style="font-size:7.2pt; font-weight:800; color:#94a3b8; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase;">
+      DECENTRALIZED AUTONOMOUS PROTOCOL SPECIFICATION
+    </div>
+    <div class="cover-h1">EQUORA MATRIX PROTOCOL</div>
+    <div class="cover-h2">14-Node Recursive State Machine &amp; Closed-Loop Liquidity Engine</div>
+    
+    <div class="cover-desc">
+      Rigorous mathematical and economic specification of the single $30.00 lifetime entry matrix architecture. Features autonomous P4+P5 tier escalation at $0.00 out-of-pocket, direct 6-node owner cashflow (600% ROI), meritocratic 2-referral anti-Sybil routing, and zero-leakage community protocol pools pegged at $0.056 USD/TROB.
+    </div>
+
+    <div class="cover-pills">
+      <div class="cover-pill">Single $30 Lifetime Entry</div>
+      <div class="cover-pill">Autonomous $0 Upgrades (P4+P5)</div>
+      <div class="cover-pill">600% Board Owner Cashflow ($180)</div>
+      <div class="cover-pill">Meritocratic 2-Referral Gate</div>
+      <div class="cover-pill">Closed-Loop Zero-Leakage Pools</div>
+      <div class="cover-pill">Null-Key Autonomous Invariant</div>
+    </div>
+
+    <div class="cover-stat-grid">
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">$30.00 USD</div>
+        <div class="cover-stat-lbl">ONE-TIME LIFETIME ENTRY</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">600% ROI</div>
+        <div class="cover-stat-lbl">$180 DIRECT CASHFLOW (6 NODES)</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">P4 + P5</div>
+        <div class="cover-stat-lbl">AUTO-UNLOCKS NEXT TIER ($0)</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">$2,160 USD</div>
+        <div class="cover-stat-lbl">12-SLOT WAVE CASHFLOW (72X)</div>
+      </div>
+    </div>
+
+    <div class="cover-abstract-box">
+      <strong style="color:#ffffff;">EXECUTIVE TECHNICAL ABSTRACT:</strong> Traditional matrix schemes fail from the <em>Matrix Attrition Trilemma</em>—exponential out-of-pocket upgrades cause participant drop-off, freezing capital velocity. Equora resolves this through a self-funding deterministic state machine where a participant deposits strictly once ($30.00 USD on Slot 1). Advancement across Slots 2 through 12 is 100% autonomous, triggered by the arrival of nodes <code>P4</code> and <code>P5</code>, whose capital ($60.00) fuels the 4 Protocol Pools while unlocking the next tier at $0.00 out-of-pocket. Six specific nodes (<code>P3, P6, P8, P9, P11, P12</code>) deliver instant 600% ROI direct cashflows ($180.00) to the qualified owner, while downline nodes (<code>P7, P10, P13</code>) enforce meritocratic 2-referral anti-Sybil checks. Node <code>P14</code> funds community pools and triggers perpetual board re-entry without ongoing subscription costs.
+    </div>
+
+    <table class="cover-spec-table">
+      <tr>
+        <td class="cover-spec-label">CONSENSUS LAYER</td>
+        <td class="cover-spec-val">TrobChain Layer-1 EVM</td>
+        <td class="cover-spec-label">SMART CONTRACT</td>
+        <td class="cover-spec-val">EquoraMatrixEngine (Solidity 0.8.20+)</td>
+      </tr>
+      <tr>
+        <td class="cover-spec-label">CONSERVATION LAW</td>
+        <td class="cover-spec-val">Sum V(P_i) = 14 &times; V_slot (Closed-Loop)</td>
+        <td class="cover-spec-label" style="color:#67e8f9 !important;">PLEDGED VALUATION PEG</td>
+        <td class="cover-spec-val peg-highlight">$0.056 USD / 1 TROB Coin (Fixed Invariant)</td>
+      </tr>
+      <tr>
+        <td class="cover-spec-label">GOVERNANCE KEY</td>
+        <td class="cover-spec-val">Renounced Null Key (0x0000...0000)</td>
+        <td class="cover-spec-label">OFFICIAL DOMAIN</td>
+        <td class="cover-spec-val">https://equorafimatrix.com</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="cover-footer">
+    <div>OFFICIAL GOVERNANCE SPECIFICATION &bull; RATIFIED BY EQUORA DAO</div>
+    <div>SMART CONTRACT VERIFIED ON SCAN.TROBCHAIN.COM</div>
+    <div>OCTOBER 2026 EDITION</div>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">SYSTEM ARCHITECTURE | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">1. Executive Protocol Summary &amp; Theoretical Architecture</div>
+    <div class="section-subtitle">Single-Capital Deposit Invariant, Closed-Cycle Solvency &amp; Zero-Leakage Conservation</div>
+  </div>
+
+  <p>
+    The <strong>Equora Matrix Protocol</strong> solves the fundamental capital exhaustion failure mode inherent in legacy decentralized matrix architectures. Operating directly on <strong>TrobChain Mainnet</strong>, Equora enforces a mathematically sound <strong>Single-Capital Deposit Model</strong>: participants activate their journey with a single out-of-pocket payment of <strong>$30.00 USD (in TROB)</strong> on Slot 1. Higher tiers (Slots 2 through 12) require <strong>$0.00 out-of-pocket capital</strong>, as they are autonomously unlocked through the cryptographic arrival of nodes <strong>P4 and P5</strong> in the preceding tier (reserved at $0 cost), and formally activated for live placements and cashflow once the 14-node board completes (P14), while their deposited capital streams directly to fuel the 4 Automated Protocol Pools.
+  </p>
+
+  <!-- OVERALL FLOW ARCHITECTURE PIPELINE BANNER -->
+  <div style="background: #0f172a; color: #ffffff; border-radius: 6px; padding: 5px 8px; margin-bottom: 3px;">
+    <div style="font-size: 7.2pt; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 2px;">
+      &#9654; Overall Flow Architecture: The 5-Stage Autonomous Settlement Pipeline
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; font-size: 6.2pt; text-align: center;">
+      <div style="background: rgba(255,255,255,0.08); padding: 3px 2px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">
+        <strong style="color: #38bdf8; display:block;">STAGE 1: ENTRY</strong>
+        $30 Lifetime Deposit in TROB (One-Time)
+      </div>
+      <div style="background: rgba(255,255,255,0.08); padding: 3px 2px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">
+        <strong style="color: #38bdf8; display:block;">STAGE 2: PLACEMENT</strong>
+        Deterministic Breadth-First Spillover Tree
+      </div>
+      <div style="background: rgba(255,255,255,0.08); padding: 3px 2px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">
+        <strong style="color: #38bdf8; display:block;">STAGE 3: 2-REF GATE</strong>
+        Anti-Sybil Verification (2 Active Referrals)
+      </div>
+      <div style="background: rgba(255,255,255,0.08); padding: 3px 2px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">
+        <strong style="color: #38bdf8; display:block;">STAGE 4: DISPERSAL</strong>
+        Owner 600%, Sponsor 200%, 4 Pools, Downlines
+      </div>
+      <div style="background: rgba(255,255,255,0.08); padding: 3px 2px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">
+        <strong style="color: #38bdf8; display:block;">STAGE 5: RECYCLE</strong>
+        Slot 2 Live Launch &amp; Infinite Reset (P14)
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG TOPOLOGY FLOW WITH CLARIFIED 14-NODE BOARD SCOPE -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 5px; text-align: center;">
+    <div style="font-size: 7.2pt; font-weight: 800; color: #0f172a; margin-bottom: 2px; text-transform: uppercase;">
+      Full Board Macro Capital Distribution (14 Nodes = $420 Total Gross Volume)
+    </div>
+    <div style="font-size: 6.3pt; color: #64748b; margin-bottom: 3px;">
+      Clarification: Each member pays $30 once and fills ONE node. A completed board holds 14 nodes ($420 total). The breakdown below shows where all 14 nodes ($420) route:
+    </div>
+    <svg width="100%" height="130" viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <rect x="10" y="42" width="135" height="46" rx="6" fill="#0f172a" />
+      <text x="77" y="59" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">FULL BOARD CYCLE</text>
+      <text x="77" y="71" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">14 NODES = $420 GROSS</text>
+      <text x="77" y="82" fill="#94a3b8" font-size="6.3" text-anchor="middle">($30 per node occupancy)</text>
+
+      <path d="M 145 65 L 190 65" stroke="#0284c7" stroke-width="2.5" fill="none" />
+
+      <rect x="190" y="36" width="135" height="58" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="257" y="56" fill="#38bdf8" font-size="8.5" font-weight="bold" text-anchor="middle">EQUORA ROUTER</text>
+      <text x="257" y="68" fill="#e2e8f0" font-size="6.8" text-anchor="middle">100% Non-Custodial EVM</text>
+      <text x="257" y="78" fill="#fde047" font-size="6.8" font-weight="bold" text-anchor="middle">2-Referral Gate Verifier</text>
+      <text x="257" y="87" fill="#94a3b8" font-size="6.5" text-anchor="middle">Zero-Leakage Invariant</text>
+
+      <!-- FORK ARROWS -->
+      <path d="M 325 50 L 365 18" stroke="#059669" stroke-width="2" fill="none" />
+      <path d="M 325 60 L 365 52" stroke="#ea580c" stroke-width="2" fill="none" />
+      <path d="M 325 71 L 365 85" stroke="#0284c7" stroke-width="2" fill="none" />
+      <path d="M 325 81 L 365 117" stroke="#7c3aed" stroke-width="2" fill="none" />
+
+      <!-- BRANCH 1: YOU CASHFLOW -->
+      <rect x="365" y="4" width="305" height="28" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" />
+      <text x="375" y="15" fill="#065f46" font-size="7.5" font-weight="bold">42.86% &bull; DIRECT BOARD OWNER CASHFLOW (6 NODES: P3, P6, P8, P9, P11, P12)</text>
+      <text x="375" y="25" fill="#047857" font-size="6.7">Instant $180 Cashflow per cycle (600% ROI). Requires 2 Direct Referrals to qualify.</text>
+
+      <!-- BRANCH 2: SPONSOR -->
+      <rect x="365" y="36" width="305" height="28" rx="4" fill="#fff7ed" stroke="#fdba74" stroke-width="1.2" />
+      <text x="375" y="47" fill="#9a3412" font-size="7.5" font-weight="bold">14.28% &bull; IMMEDIATE UPLINE SPONSOR (2 NODES: P1, P2)</text>
+      <text x="375" y="57" fill="#c2410c" font-size="6.7">Direct 200% commission ($60 on Slot 1) paid instantly to the direct inviter/sponsor.</text>
+
+      <!-- BRANCH 3: AUTOMATED POOLS & PROGRESSION -->
+      <rect x="365" y="68" width="305" height="30" rx="4" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="1.2" />
+      <text x="375" y="79" fill="#0369a1" font-size="7.5" font-weight="bold">21.43% &bull; AUTOMATED POOLS &amp; AUTO-PROGRESSION (P4, P5, P14)</text>
+      <text x="375" y="88" fill="#0284c7" font-size="6.6">P4 + P5 deposits ($60) fund 4 Pools &amp; UNLOCK/RESERVE Slot 2 at $0 out-of-pocket!</text>
+      <text x="375" y="95" fill="#0284c7" font-size="6.6">P14 deposit ($30) completes 14-node board, funds Pools, recycles tree &amp; ACTIVATES Slot 2!</text>
+
+      <!-- BRANCH 4: DOWNLINE MERITOCRATIC EVALUATION -->
+      <rect x="365" y="102" width="305" height="26" rx="4" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.2" />
+      <text x="375" y="113" fill="#581c87" font-size="7.5" font-weight="bold">21.43% &bull; MERITOCRATIC DOWNLINE ALLOCATION (P7, P10, P13)</text>
+      <text x="375" y="122" fill="#6b21a8" font-size="6.6">P7/P10 check P1/P2; P13 checks P3-P6. Unqualified funds fail-safe to 4 Pools Vault!</text>
+    </svg>
+  </div>
+
+  <!-- 4 VALUE PILLARS -->
+  <div class="card-grid grid-4" style="margin-top: 1px;">
+    <div class="info-card highlight">
+      <div class="info-card-title">&#9654; Single $30 Deposit</div>
+      <div class="info-card-desc">
+        Strictly bounded at $30 out-of-pocket for life. Slots 2 through 12 require zero external capital, automatically funded through P4 and P5 matrix completions.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">&#9654; 600% Direct ROI</div>
+      <div class="info-card-desc">
+        Exactly 6 nodes (P3, P6, P8, P9, P11, P12) flow directly to the qualified Board Owner's wallet, delivering an invariable 6x net cashflow ($180 on Slot 1).
+      </div>
+    </div>
+    <div class="info-card warning">
+      <div class="info-card-title">&#9654; 2-Referral Gate</div>
+      <div class="info-card-desc">
+        Downline allocations and matrix yields require having referred &ge; 2 active members. Eliminates passive parasitic extraction and enforces active network health.
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title">&#9654; Zero-Leakage Vault</div>
+      <div class="info-card-desc">
+        If any evaluated downline (P1, P2 or P3-P6) is unqualified, 100% of the funds route into the 4 Automated Protocol Pools Vault. No money is ever stranded or lost.
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPREHENSIVE INDUSTRY DIFFERENTIATION TABLE: OTHER PLATFORMS VS EQUORA -->
+  <div style="margin-top: 1px;">
+    <div style="font-size: 7.4pt; font-weight: 800; color: #0f172a; margin-bottom: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 5px;">
+      <span style="background: #0f172a; color: #ffffff; padding: 1.5px 5px; border-radius: 3px; font-size: 6.2pt;">INDUSTRY DIFFERENTIATION</span>
+      WHAT OTHER PLATFORMS DO VS. WHAT EQUORA DOES
+    </div>
+    <table class="institutional-table">
+      <thead>
+        <tr>
+          <th style="width: 22%;">CORE DIMENSION</th>
+          <th style="width: 39%; background: #7f1d1d; color: #fecaca;">&#10006; WHAT OTHER PLATFORMS DO (LEGACY)</th>
+          <th style="width: 39%; background: #065f46; color: #a7f3d0;">&#10004; WHAT EQUORA DOES (V6.2 PROTOCOL)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Out-of-Pocket Capital Barrier</strong></td>
+          <td style="background: #fff1f2; color: #881337;">
+            <strong>Forces repeated out-of-pocket payments:</strong> Users must pay out-of-pocket for every slot upgrade ($30 &rarr; $60 &rarr; $120... totaling <strong>$122,850+</strong>).
+          </td>
+          <td style="background: #f0fdf4; color: #065f46;">
+            <strong>Strictly $30.00 Lifetime Deposit:</strong> You deposit strictly once on Slot 1. Slots 2 through 12 require <strong>$0.00 out-of-pocket forever</strong>!
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Slot 2–12 Progression Trigger</strong></td>
+          <td style="background: #fff1f2; color: #881337;">
+            <strong>Manual user upgrade:</strong> Users must sacrifice profits or deposit new cash. Over <strong>85% stop upgrading</strong> after level 2/3, freezing the tree.
+          </td>
+          <td style="background: #f0fdf4; color: #065f46;">
+            <strong>Autonomous 2-stage escalation:</strong> P4 &amp; P5 unlock/reserve next slot ($0 cost); P14 completes 14-node board and activates live earnings!
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Upgrade Money Destination</strong></td>
+          <td style="background: #fff1f2; color: #881337;">
+            <strong>Enriches centralized admins or uplines:</strong> Upgrade capital vanishes from the user's matrix and provides zero community liquidity.
+          </td>
+          <td style="background: #f0fdf4; color: #065f46;">
+            <strong>100% directly fuels 4 Protocol Pools:</strong> Both P4 &amp; P5 deposits ($60 on Slot 1) stream straight into community pools, royalties, and bounties.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Unqualified Downline Leakage</strong></td>
+          <td style="background: #fff1f2; color: #881337;">
+            <strong>Siphoned into company admin pockets:</strong> If downlines fail qualification, money is retained by the platform founders or burned.
+          </td>
+          <td style="background: #f0fdf4; color: #065f46;">
+            <strong>Zero-Leakage Pools Vault:</strong> If downlines (P1/P2 via P7/P10 or P3-P6 via P13) lack 2 referrals, <strong>100% routes to the 4 Protocol Pools Vault</strong>.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Board Reset &amp; Perpetual Recycling</strong></td>
+          <td style="background: #fff1f2; color: #881337;">
+            <strong>Boards stall permanently:</strong> Users must pay manual re-topup fees or become trapped in abandoned, dead-end matrix boards.
+          </td>
+          <td style="background: #f0fdf4; color: #065f46;">
+            <strong>Infinite Perpetual Auto-Recycle (P14):</strong> P14 resets your board and global platform spillover auto-places in your tree forever (600% ROI repeats)!
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 2 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">14-NODE ENGINE | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">2. The 14-Node Matrix Topology &amp; Settlement Blueprint</div>
+    <div class="section-subtitle">P4-P5 Tier Escalation, 2-Referral Qualification Logic &amp; 6-Node Cashflow Architecture</div>
+  </div>
+
+  <p>
+    The Equora board is structured as a <strong>15-position binary-trinary recursive tree</strong>: 1 Apex Seat (YOU, the Board Owner) surrounded by 14 operational node positions distributed across 3 geometric tiers (2 nodes on Tier 1, 4 nodes on Tier 2, and 8 nodes on Tier 3).
+  </p>
+
+  <!-- FULL SVG 14-NODE MATRIX BOARD WITH ACCURATE NODE LOGIC -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Exact 14-Node Settlement Routing &amp; Multi-Tier Execution Diagram
+    </div>
+    <svg width="100%" height="205" viewBox="0 0 680 205" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <!-- YOU NODE -->
+      <circle cx="340" cy="18" r="15" fill="#1d4ed8" stroke="#0284c7" stroke-width="2.5" />
+      <text x="340" y="22" fill="#ffffff" font-size="8.5" font-weight="bold" text-anchor="middle">YOU</text>
+
+      <!-- TIER 1 CONNECTOR LINES -->
+      <line x1="340" y1="33" x2="210" y2="65" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="340" y1="33" x2="470" y2="65" stroke="#94a3b8" stroke-width="1.5" />
+
+      <!-- TIER 1 BADGE PILL -->
+      <rect x="235" y="39" width="210" height="15" rx="7.5" fill="#fff7ed" stroke="#fdba74" stroke-width="1.2" />
+      <text x="340" y="50" fill="#c2410c" font-size="6.8" font-weight="bold" text-anchor="middle">TIER 1 &bull; 100% to Upline Sponsor (P1 + P2 = $60)</text>
+
+      <!-- TIER 1: P1, P2 (ORANGE - UPLINE) -->
+      <circle cx="210" cy="69" r="12.5" fill="#ea580c" />
+      <text x="210" y="73" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P1</text>
+      <circle cx="470" cy="69" r="12.5" fill="#ea580c" />
+      <text x="470" y="73" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P2</text>
+
+      <!-- TIER 2 CONNECTOR LINES -->
+      <line x1="210" y1="82" x2="140" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="210" y1="82" x2="280" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="470" y1="82" x2="540" y2="117" stroke="#94a3b8" stroke-width="1.2" />
+
+      <!-- TIER 2 BADGE PILL -->
+      <rect x="180" y="91" width="320" height="15" rx="7.5" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" />
+      <text x="340" y="102" fill="#15803d" font-size="6.7" font-weight="bold" text-anchor="middle">TIER 2 &bull; P3, P6 to YOU ($60) | P4, P5 to Pools ($60) &amp; UNLOCKS/RESERVES SLOT 2</text>
+
+      <!-- TIER 2: P3 (YOU), P4 (POOLS/UNLOCK), P5 (POOLS/UNLOCK), P6 (YOU) -->
+      <circle cx="140" cy="123" r="12.5" fill="#059669" />
+      <text x="140" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P3</text>
+      <circle cx="280" cy="123" r="12.5" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="280" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P4</text>
+      <circle cx="400" cy="123" r="12.5" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="400" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P5</text>
+      <circle cx="540" cy="123" r="12.5" fill="#059669" />
+      <text x="540" y="127" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P6</text>
+
+      <!-- TIER 3 CONNECTOR LINES -->
+      <line x1="140" y1="136" x2="60" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="140" y1="136" x2="130" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="280" y1="136" x2="200" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="280" y1="136" x2="270" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="400" y1="136" x2="410" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="400" y1="136" x2="480" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="540" y1="136" x2="550" y2="169" stroke="#cbd5e1" stroke-width="1" />
+      <line x1="540" y1="136" x2="620" y2="169" stroke="#cbd5e1" stroke-width="1" />
+
+      <!-- TIER 3 NODES: P7 to P14 -->
+      <!-- P7: PURPLE (CHECKS P1/P2) -->
+      <circle cx="60" cy="174" r="11.5" fill="#7c3aed" />
+      <text x="60" y="178" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">P7</text>
+      <!-- P8: GREEN (YOU) -->
+      <circle cx="130" cy="174" r="11.5" fill="#059669" />
+      <text x="130" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P8</text>
+      <!-- P9: GREEN (YOU) -->
+      <circle cx="200" cy="174" r="11.5" fill="#059669" />
+      <text x="200" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P9</text>
+      <!-- P10: PURPLE (CHECKS P1/P2) -->
+      <circle cx="270" cy="174" r="11.5" fill="#7c3aed" />
+      <text x="270" y="178" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">P10</text>
+      <!-- P11: GREEN (YOU) -->
+      <circle cx="410" cy="174" r="11.5" fill="#059669" />
+      <text x="410" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P11</text>
+      <!-- P12: GREEN (YOU) -->
+      <circle cx="480" cy="174" r="11.5" fill="#059669" />
+      <text x="480" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P12</text>
+      <!-- P13: MAGENTA (CHECKS P3-P6 WATERFALL) -->
+      <circle cx="550" cy="174" r="11.5" fill="#db2777" />
+      <text x="550" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P13</text>
+      <!-- P14: RUBY (POOLS + RECYCLE) -->
+      <circle cx="620" cy="174" r="11.5" fill="#dc2626" />
+      <text x="620" y="178" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">P14</text>
+
+      <!-- TIER 3 SUBTEXT -->
+      <text x="95" y="195" fill="#581c87" font-size="6.3" font-weight="bold" text-anchor="middle">P7: Check P1/P2 | P8: YOU</text>
+      <text x="235" y="195" fill="#065f46" font-size="6.3" font-weight="bold" text-anchor="middle">P9: YOU | P10: Check P1/P2</text>
+      <text x="445" y="195" fill="#065f46" font-size="6.3" font-weight="bold" text-anchor="middle">P11: YOU | P12: YOU</text>
+      <text x="585" y="195" fill="#991b1b" font-size="6.3" font-weight="bold" text-anchor="middle">P13: Waterfall P3-P6 | P14: Recycle &amp; Launch</text>
+    </svg>
+  </div>
+
+  <!-- 14-NODE MASTER CASHFLOW SUMMARY TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th>Beneficiary Designation</th>
+        <th>Node Identifiers</th>
+        <th>Allocation Rules &amp; Operational Triggers</th>
+        <th>Slot 1 Value</th>
+        <th>% Volume</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background: #f0fdf4;">
+        <td><strong style="color:#059669;">YOU (Board Owner Cashflow)</strong></td>
+        <td>P3, P6, P8, P9, P11, P12</td>
+        <td>100% Direct to YOU. Requires &ge; 2 direct referrals to claim.</td>
+        <td><strong>$180.00 USD</strong></td>
+        <td><strong>42.86% (600% ROI)</strong></td>
+      </tr>
+      <tr>
+        <td>Immediate Upline Sponsor</td>
+        <td>P1, P2</td>
+        <td>100% Direct to immediate inviter/sponsor (200% commission).</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (200%)</td>
+      </tr>
+      <tr style="background: #eff6ff;">
+        <td><strong style="color:#0284c7;">Auto-Unlock Next Slot (4 Pools)</strong></td>
+        <td>P4, P5</td>
+        <td>100% to 4 Protocol Pools + <strong>AUTONOMOUSLY UNLOCKS &amp; RESERVES NEXT SLOT</strong> ($0 out-of-pocket).</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (Reserved)</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong style="color:#7c3aed;">Downline 1 Meritocratic Check</strong></td>
+        <td>P7, P10</td>
+        <td>Checks P1 (&ge;2 refs? pay) else P2; splits 50/50 if both; else <strong>routes to 4 Pools</strong>.</td>
+        <td>$60.00 USD</td>
+        <td>14.28% (or 4 Pools)</td>
+      </tr>
+      <tr style="background: #fdf2f8;">
+        <td><strong style="color:#db2777;">Downline 2 Depth Waterfall</strong></td>
+        <td>P13</td>
+        <td>Waterfall checks P3 &rarr; P4 &rarr; P5 &rarr; P6 (&ge;2 refs); else <strong>routes to 4 Pools</strong>.</td>
+        <td>$30.00 USD</td>
+        <td>7.14% (or 4 Pools)</td>
+      </tr>
+      <tr style="background: #fef2f2;">
+        <td><strong style="color:#b91c1c;">Board Recycle &amp; Slot 2 Activation</strong></td>
+        <td>P14</td>
+        <td>100% to 4 Pools + <strong>COMPLETES BOARD (14/14) &amp; FORMALLY ACTIVATES NEXT SLOT LIVE!</strong></td>
+        <td>$30.00 USD</td>
+        <td>7.14% (Recycle &amp; Live)</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL FULL BOARD CYCLE</td>
+        <td>All 14 Node Positions</td>
+        <td>Deterministic Closed-Loop Conservation: Zero Stuck Funds</td>
+        <td>$420.00 USD</td>
+        <td>100.00% BALANCED</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- RIGOROUS STEP-BY-STEP DOWNLINE & POOL ROUTING SPECIFICATION -->
+  <div class="card-grid grid-3">
+    <div class="info-card purple">
+      <div class="info-card-title">&#9874; P7 &amp; P10 Downline Check Engine</div>
+      <div class="info-card-desc">
+        <strong>Tier 1 Downline Verification:</strong><br>
+        &bull; <strong>Rule 1 (P1 Eligible):</strong> If P1 has &ge; 2 referrals and P2 does not &rarr; 100% ($30) pays P1.<br>
+        &bull; <strong>Rule 2 (P2 Eligible):</strong> If P2 has &ge; 2 referrals and P1 does not &rarr; 100% ($30) pays P2.<br>
+        &bull; <strong>Rule 3 (Both Eligible):</strong> If both have &ge; 2 referrals &rarr; 50/50 split ($15 to P1, $15 to P2).<br>
+        &bull; <strong>Rule 4 (Neither Eligible):</strong> If neither has 2 referrals &rarr; 100% ($30) is swept directly into the <strong>4 Automated Protocol Pools Vault</strong>!
+      </div>
+    </div>
+    <div class="info-card rose">
+      <div class="info-card-title">&#9874; P13 Depth Waterfall Cascade</div>
+      <div class="info-card-desc">
+        <strong>Tier 2 Depth Cascade [P3 &rarr; P4 &rarr; P5 &rarr; P6]:</strong><br>
+        &bull; Sequentially checks downline's downlines for &ge; 2 referrals.<br>
+        &bull; <strong>Priority:</strong> P3 checked first; if unqualified, checks P4; then P5; then P6.<br>
+        &bull; First qualified member receives 100% ($30).<br>
+        &bull; If all are qualified, spills over; if <strong>none are qualified</strong>, 100% routes straight into the <strong>4 Protocol Pools Vault</strong>!
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">&#9874; P14 Recycle &amp; Slot 2 Launch</div>
+      <div class="info-card-desc">
+        <strong>Board Completion &amp; Live Activation:</strong><br>
+        &bull; 100% of P14 deposit ($30) fuels the 4 Protocol Pools.<br>
+        &bull; Board clears atomically ($180 net cashflow collected); YOU re-enters under sponsor.<br>
+        &bull; <strong>Simultaneously activates Slot 2 for live earning:</strong> YOU is placed into sponsor's Slot 2 board, and downlines following from Slot 1 populate YOU's Slot 2 tree ($360 cashflow per cycle)!
+      </div>
+    </div>
+  </div>
+
+  <!-- SOLIDITY PSEUDOCODE SPECIFICATION -->
+  <div class="code-block">
+    <strong>SMART CONTRACT ROUTING LOGIC SPECIFICATION:</strong><br>
+    function settleNode(uint256 slot, uint8 idx, address user) external {<br>
+    &nbsp;&nbsp;if (idx == 1 || idx == 2) transfer(sponsor, val);<br>
+    &nbsp;&nbsp;else if (idx == 3 || idx == 6 || idx == 8 || idx == 9 || idx == 11 || idx == 12) { require(refs[owner] >= 2); transfer(owner, val); }<br>
+    &nbsp;&nbsp;else if (idx == 4 || idx == 5) { transfer(protocolPools, val); reserveNextSlot(owner, slot + 1); }<br>
+    &nbsp;&nbsp;else if (idx == 7 || idx == 10) settleDownlineTier1(slot, val); // checks P1/P2 refs >= 2; split or route to pools vault<br>
+    &nbsp;&nbsp;else if (idx == 13) settleDownlineTier2Waterfall(slot, val); // priority P3->P4->P5->P6; fail-safe to pools vault<br>
+    &nbsp;&nbsp;else if (idx == 14) { transfer(protocolPools, val); recycleBoard(owner, slot); activateNextSlot(owner, slot + 1); }<br>
+    }
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 3 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">4-POOL ENGINE | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">3. The 4 Automated Protocol Pools: Master Liquidity Engine</div>
+    <div class="section-subtitle">Guaranteed P4, P5, P14 Funding &amp; Dynamic Unqualified Leakage Capture</div>
+  </div>
+
+  <p>
+    The <strong>Equora Protocol Liquidity Engine</strong> is continuously funded by two distinct on-chain streams: (1) Guaranteed Base Allocations from nodes <strong>P4, P5</strong> ($60) and <strong>P14</strong> ($30) equaling <strong>$90.00 per Slot 1 cycle (21.43%)</strong>, and (2) Dynamic Leakage Capture, which automatically sweeps any unearned downline allocations from P7, P10, and P13 whenever downlines fail the 2-referral qualification check. This pool capital is divided with zero human intervention:
+  </p>
+
+  <!-- 4-POOLS SVG FLOW CHART -->
+  <div style="background: #f8fafc; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Autonomous Protocol Pool Capital Allocation Breakdown
+    </div>
+    <svg width="100%" height="140" viewBox="0 0 680 140" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <!-- SOURCE NODE -->
+      <rect x="10" y="44" width="135" height="52" rx="6" fill="#0f172a" />
+      <text x="77" y="63" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PROTOCOL POOLS</text>
+      <text x="77" y="75" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">P4 + P5 + P14 DEPOSITS</text>
+      <text x="77" y="87" fill="#94a3b8" font-size="6.8" text-anchor="middle">+ Unqualified Leakage</text>
+
+      <!-- SPLIT PATHS -->
+      <path d="M 145 54 L 195 20" stroke="#0284c7" stroke-width="2" fill="none" />
+      <path d="M 145 64 L 195 56" stroke="#1d4ed8" stroke-width="2" fill="none" />
+      <path d="M 145 78 L 195 92" stroke="#d97706" stroke-width="2" fill="none" />
+      <path d="M 145 88 L 195 126" stroke="#059669" stroke-width="2" fill="none" />
+
+      <!-- POOL 1 -->
+      <rect x="195" y="6" width="475" height="30" rx="4" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="1.2" />
+      <text x="205" y="18" fill="#0369a1" font-size="7.6" font-weight="bold">POOL 1: 35% DAO INSTANT PUSH &bull; Real-Time Streaming</text>
+      <text x="205" y="29" fill="#0284c7" font-size="6.8">Distributed instantaneously upon collection directly to all verified active DAO members.</text>
+
+      <!-- POOL 2 -->
+      <rect x="195" y="40" width="475" height="30" rx="4" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.2" />
+      <text x="205" y="52" fill="#1e40af" font-size="7.6" font-weight="bold">POOL 2: 40% LEADERSHIP ROYALTY &bull; Monthly Settlement (11th)</text>
+      <text x="205" y="63" fill="#1d4ed8" font-size="6.8">Distributed 11th of every month across ranks in depth: Alpha 10% | Prime 15% | Elite 25% | Crown 50%.</text>
+
+      <!-- POOL 3 -->
+      <rect x="195" y="74" width="475" height="30" rx="4" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.2" />
+      <text x="205" y="86" fill="#92400e" font-size="7.6" font-weight="bold">POOL 3: 10% MAGIC BLIND BOX &bull; 3-Month Timer Gamification</text>
+      <text x="205" y="97" fill="#b45309" font-size="6.8">Claimable after 3-month countdown: 85% get $0.50 | 10% get $0.80 | 3% get $1.20 | 2% get $5.00 Jackpot.</text>
+
+      <!-- POOL 4 -->
+      <rect x="195" y="108" width="475" height="30" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1.2" />
+      <text x="205" y="120" fill="#166534" font-size="7.6" font-weight="bold">POOL 4: 15% ONE-TIME RANK REWARDS &bull; Milestone Bounties</text>
+      <text x="205" y="131" fill="#15803d" font-size="6.8">One-time bounties upon milestone activation: Level 3 (10%) | Level 6 (15%) | Level 9 (25%) | Level 12 (50%).</text>
+    </svg>
+  </div>
+
+  <!-- 4 POOLS DETAIL GRID -->
+  <div class="card-grid grid-2">
+    <div class="info-card highlight">
+      <div class="info-card-title"><span style="color:#0284c7;">1.</span> 35% DAO Instant Push</div>
+      <div class="info-card-desc">
+        <strong>Immediate Liquidity Injection:</strong> Streamed in real-time block execution. Every active registered member in the Equora ecosystem receives programmatic micro-distributions proportional to their participation weight.
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title"><span style="color:#1d4ed8;">2.</span> 40% Leadership Royalty</div>
+      <div class="info-card-desc">
+        <strong>Institutional Monthly Equity:</strong> Settled on the <strong>11th of every month</strong>. Eliminates centralized management discretion by splitting 40% of all pool turnover across Alpha (10%), Prime (15%), Elite (25%), and Crown (50%) leaders.
+      </div>
+    </div>
+    <div class="info-card warning">
+      <div class="info-card-title"><span style="color:#d97706;">3.</span> 10% Magic Blind Box</div>
+      <div class="info-card-desc">
+        <strong>Verifiable Algorithmic Lottery:</strong> Governed by a 3-month countdown lockup. Delivers non-custodial randomized rewards: Tier 1 ($0.50), Tier 2 ($0.80), Tier 3 ($1.20), and Tier 4 Grand Jackpot ($5.00).
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title"><span style="color:#059669;">4.</span> 15% Rank Milestones</div>
+      <div class="info-card-desc">
+        <strong>Progression Acceleration Bounties:</strong> Disbursed immediately upon reaching key milestones: Level 3 Alpha (10%), Level 6 Prime (15%), Level 9 Elite (25%), and Level 12 Crown (50%), incentivizing team escalation.
+      </div>
+    </div>
+  </div>
+
+  <!-- FINANCIAL BREAKDOWN TABLE ACROSS KEY OPERATIONAL VOLUMES -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th style="width: 21%;">Pool Designation</th>
+        <th style="width: 10%;">Share (%)</th>
+        <th style="width: 17%;">Single Board ($90 Pool)</th>
+        <th style="width: 18%;">12-Slot Wave ($1,080 Pool)</th>
+        <th style="width: 17%;">100 Cycles ($9,000 Pool)</th>
+        <th style="width: 17%;">Disbursement Cadence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. DAO Instant Push</strong></td>
+        <td>35.00%</td>
+        <td>$31.50</td>
+        <td>$378.00</td>
+        <td>$3,150.00</td>
+        <td>Instant Block Stream</td>
+      </tr>
+      <tr>
+        <td><strong>2. Leadership Royalty</strong></td>
+        <td>40.00%</td>
+        <td>$36.00</td>
+        <td>$432.00</td>
+        <td>$3,600.00</td>
+        <td>11th Monthly (Clean Rank)</td>
+      </tr>
+      <tr>
+        <td><strong>3. Magic Blind Box</strong></td>
+        <td>10.00%</td>
+        <td>$9.00</td>
+        <td>$108.00</td>
+        <td>$900.00</td>
+        <td>3-Month Countdown Claim</td>
+      </tr>
+      <tr>
+        <td><strong>4. Rank Milestones</strong></td>
+        <td>15.00%</td>
+        <td>$13.50</td>
+        <td>$162.00</td>
+        <td>$1,350.00</td>
+        <td>Instant Milestone Bounty</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL PROTOCOL POOLS</td>
+        <td>100.00%</td>
+        <td>$90.00</td>
+        <td>$1,080.00</td>
+        <td>$9,000.00</td>
+        <td>100% Autonomously Executed</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ZERO-CUSTODY AUDIT STATEMENT & EXACT CALCULATION BREAKDOWN -->
+  <div class="theory-box">
+    <strong>HOW THE $90.00 POOL SPLIT IS CALCULATED (EXACT EXAMPLE):</strong><br>
+    Each 14-node board collects $420 total ($30 &times; 14). Exactly 3 nodes (&bull; <strong>P4, P5, and P14</strong> = $30 &times; 3 = <strong>$90.00 total</strong>) route directly into these 4 pools:<br>
+    &bull; <strong>Pool 1 (35%):</strong> $90 &times; 35% = <strong>$31.50</strong> (DAO Instant Push streamed directly to active members).<br>
+    &bull; <strong>Pool 2 (40%):</strong> $90 &times; 40% = <strong>$36.00</strong> (Accumulated for the 11th monthly leadership royalty).<br>
+    &bull; <strong>Pool 3 (10%):</strong> $90 &times; 10% = <strong>$9.00</strong> (Funds 3-month Magic Blind Box claims: $0.50, $0.80, $1.20, $5.00).<br>
+    &bull; <strong>Pool 4 (15%):</strong> $90 &times; 15% = <strong>$13.50</strong> (Accumulated for instant Rank Milestone upgrade bounties).<br>
+    <strong>12-Slot Wave ($1,080):</strong> When 12 boards cycle: 12 &times; $90 = $1,080 ($378 DAO + $432 Royalty + $108 Box + $162 Rank).<br>
+    <strong>Zero Administrative Custody:</strong> Smart contract batch router invokes <code>_distributePools()</code> settling 100% in the same block!
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 4 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">ALL 12 SLOTS | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">4. Institutional Financial Master Table: All 12 Slot Levels</div>
+    <div class="section-subtitle">Single $30 Out-of-Pocket Entry, P4+P5 Auto-Unlocked Tiers &amp; Exact Cashflows</div>
+  </div>
+
+  <p>
+    The following institutional ledger details the deterministic capital distribution across all 12 progressive slot tiers. <strong>Notice the fundamental economic breakthrough:</strong> A participant's lifetime out-of-pocket capital is strictly <strong>$30.00 USD on Slot 1</strong>. Slots 2 through 12 require <strong>$0.00 out-of-pocket</strong>, as each slot is automatically unlocked by the arrival of nodes <strong>P4 and P5</strong> in the preceding tier, while both deposits stream directly into the 4 Automated Protocol Pools:
+  </p>
+
+  <!-- INSTITUTIONAL FINANCIAL MASTER TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th style="width: 14%;">Slot / Level</th>
+        <th style="width: 15%;">Out-of-Pocket</th>
+        <th style="width: 10%;">Unit Entry</th>
+        <th style="width: 12%;">Gross (14 Nodes)</th>
+        <th style="width: 12%;">YOU (6 Nodes)</th>
+        <th style="width: 11%;">Sponsor (P1,P2)</th>
+        <th style="width: 11%;">Pools (P4,P5,P14)</th>
+        <th style="width: 15%;">Rank &amp; Privilege Unlocked</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Slot 1</strong></td>
+        <td><strong style="color:#0284c7;">$30.00 (One-Time)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Base Matrix + Blind Box</td>
+      </tr>
+      <tr>
+        <td><strong>Slot 2</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 2 + Auto-Unlock Slot 3</td>
+      </tr>
+      <tr style="background:#eff6ff;">
+        <td><strong>Slot 3 (Alpha)</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td><strong style="color:#0284c7;">ALPHA: Instant Rank Bounty + 10% Monthly Royalty</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Slot 4</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 4 + Auto-Unlock Slot 5</td>
+      </tr>
+      <tr>
+        <td><strong>Slot 5</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 5 + Auto-Unlock Slot 6</td>
+      </tr>
+      <tr style="background:#f0fdf4;">
+        <td><strong>Slot 6 (Prime)</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td><strong style="color:#059669;">PRIME: Instant Rank Bounty + 15% Monthly Royalty</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Slot 7</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 7 + Auto-Unlock Slot 8</td>
+      </tr>
+      <tr>
+        <td><strong>Slot 8</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 8 + Auto-Unlock Slot 9</td>
+      </tr>
+      <tr style="background:#fffbeb;">
+        <td><strong>Slot 9 (Elite)</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td><strong style="color:#d97706;">ELITE: Instant Rank Bounty + 25% Monthly Royalty</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Slot 10</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 10 + Auto-Unlock Slot 11</td>
+      </tr>
+      <tr>
+        <td><strong>Slot 11</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td>Parallel Board 11 + Auto-Unlock Slot 12</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>Slot 12 (Crown)</strong></td>
+        <td><strong style="color:#10b981;">$0.00 (Auto-Unlocked)</strong></td>
+        <td>$30.00</td>
+        <td>$420.00</td>
+        <td><strong style="color:#059669;">$180.00</strong></td>
+        <td>$60.00</td>
+        <td>$90.00</td>
+        <td><strong style="color:#7c3aed;">CROWN: Instant Apex Bounty + 50% Monthly Royalty</strong></td>
+      </tr>
+      <tr class="total-row">
+        <td>1 WAVE (12 BOARDS)</td>
+        <td><strong style="color:#38bdf8;">$30.00 ONLY!</strong></td>
+        <td>$30.00 Fixed</td>
+        <td>$5,040.00 Gross</td>
+        <td><strong style="color:#86efac;">$2,160.00 (72x ROI)</strong></td>
+        <td>$720.00</td>
+        <td>$1,080.00</td>
+        <td>12 PARALLEL BOARDS + CROWN APEX!</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- MATHEMATICAL DEDUCTIONS & MULTIPLIERS -->
+  <div class="theory-box">
+    <strong>HOW THE CASHFLOW &amp; 72x WAVE MULTIPLIER ARE DERIVED:</strong><br>
+    &bull; <strong>Single Board Payout:</strong> Every 14-node board pays <strong>YOU 6 positions</strong> (P3, P6, P8, P9, P11, P12) = 6 &times; $30 = <strong>$180.00 direct wallet cashflow</strong>.<br>
+    &bull; <strong>1 Full Wave Across All 12 Boards:</strong> 12 concurrent active boards &times; $180 = <strong>$2,160.00 USD net cashflow</strong>. From your single lifetime $30 entry, this represents an exact <strong>72x Net ROI</strong> ($2,160 / $30)!<br>
+    &bull; <strong>Multi-Wave Scaling:</strong> 5 Waves = 5 &times; $2,160 = <strong>$10,800.00</strong> (360x) &bull; 10 Waves = 10 &times; $2,160 = <strong>$21,600.00</strong> (720x) &bull; 25 Waves = <strong>$54,000.00</strong> (1,800x ROI)!<br>
+    &bull; <strong>Zero Escalation:</strong> Slots 2–12 are 100% unlocked by P4+P5 deposits at $0 out-of-pocket!
+  </div>
+
+  <div class="card-grid grid-3">
+    <div class="info-card highlight">
+      <div class="info-card-title">Single $30 Entry</div>
+      <div class="info-card-desc">
+        Strictly bounded at $30 out-of-pocket for life. No user is ever asked to pay $60, $120, or $240. Higher tiers are unlocked autonomously via P4 &amp; P5 entries at $0 cost.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">12 Parallel Boards ($180/Board)</div>
+      <div class="info-card-desc">
+        Unlocking higher slots activates parallel 14-node boards. Each board independently cycles to generate $180 cashflow (6 nodes &times; $30) directly to your wallet forever.
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title">Rank Bounty vs. Monthly Royalty</div>
+      <div class="info-card-desc">
+        <strong>Rank Bounty:</strong> One-time instant cash reward upon unlocking rank.<br>
+        <strong>Monthly Royalty:</strong> Perpetual recurring equity dividend paid every month on the 11th!
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI-CYCLE COMPOUNDING SCHEDULE -->
+  <table class="institutional-table" style="margin-top:2px;">
+    <thead>
+      <tr>
+        <th>Concurrent Wave Multiplier</th>
+        <th>Cumulative Cashflow (USD)</th>
+        <th>Out-of-Pocket Cost</th>
+        <th>Direct Capital Return</th>
+        <th>Guaranteed Pool Injection</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1 Wave Across All 12 Slots</strong></td>
+        <td><strong>$2,160.00 USD</strong></td>
+        <td>$30.00 USD (Fixed)</td>
+        <td>72x Net ROI</td>
+        <td>$1,080.00 USD</td>
+      </tr>
+      <tr>
+        <td><strong>5 Waves Across All 12 Slots</strong></td>
+        <td><strong>$10,800.00 USD</strong></td>
+        <td>$30.00 USD (Fixed)</td>
+        <td>360x Net ROI</td>
+        <td>$5,400.00 USD</td>
+      </tr>
+      <tr>
+        <td><strong>10 Waves Across All 12 Slots</strong></td>
+        <td><strong>$21,600.00 USD</strong></td>
+        <td>$30.00 USD (Fixed)</td>
+        <td>720x Net ROI</td>
+        <td>$10,800.00 USD</td>
+      </tr>
+      <tr style="background:#eff6ff;">
+        <td><strong>25 Waves Across All 12 Slots</strong></td>
+        <td><strong style="color:#1d4ed8;">$54,000.00 USD</strong></td>
+        <td>$30.00 USD (Fixed)</td>
+        <td>1,800x Net ROI</td>
+        <td>$27,000.00 USD</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 5 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">40% ROYALTY POOL | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">5. Leadership Royalty Engine (40% Pool &bull; Monthly on the 11th)</div>
+    <div class="section-subtitle">Decentralized Monthly Depth Royalty Replacing Centralized Corporate Salaries</div>
+  </div>
+
+  <p>
+    In place of legacy centralized "salaries" that depend on corporate discretionary payrolls, Equora introduces the <strong>Leadership Royalty Engine</strong>. Fueled by a massive <strong>40% allocation</strong> of all protocol pool collections, the Royalty Engine dispatches automated recurring monthly rewards directly into qualified leader wallets on the <strong>11th of every month</strong>.
+  </p>
+
+  <!-- ROYALTY DISTRIBUTION DIAGRAM -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Monthly Leadership Royalty Depth Distribution Hierarchy (11th of Every Month)
+    </div>
+    <svg width="100%" height="135" viewBox="0 0 680 135" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <rect x="20" y="10" width="640" height="22" rx="4" fill="#0f172a" />
+      <text x="340" y="24" fill="#ffffff" font-size="7.8" font-weight="bold" text-anchor="middle">TOTAL MONTHLY ROYALTY POOL (100% = 40% OF PROTOCOL TURNOVER)</text>
+
+      <!-- ALPHA: 10% -->
+      <rect x="20" y="40" width="100" height="38" rx="4" fill="#0284c7" />
+      <text x="70" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">ALPHA</text>
+      <text x="70" y="69" fill="#e0f2fe" font-size="7" font-weight="bold" text-anchor="middle">10% SHARE</text>
+
+      <!-- PRIME: 15% -->
+      <rect x="130" y="40" width="120" height="38" rx="4" fill="#059669" />
+      <text x="190" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PRIME</text>
+      <text x="190" y="69" fill="#d1fae5" font-size="7" font-weight="bold" text-anchor="middle">15% SHARE</text>
+
+      <!-- ELITE: 25% -->
+      <rect x="260" y="40" width="150" height="38" rx="4" fill="#d97706" />
+      <text x="335" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">ELITE</text>
+      <text x="335" y="69" fill="#fef3c7" font-size="7" font-weight="bold" text-anchor="middle">25% SHARE</text>
+
+      <!-- CROWN: 50% -->
+      <rect x="420" y="40" width="240" height="38" rx="4" fill="#7c3aed" />
+      <text x="540" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">CROWN ACHIEVER (APEX)</text>
+      <text x="540" y="69" fill="#ede9fe" font-size="7" font-weight="bold" text-anchor="middle">50% DOMINANT SHARE</text>
+
+      <text x="70" y="93" fill="#0369a1" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 3 (Stops at Prime)</text>
+      <text x="190" y="93" fill="#047857" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 6 (Stops at Elite)</text>
+      <text x="335" y="93" fill="#b45309" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 9 (Stops at Crown)</text>
+      <text x="540" y="93" fill="#6d28d9" font-size="6.6" font-weight="bold" text-anchor="middle">Slot 12 (Apex Master Exclusive)</text>
+
+      <rect x="20" y="105" width="640" height="18" rx="3" fill="#f1f5f9" />
+      <text x="340" y="117" fill="#475569" font-size="6.5" font-weight="bold" text-anchor="middle">
+        CLEAN PROMOTION INVARIANT: PAST RANK SHARES DISCONTINUE UPON ADVANCEMENT &bull; SETTLED 11TH MONTHLY
+      </text>
+    </svg>
+  </div>
+
+  <!-- 4 ROYALTY TIERS TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Royalty Rank</th>
+        <th style="width: 12%;">Pool Share</th>
+        <th style="width: 24%;">Slot Qualification</th>
+        <th style="width: 26%;">Monthly Settlement Invariant</th>
+        <th style="width: 18%;">Depth Benefit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Alpha Leader</strong></td>
+        <td>10.00%</td>
+        <td>Slot 3 (Auto-Unlocked via Slot 2)</td>
+        <td>Even split. <strong>Stops when promoted to Prime!</strong></td>
+        <td>Entry monthly dividend</td>
+      </tr>
+      <tr>
+        <td><strong>2. Prime Commander</strong></td>
+        <td>15.00%</td>
+        <td>Slot 6 (Auto-Unlocked via Slot 5)</td>
+        <td>Even split. <strong>Alpha share stops (no double-dipping)!</strong></td>
+        <td>Mid-tier regional equity</td>
+      </tr>
+      <tr>
+        <td><strong>3. Elite Pioneer</strong></td>
+        <td>25.00%</td>
+        <td>Slot 9 (Auto-Unlocked via Slot 8)</td>
+        <td>Even split. <strong>Prime &amp; Alpha shares stop!</strong></td>
+        <td>Executive revenue tier</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong style="color: #7c3aed;">4. Crown Achiever (Apex)</strong></td>
+        <td>50.00%</td>
+        <td>Slot 12 (Auto-Unlocked via Slot 11)</td>
+        <td>Even split. <strong>Earns exclusively apex 50% pool!</strong></td>
+        <td>Apex protocol wealth</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="theory-box">
+    <strong>MONTHLY ROYALTY FORMULA &amp; STEP-BY-STEP CALCULATION EXAMPLE:</strong><br>
+    Every month on the 11th, <strong>40% of all protocol pool funds</strong> (<code>P_royalty</code>) are split across the 4 leadership ranks. Each qualified leader receives an equal split of their rank's pool:<br>
+    <code>Your Monthly Payout = (Rank Pool Share &times; Total Monthly Royalty Pool) &divide; Number of Active Leaders in That Rank</code><br>
+    <strong>Concrete Example (Assuming a Total Monthly Royalty Pool of $36,000 USD):</strong><br>
+    &bull; <strong>Alpha Pool (10% = $3,600):</strong> If 10 Alpha leaders &rarr; <code>$3,600 &divide; 10 = $360.00 USD each</code>.<br>
+    &bull; <strong>Prime Pool (15% = $5,400):</strong> If 5 Prime leaders &rarr; <code>$5,400 &divide; 5 = $1,080.00 USD each</code>.<br>
+    &bull; <strong>Elite Pool (25% = $9,000):</strong> If 3 Elite leaders &rarr; <code>$9,000 &divide; 3 = $3,000.00 USD each</code>.<br>
+    &bull; <strong>Crown Pool (50% = $18,000):</strong> If 2 Crown leaders &rarr; <code>$18,000 &divide; 2 = $9,000.00 USD each</code>!<br>
+    <strong>Clean Promotion Invariant:</strong> Advancing to a higher rank discontinues earlier shares, preventing dilution and keeping entry pools full for rising builders!
+  </div>
+
+  <div class="card-grid grid-3">
+    <div class="info-card highlight">
+      <div class="info-card-title">11th Monthly Payout Cycle</div>
+      <div class="info-card-desc">
+        Every calendar month on the 11th at 00:00 UTC, the smart contract executes an immutable balance snapshot and streams rewards non-custodially to verified leaders.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Zero Upkeep Fees</div>
+      <div class="info-card-desc">
+        Unlike legacy platforms requiring perpetual monthly subscription payments, rank qualification is permanent once unlocked via the P4 and P5 auto-progression engine.
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title">Clean Promotion (Non-Stacking)</div>
+      <div class="info-card-desc">
+        Upon promotion, previous rank dividends stop, directing rewards exclusively into the newly unlocked tier. This ensures earlier pools remain deeply lucrative for upcoming regional builders!
+      </div>
+    </div>
+  </div>
+
+  <!-- GOVERNANCE PARTICIPATION INTEGRATION -->
+  <div class="info-card warning">
+    <div class="info-card-title">Apex Leadership Governance Weighting</div>
+    <div class="info-card-desc">
+      In addition to the 40% monthly equity dividend, members achieving Prime (Slot 6), Elite (Slot 9), and Crown (Slot 12) automatically receive cryptographic governance voting weight multipliers in the Equora Genesis DAO, allowing them to propose, sponsor, and ratify protocol liquidity parameters directly on TrobChain.
+    </div>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 6 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">10% GAMIFIED POOL | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">6. Magic Blind Box Engine (10% Pool &bull; 3-Month Countdown)</div>
+    <div class="section-subtitle">Provably Fair Gamified Reward Mechanism Powered by On-Chain Pseudo-Randomness</div>
+  </div>
+
+  <p>
+    The <strong>Magic Blind Box Engine</strong> allocates <strong>10% of total protocol pool turnover</strong> into an automated reward reserve. Designed to stimulate viral user onboarding and maintain perpetual community engagement, every registered wallet receives a cryptographic Blind Box anchored to a <strong>3-month vesting countdown timer</strong>.
+  </p>
+
+  <!-- BLIND BOX TIERS DIAGRAM -->
+  <div style="background: #ffffff; border: 1.2px solid #cbd5e1; border-radius: 8px; padding: 6px; text-align: center;">
+    <div style="font-size: 7.3pt; font-weight: 800; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">
+      Magic Blind Box Reward Tiers &amp; Meritocratic Referral Qualification Rules
+    </div>
+    <svg width="100%" height="130" viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" style="font-family: inherit;">
+      <!-- TIER 1 -->
+      <rect x="25" y="10" width="135" height="106" rx="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" />
+      <rect x="35" y="19" width="115" height="21" rx="3" fill="#64748b" />
+      <text x="92" y="33" fill="#ffffff" font-size="7.3" font-weight="bold" text-anchor="middle">TIER 1 (COMMON)</text>
+      <text x="92" y="60" fill="#0f172a" font-size="12" font-weight="bold" text-anchor="middle">$0.50 USD</text>
+      <text x="92" y="73" fill="#64748b" font-size="6.3" text-anchor="middle">All Joined Users (3-Mo Timer)</text>
+      <rect x="45" y="87" width="95" height="17" rx="8.5" fill="#e2e8f0" />
+      <text x="92" y="99" fill="#334155" font-size="7" font-weight="bold" text-anchor="middle">85% CHANCE</text>
+
+      <!-- TIER 2 -->
+      <rect x="185" y="10" width="135" height="106" rx="5" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="1.2" />
+      <rect x="195" y="19" width="115" height="21" rx="3" fill="#0284c7" />
+      <text x="252" y="33" fill="#ffffff" font-size="7.3" font-weight="bold" text-anchor="middle">TIER 2 (QUALIFIED)</text>
+      <text x="252" y="60" fill="#0369a1" font-size="12" font-weight="bold" text-anchor="middle">$0.80 USD</text>
+      <text x="252" y="73" fill="#0284c7" font-size="6.3" font-weight="bold" text-anchor="middle">Joined &amp; Done 2 Referrals</text>
+      <rect x="205" y="87" width="95" height="17" rx="8.5" fill="#bae6fd" />
+      <text x="252" y="99" fill="#0369a1" font-size="7" font-weight="bold" text-anchor="middle">10% CHANCE</text>
+
+      <!-- TIER 3 -->
+      <rect x="345" y="10" width="135" height="106" rx="5" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.2" />
+      <rect x="355" y="19" width="115" height="21" rx="3" fill="#d97706" />
+      <text x="412" y="33" fill="#ffffff" font-size="7.3" font-weight="bold" text-anchor="middle">TIER 3 (EPIC)</text>
+      <text x="412" y="60" fill="#b45309" font-size="12" font-weight="bold" text-anchor="middle">$1.20 USD</text>
+      <text x="412" y="73" fill="#d97706" font-size="6.3" font-weight="bold" text-anchor="middle">Progressed Qualified (&ge;2 Refs)</text>
+      <rect x="365" y="87" width="95" height="17" rx="8.5" fill="#fde68a" />
+      <text x="412" y="99" fill="#92400e" font-size="7" font-weight="bold" text-anchor="middle">3% CHANCE</text>
+
+      <!-- TIER 4 -->
+      <rect x="505" y="10" width="150" height="106" rx="5" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.2" />
+      <rect x="515" y="19" width="130" height="21" rx="3" fill="#7c3aed" />
+      <text x="580" y="33" fill="#ffffff" font-size="7.3" font-weight="bold" text-anchor="middle">TIER 4 (JACKPOT)</text>
+      <text x="580" y="60" fill="#6d28d9" font-size="12" font-weight="bold" text-anchor="middle">$5.00 USD</text>
+      <text x="580" y="73" fill="#7c3aed" font-size="6.3" font-weight="bold" text-anchor="middle">Apex Active Community Jackpot</text>
+      <rect x="525" y="87" width="110" height="17" rx="8.5" fill="#e9d5ff" />
+      <text x="580" y="99" fill="#581c87" font-size="7" font-weight="bold" text-anchor="middle">2% JACKPOT</text>
+    </svg>
+  </div>
+
+  <!-- MATHEMATICAL PROOF OF EXPECTED VALUE & CHANCE DISTRIBUTION -->
+  <div class="theory-box">
+    <strong>HOW THE 85% CHANCE &amp; 2-REFERRAL UPGRADE WORK (CRYSTAL CLEAR BREAKDOWN):</strong><br>
+    The Magic Blind Box is designed so <strong>every single member wins</strong>, while rewarding users who share the platform:<br>
+    &bull; <strong>85% Base Chance ($0.50 Payout):</strong> Available to <strong>all registered users</strong>. Even with 0 referrals, after completing the 3-month countdown, you have an 85% chance to reveal $0.50 USD in your mystery box!<br>
+    &bull; <strong>10% Qualified Tier ($0.80 Payout):</strong> Once you complete your <strong>2 direct referrals</strong>, you unlock eligibility for the higher $0.80 tier (a 60% boost over base reward), motivating community expansion!<br>
+    &bull; <strong>3% Epic ($1.20) &amp; 2% Grand Jackpot ($5.00):</strong> Reserved for qualified participants who advance through higher boards.<br>
+    &bull; <strong>Mathematical Solvency &amp; Average Payout:</strong><br>
+    <code>Average Payout = (85% &times; $0.50) + (10% &times; $0.80) + (3% &times; $1.20) + (2% &times; $5.00) = $0.425 + $0.080 + $0.036 + $0.100 = $0.641 USD</code>.<br>
+    Because each board cycle injects $9.00 USD into the pool, this mathematical design is 100% permanently solvent!
+  </div>
+
+  <!-- 3 MECHANISM EXPLANATION CARDS -->
+  <div class="card-grid grid-3">
+    <div class="info-card highlight">
+      <div class="info-card-title">1. The 3-Month Vesting Lock</div>
+      <div class="info-card-desc">
+        Upon joining with $30, a 90-day countdown begins on-chain. When the timer reaches 0, the participant invokes <code>claimBlindBox()</code> to reveal and withdraw their reward.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">2. 2-Referral Elevation Gate</div>
+      <div class="info-card-desc">
+        Completing 2 direct referrals unlocks the 10% probability tier ($0.80) and higher bounties, rewarding members who actively help build the matrix!
+      </div>
+    </div>
+    <div class="info-card purple">
+      <div class="info-card-title">3. Provable Solvency</div>
+      <div class="info-card-desc">
+        Weighted average payout is strictly <em>$0.641 USD</em>. With $9.00 injected per board cycle, the 10% reserve comfortably finances thousands of claims without drawdown.
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card warning">
+    <div class="info-card-title">Verifiable On-Chain Randomness Verification</div>
+    <div class="info-card-desc">
+      Blind box distribution outcomes are determined using cryptographic entropy derived from block hashes, block timestamps, and user addresses: <code>keccak256(abi.encodePacked(block.prevrandao, block.timestamp, msg.sender))</code>, ensuring that rewards cannot be predicted, manipulated, or front-run by miners or protocol developers.
+    </div>
+  </div>
+
+  <div class="info-card rose">
+    <div class="info-card-title">Retail Community Retention Dynamics</div>
+    <div class="info-card-desc">
+      Because the Blind Box vests over 90 days and elevates rewards for 2-referral achievers ($0.80), users actively monitor their dashboard at <strong>equorafimatrix.com</strong> and refer friends, driving organic platform expansion!
+    </div>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 7 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">15% MILESTONE POOL | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">7. One-Time Rank Milestone Rewards (15% Pool Reserve)</div>
+    <div class="section-subtitle">Instant Milestone Bounties Rewarding Matrix Depth &amp; Leadership Advancement</div>
+  </div>
+
+  <p>
+    The <strong>Rank Milestone Reward Engine</strong> allocates <strong>15% of total protocol pool turnover</strong> into an exclusive progression vault. As leaders ascend through the matrix tiers—unlocked automatically by the P4 and P5 progression engine—they unlock substantial one-time bounties paid directly in TROB:
+  </p>
+
+  <!-- 4 RANK CARDS -->
+  <div class="card-grid grid-4">
+    <div class="info-card highlight">
+      <div style="background: #0284c7; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        ALPHA &bull; LEVEL 3
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #0284c7; text-align: center; margin: 2px 0;">
+        10% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 3 (Alpha Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 2 ($0 cost).<br>
+        <strong>Disbursement:</strong> Instant milestone bounty transferred to wallet.
+      </div>
+    </div>
+
+    <div class="info-card success">
+      <div style="background: #059669; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        PRIME &bull; LEVEL 6
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #059669; text-align: center; margin: 2px 0;">
+        15% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 6 (Prime Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 5 ($0 cost).<br>
+        <strong>Disbursement:</strong> Substantial regional bounty for team leadership.
+      </div>
+    </div>
+
+    <div class="info-card warning">
+      <div style="background: #d97706; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        ELITE &bull; LEVEL 9
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #d97706; text-align: center; margin: 2px 0;">
+        25% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 9 (Elite Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 8 ($0 cost).<br>
+        <strong>Disbursement:</strong> Executive progression reward celebrating major volume.
+      </div>
+    </div>
+
+    <div class="info-card purple">
+      <div style="background: #7c3aed; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        CROWN &bull; LEVEL 12
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #7c3aed; text-align: center; margin: 2px 0;">
+        50% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 12 (Crown Apex).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 11 ($0 cost).<br>
+        <strong>Disbursement:</strong> Apex master bounty capturing 50% of the entire rank vault!
+      </div>
+    </div>
+  </div>
+
+  <!-- 15% POOL SUB-VAULT ALLOCATION TABLE -->
+  <div style="margin-top: 4px; margin-bottom: 2px;">
+    <div style="font-size: 7.6pt; font-weight: 800; color: #0f172a; margin-bottom: 1px;">
+      15% Rank Milestone Reserve: Sub-Vault Allocation &amp; Payout Invariants
+    </div>
+    <div style="font-size: 6.7pt; color: #475569; margin-bottom: 3px;">
+      Every 14-node board cycle injects $13.50 USD (15% of $90 pools) into the milestone reserve. In an example batch of 100 platform cycles ($1,350 total), funds are deterministically partitioned across 4 milestone sub-vaults:
+    </div>
+  </div>
+
+  <table class="institutional-table" style="font-size: 6.3pt; margin-top: 1px; margin-bottom: 4px;">
+    <thead>
+      <tr>
+        <th style="width: 18%;">Milestone Rank</th>
+        <th style="width: 13%;">Trigger Slot</th>
+        <th style="width: 16%;">Sub-Vault Share</th>
+        <th style="width: 23%;">Accumulated Pool (100 Cycles = $1,350)</th>
+        <th style="width: 30%;">Disbursement &amp; Instant Claim Logic</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Alpha Leader</strong></td>
+        <td>Slot 3</td>
+        <td><strong>10% of Pool</strong></td>
+        <td><strong>$135.00 USD</strong></td>
+        <td>Instant smart contract transfer to wallet when Slot 3 auto-unlocks via P4+P5 on Slot 2.</td>
+      </tr>
+      <tr>
+        <td><strong>Prime Commander</strong></td>
+        <td>Slot 6</td>
+        <td><strong>15% of Pool</strong></td>
+        <td><strong>$202.50 USD</strong></td>
+        <td>Instant regional leadership bounty when Slot 6 auto-unlocks via P4+P5 on Slot 5.</td>
+      </tr>
+      <tr>
+        <td><strong>Elite Pioneer</strong></td>
+        <td>Slot 9</td>
+        <td><strong>25% of Pool</strong></td>
+        <td><strong>$337.50 USD</strong></td>
+        <td>Instant executive progression bounty when Slot 9 auto-unlocks via P4+P5 on Slot 8.</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong>Crown Apex</strong></td>
+        <td>Slot 12</td>
+        <td><strong>50% of Pool</strong></td>
+        <td><strong>$675.00 USD</strong></td>
+        <td>Instant apex milestone bounty capturing 50% of the entire rank vault upon Slot 12 unlock!</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- CONCRETE EXAMPLE: WHAT DOES AN ALPHA ACHIEVER RECEIVE? -->
+  <div class="theory-box" style="border-left-color: #0284c7; background: #f0f9ff; margin-top: 3px; padding: 4.5px 8px;">
+    <strong>CONCRETE WALKTHROUGH: WHAT DOES AN ALPHA ACHIEVER RECEIVE UPON REACHING SLOT 3?</strong><br>
+    When a member's Slot 2 board fills positions <strong>P4 and P5</strong> ($30 + $30 = $60 to pools), their <strong>Slot 3 (Alpha) unlocks autonomously at $0 out-of-pocket</strong>. The smart contract immediately executes <code>claimRankMilestone(user, 3)</code>:
+    <ul style="margin: 2px 0 1px 14px; padding: 0; font-size: 6.6pt;">
+      <li><strong>1. Instant One-Time Milestone Bounty:</strong> The user receives their pro-rata share of the Alpha Milestone Vault (e.g., <strong>$135.00 USD</strong> in a 100-cycle pool) transferred directly to their Web3 wallet in TROB.</li>
+      <li><strong>2. Parallel $180 Cashflow Activation:</strong> Their newly unlocked Slot 3 board runs simultaneously, generating recurring <strong>$180.00 USD (600% ROI)</strong> across 6 nodes.</li>
+      <li><strong>3. 10% Monthly Leadership Royalty Entry:</strong> The user is permanently registered for the recurring <strong>10% Alpha Monthly Royalty</strong> paid on the 11th of every month!</li>
+    </ul>
+  </div>
+
+  <div class="theory-box" style="margin-top: 3px;">
+    <strong>PROGRESSION VELOCITY &amp; REINVESTMENT THEOREM:</strong><br>
+    The Rank Milestone Engine creates an immediate capital replenishment injection: upon reaching Slot k &isin; {3, 6, 9, 12}, the user receives an instantaneous block reward from the 15% progression vault. This eliminates the psychological friction of long matrix completion times and gives leaders instant liquidity to expand regional operations.
+  </div>
+
+  <!-- 2 STRATEGIC INSIGHT CARDS -->
+  <div class="card-grid grid-2" style="margin-top: 3px;">
+    <div class="info-card">
+      <div class="info-card-title">DAO Governance Multiplier Integration</div>
+      <div class="info-card-desc">
+        Reaching milestone levels permanently registers the user's wallet in the smart contract's immutable leader registry, unlocking verified governance voting multipliers in the Equora DAO.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Zero-Cost Tier Escalation Invariant</div>
+      <div class="info-card-desc">
+        Unlike legacy matrix schemes requiring out-of-pocket capital to upgrade, Equora participants deposit strictly once ($30 on Slot 1) and receive milestone bounties as pure upside!
+      </div>
+    </div>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 8 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">TECH & NON-TECH GUIDE | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">8. Real-World Scenario Walkthrough: Tech &amp; Non-Tech Guide</div>
+    <div class="section-subtitle">Concrete Case Study Demonstrating Exact Node Fills, Downline Eligibility &amp; Infinite Recycling</div>
+  </div>
+
+  <p>
+    To make the Equora Protocol 100% understandable for both non-technical community members and blockchain engineers, consider this concrete step-by-step scenario featuring <strong>John (YOU, Board Owner)</strong>, his sponsor <strong>Sarah</strong>, and downlines <strong>Alice</strong> and <strong>Bob</strong>:
+  </p>
+
+  <!-- NARRATIVE STEP CARDS -->
+  <div class="card-grid grid-2">
+    <div class="info-card highlight">
+      <div class="info-card-title">Step 1: John Joins &amp; Enters Tree ($30 One-Time)</div>
+      <div class="info-card-desc">
+        John deposits $30.00 once on Slot 1. He invites <strong>Alice</strong> (takes position <strong>P1</strong>) and <strong>Bob</strong> (takes position <strong>P2</strong>). Because P1 and P2 are on Tier 1, their deposits ($60 total) go 100% to John's sponsor (Sarah). John now has 2 direct referrals and is <strong>permanently qualified</strong> to earn!
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Step 2: Referral Qualification Status</div>
+      <div class="info-card-desc">
+        &bull; <strong>John:</strong> Has 2 referrals (Alice, Bob) &rarr; <span style="color:#166534; font-weight:bold;">QUALIFIED</span>.<br>
+        &bull; <strong>Alice:</strong> Refers 2 friends immediately &rarr; <span style="color:#166534; font-weight:bold;">QUALIFIED (&ge; 2 refs)</span>.<br>
+        &bull; <strong>Bob:</strong> Has referred 0 friends so far &rarr; <span style="color:#991b1b; font-weight:bold;">UNQUALIFIED (&lt; 2 refs)</span>.
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETE 14-NODE WALKTHROUGH TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th style="width: 10%;">Node</th>
+        <th style="width: 14%;">Deposit</th>
+        <th style="width: 20%;">Direct Beneficiary</th>
+        <th style="width: 32%;">Exact Execution &amp; Qualification Logic</th>
+        <th style="width: 24%;">Financial Outcome</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>P1, P2</strong></td>
+        <td>$30 + $30 = $60</td>
+        <td>Sarah (John's Sponsor)</td>
+        <td>Tier 1 nodes route 100% to immediate sponsor.</td>
+        <td>Sarah earns $60.00 (200%).</td>
+      </tr>
+      <tr style="background:#f0fdf4;">
+        <td><strong>P3, P6</strong></td>
+        <td>$30 + $30 = $60</td>
+        <td><strong>John (Board Owner)</strong></td>
+        <td>Direct board owner cashflow nodes. John is qualified (&ge; 2 refs).</td>
+        <td><strong style="color:#166534;">John earns $60.00 instantly.</strong></td>
+      </tr>
+      <tr style="background:#eff6ff;">
+        <td><strong>P4, P5</strong></td>
+        <td>$30 + $30 = $60</td>
+        <td><strong>4 Automated Protocol Pools</strong></td>
+        <td>Both deposits go directly to 4 pools. STAGE 1: <strong>AUTONOMOUSLY UNLOCKS &amp; RESERVES SLOT 2</strong> for John!</td>
+        <td><strong style="color:#0284c7;">Slot 2 Reserved ($0 cost).</strong> Pools get $60. Awaits 14-node completion.</td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>P7</strong></td>
+        <td>$30.00</td>
+        <td><strong>Alice (P1 Downline)</strong></td>
+        <td>Contract checks Tier 1 downlines (Alice &amp; Bob). Alice has &ge; 2 refs; Bob has 0 refs. Money pays Alice!</td>
+        <td><strong style="color:#7c3aed;">Alice earns $30.00 directly!</strong> Bob gets $0.</td>
+      </tr>
+      <tr style="background:#f0fdf4;">
+        <td><strong>P8, P9</strong></td>
+        <td>$30 + $30 = $60</td>
+        <td><strong>John (Board Owner)</strong></td>
+        <td>Direct board owner cashflow nodes. John is qualified (&ge; 2 refs).</td>
+        <td><strong style="color:#166534;">John earns $60.00 instantly.</strong></td>
+      </tr>
+      <tr style="background:#faf5ff;">
+        <td><strong>P10</strong></td>
+        <td>$30.00</td>
+        <td><strong>Alice or Split / Pools</strong></td>
+        <td>If Bob is still unqualified, Alice gets $30. If Bob reached 2 refs, Alice &amp; Bob split $15 each. If neither, goes to 4 Pools.</td>
+        <td>Conditional downline support or 100% to 4 Pools.</td>
+      </tr>
+      <tr style="background:#f0fdf4;">
+        <td><strong>P11, P12</strong></td>
+        <td>$30 + $30 = $60</td>
+        <td><strong>John (Board Owner)</strong></td>
+        <td>Direct board owner cashflow nodes. John is qualified (&ge; 2 refs).</td>
+        <td><strong style="color:#166534;">John earns $60.00 instantly.</strong></td>
+      </tr>
+      <tr style="background:#fdf2f8;">
+        <td><strong>P13</strong></td>
+        <td>$30.00</td>
+        <td>Downline Waterfall / Pools</td>
+        <td>Checks P3 &rarr; P4 &rarr; P5 &rarr; P6 sequentially for &ge; 2 referrals. First qualified wins; if none, routes to 4 Pools Vault.</td>
+        <td>First qualified downline gets $30 (or Pools Vault).</td>
+      </tr>
+      <tr style="background:#fef2f2;">
+        <td><strong>P14</strong></td>
+        <td>$30.00</td>
+        <td><strong>4 Pools + Recycle + Live Slot 2</strong></td>
+        <td>Deposit fuels 4 Pools. STAGE 2: <strong>14/14 complete!</strong> Slot 1 recycles under Sarah, and <strong>SLOT 2 TURNS LIVE</strong>!</td>
+        <td><strong style="color:#b91c1c;">Slot 1 ($180 ROI) resets</strong> &amp; Slot 2 starts earning ($360/cyc)!</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- TOTAL SUMMARY CALLOUT -->
+  <div class="theory-box" style="border-left-color: #059669; background: #f0fdf4; margin-top: 2px; padding: 4.5px 8px;">
+    <strong>FINAL AUDIT &amp; TWO-STAGE ESCALATION RATIONALE FOR JOHN (YOU):</strong><br>
+    John deposited strictly <strong>$30.00 USD once</strong>. He collected direct cashflows from <strong>6 nodes (P3, P6, P8, P9, P11, P12) = $180.00 USD (600% ROI)</strong>. At P4+P5, Slot 2 was unlocked &amp; reserved at $0 cost. However, Slot 2 remained in standby until Node P14 filled: this guaranteed that John completed his entire Slot 1 board, fully supported his downlines Alice and Bob, and collected his full $180 cashflow. Upon P14 arrival, Slot 1 recycled and Slot 2 formally activated for live placements — now Alice and his team naturally follow John into Slot 2 ($360/cycle)!
+  </div>
+
+  <!-- REAL-TIME PROTOCOL NOTIFICATIONS & UI EVENT STREAM -->
+  <div style="margin-top: 3px; margin-bottom: 2px;">
+    <div style="font-size: 7.6pt; font-weight: 800; color: #0f172a; margin-bottom: 1px;">
+      Real-Time Smart Contract Notifications &amp; UI Event Stream (equorafimatrix.com)
+    </div>
+    <div style="font-size: 6.7pt; color: #475569; margin-bottom: 2px;">
+      Every protocol action emits an EVM log event, instantly updating the participant's dashboard on <code>equorafimatrix.com</code>:
+    </div>
+  </div>
+
+  <table class="institutional-table" style="font-size: 6.1pt; margin-top: 1px; margin-bottom: 2px;">
+    <thead>
+      <tr>
+        <th style="width: 20%;">Event / Trigger</th>
+        <th style="width: 25%;">On-Chain EVM Signature</th>
+        <th style="width: 37%;">Dashboard Alert &amp; Banner Display</th>
+        <th style="width: 18%;">Execution Cadence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Slot Auto-Unlock</strong></td>
+        <td><code>NextSlotUnlocked(user, 2)</code></td>
+        <td><em>"Slot 2 Unlocked &amp; Reserved at $0 via Nodes P4 &amp; P5! (Pending 14-Node Board Completion)."</em></td>
+        <td>Instant on P4 + P5 arrival</td>
+      </tr>
+      <tr>
+        <td><strong>Slot Live Activation</strong></td>
+        <td><code>SlotActivatedForEarning(user, 2)</code></td>
+        <td><em>"Board 1 100% Completed (14/14)! Slot 2 Formally Activated for Live Placements &amp; Cashflow."</em></td>
+        <td>Instant on P14 arrival</td>
+      </tr>
+      <tr>
+        <td><strong>Direct Board Cashflow</strong></td>
+        <td><code>DirectCashflowPaid(user, $30)</code></td>
+        <td><em>"Instant Cashflow Received! $30.00 USD credited directly to your Web3 wallet."</em></td>
+        <td>Instant on 6 cashflow nodes</td>
+      </tr>
+      <tr>
+        <td><strong>DAO 35% Instant Push</strong></td>
+        <td><code>DaoInstantPushStreamed(amount)</code></td>
+        <td><em>"35% Protocol Pool push streamed live block-by-block to active DAO members."</em></td>
+        <td>Instant on P4, P5, P14 arrival</td>
+      </tr>
+      <tr>
+        <td><strong>Magic Blind Box Timer</strong></td>
+        <td><code>BlindBoxTimerStarted(user, 90d)</code></td>
+        <td><em>"Magic Blind Box 3-Month Vesting Initialized! Refer 2 to boost reward to $0.80."</em></td>
+        <td>On account registration</td>
+      </tr>
+      <tr>
+        <td><strong>Rank Milestone Bounty</strong></td>
+        <td><code>RankMilestoneDisbursed(user, rank)</code></td>
+        <td><em>"Alpha Level 3 Achieved! Instant one-time rank milestone bounty credited."</em></td>
+        <td>Instant upon reaching rank</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 9 OF 10</div>
+    </div>
+    
+</div>
+
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">VERIFIED SPECIFICATION | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">9. TrobChain On-Chain Infrastructure, Security &amp; Ratification</div>
+    <div class="section-subtitle">Sub-Second Finality, Non-Custodial Architecture &amp; Formal Protocol Certification</div>
+  </div>
+
+  <p>
+    The Equora Matrix Protocol is engineered exclusively for deployment on the <strong>TrobChain Mainnet</strong>, an institutional-grade Layer-1 blockchain delivering Ethereum-virtual-machine compatibility with sub-second finality and near-zero transaction fees:
+  </p>
+
+  <!-- TECHNICAL SPECS GRID -->
+  <div class="card-grid grid-4">
+    <div class="info-card">
+      <div class="info-card-title">Network</div>
+      <div class="info-card-desc"><strong>TrobChain Mainnet</strong> (EVM Layer 1)</div>
+    </div>
+    <div class="info-card highlight">
+      <div class="info-card-title">Block Time</div>
+      <div class="info-card-desc"><strong>Sub-Second</strong> (~1.2s Finality)</div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Average Gas</div>
+      <div class="info-card-desc"><strong>&lt; $0.0001 USD</strong> per transaction</div>
+    </div>
+    <div class="info-card warning">
+      <div class="info-card-title">Contract Peg</div>
+      <div class="info-card-desc"><strong>$0.056 USD</strong> / 1 TROB Coin</div>
+    </div>
+  </div>
+
+  <!-- SECURITY ARCHITECTURE -->
+  <div class="info-card">
+    <div class="info-card-title" style="color: #0f172a;">
+      Smart Contract Security Architecture &amp; Formal Invariants
+    </div>
+    <div class="info-card-desc">
+      <ul style="margin: 2px 0 2px 14px; padding: 0;">
+        <li><strong>Single Capital Deposit Invariant:</strong> Contract strictly guarantees that participants deposit only once ($30 in Slot 1). All 11 higher slots are unlocked via on-chain contract events triggered by nodes P4 and P5.</li>
+        <li><strong>Zero Custody Invariant:</strong> The Equora smart contract maintains zero internal liquidity holding balances. 100% of incoming funds are dispersed atomically within the exact same EVM transaction block.</li>
+        <li><strong>2-Referral Gate Verification:</strong> Meritocratic anti-Sybil checks verify direct referral counts before disbursing matrix and downline distributions, routing all unearned leakage to the 4 Protocol Pools Vault.</li>
+        <li><strong>Re-Entrancy Protection:</strong> Hardened with OpenZeppelin-standard re-entrancy locks on all external execution endpoints, preventing recursive drain vulnerabilities.</li>
+        <li><strong>Immutable Referral Registry:</strong> Referral links, parent-child tree linkages, and 5-digit cryptographic codes are permanently anchored to the blockchain state and cannot be modified by administrators.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RATIFICATION BADGE & SEAL -->
+  <div style="background: #0f172a; color: #ffffff; border-radius: 8px; padding: 7px 11px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <div style="font-size: 8.8pt; font-weight: 800; color: #38bdf8; margin-bottom: 2px;">
+        FORMAL RATIFICATION &amp; GOVERNANCE SEAL
+      </div>
+      <div style="font-size: 6.6pt; color: #cbd5e1; max-width: 440px; line-height: 1.30;">
+        This document certifies the mathematical, architectural, and financial specifications of the Equora Matrix Protocol Version 6.2 as fully ratified by the Genesis DAO Council.
+      </div>
+    </div>
+    <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 11px;">
+      <div style="font-size: 7pt; font-weight: 800; color: #ffffff;">STATUS: MAINNET ACTIVE</div>
+      <div style="font-size: 6.4pt; color: #38bdf8;">OCTOBER 2026 EDITION</div>
+      <div style="font-size: 6.1pt; color: #94a3b8;">EQUORA FOUNDATION</div>
+    </div>
+  </div>
+
+  <!-- OFFICIAL REFERENCES TABLE -->
+  <table class="institutional-table">
+    <thead>
+      <tr>
+        <th>Protocol Resource</th>
+        <th>Official Location / URI</th>
+        <th>Operational Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Equora Matrix Web dApp</strong></td>
+        <td><code>https://equorafimatrix.com</code></td>
+        <td>Active Mainnet Deployment</td>
+      </tr>
+      <tr>
+        <td><strong>TrobChain Block Explorer</strong></td>
+        <td><code>https://scan.trobchain.com</code></td>
+        <td>Live EVM Verification</td>
+      </tr>
+      <tr>
+        <td><strong>Smart Contract Core</strong></td>
+        <td>EquoraMatrixEngine &bull; EVM Solidity 0.8.20+</td>
+        <td>100% Non-Custodial &bull; Verified</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 10 OF 10</div>
+    </div>
+    
+</div>
+
+</body>
+</html>

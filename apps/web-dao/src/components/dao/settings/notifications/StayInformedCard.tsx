@@ -34,7 +34,7 @@ export default function StayInformedCard() {
       {/* ================= MOBILE VIEW (lg:flex) ================= */}
       <div className="lg:hidden rounded-2xl bg-white border border-[#E2ECF9] p-4 flex items-center justify-between shadow-xs font-jakarta relative overflow-hidden">
         {/* Left Info */}
-        <div className="flex items-start gap-3 z-10 max-w-[240px]">
+        <div className="flex items-start gap-3 z-10 flex-1 min-w-0 pr-2">
           <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[#155EEF] shrink-0">
             <Bell className="w-5 h-5" />
           </div>

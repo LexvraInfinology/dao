@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #cbd5e1;
+    font-size: 7.9pt;
+    line-height: 1.32;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    padding: 9.5mm 11.5mm 9.5mm 11.5mm;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0 auto 10px auto;
+  }
+  @media print {
+    body { background: transparent; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* LEXVRA WATERMARK */
+  .page-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 94pt;
+    font-weight: 900;
+    color: #0f172a;
+    opacity: 0.045;
+    letter-spacing: 16px;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .page-watermark.dark {
+    color: #ffffff;
+    opacity: 0.038;
+  }
+
+  /* HEADER & FOOTER */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.2px solid #e2e8f0;
+    padding-bottom: 3.5px;
+    margin-bottom: 1px;
+    height: 26px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-brand img {
+    height: 19px;
+    object-fit: contain;
+  }
+  .header-brand-title {
+    font-size: 8.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 3.5px;
+    margin-top: auto;
+    height: 18px;
+    font-size: 6.6pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADINGS */
+  .section-title {
+    font-size: 11.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 1px 0;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    display: inline-block;
+    width: 3.5px;
+    height: 13px;
+    background: #1d4ed8;
+    border-radius: 2px;
+  }
+  .section-subtitle {
+    font-size: 7.3pt;
+    color: #64748b;
+    margin: 0 0 3px 0;
+    font-weight: 500;
+  }
+
+  /* CONTENT BLOCKS */
+  p {
+    margin: 0 0 2.5px 0;
+    color: #334155;
+    text-align: justify;
+    line-height: 1.31;
+    font-size: 7.7pt;
+  }
+  .card-grid {
+    display: grid;
+    gap: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4.5px 7px;
+  }
+  .info-card.highlight {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+  .info-card.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .info-card.warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .info-card.purple {
+    background: #faf5ff;
+    border-color: #e9d5ff;
+  }
+  .info-card.rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .info-card-title {
+    font-size: 7.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .info-card-desc {
+    font-size: 6.6pt;
+    color: #475569;
+    line-height: 1.28;
+  }
+
+  /* INSTITUTIONAL TABLES */
+  .institutional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.6pt;
+    margin: 1px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .institutional-table th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 3.5px 5.5px;
+    text-align: left;
+    border: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 6.1pt;
+    letter-spacing: 0.3px;
+  }
+  .institutional-table td {
+    padding: 2.8px 5px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  .institutional-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+  .institutional-table tr.total-row {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+  }
+  .institutional-table tr.total-row td {
+    color: #ffffff !important;
+    border-color: #1e293b;
+  }
+
+  /* THEORETICAL CALLOUT */
+  .theory-box {
+    background: #f1f5f9;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 0 5px 5px 0;
+    padding: 4.5px 7.5px;
+    font-size: 7pt;
+    color: #1e293b;
+    line-height: 1.30;
+    position: relative;
+    z-index: 2;
+  }
+  .theory-box code {
+    background: #e2e8f0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.6pt;
+    color: #0f172a;
+  }
+
+  /* CODE BOX */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.3pt;
+    line-height: 1.25;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* COVER STYLING - INSTITUTIONAL EDITION */
+  .cover {
+    background: #090e17;
+    color: #ffffff;
+    padding: 12mm 14mm 10mm 14mm;
+    justify-content: space-between;
+    position: relative;
+    border: 2px solid #1e293b;
+    outline: 1px solid #334155;
+    outline-offset: -5px;
+  }
+  .cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-badge {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .cover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-emblem-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 7px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 40px;
+    padding: 5px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(56, 189, 248, 0.15);
+  }
+  .cover-emblem-icon {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.55));
+  }
+  .cover-emblem-x {
+    color: #38bdf8;
+    font-size: 13pt;
+    font-weight: 800;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .cover-cube {
+    height: 56px;
+    margin-bottom: 6px;
+  }
+  /* COVER PAGE TECHNICAL SPEC TABLE (EXPLICIT DARK STYLING - NEVER LIGHT ZEBRA) */
+  .cover-spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.4pt;
+    margin-top: 3px;
+    background: #0f172a !important;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-spec-table tr {
+    background: #0f172a !important;
+  }
+  .cover-spec-table tr:nth-child(even) {
+    background: #111d38 !important;
+  }
+  .cover-spec-table td {
+    padding: 3.5px 7px;
+    border: 1px solid #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+  .cover-spec-label {
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    width: 22%;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .cover-spec-val {
+    color: #f8fafc !important;
+    font-weight: 600;
+    width: 28%;
+  }
+  .cover-spec-val.peg-highlight {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-left: 2px solid #38bdf8 !important;
+  }
+  .cover-h1 {
+    font-size: 23pt;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+    line-height: 1.12;
+    margin-bottom: 2px;
+  }
+  .cover-h2 {
+    font-size: 8.3pt;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cover-desc {
+    max-width: 620px;
+    font-size: 7.4pt;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .cover-pill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 6.6pt;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+  .cover-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .cover-stat-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-top: 2.5px solid #0284c7;
+    border-radius: 4px;
+    padding: 6px 5px;
+    text-align: center;
+  }
+  .cover-stat-val {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 1px;
+  }
+  .cover-stat-lbl {
+    font-size: 6.1pt;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .cover-abstract-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 3.5px solid #38bdf8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 6.8pt;
+    color: #cbd5e1;
+    line-height: 1.33;
+    text-align: justify;
+    margin-bottom: 5px;
+  }
+  .cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    font-size: 6.4pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+    body { background: transparent; padding: 0; margin: 0; }
+    .page { margin: 0; }
+  </style>
+</head>
+<body>
+  
+<div class="page cover">
+  <div class="page-watermark dark">LEXVRA</div>
+  <div class="cover-header">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; gap:7px; background:rgba(15,23,42,0.8); border:1px solid #1e293b; padding:3px 10px; border-radius:6px;">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:22px; width:22px; object-fit:contain; filter:drop-shadow(0 0 6px rgba(56,189,248,0.7));" alt="Equora" />
+        <span style="font-size:9pt; font-weight:900; color:#ffffff; letter-spacing:0.8px;">EQUORA<span style="color:#38bdf8;">MATRIX</span></span>
+        <span style="color:#334155; font-size:8pt; margin:0 1px;">|</span>
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idG9wRmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMxRDRFRDgiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsZWZ0RmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwQTFFNEEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJyaWdodEZhY2VUcm9iIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYwQTVGQSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idEhpZ2hsaWdodFRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRkZGRkZGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNCQUU2RkQiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDYgOTAsMjggOTAsNzIgNTAsOTQgMTAsNzIgMTAsMjgiIGZpbGw9IiMwNzFBNEEiIHN0cm9rZT0iIzI1NjNFQiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCwxMSA4NSwyOS41IDUwLDQ4IDE1LDI5LjUiIGZpbGw9InVybCgjdG9wRmFjZVRyb2IpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIxNSwzMS41IDQ5LDQ5LjUgNDksODkgMTUsNzAiIGZpbGw9InVybCgjbGVmdEZhY2VUcm9iKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNTEsNDkuNSA4NSwzMS41IDg1LDcwIDUxLDg5IiBmaWxsPSJ1cmwoI3JpZ2h0RmFjZVRyb2IpIi8+CiAgPHBhdGggZD0iTTMwIDMyIEw3MCAzMiBMNzAgNDIgTDU2IDQyIEw1NiA3NiBMNDQgNzYgTDQ0IDQyIEwzMCA0MiBaIiBmaWxsPSJ1cmwoI3RIaWdobGlnaHRUcm9iKSIgZmlsdGVyPSJkcm9wLXNoYWRvdygwcHggMnB4IDRweCByZ2JhKDAsMCwwLDAuNCkpIi8+Cjwvc3ZnPgo=" style="height:17px; width:17px; object-fit:contain;" alt="TrobChain" />
+        <span style="font-size:7pt; font-weight:700; color:#94a3b8; letter-spacing:0.5px;">TROBCHAIN L1</span>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+      <div class="cover-badge" style="background:#0f172a; border-color:#334155; color:#94a3b8;">DOC REF: EQ-MTX-V6.2</div>
+      <div class="cover-badge">MAINNET MASTER SPECIFICATION</div>
+    </div>
+  </div>
+
+  <div class="cover-hero">
+    <div class="cover-emblem-badge">
+      <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" class="cover-emblem-icon" alt="Equora Protocol" />
+      <div class="cover-emblem-x">&times;</div>
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idG9wRmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMxRDRFRDgiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJsZWZ0RmFjZVRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwQTFFNEEiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJyaWdodEZhY2VUcm9iIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYwQTVGQSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idEhpZ2hsaWdodFRyb2IiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRkZGRkZGIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNCQUU2RkQiIC8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDYgOTAsMjggOTAsNzIgNTAsOTQgMTAsNzIgMTAsMjgiIGZpbGw9IiMwNzFBNEEiIHN0cm9rZT0iIzI1NjNFQiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCwxMSA4NSwyOS41IDUwLDQ4IDE1LDI5LjUiIGZpbGw9InVybCgjdG9wRmFjZVRyb2IpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIxNSwzMS41IDQ5LDQ5LjUgNDksODkgMTUsNzAiIGZpbGw9InVybCgjbGVmdEZhY2VUcm9iKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNTEsNDkuNSA4NSwzMS41IDg1LDcwIDUxLDg5IiBmaWxsPSJ1cmwoI3JpZ2h0RmFjZVRyb2IpIi8+CiAgPHBhdGggZD0iTTMwIDMyIEw3MCAzMiBMNzAgNDIgTDU2IDQyIEw1NiA3NiBMNDQgNzYgTDQ0IDQyIEwzMCA0MiBaIiBmaWxsPSJ1cmwoI3RIaWdobGlnaHRUcm9iKSIgZmlsdGVyPSJkcm9wLXNoYWRvdygwcHggMnB4IDRweCByZ2JhKDAsMCwwLDAuNCkpIi8+Cjwvc3ZnPgo=" class="cover-emblem-icon" alt="TrobChain Network" />
+    </div>
+    <div style="font-size:7.2pt; font-weight:800; color:#94a3b8; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase;">
+      DECENTRALIZED AUTONOMOUS PROTOCOL SPECIFICATION
+    </div>
+    <div class="cover-h1">EQUORA MATRIX PROTOCOL</div>
+    <div class="cover-h2">14-Node Recursive State Machine &amp; Closed-Loop Liquidity Engine</div>
+    
+    <div class="cover-desc">
+      Rigorous mathematical and economic specification of the single $30.00 lifetime entry matrix architecture. Features autonomous P4+P5 tier escalation at $0.00 out-of-pocket, direct 6-node owner cashflow (600% ROI), meritocratic 2-referral anti-Sybil routing, and zero-leakage community protocol pools pegged at $0.056 USD/TROB.
+    </div>
+
+    <div class="cover-pills">
+      <div class="cover-pill">Single $30 Lifetime Entry</div>
+      <div class="cover-pill">Autonomous $0 Upgrades (P4+P5)</div>
+      <div class="cover-pill">600% Board Owner Cashflow ($180)</div>
+      <div class="cover-pill">Meritocratic 2-Referral Gate</div>
+      <div class="cover-pill">Closed-Loop Zero-Leakage Pools</div>
+      <div class="cover-pill">Null-Key Autonomous Invariant</div>
+    </div>
+
+    <div class="cover-stat-grid">
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">$30.00 USD</div>
+        <div class="cover-stat-lbl">ONE-TIME LIFETIME ENTRY</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">600% ROI</div>
+        <div class="cover-stat-lbl">$180 DIRECT CASHFLOW (6 NODES)</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">P4 + P5</div>
+        <div class="cover-stat-lbl">AUTO-UNLOCKS NEXT TIER ($0)</div>
+      </div>
+      <div class="cover-stat-box">
+        <div class="cover-stat-val">$2,160 USD</div>
+        <div class="cover-stat-lbl">12-SLOT WAVE CASHFLOW (72X)</div>
+      </div>
+    </div>
+
+    <div class="cover-abstract-box">
+      <strong style="color:#ffffff;">EXECUTIVE TECHNICAL ABSTRACT:</strong> Traditional matrix schemes fail from the <em>Matrix Attrition Trilemma</em>—exponential out-of-pocket upgrades cause participant drop-off, freezing capital velocity. Equora resolves this through a self-funding deterministic state machine where a participant deposits strictly once ($30.00 USD on Slot 1). Advancement across Slots 2 through 12 is 100% autonomous, triggered by the arrival of nodes <code>P4</code> and <code>P5</code>, whose capital ($60.00) fuels the 4 Protocol Pools while unlocking the next tier at $0.00 out-of-pocket. Six specific nodes (<code>P3, P6, P8, P9, P11, P12</code>) deliver instant 600% ROI direct cashflows ($180.00) to the qualified owner, while downline nodes (<code>P7, P10, P13</code>) enforce meritocratic 2-referral anti-Sybil checks. Node <code>P14</code> funds community pools and triggers perpetual board re-entry without ongoing subscription costs.
+    </div>
+
+    <table class="cover-spec-table">
+      <tr>
+        <td class="cover-spec-label">CONSENSUS LAYER</td>
+        <td class="cover-spec-val">TrobChain Layer-1 EVM</td>
+        <td class="cover-spec-label">SMART CONTRACT</td>
+        <td class="cover-spec-val">EquoraMatrixEngine (Solidity 0.8.20+)</td>
+      </tr>
+      <tr>
+        <td class="cover-spec-label">CONSERVATION LAW</td>
+        <td class="cover-spec-val">Sum V(P_i) = 14 &times; V_slot (Closed-Loop)</td>
+        <td class="cover-spec-label" style="color:#67e8f9 !important;">PLEDGED VALUATION PEG</td>
+        <td class="cover-spec-val peg-highlight">$0.056 USD / 1 TROB Coin (Fixed Invariant)</td>
+      </tr>
+      <tr>
+        <td class="cover-spec-label">GOVERNANCE KEY</td>
+        <td class="cover-spec-val">Renounced Null Key (0x0000...0000)</td>
+        <td class="cover-spec-label">OFFICIAL DOMAIN</td>
+        <td class="cover-spec-val">https://equorafimatrix.com</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="cover-footer">
+    <div>OFFICIAL GOVERNANCE SPECIFICATION &bull; RATIFIED BY EQUORA DAO</div>
+    <div>SMART CONTRACT VERIFIED ON SCAN.TROBCHAIN.COM</div>
+    <div>OCTOBER 2026 EDITION</div>
+  </div>
+</div>
+
+</body>
+</html>

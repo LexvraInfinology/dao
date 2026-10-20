@@ -56,9 +56,9 @@ export default function MemberLoungePage() {
   const isCapped           = Boolean(lounge?.isCapped);
   const claimableDividends = lounge?.claimableDividendsUsd ?? 0;
   const earningsCapUsd     = (lounge?.earningsCapUsd && lounge.earningsCapUsd >= 300) ? lounge.earningsCapUsd : 1500;
-  const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93) : 0;
+  const exactEarnedFromPos = lounge?.position ? calculateMemberEarnedUsd(lounge.position, lounge.status, 93, lounge?.retopupCount ?? 0, lounge?.pushedBtt ?? 0) : 0;
   const pushedUsd          = isCapped ? earningsCapUsd : (lounge?.totalReceivedUsd ?? lounge?.pushedUsd ?? (exactEarnedFromPos > 0 ? exactEarnedFromPos : 0));
-  const cyclePushedUsd     = isCapped ? earningsCapUsd : (lounge?.currentCycleUsd ?? (lounge?.retopupCount ? 0 : pushedUsd));
+  const cyclePushedUsd     = isCapped ? earningsCapUsd : (typeof lounge?.currentCycleUsd === 'number' ? lounge.currentCycleUsd : (lounge?.retopupCount ? 0 : pushedUsd));
   const capProgressPct     = isCapped ? 100 : (lounge?.capProgressPct !== undefined ? lounge.capProgressPct : (earningsCapUsd > 0 ? Math.min(100, Math.max(0, (cyclePushedUsd / earningsCapUsd) * 100)) : 0));
 
   return (
@@ -83,7 +83,7 @@ export default function MemberLoungePage() {
                 </span>
               </div>
               <p className="text-xs text-[#4F6184] leading-relaxed">
-                You have reached the maximum 5X return ($1,500.00 USD). While capped, new dividends bypass this seat and are automatically split among the other {lounge?.activeMembersCount ? lounge.activeMembersCount - 1 : 84} active council members. Any surplus beyond $1,500 was redistributed on-chain. Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend payouts.
+                You have reached the maximum 5X return ($1,500.00 USD). While capped, new dividends bypass this seat and are automatically split among the other {lounge?.activeMembersCount ? lounge.activeMembersCount - 1 : 86} active council members. Any surplus beyond $1,500 was redistributed on-chain. Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend payouts.
               </p>
             </div>
           </div>
@@ -103,13 +103,14 @@ export default function MemberLoungePage() {
           <div className="xl:col-span-5 space-y-6">
             <ClaimableDividendsCard
               initialAmount={claimableDividends}
-              pushedAmountUsd={pushedUsd}
-              pushedAmountTrob={lounge?.pushedBtt ?? (pushedUsd / livePrice)}
-              priceUsd={livePrice}
+              pushedAmountUsd={cyclePushedUsd}
+              pushedAmountTrob={lounge?.pushedBtt ?? Math.round((cyclePushedUsd / 0.056) * 100) / 100}
+              priceUsd={0.056}
               walletAddress={activeAddress ?? undefined}
               isCapped={lounge?.isCapped}
               poolClaimableTrob={lounge?.poolClaimableTrob}
               fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
+              loading={loading}
             />
             <EarningsCapCard
               variant="desktop"
@@ -126,6 +127,7 @@ export default function MemberLoungePage() {
               bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
               newActivationsSinceCap={lounge?.newActivationsSinceCap}
               cappedAt={lounge?.cappedAt}
+              loading={loading}
             />
           </div>
         </div>
@@ -149,6 +151,7 @@ export default function MemberLoungePage() {
           bypassedToCouncilUsd={lounge?.bypassedToCouncilUsd}
           newActivationsSinceCap={lounge?.newActivationsSinceCap}
           cappedAt={lounge?.cappedAt}
+          loading={loading}
         />
         <ClaimableDividendsCard
           initialAmount={claimableDividends}
@@ -159,6 +162,7 @@ export default function MemberLoungePage() {
           isCapped={lounge?.isCapped}
           poolClaimableTrob={lounge?.poolClaimableTrob}
           fallbackClaimableTrob={lounge?.fallbackClaimableTrob}
+          loading={loading}
         />
         <IncomeChannelsCard loungeData={lounge} />
       </div>

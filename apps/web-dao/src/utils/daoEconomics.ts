@@ -70,23 +70,9 @@ export function calculateMemberCycleAndLifetime(
   }
 
   // Active member in initial cycle
-  let cycleEarnedUsd = 0;
-  let capPct = 0;
-
-  if (currentCyclePushedTrob > 0) {
-    // Exact smart contract earnings truth
-    cycleEarnedUsd = Math.min(1499.99, Math.round(currentCyclePushedTrob * CONTRACT_TROB_PEG * 100) / 100);
-    capPct = Math.min(99.9, Math.round((currentCyclePushedTrob / CONTRACT_EARNINGS_CAP_TROB) * 1000) / 10);
-  } else {
-    // Theoretical 300 / N model
-    let totalTheoretical = 0;
-    const maxK = Math.max(position, totalActiveSeats);
-    for (let k = position; k <= maxK; k++) {
-      totalTheoretical += 300 / k;
-    }
-    cycleEarnedUsd = Math.min(1499.99, Math.round(totalTheoretical * 100) / 100);
-    capPct = Math.min(99.9, Math.round((cycleEarnedUsd / 1500) * 1000) / 10);
-  }
+  // Exact smart contract earnings truth (zero synthetic theoretical estimates)
+  const cycleEarnedUsd = Math.min(1499.99, Math.round(currentCyclePushedTrob * CONTRACT_TROB_PEG * 100) / 100);
+  const capPct = Math.min(99.9, Math.round((currentCyclePushedTrob / CONTRACT_EARNINGS_CAP_TROB) * 1000) / 10);
 
   return {
     currentCycleUsd: cycleEarnedUsd,

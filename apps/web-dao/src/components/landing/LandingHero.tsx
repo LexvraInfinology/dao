@@ -17,7 +17,7 @@ export const LandingHero: React.FC = () => {
   const activeAddress = wallet.base58Address || wallet.hexAddress;
   const { data: memberData, loading: memberLoading } = useDaoMember(activeAddress);
 
-  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
   const isUnderfunded = Boolean(memberData?.status === 'underfunded' || memberData?.underfunded);
   const isMember = Boolean(memberData?.isMember && Number(memberData?.position) > 0 && !isUnderfunded);
   const seatPos = memberData?.position ?? null;
@@ -39,19 +39,17 @@ export const LandingHero: React.FC = () => {
     <section className="relative pt-[72px] sm:pt-[84px] lg:pt-[92px] pb-6 sm:pb-10 lg:pb-16 overflow-hidden min-h-[480px] min-[360px]:min-h-[520px] sm:min-h-[560px] lg:min-h-[620px] flex flex-col justify-between bg-[#EBF3FC] border-b border-slate-200/80">
       {/* Background Media Container — Preserves scene composition without aggressive cropping or zooming */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden max-w-full">
-        {/* Instant Fallback WebP Image (87 KB) — Commented out as requested, video plays in continuous loop */}
-        {/*
+        {/* Instant Fallback WebP Image (87 KB) for low-power mobile engines */}
         <Image
           src="/landing/hero-bg.webp"
           alt="EQUORA Genesis Council Overview"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[84%_bottom] sm:object-[76%_center] lg:object-[78%_center] xl:object-right transition-opacity duration-700"
+          className="object-cover object-[72%_bottom] sm:object-[76%_center] lg:object-right transition-opacity duration-700 -z-10"
         />
-        */}
 
-        {/* Web-Optimized 1080p Video — Continuous loop playback, anchored from most right side */}
+        {/* Web-Optimized 1080p Video — Seamless loop playback, puppy and character cleanly visible on right */}
         <video
           ref={videoRef}
           autoPlay
@@ -59,8 +57,8 @@ export const LandingHero: React.FC = () => {
           muted
           playsInline
           preload="auto"
-          onEnded={() => videoRef.current?.play().catch(() => {})}
-          className="w-full h-full object-cover object-right sm:object-right lg:object-right xl:object-right max-w-full opacity-100"
+          poster="/landing/hero-bg.webp"
+          className="w-full h-full object-cover object-[72%_bottom] sm:object-[76%_center] lg:object-right xl:object-right max-w-full opacity-100"
         >
           <source
             src="/landing/hero-video-optimized.mp4"
@@ -71,30 +69,29 @@ export const LandingHero: React.FC = () => {
             type="video/mp4"
           />
         </video>
-
       </div>
 
       <div className="max-w-[1360px] mx-auto px-3.5 sm:px-8 lg:px-12 relative z-10 w-full flex-1 flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start lg:items-center flex-1">
-          {/* Left Column — Top-aligned text, with CTAs pushed to the very bottom */}
+          {/* Left Column — Top-aligned text on left sky area, keeping character & puppy clear on right */}
           <div className="lg:col-span-7 xl:col-span-6 text-left flex flex-col justify-between h-full min-h-[380px] min-[360px]:min-h-[420px] sm:min-h-[460px] lg:min-h-[500px]">
-            <div className="max-w-full sm:max-w-xl lg:max-w-2xl p-0 space-y-2.5 sm:space-y-4">
-              {/* Headline — Strong High-Contrast Razor Sharp Typography, Zero Background Blur */}
-              <h1 className="text-[24px] min-[360px]:text-[28px] sm:text-4xl lg:text-[50px] xl:text-[54px] font-black uppercase text-[#071437] text-left [text-shadow:0_1px_2px_rgba(255,255,255,0.9),0_0_1px_rgba(255,255,255,1)] flex flex-col gap-1 sm:gap-2 lg:gap-2.5 leading-[1.12] sm:leading-[1.1]">
+            <div className="max-w-[275px] min-[360px]:max-w-[310px] sm:max-w-xl lg:max-w-2xl p-0 space-y-2 sm:space-y-4">
+              {/* Headline — Strong High-Contrast Typography */}
+              <h1 className="text-[21px] min-[360px]:text-[24px] sm:text-4xl lg:text-[50px] xl:text-[54px] font-black uppercase text-[#071437] text-left [text-shadow:0_1px_2px_rgba(255,255,255,0.95),0_0_1px_rgba(255,255,255,1)] flex flex-col gap-0.5 sm:gap-2 lg:gap-2.5 leading-[1.14] sm:leading-[1.1]">
                 <span className="block">100 Seats.</span>
                 <span className="block text-[#155EEF]">One Council.</span>
                 <span className="block">A Shared Future.</span>
               </h1>
 
-              {/* Subtitle — Strong High-Contrast Bold Typography */}
-              <p className="text-[12.5px] min-[360px]:text-[13.5px] sm:text-base lg:text-[17px] text-[#0A1A2F] font-bold sm:font-semibold leading-relaxed sm:leading-[1.6] text-left [text-shadow:0_1px_1px_rgba(255,255,255,0.85)] max-w-xl">
+              {/* Subtitle — Positioned on left sky, leaving right half open for puppy & boy */}
+              <p className="text-[11.5px] min-[360px]:text-[12.5px] sm:text-base lg:text-[17px] text-[#0A1A2F] font-bold sm:font-semibold leading-relaxed sm:leading-[1.6] text-left [text-shadow:0_1px_1px_rgba(255,255,255,0.9)] max-w-xl">
                 Fixed sovereign positions with direct dividend distribution and governance rights.
                 Zero referrals, infinite protocol cash flow.
               </p>
             </div>
 
-            {/* CTAs — Positioned at the very bottom of the hero section so the character and artwork are completely unobstructed */}
-            <div className="flex items-center gap-2 sm:gap-3 mt-auto pt-16 min-[360px]:pt-20 sm:pt-24 lg:pt-8 w-auto">
+            {/* CTAs — Positioned on the left so the character and puppy on the right are completely unobstructed */}
+            <div className="flex items-center gap-2 sm:gap-3 mt-auto pt-6 min-[360px]:pt-10 sm:pt-24 lg:pt-8 w-auto">
               {isMemberLoading ? (
                 <div className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full font-semibold uppercase text-[10.5px] sm:text-xs tracking-wider text-[#0E62E4] bg-white/95 border border-blue-200 shadow-xs flex items-center justify-center gap-1.5 select-none">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />

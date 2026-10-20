@@ -102,6 +102,33 @@ body {
   transform: translateY(-2px);
 }
 
+/* ── Live Activity Sheer Glass on Mobile (reveals pointing boy & hand) ── */
+.activity-card-mobile {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.02) 80%, rgba(255, 255, 255, 0) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.40) !important;
+  backdrop-filter: blur(1px) !important;
+  -webkit-backdrop-filter: blur(1px) !important;
+}
+@media (min-width: 640px) {
+  .activity-card-mobile {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+}
+
+.activity-row-mobile {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.35) 45%, rgba(255, 255, 255, 0.05) 80%, rgba(255, 255, 255, 0) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+@media (min-width: 640px) {
+  .activity-row-mobile {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  }
+}
+
 .figma-glass-nav {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);

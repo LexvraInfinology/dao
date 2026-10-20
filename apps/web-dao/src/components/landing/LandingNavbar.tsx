@@ -112,7 +112,7 @@ export const LandingNavbar: React.FC = () => {
   const shortAddress = shortenAddress(displayAddress) || 'Connected';
   const { data: memberData, loading: memberLoading } = useDaoMember(displayAddress);
 
-  const isMemberLoading = Boolean(isConnected && displayAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(isConnected && displayAddress && memberLoading && !memberData);
   const isSeatMember = Boolean(
     memberData?.isMember ||
     (memberData?.position && memberData.position > 0) ||

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Bell,
   Sparkles,
@@ -37,14 +38,29 @@ interface DaoNotificationCenterProps {
   userSeat?: number | null;
   userAddress?: string | null;
   onOpenMatrixModal?: () => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  onClose?: () => void;
 }
 
 export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
   userSeat,
   userAddress,
   onOpenMatrixModal,
+  isOpen,
+  onToggle,
+  onClose,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isDropdownOpen = isOpen !== undefined ? isOpen : internalOpen;
+
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; right: number; isMobile: boolean }>({
+    top: 64,
+    right: 12,
+    isMobile: true,
+  });
+
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('equora_notification_sound') !== 'false';
@@ -55,73 +71,95 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Initialize notifications dynamically based on user's seat position
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = () => {
+    if (typeof window === 'undefined') return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setCoords({ top: 64, right: 12, isMobile: true });
+      return;
+    }
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: Math.round(rect.bottom + 8),
+        right: Math.round(Math.max(12, window.innerWidth - rect.right)),
+        isMobile: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isDropdownOpen]);
+
+  const handleToggle = () => {
+    if (onToggle) {
+      onToggle();
+    } else {
+      setInternalOpen((v) => !v);
+    }
+    if (!isDropdownOpen && soundEnabled) {
+      playNotificationChime();
+    }
+  };
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalOpen(false);
+    }
+  };
+
+  // Initialize concise notifications dynamically based on user's seat position
   useEffect(() => {
     const list: DaoNotification[] = [];
 
-    // 1. Root Matrix Leader waterfall priority for Seats 1–10 (Temporarily hidden as per user request)
-    /*
-    if (userSeat && userSeat >= 1 && userSeat <= 10) {
-      list.push({
-        id: `root_leader_offer_${userSeat}`,
-        type: 'matrix_leader_offer',
-        title: `Apex Matrix Root Opportunity (Seat #${userSeat})`,
-        message: `As Council Seat #${userSeat}, you have priority right to claim the Apex Matrix Root Leader (Slot 1, $30 USD in TROB) before it passes to Seat #${userSeat + 1}.`,
-        timestamp: 'Just now',
-        read: false,
-        priority: true,
-        actionLabel: 'Claim Root Spot ($30)',
-        seatTarget: userSeat,
-      });
-    } else if (userSeat && userSeat > 10) {
-      // For subsequent / last members: opportunity display
-      list.push({
-        id: 'matrix_subsequent_member',
-        type: 'matrix_launch',
-        title: 'Matrix Opportunity Ready',
-        message: 'Your personal downline spillover tree graph unlocks on Day 22. Prepare your $30 TROB allocation.',
-        timestamp: '15m ago',
-        read: false,
-        actionUrl: '/dao/matrix-bridge',
-        actionLabel: 'Inspect Matrix Tree',
-      });
-    }
-    */
-
-    // 2. 35% Global Protocol Pool Push
+    // 1. 35% Global Protocol Pool Push (Concise)
     list.push({
       id: 'pool_push_35',
       type: 'pool_dividend',
-      title: '35% Protocol Value Pool Active',
-      message: 'From the 4 automated protocol pools, 35% of all downstream Matrix volume routes directly to active DAO member wallets.',
+      title: '35% Protocol Pool Active',
+      message: '35% of all downstream Matrix volume routes directly to active member wallets.',
       timestamp: '1h ago',
       read: false,
       actionUrl: '/dao/treasury',
       actionLabel: 'View Treasury',
     });
 
-    // 3. Matrix Launch Countdown alert (Day 22 Retail Matrix countdown active)
+    // 2. Matrix Launch Countdown alert (Concise)
     list.push({
       id: 'matrix_bridge_status',
       type: 'matrix_launch',
-      title: 'Day 22 Retail Matrix Ready',
-      message: 'Retail Matrix registration and spillover tree graphs go live at countdown expiry.',
+      title: 'Day 22 Retail Matrix',
+      message: 'Spillover matrix tree & downline graphs unlock at countdown expiry.',
       timestamp: '2h ago',
       read: true,
       actionUrl: '/dao/matrix-bridge',
-      actionLabel: 'Countdown Status',
+      actionLabel: 'Matrix Bridge',
     });
 
-    // 4. Council Queue Update
+    // 3. Council Queue Update (Concise)
     list.push({
       id: 'queue_update_p2p',
       type: 'queue_update',
-      title: 'Genesis Council Queue Active',
-      message: 'Genesis Council seats actively claiming on TrobChain. Instant 300/N cashbacks and downstream dividends active.',
+      title: 'Genesis Council Active',
+      message: '100 Sovereign seats with instant 300/N cashbacks on every claim.',
       timestamp: '3h ago',
       read: true,
       actionUrl: '/dao/seats',
-      actionLabel: 'View Council Grid',
+      actionLabel: 'Council Grid',
     });
 
     setNotifications(list);
@@ -135,20 +173,17 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
             const d = json.data;
             if (d.isCapped || d.retopupDeadline) {
               const seatPos = d.position || userSeat || 1;
-              const cashback = typeof d.retopupCashbackUsd === 'number' && d.retopupCashbackUsd > 0 && d.retopupCashbackUsd < 300
-                ? d.retopupCashbackUsd.toFixed(2)
-                : '3.53';
               const isExpired = d.isExpired;
 
               const retopupItem: DaoNotification = {
                 id: `retopup_alert_${userAddress}`,
                 type: 'retopup_alert',
                 title: isExpired
-                  ? `Seat #${seatPos} Vacated (48h Expired)`
-                  : `5X Cap ($1,500 USD) Reached — 48h Retopup Active (Seat #${seatPos})`,
+                  ? `Seat #${seatPos} Vacated (Expired)`
+                  : `5X Cap Reached — 48h Re-topup (Seat #${seatPos})`,
                 message: isExpired
-                  ? `The 48-hour re-topup deadline has expired without payment. Seat #${seatPos} is now open for queue reallocation.`
-                  : `You've reached the 5X Cap ($1,500 USD). Complete your $300 USD re-topup within 48 hours to reset your cap to zero and resume continuous dividend distributions.`,
+                  ? `48-hour re-topup deadline expired. Seat open for queue reallocation.`
+                  : `5X Cap reached ($1,500 USD). Re-topup $300 to reset cap and keep daily dividends.`,
                 timestamp: isExpired ? 'Expired' : 'URGENT (48h)',
                 read: false,
                 priority: !isExpired,
@@ -173,7 +208,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
 
   // Outside click & escape listener
   useEffect(() => {
-    if (!open) return;
+    if (!isDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent | PointerEvent) => {
       const target = e.target as Node;
       if (
@@ -182,11 +217,11 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
         buttonRef.current &&
         !buttonRef.current.contains(target)
       ) {
-        setOpen(false);
+        handleClose();
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') handleClose();
     };
 
     document.addEventListener('pointerdown', handleClickOutside);
@@ -195,7 +230,7 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       document.removeEventListener('pointerdown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [isDropdownOpen]);
 
   // Handle play sound on new high-priority offer (Disabled while matrix root opportunity is hidden)
   /*
@@ -319,14 +354,14 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       {/* Bell Trigger Button — visible on all screen sizes */}
       <button
         ref={buttonRef}
-        onClick={() => {
-          setOpen((v) => !v);
-          if (!open && soundEnabled) {
-            playNotificationChime();
-          }
-        }}
-        className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] hover:bg-slate-100 flex items-center justify-center transition-all shadow-xs"
+        onClick={handleToggle}
+        className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl border text-[#60739A] hover:text-[#071A4A] flex items-center justify-center transition-all shadow-xs cursor-pointer ${
+          isDropdownOpen
+            ? 'bg-blue-50 border-[#0E62E4] text-[#0E62E4]'
+            : 'bg-[#F8FAFC] border-[#E2ECF9] hover:bg-slate-100'
+        }`}
         aria-label="Open notifications"
+        aria-expanded={isDropdownOpen}
       >
         <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#17334F]" />
         {unreadCount > 0 && (
@@ -336,34 +371,49 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
         )}
       </button>
 
-      {/* Dropdown Menu */}
-      {open && (
+      {/* Dropdown Menu — Portaled to document.body to avoid header backdrop-filter clipping & left-side offset */}
+      {mounted && isDropdownOpen && typeof document !== 'undefined' && createPortal(
         <>
-          {/* Backdrop on mobile */}
+          {/* Full-screen backdrop covering the entire viewport */}
           <div
-            className="fixed inset-0 z-40 bg-black/25 sm:bg-transparent backdrop-blur-[1px] sm:backdrop-blur-none cursor-pointer"
-            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-[9990] bg-black/30 md:bg-transparent backdrop-blur-[1px] md:backdrop-blur-none cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
+            aria-label="Close notifications"
           />
 
           <div
             ref={containerRef}
-            className="fixed sm:absolute left-2.5 right-2.5 sm:left-auto sm:right-0 top-14 sm:top-[calc(100%+8px)] z-50 w-auto sm:w-[390px] max-w-[calc(100vw-20px)] bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-3 animate-fadeIn font-sans"
+            style={!coords.isMobile ? { top: coords.top, right: coords.right } : undefined}
+            className={
+              coords.isMobile
+                ? "fixed z-[9995] top-16 left-3 right-3 max-w-[360px] mx-auto bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.22)] p-3 animate-fadeIn font-sans"
+                : "fixed z-[9995] w-[350px] bg-white rounded-2xl border border-[#E2ECF9] shadow-[0_20px_50px_rgba(15,23,42,0.22)] p-3 animate-fadeIn font-sans"
+            }
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-[#E7EEF8]">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E7EEF8]">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center">
+                <div className="w-6 h-6 rounded-lg bg-[#EFF6FF] text-[#0E62E4] flex items-center justify-center shrink-0">
                   <Bell className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-[#14304A]">Notifications & Alerts</h3>
+                  <h3 className="text-xs font-bold text-[#14304A]">Notifications</h3>
                   <p className="text-[10px] text-[#4F6D87]">
-                    {unreadCount > 0 ? `${unreadCount} new updates` : 'All updates up to date'}
+                    {unreadCount > 0 ? `${unreadCount} new updates` : 'All caught up'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {/* Sound toggle */}
                 <button
                   onClick={toggleSound}
@@ -387,34 +437,36 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                   </button>
                 )}
 
+                {/* Visible Close Button */}
                 <button
-                  onClick={() => setOpen(false)}
-                  className="sm:hidden p-1 rounded-md text-slate-400 hover:text-slate-600"
+                  onClick={handleClose}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors ml-0.5"
+                  title="Close notifications"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Notification items */}
-            <div className="mt-2.5 space-y-2 max-h-[380px] overflow-y-auto pr-0.5">
+            {/* Notification items — compact list */}
+            <div className="mt-2 space-y-2 max-h-[300px] overflow-y-auto pr-0.5">
               {notifications.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3 rounded-xl border transition-all text-xs ${
+                  className={`p-2.5 rounded-xl border transition-all text-xs ${
                     item.priority
-                      ? 'bg-gradient-to-br from-amber-50/80 to-amber-100/40 border-amber-300/80 shadow-xs'
+                      ? 'bg-gradient-to-br from-amber-50/90 to-amber-100/50 border-amber-300 shadow-xs'
                       : item.read
                       ? 'bg-[#F8FAFC] border-[#E8EFF8]'
                       : 'bg-[#EFF6FF]/70 border-[#0E62E4]/25 shadow-xs'
                   }`}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-2">
                     {/* Icon */}
                     <div
-                      className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 ${
+                      className={`w-6 h-6 rounded-lg shrink-0 flex items-center justify-center mt-0.5 ${
                         item.type === 'retopup_alert'
-                          ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white animate-pulse'
+                          ? 'bg-amber-600 text-white animate-pulse'
                           : item.priority
                           ? 'bg-amber-500 text-white'
                           : item.type === 'pool_dividend'
@@ -425,15 +477,15 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                       }`}
                     >
                       {item.type === 'retopup_alert' ? (
-                        <Zap className="w-4 h-4 fill-white" />
+                        <Zap className="w-3 h-3 fill-white" />
                       ) : item.priority ? (
-                        <Crown className="w-4 h-4" />
+                        <Crown className="w-3 h-3" />
                       ) : item.type === 'pool_dividend' ? (
-                        <ShieldCheck className="w-4 h-4" />
+                        <ShieldCheck className="w-3 h-3" />
                       ) : item.type === 'matrix_launch' ? (
-                        <Layers className="w-4 h-4" />
+                        <Layers className="w-3 h-3" />
                       ) : (
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-3 h-3" />
                       )}
                     </div>
 
@@ -447,65 +499,47 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                         >
                           {item.title}
                         </span>
-                        <span className="text-[9.5px] text-[#64748B] shrink-0 font-medium">
+                        <span className="text-[9px] text-[#64748B] shrink-0 font-medium">
                           {item.timestamp}
                         </span>
                       </div>
 
-                      <p className="text-[11px] text-[#4F6D87] leading-relaxed mb-2">
+                      <p className="text-[10.5px] text-[#4F6D87] leading-relaxed mb-1.5">
                         {item.message}
                       </p>
 
                       {/* Action buttons */}
                       {item.type === 'retopup_alert' && item.actionLabel ? (
-                        <div className="flex items-center gap-2 pt-1">
+                        <div className="flex items-center gap-2 pt-0.5">
                           <button
                             type="button"
                             onClick={() => {
-                              setOpen(false);
+                              handleClose();
                               window.dispatchEvent(
                                 new CustomEvent('dao:open-retopup', {
                                   detail: { seatPosition: item.seatTarget || userSeat },
                                 })
                               );
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold shadow-xs transition-all cursor-pointer"
                           >
-                            <Zap className="w-3.5 h-3.5 fill-white" />
+                            <Zap className="w-3 h-3 fill-white" />
                             <span>{item.actionLabel}</span>
                             <ArrowRight className="w-3 h-3" />
                           </button>
                           <Link
                             href="/dao/lounge"
-                            onClick={() => setOpen(false)}
-                            className="text-[11px] font-semibold text-amber-800 hover:underline px-1.5"
+                            onClick={handleClose}
+                            className="text-[10.5px] font-semibold text-amber-800 hover:underline px-1"
                           >
-                            View Lounge
+                            Lounge
                           </Link>
-                        </div>
-                      ) : item.type === 'matrix_leader_offer' && item.actionLabel ? (
-                        <div className="flex items-center gap-2 pt-1">
-                          <Link
-                            href="/dao/matrix-bridge"
-                            onClick={() => setOpen(false)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shadow-xs transition-colors"
-                          >
-                            <span>{item.actionLabel}</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Link>
-
-                          <button
-                            onClick={(e) => handlePassRootOffer(item.id, e)}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-[11px] font-semibold transition-colors"
-                          >
-                            Pass Offer
-                          </button>
                         </div>
                       ) : item.actionUrl ? (
                         <Link
                           href={item.actionUrl}
-                          onClick={() => setOpen(false)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0E62E4] hover:underline"
+                          onClick={handleClose}
+                          className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#0E62E4] hover:underline"
                         >
                           <span>{item.actionLabel || 'View details'}</span>
                           <ChevronRight className="w-3 h-3" />
@@ -519,14 +553,22 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
 
             {/* Footer */}
             <div className="mt-2.5 pt-2 border-t border-[#E7EEF8] flex items-center justify-between text-[10px] text-[#64748B] px-1">
-              <span>Real-time TrobChain Event Listener</span>
+              <Link
+                href="/dao/settings?tab=notifications"
+                onClick={handleClose}
+                className="text-[#0E62E4] hover:underline font-semibold flex items-center gap-1"
+              >
+                <span>Notification Settings</span>
+                <ChevronRight className="w-2.5 h-2.5" />
+              </Link>
               <span className="font-semibold text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live
               </span>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

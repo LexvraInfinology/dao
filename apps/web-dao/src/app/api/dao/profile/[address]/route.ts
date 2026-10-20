@@ -14,16 +14,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
   }
 
-  let bttPriceUsd = 0.056;
-  try {
-    const { TROB_PRICE_API_URL } = await import('@/config/env');
-    const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
-    if (pRes.ok) {
-      const pj = await pRes.json();
-      const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
-      if (Number.isFinite(p) && p > 0) bttPriceUsd = p;
-    }
-  } catch {}
+  const bttPriceUsd = 0.056; // Smart contract fixed peg
 
   const earningsCapUsd = 1500;
   const earningsCapBtt = 26785.71; // Smart contract on-chain 5X cap (26,785.71 TROB = $1,500.00 USD)

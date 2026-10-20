@@ -410,15 +410,6 @@ export const DaoSearchBar: React.FC = () => {
         )}
       </div>
 
-      {/* ── Mobile Search Button (visible on tablet screens sm..lg, hidden on tiny mobile to save navbar space) ─────── */}
-      <button
-        onClick={() => setMobileModalOpen(true)}
-        className="hidden sm:flex lg:hidden w-8 h-8 rounded-xl bg-[#F8FAFC] border border-[#E2ECF9] text-[#60739A] hover:text-[#071A4A] items-center justify-center transition-all shadow-xs"
-        aria-label="Open search"
-      >
-        <Search className="w-3.5 h-3.5 text-[#17334F]" />
-      </button>
-
       {/* ── Mobile Search Modal Overlay (Portaled to document.body to escape header backdrop-filter) ── */}
       {mounted && mobileModalOpen && typeof document !== 'undefined' && createPortal(
         <div

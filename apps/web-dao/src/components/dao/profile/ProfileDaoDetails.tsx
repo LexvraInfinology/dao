@@ -26,9 +26,7 @@ export const ProfileDaoDetails: React.FC<ProfileDaoDetailsProps> = ({ profile })
   };
 
   const isMember  = Boolean(profile?.isMember && (profile?.position ?? 0) > 0);
-  const rawId     = profile?.userId ? String(profile.userId) : '';
-  const isUuid    = rawId.length > 15;
-  const memberId  = isMember ? (!isUuid && rawId ? `#${rawId}` : profile?.position ? `#${String(profile.position).padStart(4, '0')}` : '—') : '—';
+  const memberId  = isMember && profile?.position ? `#${String(profile.position).padStart(4, '0')}` : (profile?.userId ? `#${profile.userId}` : '—');
   const seatNum   = isMember && profile?.position ? `#${profile.position}` : 'Unclaimed';
   const nftId     = isMember && profile?.nftTokenId ? `#${String(profile.nftTokenId).padStart(4, '0')}` : 'Unminted';
   const joinedAt  = isMember && profile?.joinedAt

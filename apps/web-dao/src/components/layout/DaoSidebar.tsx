@@ -108,7 +108,7 @@ export const DaoSidebar: React.FC = () => {
 
   const shortDisplay = shortenAddress(displayAddress);
   const { data: memberData, loading: memberLoading } = useDaoMember(displayAddress);
-  const isMemberLoading = Boolean(isConnected && displayAddress && (memberLoading || memberData === null));
+  const isMemberLoading = Boolean(isConnected && displayAddress && memberLoading && !memberData);
 
   const handleConnectClick = () => {
     triggerSmartConnectWallet({

@@ -152,7 +152,7 @@ export const LandingLiveActivity: React.FC = () => {
 
   return (
     <section id="activity" className="scroll-mt-20 relative pt-10 sm:pt-14 lg:pt-16 pb-10 sm:pb-14 lg:pb-16 overflow-hidden bg-[#F0F6FD] border-b border-slate-200/80">
-      {/* Background Artwork: Properly fitted without clipping the character */}
+      {/* Background Artwork: Anchored to top-right on mobile so the boy's head, arm, and pointing hand are clearly positioned */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         <Image
           src="/landing/activity-boy.webp"
@@ -160,13 +160,13 @@ export const LandingLiveActivity: React.FC = () => {
           fill
           sizes="100vw"
           loading="lazy"
-          className="object-cover object-[88%_bottom] sm:object-[90%_center] lg:object-[right_center] xl:object-right"
+          className="object-cover object-[98%_top] sm:object-[90%_center] lg:object-[right_center] xl:object-right"
         />
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
-        {/* Header Block — Clean, responsive, high contrast */}
-        <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-10 lg:mb-12">
+      <div className="max-w-[1400px] mx-auto px-3.5 sm:px-6 lg:px-8 xl:px-12 relative z-10">
+        {/* Header Block — Compact on mobile so it doesn't block the boy's face */}
+        <div className="text-center max-w-[280px] min-[360px]:max-w-[320px] sm:max-w-2xl mx-auto mb-4 sm:mb-10 lg:mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 border border-blue-200/90 shadow-xs mb-2 sm:mb-2.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF] animate-pulse" />
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-[#155EEF] uppercase font-inter">
@@ -177,25 +177,25 @@ export const LandingLiveActivity: React.FC = () => {
             The Genesis Queue Is<br />
             <span className="text-[#155EEF]">Always Moving.</span>
           </h2>
-          <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-base text-[#0F172A] font-semibold leading-relaxed max-w-xl mx-auto [text-shadow:0_1px_1px_rgba(255,255,255,0.9)]">
+          <p className="mt-1.5 sm:mt-2.5 text-xs sm:text-base text-[#0F172A] font-semibold leading-relaxed mx-auto [text-shadow:0_1px_1px_rgba(255,255,255,0.9)]">
             Track seat deposits, queue distributions, and Genesis DAO activity in real time.
           </p>
         </div>
 
-        {/* Responsive Grid: Wide, spacious card on laptops and fully fluid on mobile */}
+        {/* Responsive Grid: Wide, spacious card on laptops, sheer asymmetric glass revealing pointing boy on mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center max-w-[1400px] mx-auto">
-          {/* Activity Card — Wide, luxurious layout on laptops, fully responsive on mobile */}
-          <div className="lg:col-span-8 xl:col-span-8 2xl:col-span-8 relative z-20 w-full max-w-2xl lg:max-w-none mx-auto lg:mx-0">
-            <div className="bg-white/95 sm:bg-white/90 border border-slate-200/80 shadow-[0_12px_36px_rgba(15,23,42,0.06)] rounded-2xl sm:rounded-[32px] p-3.5 sm:p-6 lg:p-8">
+          {/* Activity Card — Sheer glass on mobile: ultra-clear on the right where the boy's hand points into the table */}
+          <div className="lg:col-span-8 xl:col-span-8 2xl:col-span-8 relative z-20 w-full max-w-[330px] min-[400px]:max-w-[355px] sm:max-w-2xl lg:max-w-none mr-auto sm:mx-auto lg:mx-0">
+            <div className="activity-card-mobile shadow-[0_12px_40px_rgba(15,23,42,0.06)] rounded-2xl sm:rounded-[32px] p-3 sm:p-6 lg:p-8">
               {/* Card header */}
-              <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100/90">
+              <div className="flex items-center justify-between pb-2.5 sm:pb-4 border-b border-slate-200/40">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#155EEF] animate-pulse" />
-                  <span className="text-[10px] sm:text-xs font-semibold tracking-wider text-[#0B132B] uppercase">LIVE</span>
-                  <span className="h-3.5 w-px bg-slate-300" />
-                  <span className="text-[11px] sm:text-sm font-bold text-[#1E293B]">Genesis DAO Activity</span>
+                  <span className="text-[10px] sm:text-xs font-bold tracking-wider text-[#0B132B] uppercase">LIVE</span>
+                  <span className="h-3.5 w-px bg-slate-300/60" />
+                  <span className="text-[11px] sm:text-sm font-bold text-[#0B132B]">Genesis DAO Activity</span>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium text-[#475467]">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-[#1E293B] bg-white/40 px-2 py-0.5 rounded-full border border-white/40">
                   {loading
                     ? <Loader2 className="w-3 h-3 animate-spin text-[#155EEF]" />
                     : <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#12B76A]" />
@@ -204,19 +204,19 @@ export const LandingLiveActivity: React.FC = () => {
                 </div>
               </div>
 
-              {/* Activity rows */}
-              <div className="divide-y divide-slate-100/80">
+              {/* Activity rows — Sheer pills: solid white on left for address/label legibility, crystal-clear on right so pointing hand shows cleanly */}
+              <div className="space-y-1.5 sm:space-y-2 pt-2 sm:pt-3">
                 {loading && rows.length === 0 ? (
                   Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="py-2.5 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-3 animate-pulse px-1 sm:px-2">
+                    <div key={i} className="activity-row-mobile py-2.5 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-3 animate-pulse px-3 rounded-xl">
                       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 shrink-0" />
+                        <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200/80 shrink-0" />
                         <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="w-28 sm:w-48 h-3.5 bg-slate-200 rounded" />
-                          <div className="w-20 sm:w-36 h-2.5 bg-slate-100 rounded" />
+                          <div className="w-28 sm:w-48 h-3.5 bg-slate-200/80 rounded" />
+                          <div className="w-20 sm:w-36 h-2.5 bg-slate-100/80 rounded" />
                         </div>
                       </div>
-                      <div className="w-14 sm:w-24 h-4 bg-slate-100 rounded shrink-0" />
+                      <div className="w-14 sm:w-24 h-4 bg-slate-100/80 rounded shrink-0" />
                     </div>
                   ))
                 ) : rows.length === 0 ? (
@@ -230,17 +230,17 @@ export const LandingLiveActivity: React.FC = () => {
                   rows.slice(0, 5).map((item) => (
                     <div
                       key={item.id}
-                      className="py-2 min-[360px]:py-2.5 sm:py-3.5 flex items-center justify-between gap-2 min-[360px]:gap-3 sm:gap-5 hover:bg-white/60 px-0.5 sm:px-2 rounded-xl sm:rounded-2xl transition-colors"
+                      className="activity-row-mobile py-2 min-[360px]:py-2.5 sm:py-3 flex items-center justify-between gap-2 min-[360px]:gap-3 sm:gap-4 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]"
                     >
-                      <div className="flex items-center gap-2 min-[360px]:gap-2.5 sm:gap-4 min-w-0 flex-1">
-                        <div className={`w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${item.iconBg}`}>
+                      <div className="flex items-center gap-2 min-[360px]:gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                        <div className={`w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${item.iconBg}`}>
                           {item.iconEl}
                         </div>
                         <div className="min-w-0 space-y-0.5 flex-1">
-                          <div className="text-xs sm:text-sm md:text-base font-bold text-[#0B132B] truncate tracking-tight">
+                          <div className="text-xs sm:text-sm md:text-base font-bold text-[#0B132B] truncate tracking-tight [text-shadow:0_1px_1px_rgba(255,255,255,0.8)]">
                             {item.title}
                           </div>
-                          <div className="text-[10px] sm:text-xs text-[#64748B] truncate font-mono sm:font-sans">
+                          <div className="text-[10px] sm:text-xs text-[#0F172A] font-semibold truncate font-mono sm:font-sans [text-shadow:0_1px_1px_rgba(255,255,255,0.8)]">
                             {item.subtitle}
                           </div>
                         </div>
@@ -248,15 +248,15 @@ export const LandingLiveActivity: React.FC = () => {
                       <div className="text-right shrink-0 min-w-[62px] min-[360px]:min-w-[72px] sm:min-w-[85px] pl-1.5 sm:pl-3">
                         {item.highlight ? (
                           <div className="flex flex-col items-end">
-                            <span className={`text-xs sm:text-sm md:text-base font-black tabular-nums tracking-tight whitespace-nowrap ${item.highlightColor}`}>
+                            <span className={`text-xs sm:text-sm md:text-base font-black tabular-nums tracking-tight whitespace-nowrap px-1 rounded bg-white/70 sm:bg-transparent ${item.highlightColor}`}>
                               {item.highlight}
                             </span>
-                            <span className="text-[9px] sm:text-[10px] text-[#94A3B8] tabular-nums whitespace-nowrap">
+                            <span className="text-[9px] sm:text-[10px] text-[#1E293B] font-bold tabular-nums whitespace-nowrap">
                               {item.timeAgo}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[10px] sm:text-xs text-[#94A3B8] tabular-nums whitespace-nowrap">
+                          <span className="text-[10px] sm:text-xs text-[#1E293B] font-bold tabular-nums whitespace-nowrap">
                             {item.timeAgo}
                           </span>
                         )}
@@ -267,13 +267,13 @@ export const LandingLiveActivity: React.FC = () => {
               </div>
 
               {/* Card footer */}
-              <div className="pt-3 sm:pt-5 mt-1 border-t border-slate-100/90 text-center">
+              <div className="pt-2.5 sm:pt-5 mt-2 border-t border-slate-200/50 text-center">
                 <Link
                   href="/dao/transactions"
-                  className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full bg-white/90 hover:bg-white text-[11px] sm:text-sm font-semibold font-inter text-[#0B132B] border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-5 sm:px-6 py-2 sm:py-2.5 rounded-full bg-white/90 hover:bg-white text-[11px] sm:text-sm font-bold font-inter text-[#0B132B] border border-slate-200/80 shadow-2xs hover:shadow-xs transition-all duration-200"
                 >
                   <span>View More Activity</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#475467]" />
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#155EEF]" />
                 </Link>
               </div>
             </div>

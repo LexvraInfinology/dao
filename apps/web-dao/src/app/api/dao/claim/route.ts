@@ -5,6 +5,7 @@ import { checkServerlessEligibility } from '../../_lib/eligibility';
 import { getActiveDaoAddress, getActiveDaoHex, toTronHex } from '@/utils/trobAddress';
 import { TROB_PRICE_API_URL } from '@/config/env';
 import { verifyOnChainTransaction, getOnChainMemberPosition } from '../../_lib/txVerifier';
+import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
-    let trobPriceUsd = 0.037757;
+    let trobPriceUsd = 0.042206;
     try {
       const priceRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store' });
       if (priceRes.ok) {
@@ -136,7 +137,8 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     const entryAmountUsd = 300;
-    const entryAmountTrob = Math.max(5357.14, Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100);
+    // Smart contract requires at least MIN_ENTRY_FEE_FLOOR (4,500 TROB) or real-time $300 equivalent
+    const entryAmountTrob = Math.max(4500, Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100);
     // Formula works for any seat: 300 / N (e.g. Seat #2 gets 300/2 = $150 back instantly)
     const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
     const cashbackTrob = Math.round((cashbackUsd / trobPriceUsd) * 100) / 100;
@@ -202,14 +204,16 @@ export async function POST(req: NextRequest) {
     // 2. Insert 'joined' event
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-       VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)`,
+       VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-api', $5)
+       ON CONFLICT DO NOTHING`,
       [dbUserAddress, finalPos, cleanTx, entryAmountTrob, `Council Seat #${finalPos} Activated`]
     );
 
     // 3. Record instant cashback (transferred on-chain autonomously by smart contract)
     await queryNeon(
       `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-       VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,
+       VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)
+       ON CONFLICT DO NOTHING`,
       [dbUserAddress, finalPos, `${cleanTx}-cashback`, cashbackTrob, cashbackUsd, `Instant Cashback (Seat #${finalPos})`]
     );
 
@@ -327,7 +331,8 @@ export async function POST(req: NextRequest) {
           const actualUsd = parseFloat((item.payoutTrob * trobPriceUsd).toFixed(2));
           await queryNeon(
             `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-             VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)`,
+             VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)
+             ON CONFLICT DO NOTHING`,
             [
               item.address,
               finalPos,
@@ -340,6 +345,7 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+    invalidateMemberSyncCache();
 
     return NextResponse.json({
       success: true,

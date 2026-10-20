@@ -7,7 +7,7 @@
 // Official WhatsApp Community Group Invite URL
 export const WHATSAPP_DAO_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_DAO_GROUP_URL ||
-  'https://chat.whatsapp.com/GR19373Pgq7LezBKtXC0ng';
+  'https://chat.whatsapp.com/CncHdH2u76s95lRSURuKaW?s=cl&p=a&mlu=4&ilr=4';
 
 // Trobium Explorer Web URL
 export const EXPLORER_BASE_URL =

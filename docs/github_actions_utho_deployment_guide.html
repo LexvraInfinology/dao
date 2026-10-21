@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub Actions Deployment Failure Analysis & Resolution Guide</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 12mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      line-height: 1.4;
+      font-size: 11.5px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+
+    .title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 3px 0;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 11.5px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 8px 0 12px 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 7px 10px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 9px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-val {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    h2 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 12px 0 5px 0;
+      padding-bottom: 3px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h3 {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+
+    p {
+      margin: 0 0 5px 0;
+    }
+
+    .alert-box {
+      border-radius: 5px;
+      padding: 7px 10px;
+      margin: 6px 0;
+      font-size: 11px;
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .alert-info {
+      background: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      color: #075985;
+    }
+
+    .alert-success {
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      color: #065f46;
+    }
+
+    .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 5px;
+      padding: 6px 9px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 10.5px;
+      line-height: 1.35;
+      margin: 5px 0;
+      overflow-x: auto;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .code-inline {
+      font-family: Consolas, monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10.5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .step-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 7px 10px;
+      margin-bottom: 7px;
+      page-break-inside: avoid;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .step-num {
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 10px;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0;
+      font-size: 11px;
+    }
+
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 5px 7px;
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .footer {
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 10px;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= PAGE 1 ================= -->
+  <div class="header">
+    <div class="badge">Incident Diagnostic & Remediation Report</div>
+    <h1 class="title">GitHub Actions Deployment Failure Analysis & Resolution</h1>
+    <p class="subtitle">Complete technical diagnosis, SSH key synchronization, and Utho VM setup guide for <code>LexvraInfinology/dao</code></p>
+  </div>
+
+  <!-- METADATA -->
+  <div class="meta-grid">
+    <div class="meta-item">
+      <span class="meta-label">Repository</span>
+      <span class="meta-val">LexvraInfinology/dao</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Workflow File</span>
+      <span class="meta-val">.github/workflows/ci-cd.yml</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Failing Step</span>
+      <span class="meta-val">Deploy and verify on Utho VM</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Exit Status</span>
+      <span class="meta-val" style="color: #dc2626;">Process exit code 255</span>
+    </div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <h2>1. Incident Overview & Log Analysis</h2>
+  <div class="alert-box alert-danger">
+    <strong>Exact Terminal Failure Observed:</strong><br>
+    <code>***@***: Permission denied (publickey,password).</code><br>
+    <code>Error: Process completed with exit code 255.</code>
+  </div>
+
+  <p>During the automated CI/CD pipeline run on GitHub Actions, the <strong>CI (Build & Lint)</strong> job successfully finished. However, the downstream deployment job <code>Deploy to Utho VM</code> halted immediately upon attempting an SSH connection into the target Utho cloud instance.</p>
+
+  <p>The workflow triggers the following OpenSSH command:</p>
+  <div class="code-block">ssh \
+  -i "$RUNNER_TEMP/utho_deploy_key" \
+  -p "$CLEAN_PORT" \
+  -o BatchMode=yes \
+  -o IdentitiesOnly=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+  "$CLEAN_USER@$CLEAN_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" &lt; scripts/deploy/utho-vm.sh</div>
+
+  <!-- SECTION 2 -->
+  <h2>2. Root Cause Technical Breakdown</h2>
+  <p>The SSH exit code <code>255</code> paired with <code>Permission denied (publickey,password)</code> indicates that the SSH daemon (<code>sshd</code>) running on the Utho VM strictly rejected authentication. The failure stems from three specific factors:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 26%;">Component</th>
+        <th style="width: 36%;">Current State</th>
+        <th style="width: 38%;">Technical Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Utho VM <code>authorized_keys</code></strong></td>
+        <td>Public key is missing from the server's <code>~/.ssh/authorized_keys</code> file.</td>
+        <td>The server cannot verify incoming authentication challenges against the private key.</td>
+      </tr>
+      <tr>
+        <td><strong>GitHub Secret: <code>UTHO_SSH_PRIVATE_KEY</code></strong></td>
+        <td>Contains either an outdated key, mismatched key, or improper newline characters.</td>
+        <td>OpenSSH presents an identity that does not match any allowed public key on the host.</td>
+      </tr>
+      <tr>
+        <td><strong>OpenSSH Flag: <code>BatchMode=yes</code></strong></td>
+        <td>Enforced in line 121 of <code>ci-cd.yml</code>.</td>
+        <td>Suppresses interactive password fallback prompts in CI, terminating immediately with code 255.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert-box alert-info">
+    <strong>Key Discovery:</strong> An ED25519 deploy keypair already exists in your workspace root (<code>utho_deploy_key</code> and <code>utho_deploy_key.pub</code>), created with comment <code>github-actions-utho-deploy</code>. Authorizing this public key on the Utho server resolves the issue.
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ================= PAGE 2 ================= -->
+  <h2>3. Step-by-Step Resolution Guide</h2>
+
+  <!-- STEP 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <h3 class="step-title">Authorize the Public Key on Utho VM</h3>
+    </div>
+    <p>Log in to your Utho Cloud VM via your cloud provider web terminal or an existing root shell, then run this single block to install and lock down the authorized key:</p>
+    <div class="code-block"># Ensure ~/.ssh folder exists with 700 permissions
+mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh
+
+# Append the public key (from utho_deploy_key.pub)
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE4jc4B3Xha2FMb6vKayDTbTws+gFnh/ws1bNOjzUkXQ github-actions-utho-deploy" &gt;&gt; ~/.ssh/authorized_keys
+
+# Enforce secure permissions required by OpenSSH
+chmod 600 ~/.ssh/authorized_keys
+
+# Verify it was added successfully
+tail -n 2 ~/.ssh/authorized_keys</div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <h3 class="step-title">Configure GitHub Actions Repository Secrets</h3>
+    </div>
+    <p>Go to your GitHub repository: <strong>Settings &rarr; Secrets and variables &rarr; Actions</strong>. Ensure each secret is configured:</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 32%;">Secret Name</th>
+          <th style="width: 68%;">Description &amp; Expected Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>UTHO_SSH_PRIVATE_KEY</code></td>
+          <td>
+            Paste the full content of <code>utho_deploy_key</code> including headers:<br>
+            <span class="code-inline">-----BEGIN OPENSSH PRIVATE KEY----- ... -----END OPENSSH PRIVATE KEY-----</span>
+          </td>
+        </tr>
+        <tr>
+          <td><code>UTHO_HOST</code></td>
+          <td>The public IPv4 address or hostname of your Utho VM (e.g., <code>103.xxx.xxx.xxx</code>).</td>
+        </tr>
+        <tr>
+          <td><code>UTHO_USER</code></td>
+          <td>The user under which the application runs (typically <code>root</code> or <code>ubuntu</code>).</td>
+        </tr>
+        <tr>
+          <td><code>UTHO_SSH_PORT</code></td>
+          <td><code>22</code> (or your custom SSH port if modified).</td>
+        </tr>
+        <tr>
+          <td><code>UTHO_KNOWN_HOSTS</code></td>
+          <td>Output of <code>ssh-keyscan -H &lt;UTHO_HOST&gt;</code> to prevent host-key verification prompt rejection.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <h3 class="step-title">Prerequisites on Utho VM for Application Deployment</h3>
+    </div>
+    <p>As defined in <code>scripts/deploy/utho-vm.sh</code>, ensure the application directory is pre-initialized on the VM:</p>
+    <div class="code-block"># Ensure destination directory exists and is a git clone
+mkdir -p /opt/dao &amp;&amp; cd /opt/dao
+# If not already cloned: git clone https://github.com/LexvraInfinology/dao.git .
+
+# Ensure production .env exists with production database and RPC values
+cp .env.example .env
+
+# Verify Docker and Docker Compose v2 are installed and running
+docker compose version</div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <h3 class="step-title">Trigger Pipeline &amp; Verification</h3>
+    </div>
+    <p style="margin-bottom: 4px;">Once Steps 1 and 2 are complete:</p>
+    <ol style="margin: 0; padding-left: 18px;">
+      <li>Go to your GitHub Actions workflow page and click <strong>Re-run failed jobs</strong>.</li>
+      <li>The runner will establish the SSH handshake, execute <code>utho-vm.sh</code>, and verify healthy container status across all microservices (<code>frontend</code>, <code>api</code>, <code>indexer</code>, <code>queue</code>, <code>postgres</code>, <code>redis</code>).</li>
+    </ol>
+  </div>
+
+  <div class="alert-box alert-success" style="margin-top: 6px;">
+    <strong>Resolution Complete:</strong> Following Steps 1 and 2 will immediately resolve the <code>Permission denied (publickey,password)</code> exit code 255 failure.
+  </div>
+
+  <div class="footer">
+    <span>Equora DAO &bull; Engineering &amp; DevOps Technical Report</span>
+    <span>Generated: October 2026 &bull; Page 2 of 2</span>
+  </div>
+
+</body>
+</html>

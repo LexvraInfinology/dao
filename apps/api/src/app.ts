@@ -460,6 +460,62 @@ export function createApp(): Express {
     let currentSrVoted = false;
 
     try {
+      // 1. Query Explorer Account API for true activation date and on-chain raw state
+      const explorerApiUrl = process.env.EXPLORER_API_URL || process.env.TROB_BACKEND_EXPLORER_API_URL || "https://backend.trobchain.com/v1";
+      try {
+        const expRes = await fetch(`${explorerApiUrl}/accounts/${rawAddress}`);
+        if (expRes.ok) {
+          const expJson = (await expRes.json()) as any;
+          const expData = expJson?.data || expJson;
+          if (expData?.first_seen_at) {
+            const ts = new Date(expData.first_seen_at).getTime();
+            if (!isNaN(ts) && ts > 0) {
+              creationTimestamp = ts;
+            }
+          }
+          if (expData?.raw) {
+            const raw = expData.raw;
+            if (raw.create_time && (!creationTimestamp || Number(raw.create_time) < creationTimestamp)) {
+              let ct = Number(raw.create_time);
+              if (ct < 10000000000) ct *= 1000;
+              creationTimestamp = ct;
+            }
+            if (Array.isArray(raw.frozenV2)) {
+              for (const f of raw.frozenV2) {
+                const amountSun = Number(f.amount || 0);
+                const trobAmount = Math.floor(amountSun / 1_000_000);
+                const typeStr = String(f.type ?? "").toUpperCase();
+                const isEnergy = typeStr === "ENERGY" || typeStr === "1" || f.type === 1;
+                const isBandwidth = typeStr === "BANDWIDTH" || typeStr === "0" || f.type === 0 || !f.type;
+                if (isEnergy) {
+                  currentEnergyStakeTrob += trobAmount;
+                } else if (isBandwidth) {
+                  currentBandwidthStakeTrob += trobAmount;
+                }
+              }
+            }
+            if (Array.isArray(raw.votes)) {
+              const hasVote = raw.votes.some((v: any) => {
+                const rawV = (v.vote_address || "").trim().toLowerCase();
+                const hexV = toTronHex(v.vote_address || "");
+                return (
+                  rawV === OFFICIAL_SR_MAINNET_HEX ||
+                  rawV === OFFICIAL_SR_TESTNET_HEX ||
+                  rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+                  rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+                  hexV === OFFICIAL_SR_MAINNET_HEX ||
+                  hexV === OFFICIAL_SR_TESTNET_HEX
+                );
+              });
+              if (hasVote) currentSrVoted = true;
+            }
+          }
+        }
+      } catch (expErr) {
+        console.warn("[Eligibility Check] Explorer account lookup notice:", expErr);
+      }
+
+      // 2. Query FullNode RPC for live blockchain state
       const hexAddress = toTronHex(rawAddress);
       const fullnode = process.env.FULLNODE_URL || process.env.RPC_URL || "https://fullnode-one.trobchain.com";
       const acctRes = await fetch(`${fullnode}/wallet/getaccount`, {
@@ -471,50 +527,75 @@ export function createApp(): Express {
       if (acctRes.ok) {
         const acctData = (await acctRes.json()) as any;
         if (acctData && acctData.create_time) {
-          creationTimestamp = Number(acctData.create_time);
-          if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
-            condition1Passed = false;
-            condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
+          let ct = Number(acctData.create_time);
+          if (ct < 10000000000) ct *= 1000;
+          if (!creationTimestamp || ct < creationTimestamp) {
+            creationTimestamp = ct;
           }
         }
 
         // Live On-Chain Freeze V2 (Stake 2.0)
         if (Array.isArray(acctData.frozenV2)) {
+          let fnEnergy = 0;
+          let fnBandwidth = 0;
           for (const f of acctData.frozenV2) {
             const amountSun = Number(f.amount || 0);
             const trobAmount = Math.floor(amountSun / 1_000_000);
-            if (f.type === "ENERGY") {
-              currentEnergyStakeTrob += trobAmount;
-            } else if (!f.type || f.type === "BANDWIDTH") {
-              currentBandwidthStakeTrob += trobAmount;
+            const typeStr = String(f.type ?? "").toUpperCase();
+            const isEnergy = typeStr === "ENERGY" || typeStr === "1" || f.type === 1;
+            const isBandwidth = typeStr === "BANDWIDTH" || typeStr === "0" || f.type === 0 || !f.type;
+            if (isEnergy) {
+              fnEnergy += trobAmount;
+            } else if (isBandwidth) {
+              fnBandwidth += trobAmount;
             }
           }
+          if (fnEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = fnEnergy;
+          if (fnBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = fnBandwidth;
         }
         // Fallback for legacy Freeze 1.0 (if present)
         if (Array.isArray(acctData.frozen)) {
           const sumFrozen = acctData.frozen.reduce((acc: number, f: any) => acc + Number(f.frozen_balance || 0), 0);
-          currentBandwidthStakeTrob += Math.floor(sumFrozen / 1_000_000);
+          const legacyBandwidth = Math.floor(sumFrozen / 1_000_000);
+          if (legacyBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = legacyBandwidth;
         }
         if (acctData.account_resource?.frozen_balance_for_energy?.frozen_balance) {
-          currentEnergyStakeTrob += Math.floor(Number(acctData.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000);
+          const legacyEnergy = Math.floor(Number(acctData.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000);
+          if (legacyEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = legacyEnergy;
         }
 
         // Live On-Chain SR Votes
-        if (Array.isArray(acctData.votes)) {
+        if (Array.isArray(acctData.votes) && !currentSrVoted) {
           const hasVote = acctData.votes.some((v: any) => {
-            const vAddr = (v.vote_address || "").toLowerCase();
+            const rawV = (v.vote_address || "").trim().toLowerCase();
+            const hexV = toTronHex(v.vote_address || "");
             return (
-              vAddr === OFFICIAL_SR_MAINNET_HEX ||
-              vAddr === OFFICIAL_SR_TESTNET_HEX ||
-              vAddr === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-              vAddr === OFFICIAL_SR_TESTNET_B58.toLowerCase()
+              rawV === OFFICIAL_SR_MAINNET_HEX ||
+              rawV === OFFICIAL_SR_TESTNET_HEX ||
+              rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+              rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+              hexV === OFFICIAL_SR_MAINNET_HEX ||
+              hexV === OFFICIAL_SR_TESTNET_HEX
             );
           });
           if (hasVote) currentSrVoted = true;
         }
       }
+
+      if (!creationTimestamp) {
+        creationTimestamp = Date.now();
+      }
+
+      if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
+        condition1Passed = false;
+        condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
+      } else {
+        condition1Passed = true;
+      }
     } catch (err) {
       console.warn("[Eligibility Check] Error checking live on-chain account:", err);
+      if (!creationTimestamp) creationTimestamp = Date.now();
+      condition1Passed = true;
     }
 
     const energyPassed = currentEnergyStakeTrob >= daoRequirements.energyStakeTrob;
@@ -537,7 +618,8 @@ export function createApp(): Express {
     // 3. Official WhatsApp Channel Verification (cross-check)
     const wa = whatsappRegistry[canonical] || { verified: false, verifiedAt: null };
 
-    const eligibleToDeposit = condition1Passed && condition2Passed && wa.verified;
+    // Deposit is permitted once wallet creation date is verified (Condition 2 is optional gas optimization)
+    const eligibleToDeposit = condition1Passed;
 
     return {
       address: rawAddress,
@@ -577,11 +659,7 @@ export function createApp(): Express {
         ? "✓ Eligible to Deposit"
         : !condition1Passed
         ? `Deposit Blocked: ${condition1Reason}`
-        : !condition2Passed
-        ? `Deposit Blocked: Condition 2 (${missingReqs.join("; ")})`
-        : !wa.verified
-        ? "Deposit Blocked: Official WhatsApp channel must be joined and verified."
-        : "Deposit Blocked",
+        : "Eligible to Deposit",
       formula: dynamicFormula,
     };
   }

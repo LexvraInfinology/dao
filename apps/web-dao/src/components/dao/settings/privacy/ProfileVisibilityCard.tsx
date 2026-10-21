@@ -14,21 +14,39 @@ export default function ProfileVisibilityCard() {
   const [saved, setSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Hydrate from backend
+  // Hydrate from backend or localStorage
   useEffect(() => {
-    if (!settings) return;
-    setDaoProfileVisible(settings.privDaoProfileVisible);
-    setWalletAddressVisible(settings.privWalletVisible);
+    if (settings) {
+      setDaoProfileVisible(settings.privDaoProfileVisible);
+      setWalletAddressVisible(settings.privWalletVisible);
+    } else if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('equora_privacy_settings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.privDaoProfileVisible !== undefined) setDaoProfileVisible(parsed.privDaoProfileVisible);
+          if (parsed.privWalletVisible !== undefined) setWalletAddressVisible(parsed.privWalletVisible);
+        }
+      } catch {}
+    }
   }, [settings]);
 
   const persist = (field: 'privDaoProfileVisible' | 'privWalletVisible', value: boolean) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const existing = JSON.parse(localStorage.getItem('equora_privacy_settings') || '{}');
+        existing[field] = value;
+        localStorage.setItem('equora_privacy_settings', JSON.stringify(existing));
+      } catch {}
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+
     if (!auth.token) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       try {
         await saveUserSettings({ [field]: value }, auth.token!);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
       } catch {
         // revert on error
         if (field === 'privDaoProfileVisible') setDaoProfileVisible(!value);
@@ -161,8 +179,8 @@ export default function ProfileVisibilityCard() {
         {/* Rows Container */}
         <div className="space-y-2.5 pt-1">
           {/* Row 1: DAO Member Profile */}
-          <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl p-3 flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0 pr-3">
+          <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[#155EEF] shrink-0">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 2v2" /><path d="M8 2v2" />
@@ -171,10 +189,10 @@ export default function ProfileVisibilityCard() {
                   <path d="M6 19a6 6 0 0 1 12 0" />
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h4 className="text-xs font-bold text-[#071A4A]">DAO Member Profile</h4>
-                <p className="text-[11px] text-[#64748B] mt-0.5 truncate">
-                  Allow basic DAO profile to be visible
+                <p className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
+                  Allow basic DAO profile to be visible to others
                 </p>
               </div>
             </div>
@@ -190,14 +208,14 @@ export default function ProfileVisibilityCard() {
           </div>
 
           {/* Row 2: Wallet Address */}
-          <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl p-3 flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0 pr-3">
+          <div className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[#155EEF] shrink-0">
                 <Wallet className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h4 className="text-xs font-bold text-[#071A4A]">Wallet Address</h4>
-                <p className="text-[11px] text-[#64748B] mt-0.5 truncate">
+                <p className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
                   Show connected wallet on public profile
                 </p>
               </div>

@@ -13,17 +13,6 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
     }
 
-    let bttPriceUsd = 0.056;
-    try {
-      const { TROB_PRICE_API_URL } = await import('@/config/env');
-      const pRes = await fetch(TROB_PRICE_API_URL, { cache: 'no-store', signal: AbortSignal.timeout(1200) });
-      if (pRes.ok) {
-        const pj = await pRes.json();
-        const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
-        if (Number.isFinite(p) && p > 0) bttPriceUsd = p;
-      }
-    } catch {}
-
     const synced = await getAndSyncMemberState(address);
 
     return NextResponse.json({

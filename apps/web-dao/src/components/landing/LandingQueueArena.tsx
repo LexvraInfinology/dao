@@ -47,7 +47,7 @@ export const LandingQueueArena: React.FC = () => {
           fill
           sizes="100vw"
           loading="lazy"
-          className="object-cover object-bottom"
+          className="object-cover object-[center_65%] sm:object-bottom"
         />
       </div>
 
@@ -115,7 +115,7 @@ export const LandingQueueArena: React.FC = () => {
           {cards.map((c) => (
             <div
               key={c.title}
-              className="p-3 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl bg-white/95 sm:bg-white/90 border border-slate-200/80 shadow-[0_8px_24px_rgba(15,23,42,0.06)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] hover:-translate-y-1 transition-all duration-200 space-y-1.5 sm:space-y-2.5"
+              className="p-3.5 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl bg-white/85 sm:bg-white/90 backdrop-blur-md border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.06)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] hover:-translate-y-1 transition-all duration-200 space-y-1.5 sm:space-y-2.5"
             >
               <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#EFF8FF] border border-[#D1E9FF] flex items-center justify-center shrink-0">
                 {c.icon}
@@ -123,7 +123,7 @@ export const LandingQueueArena: React.FC = () => {
               <h3 className="text-xs sm:text-sm font-bold text-[#0B132B]">
                 {c.title}
               </h3>
-              <p className="text-[10px] sm:text-xs text-[#475467] leading-relaxed line-clamp-3 sm:line-clamp-none">
+              <p className="text-[10px] sm:text-xs text-[#475467] leading-relaxed line-clamp-3 sm:line-clamp-none font-medium">
                 {c.description}
               </p>
             </div>

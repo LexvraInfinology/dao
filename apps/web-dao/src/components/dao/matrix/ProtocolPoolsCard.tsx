@@ -20,13 +20,13 @@ export const ProtocolPoolsCard: React.FC = () => {
   }>('/api/dao/matrix', { pollMs: 15_000 });
 
   const pools = matrixData?.protocolPools;
-  const activeCount = pools?.activeDaoMemberCount ?? 2;
+  const activeCount = pools?.activeDaoMemberCount ?? 87;
   const perSeatPct = pools?.perSeatSharePct ?? (35 / activeCount);
 
   return (
     <div className="bg-white border border-[#E2EEF9] rounded-2xl p-4 sm:p-6 shadow-[0_2px_15px_rgba(14,98,228,0.06)] space-y-4 font-sans">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#E7EEF8]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-3 border-b border-[#E7EEF8]">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

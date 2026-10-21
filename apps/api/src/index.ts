@@ -1,3 +1,10 @@
+import dns from "node:dns";
+try {
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch {}
+
 import { createApp } from "./app";
 import { config } from "./config";
 import prisma from "@equora/database";
@@ -12,6 +19,16 @@ async function bootstrap() {
     console.log(`🌍 Environment: ${config.env}`);
     console.log(`🔗 Target Chain ID: ${config.blockchain.chainId}`);
     console.log(`========================================================`);
+  });
+
+  server.on("error", (err: any) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`⚠️ Port ${config.port} is already in use by another process.`);
+      console.error(`   Ensure no other API or background dev server instance is running on port ${config.port}.`);
+    } else {
+      console.error("❌ API server error:", err);
+    }
+    process.exit(1);
   });
 
   const handleShutdown = async (signal: string) => {

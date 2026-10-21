@@ -1,5 +1,5 @@
 export const BACKEND_API_PORT: number = parseInt(process.env.API_PORT || '4000', 10);
-export const BACKEND_API_URL: string = process.env.BACKEND_API_URL || 'https://api.equorafidao.com';
+export const BACKEND_API_URL: string = process.env.BACKEND_API_URL || 'http://localhost:4000';
 const BACKEND_URL: string = BACKEND_API_URL;
 
 let isBackendDown = false;
@@ -17,7 +17,7 @@ export async function fetchFromBackend<T>(
     return null;
   }
   const controller = new AbortController();
-  const timeoutMs = BACKEND_URL.startsWith('https://') ? 3500 : 1500;
+  const timeoutMs = BACKEND_URL.startsWith('https://') ? 3000 : 800;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {

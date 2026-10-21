@@ -81,6 +81,40 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
+        // Aggregate multi-recipient dividend push batches (e.g. 75 push rows from Seat #76 claim)
+        const isDividendPush =
+          (row.eventType === 'pushed' || (row.reason && row.reason.toLowerCase().includes('dividend push'))) &&
+          !(row.reason && row.reason.toLowerCase().includes('instant cashback'));
+
+        if (isDividendPush && row.incomingPosition) {
+          const rootTx = txHash.split('-pushed-')[0] || txHash;
+          const groupKey = `dividend_push_batch_${rootTx}_${row.incomingPosition}`;
+          if (seenKeys.has(groupKey)) continue;
+          seenKeys.add(groupKey);
+
+          const singleAmountTrob = parseFloat(row.amountBtt || '0');
+          const singleAmountUsd = parseFloat(row.amountUsdEst || '0');
+          const recipients = row.recipientCount || (row.incomingPosition > 1 ? row.incomingPosition - 1 : 1);
+
+          eventsList.push({
+            id: `dividend-batch-${rootTx.slice(0, 10)}-${row.incomingPosition}`,
+            eventType: 'seat_distribution',
+            userAddress: row.userAddress,
+            incomingPosition: row.incomingPosition,
+            recipientCount: recipients,
+            txHash: rootTx,
+            blockNumber: Number(row.blockNumber || 1),
+            timestamp: toIsoUtc(row.timestamp),
+            amountBtt: singleAmountTrob,
+            amountTrob: singleAmountTrob,
+            amountUsdEst: singleAmountUsd,
+            amountUsdEstimate: singleAmountUsd,
+            priceSource: row.priceSource || 'neon-db',
+            reason: `Instant 300/N Dividend Distribution (Seat #${row.incomingPosition})`,
+          });
+          continue;
+        }
+
         const dedupeKey = `${txHash}_${row.eventType}_${row.userAddress}`;
         if (seenKeys.has(dedupeKey)) continue;
         seenKeys.add(dedupeKey);
@@ -120,15 +154,45 @@ export async function GET(req: NextRequest) {
         const isPush = item.type === 'pushed';
         const userAddress = isPush ? item.to : item.from;
 
-        const dedupeKey = `${item.txHash}_${item.type}_${userAddress}`;
-        if (seenKeys.has(dedupeKey)) continue;
-        seenKeys.add(dedupeKey);
-
         let pos = item.incomingPosition;
         if (!pos) {
           const m = item.typeLabel.match(/Seat #(\d+)/i);
           if (m && m[1]) pos = parseInt(m[1], 10);
         }
+
+        // Aggregate multi-recipient on-chain dividend pushes
+        const isDividendPush =
+          (item.type === 'pushed' || (item.typeLabel && item.typeLabel.toLowerCase().includes('dividend push'))) &&
+          !(item.typeLabel && item.typeLabel.toLowerCase().includes('instant cashback'));
+
+        if (isDividendPush && pos) {
+          const rootTx = item.txHash.split('-pushed-')[0] || item.txHash;
+          const groupKey = `dividend_push_batch_${rootTx}_${pos}`;
+          if (seenKeys.has(groupKey)) continue;
+          seenKeys.add(groupKey);
+
+          eventsList.push({
+            id: `chain-dividend-${rootTx.slice(0, 10)}-${pos}`,
+            eventType: 'seat_distribution',
+            userAddress: userAddress,
+            incomingPosition: pos,
+            recipientCount: pos > 1 ? pos - 1 : 1,
+            txHash: item.txHash,
+            blockNumber: 1,
+            timestamp: toIsoUtc(item.timestamp),
+            amountBtt: item.amountTrob || item.amountBtt,
+            amountTrob: item.amountTrob || item.amountBtt,
+            amountUsdEst: item.amountUsd,
+            amountUsdEstimate: item.amountUsd,
+            priceSource: 'trobchain-blockchain',
+            reason: `Instant 300/N Dividend Distribution (Seat #${pos})`,
+          });
+          continue;
+        }
+
+        const dedupeKey = `${item.txHash}_${item.type}_${userAddress}`;
+        if (seenKeys.has(dedupeKey)) continue;
+        seenKeys.add(dedupeKey);
 
         eventsList.push({
           id: item.id,

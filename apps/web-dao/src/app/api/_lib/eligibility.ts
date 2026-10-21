@@ -62,6 +62,62 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
   let currentSrVoted = false;
 
   try {
+    // 1. Query Explorer Account API for true activation date and on-chain raw state
+    try {
+      const expRes = await fetch(`${EXPLORER_API_URL}/accounts/${rawAddress}`, {
+        cache: 'no-store',
+      });
+      if (expRes.ok) {
+        const expJson = await expRes.json();
+        const expData = expJson.data || expJson;
+        if (expData?.first_seen_at) {
+          const ts = new Date(expData.first_seen_at).getTime();
+          if (!isNaN(ts) && ts > 0) {
+            creationTimestamp = ts;
+          }
+        }
+        if (expData?.raw) {
+          const raw = expData.raw;
+          if (raw.create_time && (!creationTimestamp || Number(raw.create_time) < creationTimestamp)) {
+            let ct = Number(raw.create_time);
+            if (ct < 10000000000) ct *= 1000;
+            creationTimestamp = ct;
+          }
+          if (Array.isArray(raw.frozenV2)) {
+            for (const f of raw.frozenV2) {
+              const amountSun = Number(f.amount || 0);
+              const trobAmount = Math.floor(amountSun / 1_000_000);
+              const typeStr = String(f.type ?? '').toUpperCase();
+              const isEnergy = typeStr === 'ENERGY' || typeStr === '1' || f.type === 1;
+              const isBandwidth = typeStr === 'BANDWIDTH' || typeStr === '0' || f.type === 0 || !f.type;
+              if (isEnergy) {
+                currentEnergyStakeTrob += trobAmount;
+              } else if (isBandwidth) {
+                currentBandwidthStakeTrob += trobAmount;
+              }
+            }
+          }
+          if (Array.isArray(raw.votes)) {
+            currentSrVoted = raw.votes.some((v: any) => {
+              const rawV = (v.vote_address || '').trim().toLowerCase();
+              const hexV = toTronHex(v.vote_address || '');
+              return (
+                rawV === OFFICIAL_SR_MAINNET_HEX ||
+                rawV === OFFICIAL_SR_TESTNET_HEX ||
+                rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+                rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+                hexV === OFFICIAL_SR_MAINNET_HEX ||
+                hexV === OFFICIAL_SR_TESTNET_HEX
+              );
+            });
+          }
+        }
+      }
+    } catch (expErr) {
+      console.warn('[Eligibility] Explorer account lookup notice:', expErr);
+    }
+
+    // 2. Query FullNode RPC for live blockchain state
     const hexAddress = toTronHex(rawAddress);
     const acctRes = await fetch(`${FULLNODE_RPC_URL}/wallet/getaccount`, {
       method: 'POST',
@@ -74,86 +130,103 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
       const acctData = (await acctRes.json()) as any;
       if (acctData && acctData.create_time) {
         let ct = Number(acctData.create_time);
-        if (ct < 10000000000) ct *= 1000; // convert seconds to ms if needed
-        creationTimestamp = ct;
-        if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
-          condition1Passed = false;
-          condition1Reason = 'Wallet was activated before 1 October 2026. Only wallets created on or after 1 October 2026 are eligible.';
-        } else {
-          condition1Passed = true;
+        if (ct < 10000000000) ct *= 1000;
+        if (!creationTimestamp || ct < creationTimestamp) {
+          creationTimestamp = ct;
         }
-      }
-
-      // Fallback: check earliest on-chain transaction timestamp if create_time not returned
-      if (!creationTimestamp) {
-        try {
-          const txRes = await fetch(`${EXPLORER_API_URL}/accounts/${rawAddress}/transactions?limit=100`, {
-            cache: 'no-store',
-          });
-          if (txRes.ok) {
-            const txData = await txRes.json();
-            const list = (txData.data || []) as any[];
-            if (list.length > 0) {
-              let earliest = Infinity;
-              for (const t of list) {
-                const ts = t.timestamp ? new Date(t.timestamp).getTime() : Infinity;
-                if (ts < earliest) earliest = ts;
-              }
-              if (earliest !== Infinity) {
-                creationTimestamp = earliest;
-                if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
-                  condition1Passed = false;
-                  condition1Reason = 'Wallet was activated before 1 October 2026. Only wallets created on or after 1 October 2026 are eligible.';
-                } else {
-                  condition1Passed = true;
-                }
-              }
-            }
-          }
-        } catch {}
       }
 
       // Live On-Chain Freeze V2 (Stake 2.0)
       if (Array.isArray(acctData.frozenV2)) {
+        let fnEnergy = 0;
+        let fnBandwidth = 0;
         for (const f of acctData.frozenV2) {
           const amountSun = Number(f.amount || 0);
           const trobAmount = Math.floor(amountSun / 1_000_000);
-          if (f.type === 'ENERGY') {
-            currentEnergyStakeTrob += trobAmount;
-          } else if (!f.type || f.type === 'BANDWIDTH') {
-            currentBandwidthStakeTrob += trobAmount;
+          const typeStr = String(f.type ?? '').toUpperCase();
+          const isEnergy = typeStr === 'ENERGY' || typeStr === '1' || f.type === 1;
+          const isBandwidth = typeStr === 'BANDWIDTH' || typeStr === '0' || f.type === 0 || !f.type;
+          if (isEnergy) {
+            fnEnergy += trobAmount;
+          } else if (isBandwidth) {
+            fnBandwidth += trobAmount;
           }
         }
+        if (fnEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = fnEnergy;
+        if (fnBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = fnBandwidth;
       }
+
       // Legacy Freeze 1.0
       if (Array.isArray(acctData.frozen)) {
         const sumFrozen = acctData.frozen.reduce(
           (acc: number, f: any) => acc + Number(f.frozen_balance || 0),
           0
         );
-        currentBandwidthStakeTrob += Math.floor(sumFrozen / 1_000_000);
+        const legacyBandwidth = Math.floor(sumFrozen / 1_000_000);
+        if (legacyBandwidth > currentBandwidthStakeTrob) currentBandwidthStakeTrob = legacyBandwidth;
       }
       if (acctData.account_resource?.frozen_balance_for_energy?.frozen_balance) {
-        currentEnergyStakeTrob += Math.floor(
+        const legacyEnergy = Math.floor(
           Number(acctData.account_resource.frozen_balance_for_energy.frozen_balance) / 1_000_000
         );
+        if (legacyEnergy > currentEnergyStakeTrob) currentEnergyStakeTrob = legacyEnergy;
       }
 
       // Live On-Chain SR Votes
-      if (Array.isArray(acctData.votes)) {
+      if (Array.isArray(acctData.votes) && !currentSrVoted) {
         currentSrVoted = acctData.votes.some((v: any) => {
-          const vAddr = (v.vote_address || '').toLowerCase();
+          const rawV = (v.vote_address || '').trim().toLowerCase();
+          const hexV = toTronHex(v.vote_address || '');
           return (
-            vAddr === OFFICIAL_SR_MAINNET_HEX ||
-            vAddr === OFFICIAL_SR_TESTNET_HEX ||
-            vAddr === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-            vAddr === OFFICIAL_SR_TESTNET_B58.toLowerCase()
+            rawV === OFFICIAL_SR_MAINNET_HEX ||
+            rawV === OFFICIAL_SR_TESTNET_HEX ||
+            rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+            rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+            hexV === OFFICIAL_SR_MAINNET_HEX ||
+            hexV === OFFICIAL_SR_TESTNET_HEX
           );
         });
       }
     }
+
+    // 3. Fallback: check earliest on-chain transaction timestamp if create_time not returned
+    if (!creationTimestamp) {
+      try {
+        const txRes = await fetch(`${EXPLORER_API_URL}/accounts/${rawAddress}/transactions?limit=100`, {
+          cache: 'no-store',
+        });
+        if (txRes.ok) {
+          const txData = await txRes.json();
+          const list = (txData.data || []) as any[];
+          if (list.length > 0) {
+            let earliest = Infinity;
+            for (const t of list) {
+              const ts = t.timestamp ? new Date(t.timestamp).getTime() : Infinity;
+              if (ts < earliest) earliest = ts;
+            }
+            if (earliest !== Infinity) {
+              creationTimestamp = earliest;
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 4. Fallback for newly generated wallets: default to current activation timestamp
+    if (!creationTimestamp) {
+      creationTimestamp = Date.now();
+    }
+
+    if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
+      condition1Passed = false;
+      condition1Reason = 'Wallet was activated before 1 October 2026. Only wallets created on or after 1 October 2026 are eligible.';
+    } else {
+      condition1Passed = true;
+    }
   } catch (err) {
     console.warn('[Eligibility] Error querying on-chain trobchain node:', err);
+    if (!creationTimestamp) creationTimestamp = Date.now();
+    condition1Passed = true;
   }
 
   const REQUIRED_ENERGY_TROB = 1070;

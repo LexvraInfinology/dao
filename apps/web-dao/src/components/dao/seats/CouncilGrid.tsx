@@ -59,27 +59,27 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
   const filteredSeatNumbers = new Set(filteredSeats.map((s) => s.seatNumber));
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-3 sm:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3.5 sm:space-y-4 font-sans">
+    <div className="rounded-2xl bg-white border border-[#E2EEF9] p-2.5 xs:p-3 sm:p-4 md:p-5 shadow-[0_2px_12px_rgba(14,98,228,0.06)] space-y-3 sm:space-y-4 font-sans">
       {/* Header with Title and Filter Dropdown */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 relative">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-[#14304A]">
+      <div className="flex items-center justify-between gap-2 relative">
+        <div className="min-w-0">
+          <h2 className="text-sm xs:text-base sm:text-lg font-bold text-[#14304A] truncate">
             100–Seat Council Grid
           </h2>
           <p className="text-xs text-[#4F6D87] mt-0.5 hidden md:block">
             Click on a seat to view details, claim, or inspect.
           </p>
-          <p className="text-xs text-[#4F6D87] mt-0.5 md:hidden">
+          <p className="text-[10px] xs:text-xs text-[#4F6D87] mt-0.5 md:hidden truncate">
             Tap any seat to inspect or claim
           </p>
         </div>
 
         {/* Filter Dropdown */}
-        <div ref={filterDropdownRef} className="relative self-end sm:self-auto">
+        <div ref={filterDropdownRef} className="relative shrink-0">
           <button
             type="button"
             onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-[#F7FBFF] border border-[#E2EEF9] text-xs font-semibold text-[#14304A] shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 xs:gap-2 px-2.5 xs:px-3 py-1.5 rounded-lg bg-white hover:bg-[#F7FBFF] border border-[#E2EEF9] text-[11px] xs:text-xs font-semibold text-[#14304A] shadow-xs transition-colors cursor-pointer"
           >
             <span>{filterLabels[filter]}</span>
             <ChevronDown className="w-3.5 h-3.5 text-[#4F6D87]" />
@@ -100,7 +100,7 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
                       setFilter(key as 'all' | 'claimed' | 'mine' | 'next' | 'defaulted' | 'locked');
                       setFilterDropdownOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-medium text-left transition-colors ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-medium text-left transition-colors cursor-pointer ${
                       filter === key
                         ? 'bg-[#EFF6FF] text-[#0E62E4] font-bold'
                         : 'text-[#14304A] hover:bg-[#F7FBFF]'
@@ -116,8 +116,8 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
         </div>
       </div>
 
-      {/* 10x10 Matrix Grid - 10 columns across all screen sizes for authentic layout */}
-      <div className="grid grid-cols-10 gap-1 sm:gap-2">
+      {/* 10x10 Matrix Grid - 10 columns across all screen sizes with responsive gap */}
+      <div className="grid grid-cols-10 gap-0.5 xs:gap-1 sm:gap-1.5 md:gap-2">
         {seats.map((seat) => {
           const isSelected = selectedSeat.seatNumber === seat.seatNumber;
           const isFaded = !filteredSeatNumbers.has(seat.seatNumber);
@@ -170,15 +170,15 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
               key={seat.seatNumber}
               type="button"
               onClick={() => onSelectSeat(seat)}
-              className={`aspect-square rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex flex-col items-center justify-between transition-all select-none relative ${tileClasses} ${
+              className={`aspect-square rounded-md xs:rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex flex-col items-center justify-between transition-all select-none relative cursor-pointer ${tileClasses} ${
                 isSelected
-                  ? 'ring-2 ring-[#0E62E4] ring-offset-2 scale-105 z-30 shadow-md'
+                  ? 'ring-2 ring-[#0E62E4] ring-offset-1 sm:ring-offset-2 scale-105 z-30 shadow-md'
                   : ''
               } ${isFaded ? 'opacity-25' : 'opacity-100'}`}
               title={`Seat #${seat.seatNumber} (${seat.status})`}
             >
               {/* Top dot or lock icon */}
-              <div className="h-1.5 sm:h-2 flex items-center justify-center mt-0.5">
+              <div className="h-1 xs:h-1.5 sm:h-2 flex items-center justify-center mt-0.5">
                 {topElement}
               </div>
 
@@ -191,8 +191,36 @@ export const CouncilGrid: React.FC<CouncilGridProps> = ({
         })}
       </div>
 
+      {/* Mobile Selected Seat Quick Strip */}
+      <div className="md:hidden pt-1">
+        <a
+          href="#seat-inspector-section"
+          className="w-full px-3 py-2 rounded-xl bg-slate-50 hover:bg-[#EFF6FF] border border-[#E2EEF9] flex items-center justify-between transition-all"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
+              selectedSeat.status === 'mine' ? 'bg-emerald-500' :
+              selectedSeat.statusBadge === '5X Capped' ? 'bg-red-500' :
+              selectedSeat.statusBadge === 'Underfunded' ? 'bg-amber-500' :
+              selectedSeat.status === 'next' ? 'bg-[#0E62E4]' :
+              selectedSeat.status === 'defaulted' ? 'bg-purple-500' : 'bg-slate-700'
+            }`} />
+            <span className="text-xs font-bold text-[#14304A] truncate">
+              Selected: Seat #{selectedSeat.seatNumber}
+            </span>
+            <span className="text-[10px] text-[#4F6D87] truncate hidden xs:inline">
+              ({selectedSeat.status === 'mine' ? 'Your Seat' : selectedSeat.statusBadge || selectedSeat.status})
+            </span>
+          </div>
+          <span className="text-[11px] font-semibold text-[#0E62E4] flex items-center gap-1 shrink-0">
+            <span>Inspect</span>
+            <span>↓</span>
+          </span>
+        </a>
+      </div>
+
       {/* Legend Footer */}
-      <div className="pt-3 border-t border-[#E2EEF9]">
+      <div className="pt-2.5 sm:pt-3 border-t border-[#E2EEF9]">
         {/* Desktop Legend */}
         <div className="hidden md:flex flex-wrap items-center justify-between gap-2 text-xs font-semibold">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200">

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    
+  @page {
+    size: 210mm 297mm;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #cbd5e1;
+    font-size: 7.9pt;
+    line-height: 1.32;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    overflow: hidden;
+    padding: 9.5mm 11.5mm 9.5mm 11.5mm;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0 auto 10px auto;
+  }
+  @media print {
+    body { background: transparent; }
+    .page { margin: 0; box-shadow: none; }
+  }
+
+  /* LEXVRA WATERMARK */
+  .page-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-32deg);
+    font-size: 94pt;
+    font-weight: 900;
+    color: #0f172a;
+    opacity: 0.045;
+    letter-spacing: 16px;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+    text-transform: uppercase;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .page-watermark.dark {
+    color: #ffffff;
+    opacity: 0.038;
+  }
+
+  /* HEADER & FOOTER */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1.2px solid #e2e8f0;
+    padding-bottom: 3.5px;
+    margin-bottom: 1px;
+    height: 26px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-brand img {
+    height: 19px;
+    object-fit: contain;
+  }
+  .header-brand-title {
+    font-size: 8.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #0284c7;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 3.5px;
+    margin-top: auto;
+    height: 18px;
+    font-size: 6.6pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADINGS */
+  .section-title {
+    font-size: 11.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 1px 0;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    display: inline-block;
+    width: 3.5px;
+    height: 13px;
+    background: #1d4ed8;
+    border-radius: 2px;
+  }
+  .section-subtitle {
+    font-size: 7.3pt;
+    color: #64748b;
+    margin: 0 0 3px 0;
+    font-weight: 500;
+  }
+
+  /* CONTENT BLOCKS */
+  p {
+    margin: 0 0 2.5px 0;
+    color: #334155;
+    text-align: justify;
+    line-height: 1.31;
+    font-size: 7.7pt;
+  }
+  .card-grid {
+    display: grid;
+    gap: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .info-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4.5px 7px;
+  }
+  .info-card.highlight {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+  .info-card.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+  .info-card.warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .info-card.purple {
+    background: #faf5ff;
+    border-color: #e9d5ff;
+  }
+  .info-card.rose {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+  .info-card-title {
+    font-size: 7.3pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .info-card-desc {
+    font-size: 6.6pt;
+    color: #475569;
+    line-height: 1.28;
+  }
+
+  /* INSTITUTIONAL TABLES */
+  .institutional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.6pt;
+    margin: 1px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .institutional-table th {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 3.5px 5.5px;
+    text-align: left;
+    border: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 6.1pt;
+    letter-spacing: 0.3px;
+  }
+  .institutional-table td {
+    padding: 2.8px 5px;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  .institutional-table tr:nth-child(even) {
+    background: #f8fafc;
+  }
+  .institutional-table tr.total-row {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+  }
+  .institutional-table tr.total-row td {
+    color: #ffffff !important;
+    border-color: #1e293b;
+  }
+
+  /* THEORETICAL CALLOUT */
+  .theory-box {
+    background: #f1f5f9;
+    border-left: 3.5px solid #2563eb;
+    border-radius: 0 5px 5px 0;
+    padding: 4.5px 7.5px;
+    font-size: 7pt;
+    color: #1e293b;
+    line-height: 1.30;
+    position: relative;
+    z-index: 2;
+  }
+  .theory-box code {
+    background: #e2e8f0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.6pt;
+    color: #0f172a;
+  }
+
+  /* CODE BOX */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 6.3pt;
+    line-height: 1.25;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* COVER STYLING - INSTITUTIONAL EDITION */
+  .cover {
+    background: #090e17;
+    color: #ffffff;
+    padding: 12mm 14mm 10mm 14mm;
+    justify-content: space-between;
+    position: relative;
+    border: 2px solid #1e293b;
+    outline: 1px solid #334155;
+    outline-offset: -5px;
+  }
+  .cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-badge {
+    background: #0f172a;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .cover-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-emblem-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 7px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 40px;
+    padding: 5px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(56, 189, 248, 0.15);
+  }
+  .cover-emblem-icon {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.55));
+  }
+  .cover-emblem-x {
+    color: #38bdf8;
+    font-size: 13pt;
+    font-weight: 800;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .cover-cube {
+    height: 56px;
+    margin-bottom: 6px;
+  }
+  /* COVER PAGE TECHNICAL SPEC TABLE (EXPLICIT DARK STYLING - NEVER LIGHT ZEBRA) */
+  .cover-spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.4pt;
+    margin-top: 3px;
+    background: #0f172a !important;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-spec-table tr {
+    background: #0f172a !important;
+  }
+  .cover-spec-table tr:nth-child(even) {
+    background: #111d38 !important;
+  }
+  .cover-spec-table td {
+    padding: 3.5px 7px;
+    border: 1px solid #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+  .cover-spec-label {
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    width: 22%;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .cover-spec-val {
+    color: #f8fafc !important;
+    font-weight: 600;
+    width: 28%;
+  }
+  .cover-spec-val.peg-highlight {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-left: 2px solid #38bdf8 !important;
+  }
+  .cover-h1 {
+    font-size: 23pt;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.8px;
+    line-height: 1.12;
+    margin-bottom: 2px;
+  }
+  .cover-h2 {
+    font-size: 8.3pt;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cover-desc {
+    max-width: 620px;
+    font-size: 7.4pt;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+  .cover-pill {
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 6.6pt;
+    color: #f1f5f9;
+    font-weight: 600;
+  }
+  .cover-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .cover-stat-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-top: 2.5px solid #0284c7;
+    border-radius: 4px;
+    padding: 6px 5px;
+    text-align: center;
+  }
+  .cover-stat-val {
+    font-size: 11.5pt;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 1px;
+  }
+  .cover-stat-lbl {
+    font-size: 6.1pt;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .cover-abstract-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 3.5px solid #38bdf8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 6.8pt;
+    color: #cbd5e1;
+    line-height: 1.33;
+    text-align: justify;
+    margin-bottom: 5px;
+  }
+  .cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #1e293b;
+    padding-top: 6px;
+    font-size: 6.4pt;
+    color: #64748b;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+    body { background: transparent; padding: 0; margin: 0; }
+    .page { margin: 0; }
+  </style>
+</head>
+<body>
+  
+<div class="page">
+  <div class="page-watermark">LEXVRA</div>
+  
+    <div class="page-header">
+      <div class="header-brand">
+        <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iZXFBbWJpZW50R2xvdyIgY3g9IjUwJSIgY3k9IjUwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgc3RvcC1vcGFjaXR5PSIwLjQ1IiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwLjIiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzE1NUVFRiIgc3RvcC1vcGFjaXR5PSIwIiAvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRMIiB4MT0iMTgiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdERDNGQyIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMTU1RUVGIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldFRSIiB4MT0iODIiIHkxPSIyMCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM4QkRGOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMUQ0RUQ4IiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJMIiB4MT0iMTgiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFENEVEOCIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEIxQTQyIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFGYWNldEJSIiB4MT0iODIiIHkxPSI4MCIgeDI9IjUwIiB5Mj0iNTAiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzI1NjNFQiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMEQyNTVFIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZXFDb3JlSGlnaGxpZ2h0IiB4MT0iNTAiIHkxPSIyNiIgeDI9IjUwIiB5Mj0iNzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI0UwRjJGRSIgc3RvcC1vcGFjaXR5PSIwLjkiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMzhCREY4IiBzdG9wLW9wYWNpdHk9IjAuNiIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDI4NEM3IiBzdG9wLW9wYWNpdHk9IjAuMyIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM4IiBmaWxsPSJ1cmwoI2VxQW1iaWVudEdsb3cpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsMTEgMjIsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldFRMKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDExIDc4LDUwIDUwLDUwIiBmaWxsPSJ1cmwoI2VxRmFjZXRUUikiIC8+CiAgPHBvbHlnb24gcG9pbnRzPSI1MCw4OSAyMiw1MCA1MCw1MCIgZmlsbD0idXJsKCNlcUZhY2V0QkwpIiAvPgogIDxwb2x5Z29uIHBvaW50cz0iNTAsODkgNzgsNTAgNTAsNTAiIGZpbGw9InVybCgjZXFGYWNldEJSKSIgLz4KICA8cG9seWdvbiBwb2ludHM9IjUwLDI4IDM1LDUwIDUwLDcyIDY1LDUwIiBmaWxsPSJ1cmwoI2VxQ29yZUhpZ2hsaWdodCkiIC8+CiAgPGxpbmUgeDE9IjIyIiB5MT0iNTAiIHgyPSI3OCIgeTI9IjUwIiBzdHJva2U9IiNCQUU2RkQiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIwLjk1IiAvPgogIDxsaW5lIHgxPSI1MCIgeTE9IjExIiB4Mj0iNTAiIHkyPSI4OSIgc3Ryb2tlPSIjRTBGMkZFIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utb3BhY2l0eT0iMC45IiAvPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEiIHI9IjEuNSIgZmlsbD0iI0ZGRkZGRiIgLz4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxLjgiIGZpbGw9IiNGRkZGRkYiIC8+Cjwvc3ZnPgo=" style="height:19px; width:19px; object-fit:contain;" alt="EquoraMatrix" />
+        <span class="header-brand-title">EQUORAFIMATRIX.COM</span>
+      </div>
+      <div class="header-meta">15% MILESTONE POOL | DEFI ON TROBCHAIN</div>
+    </div>
+    
+  
+  <div>
+    <div class="section-title">7. One-Time Rank Milestone Rewards (15% Pool Reserve)</div>
+    <div class="section-subtitle">Instant Milestone Bounties Rewarding Matrix Depth &amp; Leadership Advancement</div>
+  </div>
+
+  <p>
+    The <strong>Rank Milestone Reward Engine</strong> allocates <strong>15% of total protocol pool turnover</strong> into an exclusive progression vault. As leaders ascend through the matrix tiers—unlocked automatically by the P4 and P5 progression engine—they unlock substantial one-time bounties paid directly in TROB:
+  </p>
+
+  <!-- 4 RANK CARDS -->
+  <div class="card-grid grid-4">
+    <div class="info-card highlight">
+      <div style="background: #0284c7; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        ALPHA &bull; LEVEL 3
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #0284c7; text-align: center; margin: 2px 0;">
+        10% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 3 (Alpha Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 2 ($0 cost).<br>
+        <strong>Disbursement:</strong> Instant milestone bounty transferred to wallet.
+      </div>
+    </div>
+
+    <div class="info-card success">
+      <div style="background: #059669; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        PRIME &bull; LEVEL 6
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #059669; text-align: center; margin: 2px 0;">
+        15% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 6 (Prime Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 5 ($0 cost).<br>
+        <strong>Disbursement:</strong> Substantial regional bounty for team leadership.
+      </div>
+    </div>
+
+    <div class="info-card warning">
+      <div style="background: #d97706; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        ELITE &bull; LEVEL 9
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #d97706; text-align: center; margin: 2px 0;">
+        25% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 9 (Elite Rank).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 8 ($0 cost).<br>
+        <strong>Disbursement:</strong> Executive progression reward celebrating major volume.
+      </div>
+    </div>
+
+    <div class="info-card purple">
+      <div style="background: #7c3aed; color: #ffffff; padding: 3.5px 5px; border-radius: 4px; font-weight: 800; font-size: 7.2pt; text-align: center; margin-bottom: 3px;">
+        CROWN &bull; LEVEL 12
+      </div>
+      <div style="font-size: 11.5pt; font-weight: 900; color: #7c3aed; text-align: center; margin: 2px 0;">
+        50% POOL
+      </div>
+      <div class="info-card-desc">
+        <strong>Auto-Unlocked:</strong> Slot 12 (Crown Apex).<br>
+        <strong>Prerequisite:</strong> P4+P5 on Slot 11 ($0 cost).<br>
+        <strong>Disbursement:</strong> Apex master bounty capturing 50% of the entire rank vault!
+      </div>
+    </div>
+  </div>
+
+  <!-- 15% POOL SUB-VAULT ALLOCATION TABLE -->
+  <div style="margin-top: 4px; margin-bottom: 2px;">
+    <div style="font-size: 7.6pt; font-weight: 800; color: #0f172a; margin-bottom: 1px;">
+      15% Rank Milestone Reserve: Sub-Vault Allocation &amp; Payout Invariants
+    </div>
+    <div style="font-size: 6.7pt; color: #475569; margin-bottom: 3px;">
+      Every 14-node board cycle injects $13.50 USD (15% of $90 pools) into the milestone reserve. In an example batch of 100 platform cycles ($1,350 total), funds are deterministically partitioned across 4 milestone sub-vaults:
+    </div>
+  </div>
+
+  <table class="institutional-table" style="font-size: 6.3pt; margin-top: 1px; margin-bottom: 4px;">
+    <thead>
+      <tr>
+        <th style="width: 18%;">Milestone Rank</th>
+        <th style="width: 13%;">Trigger Slot</th>
+        <th style="width: 16%;">Sub-Vault Share</th>
+        <th style="width: 23%;">Accumulated Pool (100 Cycles = $1,350)</th>
+        <th style="width: 30%;">Disbursement &amp; Instant Claim Logic</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Alpha Leader</strong></td>
+        <td>Slot 3</td>
+        <td><strong>10% of Pool</strong></td>
+        <td><strong>$135.00 USD</strong></td>
+        <td>Instant smart contract transfer to wallet when Slot 3 auto-unlocks via P4+P5 on Slot 2.</td>
+      </tr>
+      <tr>
+        <td><strong>Prime Commander</strong></td>
+        <td>Slot 6</td>
+        <td><strong>15% of Pool</strong></td>
+        <td><strong>$202.50 USD</strong></td>
+        <td>Instant regional leadership bounty when Slot 6 auto-unlocks via P4+P5 on Slot 5.</td>
+      </tr>
+      <tr>
+        <td><strong>Elite Pioneer</strong></td>
+        <td>Slot 9</td>
+        <td><strong>25% of Pool</strong></td>
+        <td><strong>$337.50 USD</strong></td>
+        <td>Instant executive progression bounty when Slot 9 auto-unlocks via P4+P5 on Slot 8.</td>
+      </tr>
+      <tr style="background: #faf5ff;">
+        <td><strong>Crown Apex</strong></td>
+        <td>Slot 12</td>
+        <td><strong>50% of Pool</strong></td>
+        <td><strong>$675.00 USD</strong></td>
+        <td>Instant apex milestone bounty capturing 50% of the entire rank vault upon Slot 12 unlock!</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- CONCRETE EXAMPLE: WHAT DOES AN ALPHA ACHIEVER RECEIVE? -->
+  <div class="theory-box" style="border-left-color: #0284c7; background: #f0f9ff; margin-top: 3px; padding: 4.5px 8px;">
+    <strong>CONCRETE WALKTHROUGH: WHAT DOES AN ALPHA ACHIEVER RECEIVE UPON REACHING SLOT 3?</strong><br>
+    When a member's Slot 2 board fills positions <strong>P4 and P5</strong> ($30 + $30 = $60 to pools), their <strong>Slot 3 (Alpha) unlocks autonomously at $0 out-of-pocket</strong>. The smart contract immediately executes <code>claimRankMilestone(user, 3)</code>:
+    <ul style="margin: 2px 0 1px 14px; padding: 0; font-size: 6.6pt;">
+      <li><strong>1. Instant One-Time Milestone Bounty:</strong> The user receives their pro-rata share of the Alpha Milestone Vault (e.g., <strong>$135.00 USD</strong> in a 100-cycle pool) transferred directly to their Web3 wallet in TROB.</li>
+      <li><strong>2. Parallel $180 Cashflow Activation:</strong> Their newly unlocked Slot 3 board runs simultaneously, generating recurring <strong>$180.00 USD (600% ROI)</strong> across 6 nodes.</li>
+      <li><strong>3. 10% Monthly Leadership Royalty Entry:</strong> The user is permanently registered for the recurring <strong>10% Alpha Monthly Royalty</strong> paid on the 11th of every month!</li>
+    </ul>
+  </div>
+
+  <div class="theory-box" style="margin-top: 3px;">
+    <strong>PROGRESSION VELOCITY &amp; REINVESTMENT THEOREM:</strong><br>
+    The Rank Milestone Engine creates an immediate capital replenishment injection: upon reaching Slot k &isin; {3, 6, 9, 12}, the user receives an instantaneous block reward from the 15% progression vault. This eliminates the psychological friction of long matrix completion times and gives leaders instant liquidity to expand regional operations.
+  </div>
+
+  <!-- 2 STRATEGIC INSIGHT CARDS -->
+  <div class="card-grid grid-2" style="margin-top: 3px;">
+    <div class="info-card">
+      <div class="info-card-title">DAO Governance Multiplier Integration</div>
+      <div class="info-card-desc">
+        Reaching milestone levels permanently registers the user's wallet in the smart contract's immutable leader registry, unlocking verified governance voting multipliers in the Equora DAO.
+      </div>
+    </div>
+    <div class="info-card success">
+      <div class="info-card-title">Zero-Cost Tier Escalation Invariant</div>
+      <div class="info-card-desc">
+        Unlike legacy matrix schemes requiring out-of-pocket capital to upgrade, Equora participants deposit strictly once ($30 on Slot 1) and receive milestone bounties as pure upside!
+      </div>
+    </div>
+  </div>
+
+  
+    <div class="page-footer">
+      <div>EQUORA MATRIX PROTOCOL &bull; MASTER SPECIFICATION V6.2 &bull; EQUORAFIMATRIX.COM</div>
+      <div>PEGGED AT $0.056 / TROB &bull; VERIFIED ON SCAN.TROBCHAIN.COM</div>
+      <div>PAGE 8 OF 10</div>
+    </div>
+    
+</div>
+
+</body>
+</html>

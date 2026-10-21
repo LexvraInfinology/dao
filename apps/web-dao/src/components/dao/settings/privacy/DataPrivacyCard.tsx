@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { ExternalLink, ArrowRight } from 'lucide-react';
 
 export default function DataPrivacyCard() {
@@ -47,19 +48,18 @@ export default function DataPrivacyCard() {
         </p>
 
         {/* Action Link Box */}
-        <button
-          type="button"
-          onClick={() => alert('Viewing Privacy Information')}
+        <Link
+          href="/privacy"
           className="w-full bg-[#F8FAFC] border border-[#E2ECF9] rounded-xl px-4 py-3 flex items-center justify-between text-[#155EEF] hover:bg-[#F1F5F9] transition-colors cursor-pointer group mt-3"
         >
           <div className="flex items-center gap-2.5">
             <ExternalLink className="w-4 h-4 text-[#155EEF] shrink-0" />
             <span className="text-xs font-bold text-[#155EEF]">
-              Privacy Information
+              Privacy Information & Policy
             </span>
           </div>
           <ArrowRight className="w-4 h-4 text-[#155EEF] group-hover:translate-x-0.5 transition-transform shrink-0" />
-        </button>
+        </Link>
       </div>
     </div>
   );

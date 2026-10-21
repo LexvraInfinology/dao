@@ -52,14 +52,14 @@ export default function MatrixTreeGraph() {
     <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-[#E2ECF9] shadow-[0_2px_20px_rgba(21,94,239,0.03)] font-jakarta overflow-hidden">
       
       {/* ─── CARD HEADER ─── */}
-      <div className="p-5 sm:p-7 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F1F5F9]">
+      <div className="p-4 sm:p-6 pb-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#F1F5F9]">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-black text-[#071A4A] tracking-tight uppercase">
+            <h2 className="text-lg sm:text-2xl font-black text-[#071A4A] tracking-tight uppercase">
               MATRIX ARCHITECTURE
             </h2>
             <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0E62E4] border border-[#0E62E4]/20 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-              Static Example
+              Static Model
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[#64748B] font-medium mt-0.5">
@@ -68,24 +68,25 @@ export default function MatrixTreeGraph() {
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 self-start md:self-auto">
           <button
             onClick={() => setHighlightIncome(!highlightIncome)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
               highlightIncome
                 ? 'bg-[#EFF6FF] text-[#155EEF] border-[#BFDBFE]'
                 : 'bg-white text-[#64748B] border-[#E2E8F0] hover:text-[#071A4A]'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Direct Income Positions (3, 6, 8, 9, 11, 12)</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Direct Income Positions (3, 6, 8, 9, 11, 12)</span>
+            <span className="sm:hidden">6 Direct Returns ($180)</span>
           </button>
         </div>
       </div>
 
       {/* ─── RESPONSIVE VECTOR TREE CANVAS ─── */}
-      <div className="bg-[#F8FAFD] p-3 sm:p-6 lg:p-8 flex justify-center items-center">
-        <div className="w-full max-w-[840px]">
+      <div className="bg-[#F8FAFD] p-2 sm:p-6 lg:p-8 flex justify-center items-center overflow-x-auto">
+        <div className="w-full min-w-[560px] md:min-w-0 max-w-[840px]">
           <svg
             viewBox="0 0 840 345"
             className="w-full h-auto select-none"
@@ -534,7 +535,7 @@ export default function MatrixTreeGraph() {
 
         {/* ─── NODE DETAILS INSPECTOR ─── */}
         {activeNode && (
-          <div className="p-4 rounded-xl bg-white border border-[#BFDBFE] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="p-4 rounded-xl bg-white border border-[#BFDBFE] flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fadeIn">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm bg-[#EFF6FF] text-[#155EEF] border border-[#BFDBFE]">
                 #{activeNode.position}

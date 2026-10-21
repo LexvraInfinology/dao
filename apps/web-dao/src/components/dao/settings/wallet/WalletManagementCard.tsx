@@ -1,17 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeftRight, Trash2, ChevronRight } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { WalletModal } from '@/components/ui/WalletModal';
 
 export default function WalletManagementCard() {
   const wallet = useWallet();
   const auth   = useAuthContext();
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
 
   const handleSwitch = () => {
     wallet.disconnect();
     auth.signOut();
+    setWalletModalOpen(true);
   };
 
   const handleDisconnect = () => {
@@ -75,6 +78,11 @@ export default function WalletManagementCard() {
           <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#DC2626] transition-colors" />
         </div>
       </div>
+
+      <WalletModal
+        isOpen={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
+      />
     </div>
   );
 }

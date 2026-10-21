@@ -11,6 +11,7 @@ const API_BASE = '';
 export interface UseApiResult<T> {
   data: T | null;
   loading: boolean;
+  isValidating?: boolean;
   error: string | null;
   refetch: () => void;
 }
@@ -73,6 +74,7 @@ export function clearDaoClientCaches() {
 
 // Global in-memory cache for live dynamic API responses (persists across component mounts)
 const memoryApiCache = new Map<string, any>();
+const inFlightClientRequests = new Map<string, Promise<any>>();
 
 function isDynamicPath(path: string): boolean {
   return (
@@ -122,15 +124,25 @@ export function useApi<T>(
     }
     return null;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (fallback !== null && fallback !== undefined) return false;
+    if (path && memoryApiCache.has(path)) return false;
+    return Boolean(enabled && path);
+  });
+  const [isValidating, setIsValidating] = useState<boolean>(false);
   const [error, setError]     = useState<string | null>(null);
   const pollRef               = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dataRef               = useRef<T | null>(data);
+  dataRef.current = data;
 
   // Safely hydrate from memory cache (or static non-dynamic sessionStorage) on client immediately after mount
   useEffect(() => {
     if (!path) return;
     if (memoryApiCache.has(path)) {
-      setData(memoryApiCache.get(path));
+      const cached = memoryApiCache.get(path);
+      setData(cached);
+      dataRef.current = cached;
+      setLoading(false);
       return;
     }
     if (typeof window !== 'undefined' && !isDynamicPath(path)) {
@@ -140,6 +152,8 @@ export function useApi<T>(
           const parsed = JSON.parse(stored);
           memoryApiCache.set(path, parsed);
           setData(parsed);
+          dataRef.current = parsed;
+          setLoading(false);
         }
       } catch {}
     }
@@ -148,7 +162,12 @@ export function useApi<T>(
   const fetchData = useCallback(async () => {
     if (!path || !enabled) return;
 
-    setLoading(true);
+    // Only set loading = true on initial load if we don't have data yet!
+    // On background updates/polling, data stays on screen and loading stays false!
+    if (!dataRef.current && !memoryApiCache.has(path)) {
+      setLoading(true);
+    }
+    setIsValidating(true);
     setError(null);
 
     const headers: Record<string, string> = {
@@ -156,28 +175,33 @@ export function useApi<T>(
     };
     if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
 
+    const cacheKey = `${API_BASE}${path}`;
     try {
-      const res = await fetch(`${API_BASE}${path}`, {
-        headers,
-        cache: 'no-store',
-      });
-
-      if (!res.ok) {
-        throw new Error(`API ${res.status}: ${res.statusText}`);
+      let reqPromise = inFlightClientRequests.get(cacheKey);
+      if (!reqPromise) {
+        reqPromise = fetch(cacheKey, {
+          headers,
+          cache: 'no-store',
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+            return res.json();
+          })
+          .finally(() => {
+            inFlightClientRequests.delete(cacheKey);
+          });
+        inFlightClientRequests.set(cacheKey, reqPromise);
       }
 
-      const json = await res.json();
+      const json = await reqPromise;
       const result = json.data !== undefined ? json.data : json;
       setData(result);
-      if (path && !isDynamicPath(path)) {
-        memoryApiCache.set(path, result);
-        if (typeof window !== 'undefined') {
-          try {
-            sessionStorage.setItem(`eq_cache_${path}`, JSON.stringify(result));
-          } catch {}
-        }
-      } else if (path) {
-        memoryApiCache.set(path, result);
+      dataRef.current = result;
+      memoryApiCache.set(path, result);
+      if (typeof window !== 'undefined' && !isDynamicPath(path)) {
+        try {
+          sessionStorage.setItem(`eq_cache_${path}`, JSON.stringify(result));
+        } catch {}
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error';
@@ -185,6 +209,7 @@ export function useApi<T>(
       // Keep stale data if we have it
     } finally {
       setLoading(false);
+      setIsValidating(false);
     }
   }, [path, enabled, auth.token]);
 
@@ -202,8 +227,8 @@ export function useApi<T>(
     };
   }, [fetchData, pollMs, path, enabled]);
 
-  const isActivelyLoading = loading || (Boolean(path && enabled) && data === null && !error);
-  return { data, loading: isActivelyLoading, error, refetch: fetchData };
+  const isActivelyLoading = loading && data === null;
+  return { data, loading: isActivelyLoading, isValidating, error, refetch: fetchData };
 }
 
 // ─── Typed shortcuts ──────────────────────────────────────────────────────────
@@ -237,6 +262,7 @@ export interface DaoEventData {
   eventType: string;
   userAddress: string | null;
   incomingPosition: number | null;
+  recipientCount?: number | null;
   amountBtt: number;
   amountTrob?: number;
   amountUsdEstimate: number;
@@ -385,6 +411,10 @@ export interface TransactionItem {
   categoryBadge?: string;
   sourceSeat?: number;
   note?: string;
+  blockNumber?: number | string;
+  contractAddress?: string;
+  distributionFormula?: string;
+  rawType?: string;
 }
 
 export interface TransactionsData {
@@ -398,6 +428,34 @@ export interface TransactionsData {
   priceSource: string;
   protocolInflowsUsd?: number;
   protocolOutflowsUsd?: number;
+  userInflowUsd?: number;
+  userInflowTrob?: number;
+  userOutflowUsd?: number;
+  userOutflowTrob?: number;
+  userNetReturnUsd?: number;
+  userMultiplier?: number;
+  memberFinancials?: {
+    address: string;
+    position: number | null;
+    isMember: boolean;
+    status: 'active' | 'capped' | 'vacant' | 'non-member';
+    userInflowUsd: number;
+    userInflowTrob: number;
+    userOutflowUsd: number;
+    userOutflowTrob: number;
+    userNetReturnUsd: number;
+    userMultiplier: number;
+    retopupCount: number;
+    underfundedAudit?: {
+      wasUnderfunded: boolean;
+      unearnedDebtTrob: number;
+      initialV1DepositTrob: number;
+      completionDepositTrob?: number;
+      cashbackReceivedTrob?: number;
+      recovered: boolean;
+      note: string;
+    };
+  };
 }
 
 // ─── Convenience wrappers ─────────────────────────────────────────────────────
@@ -406,21 +464,9 @@ export function useDaoStats(pollMs?: number) {
   return useApi<DaoStatsData>('/api/dao/stats', { pollMs });
 }
 
-export const DEFAULT_TROB_PRICE: TrobPriceData = {
-  priceUsd: 0.042431,
-  priceSource: 'live-market-api',
-  updatedAt: new Date().toISOString(),
-  isStale: false,
-  seatEntryUsd: 300,
-  seatEntryTrob: 7070.30,
-  earningsCapUsd: 1500,
-  earningsCapTrob: 35351.51,
-};
-
 export function useTrobPrice(pollMs: number = 15_000) {
   return useApi<TrobPriceData>('/api/price/trob', {
     pollMs,
-    fallback: DEFAULT_TROB_PRICE,
   });
 }
 
@@ -454,16 +500,19 @@ export function useTransactions(
   page = 1,
   limit = 20,
   type?: string,
-  search?: string
+  search?: string,
+  pollMs: number = 8000,
+  userWallet: string | null = null
 ) {
   const params = new URLSearchParams();
   if (address) params.set('address', address);
+  if (userWallet) params.set('userWallet', userWallet);
   params.set('page', String(page));
   params.set('limit', String(limit));
   if (type && type !== 'all') params.set('type', type);
   if (search && search.trim()) params.set('search', search.trim());
 
-  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`);
+  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`, { pollMs });
 }
 
 export function useDaoProposals(limit = 20) {

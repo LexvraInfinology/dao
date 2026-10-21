@@ -42,8 +42,8 @@ export default function CouncilSeatsPage() {
   const { data: membersPayload, loading: membersLoading, refetch: refetchMembers } =
     useApi<ApiMembersPayload>('/api/dao/members?page=1&limit=100', { pollMs: 15_000 });
 
-  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && (memberLoading || memberData === null));
-  const isSeatsLoading  = Boolean(membersLoading || !membersPayload);
+  const isMemberLoading = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
+  const isSeatsLoading  = Boolean(!membersPayload && membersLoading);
 
   // Live real-time tick to auto-evaluate 48h expiration in real time
   const [clockTick, setClockTick] = useState(Date.now());
@@ -143,12 +143,19 @@ export default function CouncilSeatsPage() {
     setMintErr(null);
     setMinting(true);
 
-    const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : 0.042431;
+    const livePriceUsd = (price?.priceUsd && price.priceUsd > 0) ? price.priceUsd : null;
     const seatEntryTrob = (price?.seatEntryTrob && price.seatEntryTrob > 0)
       ? price.seatEntryTrob
-      : Math.round((300 / livePriceUsd) * 100) / 100;
+      : (livePriceUsd ? Math.round((300 / livePriceUsd) * 100) / 100 : null);
+
+    if (!seatEntryTrob || !livePriceUsd) {
+      setMinting(false);
+      return { success: false, error: 'Live TROB market rate is currently loading. Please wait for real-time oracle price.' };
+    }
+
     // Security floor: Entry fee is strictly pegged to $300 USD (minimum 3,000 TROB)
     if (seatEntryTrob < 3000) {
+      setMinting(false);
       throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD is strictly required.`);
     }
     const callValueSun = Math.ceil(seatEntryTrob * 1_000_000);
@@ -263,7 +270,7 @@ export default function CouncilSeatsPage() {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fadeIn w-full max-w-full overflow-x-hidden">
+    <div className="space-y-3.5 xs:space-y-4 sm:space-y-5 md:space-y-6 animate-fadeIn w-full max-w-full overflow-x-hidden">
       <CouncilSeatsHero />
 
       <CouncilStatCards />
@@ -273,64 +280,91 @@ export default function CouncilSeatsPage() {
 
       {/* Connected Wallet Status Banner — 100% Direct Blockchain Sync Indicator */}
       {wallet.isConnected && !isUnderfundedMember && (
-        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
+        <div className={`p-3 xs:p-3.5 sm:p-4 rounded-2xl border shadow-xs transition-all ${
           isMemberLoading
             ? 'bg-[#F7FBFF] border-blue-200 text-[#14304A]'
             : isRealMember
             ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
             : 'bg-[#F7FBFF] border-[#E2EEF9] text-[#14304A]'
         }`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              isMemberLoading ? 'bg-[#0E62E4] text-white' : isRealMember ? 'bg-emerald-500 text-white' : 'bg-[#0E62E4] text-white'
-            }`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            {/* Left Info Section */}
+            <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
+                isMemberLoading
+                  ? 'bg-[#0E62E4] text-white'
+                  : isRealMember
+                  ? 'bg-emerald-500 text-white shadow-xs'
+                  : 'bg-[#0E62E4] text-white'
+              }`}>
+                {isMemberLoading ? (
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                ) : isRealMember ? (
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1">
+                {/* Header row: Status + Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-bold font-sans tracking-tight">
+                    {isMemberLoading
+                      ? 'Verifying Council Membership...'
+                      : isRealMember
+                      ? `Active Council Member (Seat #${memberData!.position})`
+                      : 'Connected Wallet · Available for Seat Claim'}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                    isRealMember
+                      ? 'bg-white text-emerald-800 border-emerald-300'
+                      : 'bg-white text-[#0E62E4] border-blue-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      isMemberLoading
+                        ? 'bg-blue-500 animate-ping'
+                        : isRealMember
+                        ? 'bg-emerald-500 animate-pulse'
+                        : 'bg-blue-500'
+                    }`} />
+                    <span>{isMemberLoading ? 'Syncing...' : 'Blockchain Synced'}</span>
+                  </span>
+                </div>
+
+                {/* Subtitle row: Address info */}
+                <p className="text-[11px] text-[#4F6D87] truncate max-w-full">
+                  {isMemberLoading
+                    ? `Verifying on-chain sovereign seat allocation for ${activeAddress}...`
+                    : isRealMember
+                    ? `Verified on-chain for Seat #${memberData!.position} · ${activeAddress}`
+                    : `Connected: ${activeAddress} · 1 seat limit per wallet`}
+                </p>
+              </div>
+            </div>
+
+            {/* Right Action Section */}
+            <div className="shrink-0 w-full md:w-auto pt-0.5 md:pt-0">
               {isMemberLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="w-full md:w-auto text-[11px] font-semibold text-[#0E62E4] bg-white px-3.5 py-2 rounded-xl border border-blue-200 text-center flex items-center justify-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Syncing Dynamic Data...</span>
+                </div>
               ) : isRealMember ? (
-                <Check className="w-5 h-5" />
+                <a
+                  href="/dao/lounge"
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold shadow-xs hover:shadow transition-all text-center cursor-pointer"
+                >
+                  <span>Enter Member Lounge</span>
+                  <span className="text-emerald-100 font-normal">→</span>
+                </a>
               ) : (
-                <ShieldCheck className="w-5 h-5" />
+                <div className="w-full md:w-auto text-[11px] font-semibold text-[#0E62E4] bg-white px-3 py-1.5 rounded-xl border border-blue-200 text-center">
+                  1 Seat Per Device & Wallet Limit
+                </div>
               )}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold font-sans">
-                  {isMemberLoading
-                    ? 'Verifying Council Membership...'
-                    : isRealMember
-                    ? `Active Council Member (Seat #${memberData!.position})`
-                    : 'Connected Wallet · Available for Seat Claim'}
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white border border-current/20 font-semibold">
-                  {isMemberLoading ? 'Syncing...' : 'Blockchain Synced'}
-                </span>
-              </div>
-              <p className="text-[11px] text-[#4F6D87] truncate">
-                {isMemberLoading
-                  ? `Verifying on-chain sovereign seat allocation for ${activeAddress}...`
-                  : isRealMember
-                  ? `Wallet ${activeAddress} is verified on the smart contract for Seat #${memberData!.position}. Limit: 1 seat per wallet/device.`
-                  : `Connected: ${activeAddress}. You do not own a seat yet. You may claim 1 vacant seat below ($300 USD).`}
-              </p>
-            </div>
           </div>
-          {isMemberLoading ? (
-            <div className="shrink-0 text-[11px] font-semibold text-[#0E62E4] bg-white px-3.5 py-1.5 rounded-xl border border-blue-200 text-center flex items-center gap-1.5">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Syncing Dynamic Data...</span>
-            </div>
-          ) : isRealMember ? (
-            <a
-              href="/dao/lounge"
-              className="shrink-0 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all text-center"
-            >
-              Enter Member Lounge
-            </a>
-          ) : (
-            <div className="shrink-0 text-[11px] font-semibold text-[#0E62E4] bg-white px-3 py-1.5 rounded-xl border border-blue-200 text-center">
-              1 Seat Per Device & Wallet Limit
-            </div>
-          )}
         </div>
       )}
 
@@ -373,7 +407,7 @@ export default function CouncilSeatsPage() {
         </div>
 
         {/* Right: Inspector + About */}
-        <div className="lg:col-span-4 space-y-6">
+        <div id="seat-inspector-section" className="lg:col-span-4 space-y-4 sm:space-y-6 scroll-mt-20">
           {/* Success notification */}
           {notification && (
             <div className="p-4 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] text-xs text-[#047857] font-semibold flex items-center gap-2.5 shadow-sm animate-fadeIn">

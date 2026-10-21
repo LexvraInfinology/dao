@@ -39,42 +39,60 @@ export default function NotificationSettingsCard() {
   const auth = useAuthContext();
   const { data: settings, loading } = useUserSettings(auth.token);
 
-  // Local state — initialised from backend data
+  // Local state — initialised from backend data or localStorage
   const [toggles, setToggles] = useState<Record<NotifKey, boolean>>(DEFAULT_NOTIFS);
   const [saved, setSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Hydrate local state from loaded settings
+  // Hydrate local state from loaded settings or localStorage
   useEffect(() => {
-    if (!settings) return;
-    setToggles({
-      notifDaoActivity:     settings.notifDaoActivity,
-      notifGovernance:      settings.notifGovernance,
-      notifCouncilSeat:     settings.notifCouncilSeat,
-      notifMatrixBridge:    settings.notifMatrixBridge,
-      notifProtocolUpdates: settings.notifProtocolUpdates,
-      notifSecurityAlerts:  settings.notifSecurityAlerts,
-      notifMarketingEvents: settings.notifMarketingEvents,
-    });
+    if (settings) {
+      setToggles({
+        notifDaoActivity:     settings.notifDaoActivity,
+        notifGovernance:      settings.notifGovernance,
+        notifCouncilSeat:     settings.notifCouncilSeat,
+        notifMatrixBridge:    settings.notifMatrixBridge,
+        notifProtocolUpdates: settings.notifProtocolUpdates,
+        notifSecurityAlerts:  settings.notifSecurityAlerts,
+        notifMarketingEvents: settings.notifMarketingEvents,
+      });
+    } else if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('equora_notification_settings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setToggles((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch {}
+    }
   }, [settings]);
 
-  // Persist a single toggle change after a short debounce
+  // Persist a toggle change immediately locally and debounced to backend
   const handleToggle = (key: NotifKey) => {
     const newValue = !toggles[key];
-    setToggles((prev) => ({ ...prev, [key]: newValue }));
+    const updated = { ...toggles, [key]: newValue };
+    setToggles(updated);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('equora_notification_settings', JSON.stringify(updated));
+        window.dispatchEvent(
+          new CustomEvent('dao:notification-settings-updated', { detail: updated })
+        );
+      } catch {}
+    }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
 
     if (!auth.token) return;
 
-    // Debounce: cancel previous save timer, fire new one after 600ms
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       try {
         await saveUserSettings({ [key]: newValue }, auth.token!);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
       } catch {
-        // Silently revert on error
-        setToggles((prev) => ({ ...prev, [key]: !newValue }));
+        // Silently keep local state
       }
     }, 600);
   };
@@ -208,10 +226,7 @@ export default function NotificationSettingsCard() {
               Notification Settings
             </h3>
             <p className="text-xs text-[#64748B] mt-0.5">
-              Choose what updates you want to receive.
-              {!auth.token && (
-                <span className="ml-1 text-amber-600 font-medium">(Sign in to persist settings)</span>
-              )}
+              Choose what real-time updates and push alerts you want to receive.
             </p>
           </div>
           {saved && (
@@ -282,15 +297,15 @@ export default function NotificationSettingsCard() {
               className="bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl p-3 flex items-center justify-between"
             >
               {/* Left Info */}
-              <div className="flex items-center gap-3 min-w-0 pr-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center shrink-0">
                   {item.icon}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-[#071A4A]">
                     {item.title}
                   </h4>
-                  <p className="text-[11px] text-[#64748B] mt-0.5 truncate">
+                  <p className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
                     {item.subtitle}
                   </p>
                 </div>

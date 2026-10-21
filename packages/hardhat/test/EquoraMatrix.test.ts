@@ -571,4 +571,199 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       );
     });
   });
+
+  describe("Two-Stage Tier Escalation, Strict Floor & Zero-Leakage Protocol Pools", function () {
+    it("should enforce MIN_SLOT1_FLOOR of 30 TROB", async function () {
+      expect(await matrix.MIN_SLOT1_FLOOR()).to.equal(SLOT1_COST);
+      expect(await matrix.BASE_SLOT_COST()).to.equal(SLOT1_COST);
+    });
+
+    it("should unlock Slot 2 at P5 in reserved standby mode (isLive = false) and activate live at P14 (isLive = true)", async function () {
+      // 1. Qualify matrixOwner with 2 active directs
+      const d1 = await createFundedWallet(owner);
+      const d2 = await createFundedWallet(owner);
+      await matrix.connect(d1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(d2).joinSlot(1, matrixOwner.address);
+
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+      expect(await matrix.isSlotLive(matrixOwner.address, 1)).to.be.true;
+      expect(await matrix.isSlotLive(matrixOwner.address, 2)).to.be.false;
+
+      // 2. Fill positions 1 to 4 under matrixOwner
+      for (let i = 1; i <= 4; i++) {
+        const p = await createFundedWallet(owner);
+        await matrix.connect(p).joinSlot(1, matrixOwner.address);
+      }
+
+      // Slot 2 still locked before P5
+      let slot2Data = await matrix.getSlotDataV2(matrixOwner.address, 2);
+      expect(slot2Data.isUnlocked).to.be.false;
+      expect(slot2Data.isLive).to.be.false;
+
+      // 3. Fill P5 -> Emits SlotReserved, unlocks Slot 2 in standby mode
+      const p5 = await createFundedWallet(owner);
+      await expect(matrix.connect(p5).joinSlot(1, matrixOwner.address))
+        .to.emit(matrix, "SlotReserved")
+        .withArgs(matrixOwner.address, 1, 2, (v: any) => v > 0);
+
+      slot2Data = await matrix.getSlotDataV2(matrixOwner.address, 2);
+      expect(slot2Data.isUnlocked).to.be.true;
+      expect(slot2Data.isLive).to.be.false; // In standby mode!
+      expect(await matrix.isSlotLive(matrixOwner.address, 2)).to.be.false;
+
+      // 4. Fill positions 6 to 13 -> Slot 2 remains in standby mode
+      for (let i = 6; i <= 13; i++) {
+        const p = await createFundedWallet(owner);
+        await matrix.connect(p).joinSlot(1, matrixOwner.address);
+      }
+      expect(await matrix.isSlotLive(matrixOwner.address, 2)).to.be.false;
+
+      // 5. Fill position 14 -> Board completes, emits SlotActivatedForEarning and SlotAutoActivated
+      const p14 = await createFundedWallet(owner);
+      await expect(matrix.connect(p14).joinSlot(1, matrixOwner.address))
+        .to.emit(matrix, "SlotActivatedForEarning")
+        .withArgs(matrixOwner.address, 2, (v: any) => v > 0);
+
+      slot2Data = await matrix.getSlotDataV2(matrixOwner.address, 2);
+      expect(slot2Data.isUnlocked).to.be.true;
+      expect(slot2Data.isLive).to.be.true; // Live and earning!
+      expect(await matrix.isSlotLive(matrixOwner.address, 2)).to.be.true;
+
+      const liveStatuses = await matrix.getAllSlotsLiveStatus(matrixOwner.address);
+      expect(liveStatuses[0]).to.be.true; // Slot 1 is live
+      expect(liveStatuses[1]).to.be.true; // Slot 2 is now live
+      expect(liveStatuses[2]).to.be.false; // Slot 3 is not yet unlocked
+    });
+
+    it("should route unqualified P7, P10, and P13 100% to 4 Protocol Pools (Vault) without leaking to owner", async function () {
+      // 1. Qualify matrixOwner
+      const d1 = await createFundedWallet(owner);
+      const d2 = await createFundedWallet(owner);
+      await matrix.connect(d1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(d2).joinSlot(1, matrixOwner.address);
+
+      await matrix.connect(matrixOwner).joinSlot(1, upline1.address);
+
+      // 2. Fill P1 and P2 with participants who have 0 referrals (unqualified)
+      const p1 = await createFundedWallet(owner);
+      const p2 = await createFundedWallet(owner);
+      await matrix.connect(p1).joinSlot(1, matrixOwner.address);
+      await matrix.connect(p2).joinSlot(1, matrixOwner.address);
+
+      // 3. Fill P3, P4, P5, P6
+      for (let i = 3; i <= 6; i++) {
+        const p = await createFundedWallet(owner);
+        await matrix.connect(p).joinSlot(1, matrixOwner.address);
+      }
+
+      const ownerEarnedBeforeP7 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedBeforeP7 = await vault.totalRoutedFromMatrix();
+
+      // 4. Fill P7 -> Both downlines P1 and P2 are unqualified
+      // Must route 100% to Vault (4 Protocol Pools), NOT to matrixOwner!
+      const p7 = await createFundedWallet(owner);
+      await expect(matrix.connect(p7).joinSlot(1, matrixOwner.address))
+        .to.emit(matrix, "ProtocolPoolFunded")
+        .withArgs(matrixOwner.address, SLOT1_COST, 1, 1, 7, (v: any) => v > 0);
+
+      const ownerEarnedAfterP7 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedAfterP7 = await vault.totalRoutedFromMatrix();
+
+      // Matrix owner receives NOTHING from unqualified P7 (Zero Leakage)
+      expect(ownerEarnedAfterP7).to.equal(ownerEarnedBeforeP7);
+      // Vault routes full 30 TROB into the 4 protocol pools
+      expect(vaultRoutedAfterP7 - vaultRoutedBeforeP7).to.equal(SLOT1_COST);
+
+      // 5. Fill P8 and P9 (direct to matrix owner)
+      const p8 = await createFundedWallet(owner);
+      const p9 = await createFundedWallet(owner);
+      await matrix.connect(p8).joinSlot(1, matrixOwner.address);
+      await matrix.connect(p9).joinSlot(1, matrixOwner.address);
+
+      // 6. Fill P10 -> P1 and P2 are still unqualified -> routes to Vault, NOT owner
+      const ownerEarnedBeforeP10 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedBeforeP10 = await vault.totalRoutedFromMatrix();
+
+      const p10 = await createFundedWallet(owner);
+      await expect(matrix.connect(p10).joinSlot(1, matrixOwner.address))
+        .to.emit(matrix, "ProtocolPoolFunded")
+        .withArgs(matrixOwner.address, SLOT1_COST, 1, 1, 10, (v: any) => v > 0);
+
+      const ownerEarnedAfterP10 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedAfterP10 = await vault.totalRoutedFromMatrix();
+      expect(ownerEarnedAfterP10).to.equal(ownerEarnedBeforeP10);
+      expect(vaultRoutedAfterP10 - vaultRoutedBeforeP10).to.equal(SLOT1_COST);
+
+      // 7. Fill P11, P12 (direct to owner)
+      const p11 = await createFundedWallet(owner);
+      const p12 = await createFundedWallet(owner);
+      await matrix.connect(p11).joinSlot(1, matrixOwner.address);
+      await matrix.connect(p12).joinSlot(1, matrixOwner.address);
+
+      // 8. Fill P13 -> Nodes 3, 4, 5, 6 are unqualified -> routes to Vault, NOT owner
+      const ownerEarnedBeforeP13 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedBeforeP13 = await vault.totalRoutedFromMatrix();
+
+      const p13 = await createFundedWallet(owner);
+      await expect(matrix.connect(p13).joinSlot(1, matrixOwner.address))
+        .to.emit(matrix, "ProtocolPoolFunded")
+        .withArgs(matrixOwner.address, SLOT1_COST, 1, 1, 13, (v: any) => v > 0);
+
+      const ownerEarnedAfterP13 = await matrix.totalEarned(matrixOwner.address);
+      const vaultRoutedAfterP13 = await vault.totalRoutedFromMatrix();
+      expect(ownerEarnedAfterP13).to.equal(ownerEarnedBeforeP13);
+      expect(vaultRoutedAfterP13 - vaultRoutedBeforeP13).to.equal(SLOT1_COST);
+    });
+
+    it("should support claimRoyalty and totalRoyaltyClaimed on EquoraSalaryPool (Royalty Pool)", async function () {
+      expect(await vault.ROYALTY_BPS()).to.equal(4000);
+      expect(await vault.royaltyPool()).to.equal(await salaryPool.getAddress());
+
+      // Check initial claimable is 0
+      expect(await salaryPool.getClaimable(matrixOwner.address)).to.equal(0n);
+      expect(await salaryPool.totalRoyaltyClaimed(matrixOwner.address)).to.equal(0n);
+
+      // Revert if claiming with 0 balance
+      await expect(salaryPool.connect(matrixOwner).claimRoyalty()).to.be.revertedWithCustomError(
+        salaryPool,
+        "NothingToClaim"
+      );
+    });
+
+    it("should calculate and dynamically update $30 USD matrix entry fee based on TROB market price", async function () {
+      // 1. Verify $30 USD constant peg
+      expect(await matrix.ENTRY_FEE_USD()).to.equal(30_000_000n);
+      expect(await matrix.trobPriceUsd6()).to.equal(1_000_000n); // Default $1.00 in mock tests
+      expect(await matrix.BASE_SLOT_COST()).to.equal(ethers.parseEther("30"));
+
+      // 2. Pure helper checks at various market prices
+      // At $0.056 / TROB (56,000 in 6-decimal USD): $30 / 0.056 = 535.714285... TROB
+      const costAt56Cents = await matrix.getRequiredTrobForSlot(1, 56000n);
+      expect(costAt56Cents).to.equal(535714285714285714285n);
+
+      // Higher slot (Slot 2 = 2x Slot 1 = 1,071.42857... TROB)
+      const slot2At56Cents = await matrix.getRequiredTrobForSlot(2, 56000n);
+      expect(slot2At56Cents).to.equal(costAt56Cents * 2n);
+
+      // At $0.042431 / TROB (42,431 in 6-decimal USD): $30 / 0.042431 = ~707.03 TROB
+      const costAt42Cents = await matrix.getRequiredTrobForSlot(1, 42431n);
+      expect(costAt42Cents).to.equal(707030237326482995922n);
+
+      // 3. Admin updates price to live market rate ($0.056)
+      await expect(matrix.connect(owner).setTrobPrice(56000n))
+        .to.emit(matrix, "TrobPriceUpdated")
+        .withArgs(56000n, costAt56Cents, (ts: any) => ts > 0);
+
+      expect(await matrix.trobPriceUsd6()).to.equal(56000n);
+      expect(await matrix.baseSlotCost()).to.equal(costAt56Cents);
+      expect(await matrix.BASE_SLOT_COST()).to.equal(costAt56Cents);
+      expect(await matrix.getSlotCost(1)).to.equal(costAt56Cents);
+      expect(await matrix.getSlotCost(2)).to.equal(slot2At56Cents);
+
+      // Non-owner cannot update price
+      await expect(
+        matrix.connect(matrixOwner).setTrobPrice(56000n)
+      ).to.be.revertedWithCustomError(matrix, "OwnableUnauthorizedAccount");
+    });
+  });
 });

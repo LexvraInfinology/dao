@@ -1,4 +1,4 @@
-// Sources flattened with hardhat v2.29.1 https://hardhat.org
+﻿// Sources flattened with hardhat v2.29.1 https://hardhat.org
 
 // SPDX-License-Identifier: MIT
 
@@ -39,6 +39,7 @@ abstract contract Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -140,6 +141,7 @@ abstract contract Ownable is Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/IERC20.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -222,6 +224,7 @@ interface IERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -307,6 +310,7 @@ abstract contract ReentrancyGuard {
 // File contracts/interfaces/IEquoraNFT.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 /**
  * @title IEquoraNFT
@@ -332,6 +336,7 @@ interface IEquoraNFT {
 // File contracts/interfaces/IEquoraRegistry.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 /**
  * @title IEquoraRegistry
@@ -357,13 +362,14 @@ interface IEquoraRegistry {
 // File contracts/core/EquoraMatrix.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 
 
 
 
 /**
- * @title EquoraMatrix — V3 (Equora.Fi Aligned)
+ * @title EquoraMatrix ΓÇö V3 (Equora.Fi Aligned)
  * @dev 12-Slot, 14-Node Single-Leg Matrix Engine
  *
  * === SLOT COSTS (formula: 30 x 2^(N-1)) =====================================
@@ -376,35 +382,35 @@ interface IEquoraRegistry {
  *   P1  -> Upline 1 (immediate eligible upline above matrix owner)
  *   P2  -> Upline 2 (upline's upline)
  *   P3  -> Slot Owner (YOU)
- *   P4  -> Protocol Pools via EquoraVault (35% DAO, 40% Salary, 15% Rewards, 10% Box)
+ *   P4  -> Protocol Pools via EquoraVault (35% DAO, 40% Royalty, 15% Rewards, 10% Box)
  *   P5  -> Protocol Pools via EquoraVault
  *   P6  -> Slot Owner (YOU)
- *   P7  -> Downline 1 (spillover to first direct under you, if qualified)
+ *   P7  -> Downline 1 (spillover to first direct under you, if qualified; else 4 Protocol Pools via EquoraVault)
  *   P8  -> Slot Owner (YOU)
  *   P9  -> Slot Owner (YOU)
- *   P10 -> Downline 1 (spillover)
+ *   P10 -> Downline 1 / Downline 2 (if qualified; else 4 Protocol Pools via EquoraVault)
  *   P11 -> Slot Owner (YOU)
  *   P12 -> Slot Owner (YOU)
- *   P13 -> Downline 2 (spillover to second direct under you, if qualified)
+ *   P13 -> Downline 2 / Tier 2 Waterfall (if qualified; else 4 Protocol Pools via EquoraVault)
  *   P14 -> Protocol Pools via EquoraVault
  *
  * Per-slot breakdown for Slot 1 (cost = 30 TROB per node, 14 nodes = 420 TROB):
- *   P1 + P2            = 60  TROB → Immediate Upline (2 × 30)
- *   P3+P6+P8+P9+P11+P12= 180 TROB → YOU (6 × 30)
- *   P4+P5+P14          = 90  TROB → Protocol Pools (3 × 30)
- *   P7+P10             = 60  TROB → Downline 1 (2 × 30)
- *   P13                = 30  TROB → Downline 2 (1 × 30)
+ *   P1 + P2            = 60  TROB ΓåÆ Immediate Upline (2 ├ù 30) (if qualified; else 4 Protocol Pools)
+ *   P3+P6+P8+P9+P11+P12= 180 TROB ΓåÆ YOU (6 ├ù 30)
+ *   P4+P5+P14          = 90  TROB ΓåÆ Protocol Pools (3 ├ù 30) (35% DAO, 40% Royalty, 15% Rewards, 10% Box)
+ *   P7+P10             = 60  TROB ΓåÆ Downline 1 (2 ├ù 30) (if qualified; else 4 Protocol Pools)
+ *   P13                = 30  TROB ΓåÆ Downline 2 (1 ├ù 30) (if qualified; else 4 Protocol Pools)
  *   Total              = 420 TROB
  *
  * === QUALIFICATION ===========================================================
  *   isQualified = directReferrals >= 2
- *   Unqualified fallback = Matrix Owner (never root wallet)
+ *   Unqualified fallback = 4 Protocol Pools via EquoraVault (never root wallet, zero fund leakage)
  *
  * === MAGIC BLIND BOX MILESTONES =============================================
  *   Slots 3,6,9,12 first cycle completion: Rank NFT minted (Alpha/Prime/Elite/Crown)
  *
  * === NULL KEY (Null Ownership) ===============================================
- *   After deployment wiring, renounceOwnership() is called — no admin can
+ *   After deployment wiring, renounceOwnership() is called ΓÇö no admin can
  *   ever pause, modify fees, or redirect funds.
  *
  * Security:
@@ -429,10 +435,15 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // Constants
     // -------------------------------------------------------------------------
 
-    uint256 public constant TOTAL_SLOTS      = 12;
-    uint256 public constant TREE_NODES       = 14;
-    uint256 public constant BASE_SLOT_COST   = 30 * 10 ** 18;
-    uint256 public constant MAX_UPLINE_DEPTH = 12;
+    uint256 public constant TOTAL_SLOTS          = 12;
+    uint256 public constant TREE_NODES           = 14;
+    uint256 public constant ENTRY_FEE_USD        = 30_000_000;   // $30 USD (6 decimals)
+    uint256 public constant MIN_SLOT1_FLOOR      = 30 * 10 ** 18; // 30 TROB floor
+    uint256 public constant MAX_UPLINE_DEPTH     = 12;
+
+    uint256 public trobPriceUsd6                 = 1_000_000;    // Default $1.00 USD (6 decimals)
+    uint256 public baseSlotCost                  = 30 * 10 ** 18; // Pegged to $30 USD in TROB
+    uint256 public lastPriceUpdateTimestamp;
 
     /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
     string public constant OFFICIAL_SR_BASE58      = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
@@ -449,7 +460,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         UPLINE_1,
         UPLINE_2,
         OWNER_DIRECT,
-        PROTOCOL_POOL,    // P4, P5, P14 — forwarded to EquoraVault
+        PROTOCOL_POOL,    // P4, P5, P14 ΓÇö forwarded to EquoraVault
         SPILLOVER_DOWNLINE1,
         SPILLOVER_DOWNLINE2,
         CYCLE_COMPLETE
@@ -461,6 +472,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     struct MatrixSlot {
         bool        isUnlocked;
+        bool        isLive;          // false when reserved via P4+P5; true when activated via P14 full board completion!
         uint256     currentCycle;    // starts at 1
         uint256     filledNodes;     // 0 to 14
         address[14] nodes;           // ACTIVE cycle positions
@@ -489,7 +501,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // Optional launch delay to enforce the 21-day exclusive Genesis DAO phase
     uint256 public matrixLaunchTime;
 
-    // Genesis DAO contract — to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
+    // Genesis DAO contract ΓÇö to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
     address public daoContract;
 
     // -------------------------------------------------------------------------
@@ -599,10 +611,21 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     event BalanceWithdrawn(address indexed user, uint256 amount, uint256 timestamp);
     event VaultContractSet(address indexed vault);
     event DaoContractSet(address indexed dao);
+    event SlotReserved(
+        address indexed user,
+        uint8   indexed fromSlot,
+        uint8   indexed reservedSlot,
+        uint256 timestamp
+    );
     event SlotAutoActivated(
         address indexed user,
         uint8   indexed fromSlot,
         uint8   indexed activatedSlot,
+        uint256 timestamp
+    );
+    event SlotActivatedForEarning(
+        address indexed user,
+        uint8   indexed slot,
         uint256 timestamp
     );
     event ActiveDirectReferralCounted(
@@ -611,6 +634,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         uint256 totalActiveDirects,
         uint256 timestamp
     );
+    event TrobPriceUpdated(uint256 priceUsd6, uint256 newBaseCost, uint256 timestamp);
+    event BaseSlotCostUpdated(uint256 newBaseCost, uint256 priceUsd6, uint256 timestamp);
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -628,15 +653,69 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         registry     = IEquoraRegistry(_registry);
         nftContract  = IEquoraNFT(_nftContract);
 
-        // Precompute slot costs: 30, 60, 120, 240 ... 61440
+        // Precompute slot costs pegged to $30 USD (default: 30 * 1e18 at $1.00 USD)
+        baseSlotCost = (ENTRY_FEE_USD * 1e18) / trobPriceUsd6;
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
-            slotCosts[i] = BASE_SLOT_COST * (2 ** (i - 1));
+            slotCosts[i] = baseSlotCost * (2 ** (i - 1));
         }
     }
 
     // -------------------------------------------------------------------------
     // Admin (only callable before renounceOwnership)
     // -------------------------------------------------------------------------
+
+    /**
+     * @dev Updates the live TROB market price and dynamically recalculates slot costs for $30 USD.
+     *      Formula: baseSlotCost = ($30 USD / _trobPriceUsd6) * 1e18
+     *      Example: At $0.056/TROB (_trobPriceUsd6 = 56000), baseSlotCost = 535.714285... TROB
+     */
+    function setTrobPrice(uint256 _trobPriceUsd6) external onlyOwner {
+        require(_trobPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
+        trobPriceUsd6 = _trobPriceUsd6;
+        lastPriceUpdateTimestamp = block.timestamp;
+
+        uint256 newBase = (ENTRY_FEE_USD * 1e18) / _trobPriceUsd6;
+        require(newBase >= MIN_SLOT1_FLOOR, "EquoraMatrix: cost below floor");
+        baseSlotCost = newBase;
+
+        for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
+            slotCosts[i] = newBase * (2 ** (i - 1));
+        }
+        emit TrobPriceUpdated(_trobPriceUsd6, newBase, block.timestamp);
+    }
+
+    /**
+     * @dev Sets base slot cost directly with price validation.
+     */
+    function setBaseSlotCost(uint256 _newBaseCost, uint256 _trobPriceUsd6) external onlyOwner {
+        require(_newBaseCost >= MIN_SLOT1_FLOOR, "EquoraMatrix: cost below floor");
+        require(_trobPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
+        trobPriceUsd6 = _trobPriceUsd6;
+        baseSlotCost  = _newBaseCost;
+        lastPriceUpdateTimestamp = block.timestamp;
+
+        for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
+            slotCosts[i] = _newBaseCost * (2 ** (i - 1));
+        }
+        emit BaseSlotCostUpdated(_newBaseCost, _trobPriceUsd6, block.timestamp);
+    }
+
+    /**
+     * @dev Dynamic getter for BASE_SLOT_COST returning current $30 USD base cost.
+     */
+    function BASE_SLOT_COST() external view returns (uint256) {
+        return baseSlotCost;
+    }
+
+    /**
+     * @dev Calculate how much $30 USD (Slot 1) or higher slots is worth in TROB at a given price.
+     */
+    function getRequiredTrobForSlot(uint256 slot, uint256 currentPriceUsd6) external pure returns (uint256) {
+        require(slot >= 1 && slot <= TOTAL_SLOTS, "EquoraMatrix: invalid slot");
+        require(currentPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
+        uint256 base = (ENTRY_FEE_USD * 1e18) / currentPriceUsd6;
+        return base * (2 ** (slot - 1));
+    }
 
     function setVaultContract(address _vault) external onlyOwner {
         require(_vault != address(0), "EquoraMatrix: invalid vault");
@@ -747,6 +826,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
 
         uint256 cost = slotCosts[slot];
+        require(cost >= baseSlotCost && cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below minimum floor");
 
         bool ok = paymentToken.transferFrom(msg.sender, address(this), cost);
         require(ok, "EquoraMatrix: payment failed - approve token first");
@@ -763,8 +843,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             try nftContract.mintWelcomePass(msg.sender) {} catch {}
         }
 
-        // Unlock slot
+        // Unlock slot (Slot 1 is immediately live once qualified)
         userSlots[msg.sender][slot].isUnlocked   = true;
+        userSlots[msg.sender][slot].isLive       = true;
         userSlots[msg.sender][slot].currentCycle = 1;
         userSlots[msg.sender][slot].filledNodes  = 0;
 
@@ -830,7 +911,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address matrixOwner = sponsor;
         uint256 depth = 0;
         while (
-            (!userSlots[matrixOwner][slot].isUnlocked || (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) &&
+            (!userSlots[matrixOwner][slot].isUnlocked ||
+             (slot > 1 && !userSlots[matrixOwner][slot].isLive) ||
+             (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) &&
             depth < MAX_UPLINE_DEPTH
         ) {
             address up = registry.getSponsor(matrixOwner);
@@ -842,13 +925,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             depth++;
         }
 
-        if (!userSlots[matrixOwner][slot].isUnlocked || (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) {
+        if (!userSlots[matrixOwner][slot].isUnlocked ||
+            (slot > 1 && !userSlots[matrixOwner][slot].isLive) ||
+            (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) {
             matrixOwner = rootOwner;
         }
 
         // Auto-activate slot for root matrix owner if not yet unlocked
         if (matrixOwner == rootOwner && !userSlots[matrixOwner][slot].isUnlocked) {
             userSlots[matrixOwner][slot].isUnlocked   = true;
+            userSlots[matrixOwner][slot].isLive       = true;
             userSlots[matrixOwner][slot].currentCycle = 1;
             userSlots[matrixOwner][slot].filledNodes  = 0;
             if (slot > highestSlot[matrixOwner]) {
@@ -882,14 +968,14 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     /**
      * @dev Route slot cost to correct recipient based on position.
      *
-     *  P1  → Upline 1
-     *  P2  → Upline 2
-     *  P3, P6, P8, P9, P11, P12 → Slot Owner (direct income)
-     *  P4, P5, P14 → EquoraVault (Protocol Pools: 35% DAO, 40% Salary, 15% Rewards, 10% Box)
-     *  P7, P10 → Downline 1 (if qualified), else Owner
-     *  P13 → Downline 2 (if qualified), else Owner
+     *  P1  ΓåÆ Upline 1 (if qualified), else 4 Protocol Pools (EquoraVault)
+     *  P2  ΓåÆ Upline 2 (if qualified), else 4 Protocol Pools (EquoraVault)
+     *  P3, P6, P8, P9, P11, P12 ΓåÆ Slot Owner (direct income)
+     *  P4, P5, P14 ΓåÆ EquoraVault (Protocol Pools: 35% DAO, 40% Royalty, 15% Rewards, 10% Box)
+     *  P7, P10 ΓåÆ Downline 1 (if qualified), else 4 Protocol Pools (EquoraVault)
+     *  P13 ΓåÆ Downline 2 (if qualified), else 4 Protocol Pools (EquoraVault)
      *
-     *  INVARIANT: every wei of cost is distributed — no silent sinks.
+     *  INVARIANT: . wei of cost is distributed ΓÇö no silent sinks.
      */
     function _routePayment(
         address matrixOwner,
@@ -905,7 +991,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         emit PositionFilled(matrixOwner, s, cycle, p, matrixOwner, cost);
 
         if (position == 1) {
-            // P1 → Upline 1
+            // P1 ΓåÆ Upline 1
             address upline1 = registry.getSponsor(matrixOwner);
             if (upline1 != address(0) && isMatrixQualified(upline1)) {
                 _pushMatrixPayment(upline1, cost);
@@ -918,7 +1004,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
 
         } else if (position == 2) {
-            // P2 → Upline 2
+            // P2 ΓåÆ Upline 2
             address up1     = registry.getSponsor(matrixOwner);
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
             if (upline2 != address(0) && isMatrixQualified(upline2)) {
@@ -936,28 +1022,31 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             position == 8  || position == 9  ||
             position == 11 || position == 12
         ) {
-            // P3, P6, P8, P9, P11, P12 → Owner direct income
+            // P3, P6, P8, P9, P11, P12 ΓåÆ Owner direct income
             _creditOwner(matrixOwner, slot, cost);
             emit DistributionExecuted(matrixOwner, cost, PayoutType.OWNER_DIRECT, s, cycle, p);
 
         } else if (position == 4 || position == 5 || position == 14) {
-            // P4, P5, P14 → Protocol Pools via EquoraVault (35% Ecosystem & DAO Pool, 40% Salary Pool, 15% Level Rewards, 10% Magic Blind Box)
+            // P4, P5, P14 ΓåÆ Protocol Pools via EquoraVault (35% Ecosystem & DAO Pool, 40% Royalty Pool, 15% Level Rewards, 10% Magic Blind Box)
             _forwardToVault(matrixOwner, cost);
             emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
             emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
 
-            // Re-topup Rule (Flow #3): 4th and 5th ID fund goes to pools automatically
-            // and simultaneously activates next slot's top ID of user
+            // Two-Stage Tier Escalation (Stage 1):
+            // 4th and 5th node fund protocol pools automatically ($0 out-of-pocket).
+            // At position 5, the next slot is UNLOCKED & RESERVED in standby mode.
+            // It does NOT start earning or accepting placements yet until this board completes all 14 nodes!
             if (position == 5 && slot < TOTAL_SLOTS) {
                 uint256 nextSlot = slot + 1;
                 if (!userSlots[matrixOwner][nextSlot].isUnlocked) {
                     userSlots[matrixOwner][nextSlot].isUnlocked   = true;
+                    userSlots[matrixOwner][nextSlot].isLive       = false; // RESERVED STANDBY
                     userSlots[matrixOwner][nextSlot].currentCycle = 1;
                     userSlots[matrixOwner][nextSlot].filledNodes  = 0;
                     if (nextSlot > highestSlot[matrixOwner]) {
                         highestSlot[matrixOwner] = nextSlot;
                     }
-                    emit SlotAutoActivated(matrixOwner, s, uint8(nextSlot), block.timestamp);
+                    emit SlotReserved(matrixOwner, s, uint8(nextSlot), block.timestamp);
                 }
             }
 
@@ -1106,7 +1195,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Forward P4/P5/P14 funds to EquoraVault for protocol pool distribution.
-     *      The vault routes: 35% Ecosystem & DAO Pool, 40% Salary Pool, 15% Level Rewards, 10% Magic Blind Box.
+     *      The vault routes: 35% Ecosystem & DAO Pool, 40% Royalty Pool, 15% Level Rewards, 10% Magic Blind Box.
      *      If vault is not configured (pre-wiring), funds credit to owner as safety.
      */
     function _forwardToVault(address matrixOwner, uint256 amount) internal {
@@ -1157,7 +1246,19 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         emit CycleCompleted(user, uint8(slot), completedCycle, block.timestamp);
         emit MatrixRecycled(user, uint8(slot), mSlot.currentCycle, block.timestamp);
 
-        // 3. Milestone: Slots 3,6,9,12 on first cycle → mint Rank NFT
+        // 3. Two-Stage Tier Escalation (Stage 2):
+        // When completing Cycle 1 on any slot < TOTAL_SLOTS, the next slot officially
+        // ACTIVATES for live placements and earnings! Board is live and accepting team placements.
+        if (slot < TOTAL_SLOTS && completedCycle == 1) {
+            uint256 nextSlot = slot + 1;
+            if (userSlots[user][nextSlot].isUnlocked && !userSlots[user][nextSlot].isLive) {
+                userSlots[user][nextSlot].isLive = true;
+                emit SlotAutoActivated(user, uint8(slot), uint8(nextSlot), block.timestamp);
+                emit SlotActivatedForEarning(user, uint8(nextSlot), block.timestamp);
+            }
+        }
+
+        // 4. Milestone: Slots 3,6,9,12 on first cycle ΓåÆ mint Rank NFT
         if ((slot == 3 || slot == 6 || slot == 9 || slot == 12) && completedCycle == 1) {
             _awardMilestoneNFT(user, slot);
         }
@@ -1165,7 +1266,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Award milestone rank NFT on first cycle completion of key slots.
-     *      Slot 3 → ALPHA, Slot 6 → PRIME, Slot 9 → ELITE, Slot 12 → CROWN
+     *      Slot 3 ΓåÆ ALPHA, Slot 6 ΓåÆ PRIME, Slot 9 ΓåÆ ELITE, Slot 12 ΓåÆ CROWN
      */
     function _awardMilestoneNFT(address user, uint256 slot) internal {
         IEquoraNFT.Rank rank;
@@ -1215,6 +1316,26 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Checks if a slot is formally live and accepting placements / earning.
+     *      Slot 1 is live upon unlock. Slots 2-12 become live only after preceding slot completes 14 nodes.
+     */
+    function isSlotLive(address user, uint256 slot) external view returns (bool) {
+        return userSlots[user][slot].isLive;
+    }
+
+    function getSlotDataV2(address user, uint256 slot) external view returns (
+        bool        isUnlocked,
+        bool        isLive,
+        uint256     currentCycle,
+        uint256     filledNodes,
+        address[14] memory nodes,
+        uint256     slotEarned
+    ) {
+        MatrixSlot storage m = userSlots[user][slot];
+        return (m.isUnlocked, m.isLive, m.currentCycle, m.filledNodes, m.nodes, m.totalEarned);
+    }
+
+    /**
      * @dev Checks if a user is qualified in the matrix.
      *      A user is qualified when they have successfully directed at least 2 direct referrals
      *      who have EACH made a deposit for 30$ worth of TROB (unlocked Slot 1).
@@ -1259,6 +1380,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function isMatrixTreeStarted(address user, uint256 slot) public view returns (bool) {
         if (!userSlots[user][slot].isUnlocked) return false;
+        if (slot > 1 && !userSlots[user][slot].isLive) return false;
         return isMatrixQualified(user);
     }
 
@@ -1291,6 +1413,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             unlocked[i - 1] = userSlots[user][i].isUnlocked;
             cycles[i - 1]   = userSlots[user][i].currentCycle;
             filled[i - 1]   = userSlots[user][i].filledNodes;
+        }
+    }
+
+    function getAllSlotsLiveStatus(address user) external view returns (bool[12] memory live) {
+        for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
+            live[i - 1] = userSlots[user][i].isLive;
         }
     }
 
@@ -1337,6 +1465,6 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
 interface IEquoraVault {
     /// @dev Called by EquoraMatrix to route P4/P5/P14 funds into the 4 protocol pools.
-    ///      Vault splits: 35% Ecosystem & DAO Pool | 40% Salary Pool | 15% Level Rewards | 10% Magic Blind Box.
+    ///      Vault splits: 35% Ecosystem & DAO Pool | 40% Royalty Pool | 15% Level Rewards | 10% Magic Blind Box.
     function routePoolDeposit(uint256 amount) external;
 }

@@ -211,6 +211,55 @@ services:
     networks:
       - equora_network
 
+  matrix-frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.matrix
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafi.com}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.equorafidao.com}
+        NEXT_PUBLIC_MATRIX_DOMAIN: ${NEXT_PUBLIC_MATRIX_DOMAIN:-equorafi.com}
+        NEXT_PUBLIC_DAO_DOMAIN: ${NEXT_PUBLIC_DAO_DOMAIN:-equorafidao.com}
+        NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafi.com}
+        NEXT_PUBLIC_DAO_URL: ${NEXT_PUBLIC_DAO_URL:-https://equorafidao.com}
+        NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-${CHAIN_ID:-1000}}
+        NEXT_PUBLIC_TARGET_NETWORK: ${NEXT_PUBLIC_TARGET_NETWORK:-mainnet}
+        NEXT_PUBLIC_EXPLORER_URL: ${NEXT_PUBLIC_EXPLORER_URL:-https://trobchain.com}
+        NEXT_PUBLIC_EXPLORER_API_URL: ${NEXT_PUBLIC_EXPLORER_API_URL:-https://backend.trobchain.com/v1}
+        NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-https://fullnode-one.trobchain.com}
+        NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID:-7663d51173c43f7ad40158edb7e88859}
+        NEXT_PUBLIC_TOKEN_ADDRESS: ${NEXT_PUBLIC_TOKEN_ADDRESS:-TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt}
+        NEXT_PUBLIC_REGISTRY_ADDRESS: ${NEXT_PUBLIC_REGISTRY_ADDRESS:-TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy}
+        NEXT_PUBLIC_NFT_ADDRESS: ${NEXT_PUBLIC_NFT_ADDRESS:-TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz}
+        NEXT_PUBLIC_DAO_ADDRESS: ${NEXT_PUBLIC_DAO_ADDRESS:-TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT}
+        NEXT_PUBLIC_VAULT_ADDRESS: ${NEXT_PUBLIC_VAULT_ADDRESS:-TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB}
+        NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafi.com}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.equorafidao.com}
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://api:4000}
+      NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-1000}
+      NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-https://fullnode-one.trobchain.com}
+      NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE}
+      NEXT_PUBLIC_TOKEN_ADDRESS: ${NEXT_PUBLIC_TOKEN_ADDRESS:-TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${MATRIX_WEB_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - equora_network
+
+
 volumes:
   equora_pg_data:
     driver: local

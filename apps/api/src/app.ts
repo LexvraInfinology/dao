@@ -24,6 +24,7 @@ import {
 } from "@equora/services";
 import prisma from "@equora/database";
 import { createPublicClient, http, parseAbi } from "viem";
+import { matrixRouter } from "./routes/matrixRouter";
 
 export function createApp(): Express {
   const app = express();
@@ -1916,6 +1917,10 @@ export function createApp(): Express {
       next(err);
     }
   });
+
+  // ── MATRIX PROTOCOL ROUTES ───────────────────────────────────────────────
+  app.use("/api/matrix", matrixRouter);
+  app.use("/api/v1/matrix", matrixRouter);
 
   // ── tRPC ──────────────────────────────────────────────────────────────────
   app.use(

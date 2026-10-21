@@ -11,7 +11,44 @@ const SENDER_HEX = '4167b282b09c3aac1b9fbff6b4ec14ea2b72573c02';
 const DAO_CONTRACT_HEX = '4196cc34af00df982ef8260849f1d0747a0de3366e';
 const DAO_BASE58 = 'TPiYzJQhBD44xCFNYVrVD4Ur1gaF13nxup';
 
-const DB_URL = "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+function loadEnv() {
+  if (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL) return;
+  try {
+    if (typeof process.loadEnvFile === 'function') {
+      const rootEnv = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(rootEnv)) {
+        process.loadEnvFile(rootEnv);
+      }
+    }
+  } catch (e) {}
+
+  if (!process.env.DATABASE_URL && !process.env.NEON_DATABASE_URL) {
+    try {
+      const rootEnv = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(rootEnv)) {
+        const content = fs.readFileSync(rootEnv, 'utf8');
+        for (const line of content.split('\n')) {
+          const match = line.trim().match(/^([^=]+)=(.*)$/);
+          if (match) {
+            const key = match[1].trim();
+            const val = match[2].trim().replace(/^["']|["']$/g, '');
+            if (!process.env[key]) {
+              process.env[key] = val;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
+}
+
+loadEnv();
+
+const DB_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+if (!DB_URL) {
+  console.error('Error: DATABASE_URL or NEON_DATABASE_URL environment variable is required.');
+  process.exit(1);
+}
 
 function getNeonSqlEndpoint(url) {
   const match = url.match(/@([^/:]+)/);

@@ -73,9 +73,8 @@ function hexToTrobBase58(addr: string): string {
 }
 
 async function queryNeonDirect<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
-  const dbUrl =
-    process.env.DATABASE_URL ||
-    "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+  const dbUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+  if (!dbUrl) return { rows: [] };
   const match = dbUrl.match(/@([^/:]+)/);
   if (!match || !match[1]) return { rows: [] };
   const endpoint = `https://${match[1]}/sql`;

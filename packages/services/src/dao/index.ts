@@ -212,18 +212,19 @@ export class PriceService {
 
 export const priceService = new PriceService();
 
-const NEON_DIRECT_URL =
-  process.env.NEON_DATABASE_URL ||
-  "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
-
 export async function queryNeonHttp<T = any>(query: string, params: any[] = []): Promise<T[]> {
   try {
-    let dbUrl = process.env.DATABASE_URL || "";
-    if (!dbUrl.includes("neon.tech")) {
-      dbUrl = NEON_DIRECT_URL;
+    const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || "";
+    if (!dbUrl) {
+      console.warn("queryNeonHttp: Neither NEON_DATABASE_URL nor DATABASE_URL is configured in environment");
+      return [];
     }
     const match = dbUrl.match(/@([^/:]+)/);
-    const host = match && match[1] ? match[1] : "ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech";
+    if (!match || !match[1]) {
+      console.warn("queryNeonHttp: Unable to resolve host from database connection URL");
+      return [];
+    }
+    const host = match[1];
     const endpoint = `https://${host}/sql`;
 
     const controller = new AbortController();

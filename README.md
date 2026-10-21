@@ -112,8 +112,7 @@ TROB_BACKEND_EXPLORER_API_URL=https://backend.trobchain.com/v1
 TROB_PRICE_API_URL=https://backend.trobchain.com/v1/market/price
 NEXT_PUBLIC_TROB_PRICE_API_URL=https://backend.trobchain.com/v1/market/price
 
-# Database (Neon Serverless PostgreSQL)
-DATABASE_URL="postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://<user>:<password>@<host>/neondb?sslmode=require"
 
 # Domains & Security
 CORS_ORIGIN="https://equorafidao.com,https://www.equorafidao.com,https://equorafi.com,https://www.equorafi.com,http://localhost:3000"

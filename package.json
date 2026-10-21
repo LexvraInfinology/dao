@@ -25,6 +25,7 @@
     "db:migrate": "pnpm --filter @equora/database db:migrate",
     "db:studio": "pnpm --filter @equora/database db:studio",
     "clean": "turbo run clean",
+    "seed:matrix:clean": "tsx scripts/seed_matrix_clean.ts",
     "postinstall": "node scripts/patch-qr.js"
   },
   "dependencies": {

@@ -1,11 +1,60 @@
-const dbUrl = "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+import fs from 'fs';
+import path from 'path';
+
+function loadEnv() {
+  if (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL) return;
+  try {
+    if (typeof process.loadEnvFile === 'function') {
+      const rootEnv = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(rootEnv)) {
+        process.loadEnvFile(rootEnv);
+      }
+    }
+  } catch (e) {}
+
+  if (!process.env.DATABASE_URL && !process.env.NEON_DATABASE_URL) {
+    try {
+      const rootEnv = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(rootEnv)) {
+        const content = fs.readFileSync(rootEnv, 'utf8');
+        for (const line of content.split('\n')) {
+          const match = line.trim().match(/^([^=]+)=(.*)$/);
+          if (match) {
+            const key = match[1].trim();
+            const val = match[2].trim().replace(/^["']|["']$/g, '');
+            if (!process.env[key]) {
+              process.env[key] = val;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
+}
+
+loadEnv();
+
+const dbUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+if (!dbUrl) {
+  console.error('Error: DATABASE_URL or NEON_DATABASE_URL environment variable is required.');
+  process.exit(1);
+}
+
+function getNeonSqlEndpoint(url) {
+  const match = url.match(/@([^/:]+)/);
+  return match && match[1] ? `https://${match[1]}/sql` : '';
+}
 
 async function queryNeon(sql) {
-  const res = await fetch("https://ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/sql", {
+  const endpoint = getNeonSqlEndpoint(dbUrl);
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Neon-Connection-String': dbUrl, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: sql }),
   });
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
   return await res.json();
 }
 

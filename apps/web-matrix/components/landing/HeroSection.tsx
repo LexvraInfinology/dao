@@ -331,7 +331,7 @@ export function HeroSection() {
 
               {/* Subtitle - Exact copy from Figma */}
               <p className="text-sm sm:text-base text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-5 sm:mb-6">
-                Start with just $30 USDT and step into a 12-slot progression
+                Start with just 30 TROB ($30) and step into a 12-slot progression
                 system. Grow your network, unlock higher tiers automatically, and
                 earn real rewards on-chain.
               </p>

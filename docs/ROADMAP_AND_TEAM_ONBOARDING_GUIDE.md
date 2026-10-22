@@ -233,8 +233,7 @@ PORT=4000
 WEB_PORT=3000
 API_PORT=4000
 
-# 1. Database Connection (Neon Cloud PostgreSQL)
-DATABASE_URL="postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 # 2. Redis Cache
 REDIS_URL="redis://localhost:6379"

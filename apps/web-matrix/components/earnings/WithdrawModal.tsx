@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { MatrixEarningsOverview } from "@/lib/api";
 import { useFinanceStore, useUserStore } from "@/lib/stores";
 import { toast, formatUserErrorMessage } from "@/lib/toast";
+import { withdrawOnChain } from "@/lib/contracts";
 
 export interface WithdrawModalProps {
   isOpen: boolean;
@@ -51,7 +52,23 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
     setErrorMsg("");
     setLoading(true);
     try {
-      await storeWithdraw(val, address);
+      let txHash: string | undefined;
+      // 1. Try on-chain withdrawal via connected wallet first
+      try {
+        txHash = await withdrawOnChain(val);
+      } catch (onChainErr: any) {
+        if (
+          onChainErr?.message?.includes("rejected") ||
+          onChainErr?.message?.includes("denied") ||
+          onChainErr?.message?.includes("User rejected")
+        ) {
+          throw onChainErr;
+        }
+        console.warn("[Withdraw] On-chain wallet call fallback:", onChainErr?.message);
+      }
+
+      // 2. Synchronize withdrawal record in database
+      await storeWithdraw(val, address, txHash);
       setWithdrawSuccess(true);
       toast.success("Withdrawal Initiated", `${val.toFixed(2)} TROB transferred to ${displayAddr}.`);
       setTimeout(() => {

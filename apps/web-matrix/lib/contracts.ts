@@ -223,6 +223,11 @@ export async function getOnChainSlotStatus(
   }
 }
 
+export function getSlotCost(slotNumber: number): number {
+  if (slotNumber < 1 || slotNumber > 12) return 30;
+  return 30 * Math.pow(2, slotNumber - 1);
+}
+
 /** Fetch full 14-node placement data directly on-chain */
 export async function getOnChainSlotDetails(
   userAddress: string,
@@ -278,7 +283,7 @@ export async function getOnChainSlotDetails(
 
   return {
     slotNumber,
-    cost: 30, // Pegged $30 unit entry according to Master Whitepaper
+    cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
     currentCycle: cycleNum,
     recyclesCount: Math.max(0, cycleNum - 1),
@@ -314,7 +319,7 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
 
     result.push({
       slotNumber: i,
-      cost: 30, // $30 fixed unit value per Master Whitepaper
+      cost: getSlotCost(i),
       isUnlocked,
       currentCycle: cycle,
       recyclesCount: Math.max(0, cycle - 1),
@@ -545,6 +550,47 @@ export async function joinSlotOnChain(
         return receipt.hash;
       } catch (err: any) {
         throw new Error(err.message || "joinSlot failed on-chain");
+      }
+    }
+  }
+
+  throw new Error("No compatible Web3 wallet detected. Please connect MetaMask or TrobSafe.");
+}
+
+/**
+ * Executes withdraw on-chain from EquoraMatrix using the connected Web3 wallet.
+ */
+export async function withdrawOnChain(amount: number): Promise<string> {
+  const amountWei = ethers.parseUnits(String(amount), 18).toString();
+  const matrixContractHex = toHexAddress(CONTRACT_ADDRESSES.matrix);
+
+  if (typeof window !== "undefined") {
+    const w = window as any;
+    // 1. TronWeb / TronLink / TrobSafe
+    const tw = w.trobSafe || w.trobWeb || w.tronWeb || (w.trob?.trx ? w.trob : null);
+    if (tw && tw.ready && tw.contract) {
+      try {
+        const contract = await tw.contract().at(CONTRACT_ADDRESSES.matrix);
+        const tx = await contract.withdraw(amountWei).send({
+          feeLimit: 100_000_000,
+        });
+        return typeof tx === "string" ? tx : tx?.txid || String(tx);
+      } catch (err: any) {
+        throw new Error(err.message || "Withdraw transaction rejected by wallet");
+      }
+    }
+
+    // 2. Ethereum / EIP-1193 / MetaMask
+    if (w.ethereum) {
+      try {
+        const provider = new ethers.BrowserProvider(w.ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(matrixContractHex, MATRIX_ABI, signer);
+        const tx = await contract.withdraw(amountWei);
+        const receipt = await tx.wait();
+        return receipt.hash;
+      } catch (err: any) {
+        throw new Error(err.message || "Withdraw failed on-chain");
       }
     }
   }

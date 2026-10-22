@@ -138,20 +138,39 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     set({ loadingProfile: true, error: null });
     try {
-      // 1. Prioritize live on-chain profile & financials
-      const onChainProf = await getOnChainUserProfile(effectiveAddress);
-      if (onChainProf) {
+      const sponsor = typeof window !== "undefined" ? localStorage.getItem("equora_sponsor") : null;
+      const [onChainProf, dbProf] = await Promise.all([
+        getOnChainUserProfile(effectiveAddress).catch((err) => {
+          console.warn("[UserStore] On-chain profile query failed:", err?.message);
+          return null;
+        }),
+        matrixApi.getProfile(effectiveAddress, sponsor || undefined).catch((err) => {
+          console.warn("[UserStore] API profile query failed:", err?.message);
+          return null;
+        }),
+      ]);
+
+      if (onChainProf && dbProf) {
+        // Merge: retain live on-chain balances/status, preserve user custom profile data
+        const merged = {
+          ...dbProf,
+          ...onChainProf,
+          username: dbProf.username || onChainProf.username,
+          avatarUrl: dbProf.avatarUrl || onChainProf.avatarUrl,
+          bio: dbProf.bio || onChainProf.bio,
+          telegram: dbProf.telegram || onChainProf.telegram,
+          twitter: dbProf.twitter || onChainProf.twitter,
+        };
+        set({ profile: merged, loadingProfile: false });
+        return;
+      } else if (onChainProf) {
         set({ profile: onChainProf, loadingProfile: false });
         return;
+      } else if (dbProf) {
+        set({ profile: dbProf, loadingProfile: false });
+        return;
       }
-    } catch (err: any) {
-      console.warn("[UserStore] Direct on-chain profile query failed, falling back to API:", err);
-    }
-
-    try {
-      const sponsor = typeof window !== "undefined" ? localStorage.getItem("equora_sponsor") : null;
-      const prof = await matrixApi.getProfile(effectiveAddress, sponsor || undefined);
-      set({ profile: prof, loadingProfile: false });
+      throw new Error("Unable to load profile data from chain or database");
     } catch (err: any) {
       set({
         error: err?.message || "Failed to load user profile",

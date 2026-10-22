@@ -884,7 +884,8 @@ export class MatrixService {
 
   async requestWithdrawal(
     address: string,
-    amount: number
+    amount: number,
+    customTxHash?: string
   ): Promise<{ success: boolean; amountWithdrawn: number; txHash: string; remainingBalance: number }> {
     const canonicalAddress = address.toLowerCase();
 
@@ -898,7 +899,9 @@ export class MatrixService {
       throw new Error(`Insufficient available balance. Available: ${Number(profile?.availableBalance || 0)} TROB`);
     }
 
-    const txHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
+    const txHash =
+      customTxHash ||
+      `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`;
 
     // Execute atomic balance deduction
     const updated = await prisma.matrixProfile.update({

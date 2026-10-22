@@ -209,7 +209,8 @@ export class BlockchainIndexer {
     const currentBlock = BigInt(blockData.block_header?.raw_data?.number || 0);
 
     if (!this.hasLoggedOnline || this.wasOffline) {
-      logger.info(`🔗 TrobChain Mainnet Connected (Block #${currentBlock})`);
+      const netName = config.rpcUrl.includes("testnet") ? "TrobChain Testnet" : "TrobChain Mainnet";
+      logger.info(`🔗 ${netName} Connected (Block #${currentBlock})`);
       this.hasLoggedOnline = true;
       this.wasOffline = false;
     }

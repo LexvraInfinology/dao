@@ -35,11 +35,14 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
 
   if (!isOpen) return null;
 
-  const displayAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x8A3F...91F2";
+  const displayAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address) return;
+    if (!address) {
+      setErrorMsg("Please connect your wallet first");
+      return;
+    }
     const val = parseFloat(withdrawAmount);
     if (isNaN(val) || val <= 0) {
       setErrorMsg("Please enter a valid amount");
@@ -130,7 +133,7 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
               </div>
               <div className="flex justify-between items-center text-[11.5px] text-[#64748b] mt-1.5">
                 <span>Available: {available.toFixed(2)} TROB</span>
-                <span>Network: Base / Polygon</span>
+                <span>Network: TrobChain (TROB)</span>
               </div>
             </div>
 

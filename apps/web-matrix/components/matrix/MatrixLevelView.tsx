@@ -6,43 +6,34 @@ export interface MatrixLevelViewProps {
   slots?: MatrixSlotSummary[];
   onSelectSlot?: (slotNum: number) => void;
   selectedSlotNumber?: number;
+  onBuySlot?: (slotNum: number) => void;
 }
 
 export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
   const storeSlots = useMatrixStore((s) => s.slots);
   const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
   const storeSelectSlot = useMatrixStore((s) => s.selectSlot);
+  const storeBuySlot = useMatrixStore((s) => s.buySlot);
 
   const slots = props.slots ?? storeSlots;
   const onSelectSlot = props.onSelectSlot ?? storeSelectSlot;
+  const onBuySlot = props.onBuySlot;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
-  const defaultProgressionLevels = [
-    {
-      level: 1,
-      num: "01",
-      status: "Active",
-      statusType: "active",
-      nodesFilled: 8,
+  const defaultProgressionLevels = Array.from({ length: 12 }, (_, i) => {
+    const lvl = i + 1;
+    return {
+      level: lvl,
+      num: String(lvl).padStart(2, "0"),
+      status: lvl === 1 ? "Active" : "Locked",
+      statusType: lvl === 1 ? "active" : "locked",
+      nodesFilled: 0,
       totalNodes: 14,
-      progress: 57,
-      earned: "142.50 TROB",
-      isActive: true,
-    },
-    ...Array.from({ length: 11 }, (_, i) => {
-      const lvl = i + 2;
-      return {
-        level: lvl,
-        num: String(lvl).padStart(2, "0"),
-        status: "Locked",
-        statusType: "locked",
-        nodesFilled: 0,
-        totalNodes: 14,
-        progress: 0,
-        earned: "",
-        isActive: false,
-      };
-    }),
-  ];
+      progress: 0,
+      earned: "0.00 TROB",
+      isActive: lvl === 1,
+      cost: 30,
+    };
+  });
 
   const progressionLevels =
     slots && slots.length > 0
@@ -60,7 +51,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
         }))
       : defaultProgressionLevels;
 
-  const unlockedCount = slots ? slots.filter((s) => s.isUnlocked).length : 1;
+  const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 0;
 
   return (
               /* ═══════════════════════════════════════════════════════════ */
@@ -203,19 +194,32 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                               </div>
                             </div>
 
-                            <svg
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#cbd5e1"
-                              strokeWidth="2.2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-[#cbd5e1] flex-shrink-0 ml-2"
-                            >
-                              <polyline points="9 18 15 12 9 6" />
-                            </svg>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onBuySlot) onBuySlot(lvl.level);
+                                  else if (onSelectSlot) onSelectSlot(lvl.level);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-bold shadow-2xs transition-all cursor-pointer"
+                              >
+                                Unlock
+                              </button>
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#cbd5e1"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-[#cbd5e1]"
+                              >
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            </div>
                           </div>
                         )}
                       </div>

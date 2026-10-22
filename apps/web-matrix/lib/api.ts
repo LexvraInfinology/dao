@@ -7,20 +7,44 @@ export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "").endsWith("/api/matrix
   ? rawBaseUrl.replace(/\/+$/, "")
   : `${rawBaseUrl.replace(/\/+$/, "")}/api/matrix`;
 
-export const DEFAULT_USER_ADDRESS =
-  process.env.NEXT_PUBLIC_DEFAULT_WALLET || "0x71c85d7b561e723908f9c162590214b7e8d24982";
+export const DEFAULT_USER_ADDRESS = "";
 
 export function getStoredUserAddress(): string {
   if (typeof window !== "undefined") {
+    // Check if user explicitly disconnected
+    const isDisconnected = localStorage.getItem("equora_wallet_explicit_disconnect") === "true";
+    if (isDisconnected) return "";
+
     const stored = localStorage.getItem("equora_user_address");
-    if (stored) return stored.toLowerCase();
+    if (stored && stored.trim().startsWith("0x")) {
+      return stored.trim().toLowerCase();
+    }
+
+    // Dynamic cross-sync with DAO auth address if present on this device
+    const daoAuth = localStorage.getItem("equora_auth_address");
+    if (daoAuth && daoAuth.trim().startsWith("0x")) {
+      return daoAuth.trim().toLowerCase();
+    }
   }
-  return DEFAULT_USER_ADDRESS.toLowerCase();
+  return "";
 }
 
-export function setStoredUserAddress(address: string): void {
+export function setStoredUserAddress(address: string | null): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem("equora_user_address", address.toLowerCase());
+    if (address && address.trim().startsWith("0x")) {
+      localStorage.setItem("equora_user_address", address.trim().toLowerCase());
+      localStorage.removeItem("equora_wallet_explicit_disconnect");
+    } else {
+      localStorage.removeItem("equora_user_address");
+      localStorage.setItem("equora_wallet_explicit_disconnect", "true");
+    }
+  }
+}
+
+export function clearStoredUserAddress(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("equora_user_address");
+    localStorage.setItem("equora_wallet_explicit_disconnect", "true");
   }
 }
 
@@ -374,4 +398,99 @@ export const matrixApi = {
       body: JSON.stringify({ address: address.toLowerCase() }),
     });
   },
+
+  /** Live TROB Price & $30 Slot Calculation */
+  async getLiveTrobPrice(): Promise<{
+    priceUsd: number;
+    priceSource: string;
+    updatedAt: string;
+    isStale: boolean;
+    slot1Trob: number;
+  }> {
+    const rootApi = process.env.NEXT_PUBLIC_API_URL 
+      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "")
+      : "http://localhost:4000";
+    try {
+      const res = await fetch(`${rootApi}/api/price/trob`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const priceUsd = Number(json.data.priceUsd) || 0.05;
+        const slot1Trob = Math.ceil((30 / priceUsd) * 100) / 100;
+        return {
+          priceUsd,
+          priceSource: json.data.priceSource || "live-oracle",
+          updatedAt: json.data.updatedAt || new Date().toISOString(),
+          isStale: !!json.data.isStale,
+          slot1Trob,
+        };
+      }
+    } catch {
+      // Fallback if API offline
+    }
+    return {
+      priceUsd: 1.0,
+      priceSource: "pegged-floor",
+      updatedAt: new Date().toISOString(),
+      isStale: false,
+      slot1Trob: 30,
+    };
+  },
+
+  /**
+   * Auto-fetch on-chain account details & eligibility:
+   * - Wallet creation date (>= 1 Oct 2026)
+   * - Staked Energy (1,070 TROB or 107 TROB)
+   * - Staked Bandwidth (237 TROB or 24 TROB)
+   * - Official SR Vote (TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY)
+   * Note: Matrix has NO device restriction (multiple wallets per device allowed, 1 matrix ID per wallet).
+   */
+  async getWalletEligibility(address: string): Promise<WalletEligibility | null> {
+    if (!address) return null;
+    const rootApi = process.env.NEXT_PUBLIC_API_URL
+      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "")
+      : "http://localhost:4000";
+    try {
+      const res = await fetch(`${rootApi}/api/dao/eligibility/${address}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        return json.data as WalletEligibility;
+      }
+    } catch (err) {
+      console.warn("[MatrixApi] Failed to fetch eligibility details:", err);
+    }
+    return null;
+  },
 };
+
+export interface WalletEligibility {
+  address: string;
+  canonicalAddress?: string;
+  condition1: {
+    passed: boolean;
+    creationTimestamp: number | null;
+    creationDate: string | null;
+    minRequiredDate: string;
+    reason?: string;
+  };
+  condition2: {
+    passed: boolean;
+    energy: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    bandwidth: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    srVote: {
+      voted: boolean;
+      officialSrAddress: string;
+      passed: boolean;
+    };
+    missingRequirements: string[];
+  };
+  eligibleToDeposit: boolean;
+  status: string;
+}

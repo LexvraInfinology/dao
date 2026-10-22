@@ -36,20 +36,12 @@ async function main() {
   await prisma.matrixTransaction.deleteMany({});
   console.log("   ✓ Purged matrix placements, cycles, activities, transactions.");
 
-  console.log("2. Purging test dummy operatives (userId > 1)...");
-  // Delete matrix profiles, settings, slots for non-root users
-  const nonRootUsers = await prisma.user.findMany({
-    where: { address: { not: GENESIS_ROOT_ADDRESS } },
-    select: { address: true, userId: true },
-  });
-
-  for (const u of nonRootUsers) {
-    await prisma.matrixSlot.deleteMany({ where: { userAddress: u.address } });
-    await prisma.matrixSettings.deleteMany({ where: { userAddress: u.address } });
-    await prisma.matrixProfile.deleteMany({ where: { userAddress: u.address } });
-    await prisma.user.delete({ where: { address: u.address } });
-  }
-  console.log(`   ✓ Purged ${nonRootUsers.length} simulated test operatives.`);
+  console.log("2. Purging matrix data for non-root operatives...");
+  // Clear matrix-specific state for other users without deleting the User records
+  await prisma.matrixSlot.deleteMany({ where: { userAddress: { not: GENESIS_ROOT_ADDRESS } } });
+  await prisma.matrixSettings.deleteMany({ where: { userAddress: { not: GENESIS_ROOT_ADDRESS } } });
+  await prisma.matrixProfile.deleteMany({ where: { userAddress: { not: GENESIS_ROOT_ADDRESS } } });
+  console.log("   ✓ Reset matrix profiles, settings, and slots for non-root users.");
 
   console.log("3. Initializing / Resetting Root Genesis Operative #1...");
   await prisma.matrixSlot.deleteMany({ where: { userAddress: GENESIS_ROOT_ADDRESS } });

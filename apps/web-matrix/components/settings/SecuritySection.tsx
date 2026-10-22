@@ -3,11 +3,24 @@
 import React from "react";
 import { toast } from "@/lib/toast";
 
+import { useUserStore } from "@/lib/stores";
+import { EXPLORER_URL } from "@/lib/contracts";
+
 export interface SecuritySectionProps {
   copy: (text: string) => void;
 }
 
 export function SecuritySection({ copy }: SecuritySectionProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const rawAddress = useUserStore((s) => s.address) || "";
+  const address = mounted ? rawAddress : "";
+  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
+  const displayAddressSpaced = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
+
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
 
@@ -32,10 +45,10 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
             <div className="min-w-0">
               <div className="text-[13.5px] font-bold text-[#0f172a] leading-tight">Connected Wallet</div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[12px] font-mono text-[#64748b]">0x8A3F . . . 91F2</span>
+                <span className="text-[12px] font-mono text-[#64748b]">{displayAddressSpaced}</span>
                 <button
                   type="button"
-                  onClick={() => copy("0x8A3F5B89127c4D9081e7492c1945Eb8712391F2")}
+                  onClick={() => copy(address)}
                   className="text-[#94a3b8] hover:text-[#2563eb] p-0.5 cursor-pointer transition-colors"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,7 +57,7 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
                   </svg>
                 </button>
                 <a
-                  href="https://etherscan.io/address/0x8A3F5B89127c4D9081e7492c1945Eb8712391F2"
+                  href={`${EXPLORER_URL}/#/address/${address}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#94a3b8] hover:text-[#2563eb] p-0.5 cursor-pointer transition-colors"
@@ -61,14 +74,21 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#16a34a] text-[11.5px] font-bold shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
-              Connected
-            </div>
+            {mounted && address ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#16a34a] text-[11.5px] font-bold shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                Connected
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[11.5px] font-bold shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                Disconnected
+              </div>
+            )}
 
             <button
               type="button"
-              onClick={() => toast.info("Your wallet is secured by Web3 cryptography on Polygon Amoy.", "Wallet Security")}
+              onClick={() => toast.info("Your wallet is secured by Web3 cryptography on TrobChain.", "Wallet Security")}
               className="text-[12.5px] sm:text-[13px] font-bold text-[#2563eb] hover:text-[#1d4ed8] flex items-center gap-1 cursor-pointer transition-colors"
             >
               View Wallet
@@ -214,7 +234,7 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
               </div>
               <div className="min-w-0">
                 <div className="text-[13.5px] font-bold text-[#0f172a] leading-tight">Wallet Connected</div>
-                <div className="text-[12px] font-mono text-[#64748b] mt-0.5">0x8A3F...91F2</div>
+                <div className="text-[12px] font-mono text-[#64748b] mt-0.5">{displayAddress}</div>
               </div>
             </div>
 

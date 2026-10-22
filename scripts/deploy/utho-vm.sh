@@ -75,7 +75,7 @@ wait_for_health() {
     if [ "$all_ready" = true ]; then
       compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-      compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       return 0
     fi
 

@@ -12,18 +12,28 @@ export interface AccountSectionProps {
 }
 
 export function AccountSection({ copy, profile: propProfile, slotsCount: propSlotsCount }: AccountSectionProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const storeProfile = useUserStore((s) => s.profile);
   const storeSlots = useMatrixStore((s) => s.slots);
 
-  const profile = propProfile !== undefined ? propProfile : storeProfile;
-  const count = propSlotsCount !== undefined ? propSlotsCount : storeSlots.length;
-  const userId = profile?.userId ?? 10014;
-  const address = profile?.address ?? "0x8A3F5B89127c4D9081e7492c1945Eb8712391F2";
-  const displayAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
-  const levelNum = count > 0 ? count : 1;
-  const joinedDate = profile?.joinedAt
-    ? new Date(profile.joinedAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
-    : "Active";
+  const profile = mounted ? (propProfile !== undefined ? propProfile : storeProfile) : null;
+  const count = mounted ? (propSlotsCount !== undefined ? propSlotsCount : storeSlots.length) : 0;
+  const storeAddress = useUserStore((s) => s.address);
+  const address = mounted ? (profile?.address ?? storeAddress ?? "") : "";
+  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
+  const userIdDisplay = profile?.userId ? `#${profile.userId}` : (address ? "#Pending" : "Unregistered");
+  const levelDisplay = count > 0 ? `Slot ${count}` : "Not Activated";
+  let joinedDate = address ? "Connected" : "—";
+  if (profile?.joinedAt) {
+    const d = new Date(profile.joinedAt);
+    if (!isNaN(d.getTime())) {
+      joinedDate = d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+    }
+  }
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
@@ -63,8 +73,8 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Member ID</span>
             </div>
             <div className="flex-shrink-0">
-              <span className="px-2.5 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-extrabold text-[13px] sm:text-[14px] tracking-tight">
-                #{userId}
+              <span suppressHydrationWarning className="px-2.5 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-extrabold text-[13px] sm:text-[14px] tracking-tight">
+                {userIdDisplay}
               </span>
             </div>
           </div>
@@ -80,11 +90,11 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Current Level</span>
             </div>
             <div className="flex-shrink-0">
-              <div className="px-2.5 sm:px-3 py-1 rounded-full bg-[#2563eb] text-white font-bold text-[11.5px] sm:text-[12px] flex items-center gap-1.5 shadow-xs">
+              <div suppressHydrationWarning className="px-2.5 sm:px-3 py-1 rounded-full bg-[#2563eb] text-white font-bold text-[11.5px] sm:text-[12px] flex items-center gap-1.5 shadow-xs">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
-                Slot {levelNum}
+                {levelDisplay}
               </div>
             </div>
           </div>
@@ -107,7 +117,7 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               aria-label="Copy wallet address"
               title="Click to copy wallet address"
             >
-              <span>{displayAddress}</span>
+              <span suppressHydrationWarning>{displayAddress}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[#94a3b8] group-hover:text-[#2563eb] transition-colors flex-shrink-0">
                 <rect x="9" y="9" width="13" height="13" rx="2" />
                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
@@ -126,7 +136,7 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               </div>
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Member Since</span>
             </div>
-            <span className="text-[11px] sm:text-[13px] font-bold text-[#0f172a] text-right whitespace-nowrap flex-shrink-0">
+            <span suppressHydrationWarning className="text-[11px] sm:text-[13px] font-bold text-[#0f172a] text-right whitespace-nowrap flex-shrink-0">
               {joinedDate}
             </span>
           </div>
@@ -142,8 +152,8 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Referral / Sponsor ID</span>
             </div>
             <div className="flex-shrink-0">
-              <div className="px-2 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-bold text-[12px] sm:text-[13px] flex items-center gap-1">
-                <span>↑</span> {profile?.sponsorUserId ? `#${profile.sponsorUserId}` : "Genesis (Root)"}
+              <div suppressHydrationWarning className="px-2 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-bold text-[12px] sm:text-[13px] flex items-center gap-1">
+                <span>↑</span> {profile?.sponsorUserId ? `#${profile.sponsorUserId}` : (address ? "Genesis (Root)" : "None")}
               </div>
             </div>
           </div>
@@ -160,9 +170,15 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Matrix Status</span>
             </div>
             <div className="flex-shrink-0">
-              <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#16a34a] text-[11.5px] sm:text-[12px] font-bold shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />Active Node
-              </div>
+              {mounted && address ? (
+                <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#16a34a] text-[11.5px] sm:text-[12px] font-bold shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />Active Node
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[11.5px] sm:text-[12px] font-bold shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />Disconnected
+                </div>
+              )}
             </div>
           </div>
         </div>

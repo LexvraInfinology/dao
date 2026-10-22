@@ -87,7 +87,7 @@ async function deployContractToTrob(name, artifactRelativePath, constructorParam
 
   const payload = {
     owner_address: tronHex,
-    fee_limit: 1000000000, // 1000 TROB
+    fee_limit: 50000000, // 50 TROB
     call_value: 0,
     consume_user_resource_percent: 100,
     origin_energy_limit: 10000000,

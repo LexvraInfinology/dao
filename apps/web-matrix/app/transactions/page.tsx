@@ -220,7 +220,7 @@ export default function TransactionsPage() {
               <button type="button" onClick={() => setWalletModalOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[11px] font-medium cursor-pointer">
                 <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
                 <span className="font-mono font-semibold text-[#1e40af]">
-                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x71...4982"}
+                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
                 </span>
               </button>
             </div>
@@ -231,7 +231,7 @@ export default function TransactionsPage() {
                 <circle cx="11.5" cy="9.5" r="1" fill="#64748b" />
               </svg>
               <span className="text-[12.5px] font-medium text-[#334155] font-mono">
-                {address ? `${address.slice(0, 6)} . . ${address.slice(-4)}` : "0x71c8 . . 4982"}
+                {address ? `${address.slice(0, 6)} . . ${address.slice(-4)}` : "Connect Wallet"}
               </span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

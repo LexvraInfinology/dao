@@ -45,73 +45,17 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
 
   const filledCount =
     slotDetails?.filledNodes ??
-    (slotDetails?.nodes ? slotDetails.nodes.filter((n) => n.filled).length : 4);
+    (slotDetails?.nodes ? slotDetails.nodes.filter((n) => n.filled).length : 0);
 
   const matrixMembers: MatrixMember[] = React.useMemo(() => {
     if (!slotDetails?.nodes || slotDetails.nodes.length === 0) {
-      return [
-        {
-          pos: "01",
-          isYou: true,
-          member: "You",
-          address: "0x8A3F...91F2",
-          addressFormatted: "0x8A3F . . . 91F2",
-          status: "Active",
-          statusType: "active",
-          joined: "12 Sep 2026",
-          joinedShort: "12 Sep 2026 • L1",
-          level: `Slot ${selectedSlotNumber}`,
-          earned: "142.50 TROB",
-          avatarBg: "bg-[#2563eb]",
-          avatarNum: "1",
-        },
-        {
-          pos: "02",
-          isYou: false,
-          address: "0x3A2...9F1C",
-          addressFormatted: "0x3A2 . . . 9F1C",
-          status: "Filled",
-          statusType: "filled",
-          joined: "14 Sep 2026",
-          joinedShort: "14 Sep 2026",
-          level: `Slot ${selectedSlotNumber}`,
-          earned: "25.00 TROB",
-          avatarBg: "bg-[radial-gradient(circle_at_30%_30%,#38bdf8,#0284c7_65%,#0369a1_100%)]",
-        },
-        {
-          pos: "03",
-          isYou: false,
-          address: "0x7D9...2ABE",
-          addressFormatted: "0x7D9 . . . 2ABE",
-          status: "Filled",
-          statusType: "filled",
-          joined: "15 Sep 2026",
-          joinedShort: "15 Sep 2026",
-          level: `Slot ${selectedSlotNumber}`,
-          earned: "17.50 TROB",
-          avatarBg: "bg-[radial-gradient(circle_at_30%_30%,#818cf8,#4f46e5_65%,#3730a3_100%)]",
-        },
-        {
-          pos: "04",
-          isYou: false,
-          address: "0x9K1...4B7D",
-          addressFormatted: "0x9K1 . . . 4B7D",
-          status: "Filled",
-          statusType: "filled",
-          joined: "16 Sep 2026",
-          joinedShort: "16 Sep 2026",
-          level: `Slot ${selectedSlotNumber}`,
-          earned: "12.50 TROB",
-          avatarBg: "bg-[radial-gradient(circle_at_30%_30%,#38bdf8,#0284c7_65%,#0369a1_100%)]",
-        },
-        ...Array.from({ length: 10 }, (_, i) => ({
-          pos: String(i + 5).padStart(2, "0"),
-          isOpen: true,
-          status: "Open",
-          statusType: "open" as const,
-          level: `Slot ${selectedSlotNumber}`,
-        })),
-      ];
+      return Array.from({ length: 14 }, (_, i) => ({
+        pos: String(i + 1).padStart(2, "0"),
+        isOpen: true,
+        status: "Open",
+        statusType: "open" as const,
+        level: `Slot ${selectedSlotNumber}`,
+      }));
     }
 
     return Array.from({ length: 14 }, (_, i) => {

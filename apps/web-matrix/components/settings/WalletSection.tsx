@@ -12,12 +12,17 @@ export interface WalletSectionProps {
 }
 
 export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDisconnectWallet }: WalletSectionProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const storeProfile = useUserStore((s) => s.profile);
   const storeAddress = useUserStore((s) => s.address);
 
-  const profile = propProfile !== undefined ? propProfile : storeProfile;
-  const address = profile?.address ?? storeAddress ?? "0x8A3F5B89127c4D9081e7492c1945Eb8712391F2";
-  const displayAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const profile = mounted ? (propProfile !== undefined ? propProfile : storeProfile) : null;
+  const address = mounted ? (profile?.address ?? storeAddress ?? "") : "";
+  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">

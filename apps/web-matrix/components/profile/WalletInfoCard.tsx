@@ -15,8 +15,8 @@ export function WalletInfoCard({ copy, profile: propProfile, onManage }: WalletI
   const storeAddress = useUserStore((s) => s.address);
 
   const profile = propProfile !== undefined ? propProfile : storeProfile;
-  const address = profile?.address ?? storeAddress ?? "0x8A3F5B89127c4D9081e7492c1945Eb8712391F2";
-  const displayAddress = `${address.slice(0, 6)} . . . ${address.slice(-4)}`;
+  const address = profile?.address ?? storeAddress ?? "";
+  const displayAddress = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
   const joinedDate = profile?.joinedAt ? new Date(profile.joinedAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Active";
 
   return (
@@ -70,7 +70,7 @@ export function WalletInfoCard({ copy, profile: propProfile, onManage }: WalletI
                 <path d="M12 2L4 12l8 5 8-5-8-10z" fill="#2563eb" opacity="0.85"/>
                 <path d="M12 17l-8-5 8 10 8-10-8 5z" fill="#1d4ed8"/>
               </svg>
-              <span className="text-[13.5px] font-bold text-[#0f172a]">Polygon / Base (EVM)</span>
+              <span className="text-[13.5px] font-bold text-[#0f172a]">TrobChain L1 (Native)</span>
             </div>
           </div>
 
@@ -80,7 +80,7 @@ export function WalletInfoCard({ copy, profile: propProfile, onManage }: WalletI
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               <span className="text-[13px] font-medium">Wallet Type</span>
             </div>
-            <span className="text-[13.5px] font-bold text-[#0f172a]">MetaMask / Web3</span>
+            <span className="text-[13.5px] font-bold text-[#0f172a]">TrobSafe / Web3</span>
           </div>
 
           {/* Connected Since */}

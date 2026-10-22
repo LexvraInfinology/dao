@@ -17,6 +17,7 @@ import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useUserStore, useMatrixStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
+import { NETWORK_NAME } from "@/lib/contracts";
 
 export default function SettingsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +36,12 @@ export default function SettingsPage() {
   const fetchSlots = useMatrixStore((s) => s.fetchSlots);
 
   const [localNotifications, setLocalNotifications] = useState<Record<string, boolean>>({});
+
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     fetchProfile();
@@ -238,7 +245,7 @@ export default function SettingsPage() {
           {/* Right Header items */}
           <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
             <div
-              onClick={() => toast.info("Polygon Amoy testnet is operational and synced.", "Protocol Live")}
+              onClick={() => toast.info(`${NETWORK_NAME} is operational and synced.`, "Protocol Live")}
               className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] cursor-pointer hover:bg-emerald-100/50 transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse"/>
@@ -257,12 +264,16 @@ export default function SettingsPage() {
             <div className="lg:hidden flex items-center gap-1.5">
               <button type="button" onClick={() => setWalletModalOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[11px] font-medium cursor-pointer">
                 <span className="w-2 h-2 rounded-full bg-[#2563eb]"/>
-                <span className="font-mono font-semibold text-[#1e40af]">{address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x..."}</span>
+                <span className="font-mono font-semibold text-[#1e40af]" suppressHydrationWarning>
+                  {mounted && address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x..."}
+                </span>
               </button>
             </div>
             <button type="button" onClick={() => setWalletModalOpen(true)} className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#f1f5f9] cursor-pointer">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="13" height="9.5" rx="2" stroke="#64748b" strokeWidth="1.3"/><path d="M1.5 6.5h13" stroke="#64748b" strokeWidth="1.3"/><circle cx="11.5" cy="9.5" r="1" fill="#64748b"/></svg>
-              <span className="text-[12.5px] font-medium text-[#334155] font-mono">{address ? `${address.slice(0, 6)} . . ${address.slice(-4)}` : "0x..."}</span>
+              <span className="text-[12.5px] font-medium text-[#334155] font-mono" suppressHydrationWarning>
+                {mounted && address ? `${address.slice(0, 6)} . . ${address.slice(-4)}` : "0x..."}
+              </span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             <Link href="/profile" title="View Profile" className="hidden lg:flex w-[38px] h-[38px] rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">

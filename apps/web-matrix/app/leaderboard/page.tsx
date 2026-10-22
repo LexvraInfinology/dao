@@ -13,6 +13,7 @@ import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useLeaderboardStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
+import { NETWORK_NAME } from "@/lib/contracts";
 
 export default function LeaderboardPage() {
   const { address, changeAddress } = useMatrixUser();
@@ -264,7 +265,7 @@ return (
           <div className="flex items-center gap-2 lg:gap-3">
             {/* Desktop: Protocol Live Badge */}
             <div
-              onClick={() => toast.info("Polygon Amoy testnet is operational and synced.", "Protocol Live")}
+              onClick={() => toast.info(`${NETWORK_NAME} is operational and synced.`, "Protocol Live")}
               className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] cursor-pointer hover:bg-emerald-100/50 transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
@@ -302,7 +303,7 @@ return (
               >
                 <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
                 <span className="font-mono font-semibold text-[#1e40af]">
-                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x71...4982"}
+                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
                 </span>
               </button>
             </div>
@@ -319,7 +320,7 @@ return (
                 <circle cx="11.5" cy="9.5" r="1" fill="#64748b" />
               </svg>
               <span className="text-[12.5px] font-medium text-[#334155] font-mono whitespace-nowrap">
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x71c8...4982"}
+                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
               </span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

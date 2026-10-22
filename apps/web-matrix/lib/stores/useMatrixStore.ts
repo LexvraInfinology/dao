@@ -6,6 +6,11 @@ import {
   MatrixSlotDetails,
   MatrixDashboardOverview,
 } from "../api";
+import {
+  getOnChainAllSlots,
+  getOnChainSlotDetails,
+  getOnChainDirectMembers,
+} from "../contracts";
 import { useUserStore } from "./useUserStore";
 
 export interface MatrixState {
@@ -41,7 +46,8 @@ export interface MatrixState {
   ) => Promise<void>;
   buySlot: (
     slotNum: number,
-    userAddress?: string
+    userAddress?: string,
+    txHash?: string
   ) => Promise<{ success: boolean; slot: MatrixSlotSummary; message: string }>;
   fetchDirectMembers: (userAddress?: string, force?: boolean) => Promise<void>;
   fetchDashboard: (userAddress?: string, force?: boolean) => Promise<void>;
@@ -71,6 +77,17 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     if (slots.length > 0 && !force) return;
 
     set({ loadingSlots: true, error: null });
+    try {
+      // 1. Prioritize live on-chain contract state
+      const onChainData = await getOnChainAllSlots(addr);
+      if (onChainData && onChainData.length > 0) {
+        set({ slots: onChainData, loadingSlots: false });
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[MatrixStore] Direct on-chain slot query failed, falling back to API:", err);
+    }
+
     try {
       const data = await matrixApi.getSlots(addr);
       set({ slots: data || [], loadingSlots: false });
@@ -106,6 +123,22 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
     set({ loadingDetails: true, error: null });
     try {
+      // 1. Prioritize live on-chain 14-node board data
+      const onChainDetails = await getOnChainSlotDetails(addr, targetSlot);
+      if (onChainDetails) {
+        set({
+          slotDetails: onChainDetails,
+          selectedSlotNumber: targetSlot,
+          selectedCycle: onChainDetails.currentCycle,
+          loadingDetails: false,
+        });
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[MatrixStore] Direct on-chain slot details failed, falling back to API:", err);
+    }
+
+    try {
       const details = await matrixApi.getSlotDetails(addr, targetSlot, targetCycle);
       set({
         slotDetails: details,
@@ -121,13 +154,13 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     }
   },
 
-  buySlot: async (slotNum: number, userAddress?: string) => {
+  buySlot: async (slotNum: number, userAddress?: string, txHash?: string) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) throw new Error("No wallet connected to buy slot");
 
     set({ buyingSlot: true, error: null });
     try {
-      const res = await matrixApi.buySlot(addr, slotNum);
+      const res = await matrixApi.buySlot(addr, slotNum, txHash);
       // Revalidate slots & details immediately
       await get().fetchSlots(addr, true);
       await get().fetchSlotDetails(slotNum, undefined, addr, true);
@@ -152,6 +185,17 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     if (directMembers.length > 0 && !force) return;
 
     set({ loadingDirects: true, error: null });
+    try {
+      // 1. Prioritize live on-chain direct referrals
+      const onChainDirects = await getOnChainDirectMembers(addr);
+      if (onChainDirects) {
+        set({ directMembers: onChainDirects, loadingDirects: false });
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[MatrixStore] Direct on-chain direct members query failed:", err);
+    }
+
     try {
       const members = await matrixApi.getDirectMembers(addr);
       set({ directMembers: members || [], loadingDirects: false });

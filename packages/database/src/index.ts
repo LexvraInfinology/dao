@@ -2,7 +2,7 @@
 // EQUORA.FI PROTOCOL — PRISMA CLIENT SINGLETON & DATABASE UTILITIES
 // ==============================================================================
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "./generated/client";
 
 declare global {
   // Allow global `var` declarations in TypeScript
@@ -23,5 +23,5 @@ if (process.env.NODE_ENV !== "production") {
   global.__equora_prisma__ = prisma;
 }
 
-export * from "@prisma/client";
+export * from "./generated/client";
 export default prisma;

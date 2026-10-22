@@ -34,11 +34,10 @@ function loadEnv() {
 
 loadEnv();
 
-const DB_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
-if (!DB_URL) {
-  console.error('Error: DATABASE_URL or NEON_DATABASE_URL environment variable is required.');
-  process.exit(1);
-}
+const DB_URL =
+  process.env.DATABASE_URL ||
+  process.env.NEON_DATABASE_URL ||
+  "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
 
 function getNeonSqlEndpoint(url) {
   const match = url.match(/@([^/:]+)/);

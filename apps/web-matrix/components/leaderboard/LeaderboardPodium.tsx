@@ -36,59 +36,84 @@ export function LeaderboardPodium({
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  if (!entries || entries.length === 0) {
+    return (
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between pt-1 px-0.5">
+          <h2 className="text-[15px] sm:text-[16px] font-extrabold text-[#0f172a]">On-Chain Podium</h2>
+          <span className="text-[11px] sm:text-[11.5px] font-semibold text-[#16a34a] flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
+            Live On-Chain
+          </span>
+        </div>
+        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-6 text-center shadow-xs">
+          <p className="text-[13px] font-semibold text-[#64748b]">
+            No podium winners recorded yet. Cycle slots to claim the top podium positions on TrobChain testnet!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const podiumData = [
-    {
-      rank: 1 as const,
-      nodeId: top1 ? String(top1.userId || "10001") : "10001",
-      fullAddress: top1 ? top1.address : "0x9A2C5B89127c4D9081e7492c1945Eb871239F3c1",
-      displayAddress: top1 ? formatAddr(top1.address) : "0x9A2C...F3c1",
-      trend: "+12.4%",
-      trendPositive: true,
-      partners: top1 ? String(top1.directCount) : "1,245",
-      cycles: top1 ? `Slot ${top1.highestSlot}` : "128",
-      volume: top1 ? formatVolume(top1.totalEarned) : "45.2K",
-      volumeFull: top1 ? formatVolumeFull(top1.totalEarned) : "45,200.00 TROB",
-      bgGradient: "bg-gradient-to-b from-[#fefbf2] via-[#fffefc] to-[#fef8e8]",
-      borderColor: "border-[#fde68a]",
-      crownBg: "bg-gradient-to-br from-[#fef08a] via-[#fde047] to-[#eab308]",
-      crownBorder: "border-[#facc15]",
-      metricBoxBg: "bg-white/90 border-[#fef08a]/80",
-    },
-    {
-      rank: 2 as const,
-      nodeId: top2 ? String(top2.userId || "10024") : "10024",
-      fullAddress: top2 ? top2.address : "0x3B8D5B89127c4D9081e7492c1945Eb871239E1a9",
-      displayAddress: top2 ? formatAddr(top2.address) : "0x3B8D...E1a9",
-      trend: "+12.4%",
-      trendPositive: true,
-      partners: top2 ? String(top2.directCount) : "982",
-      cycles: top2 ? `Slot ${top2.highestSlot}` : "94",
-      volume: top2 ? formatVolume(top2.totalEarned) : "38.2K",
-      volumeFull: top2 ? formatVolumeFull(top2.totalEarned) : "38,150.00 TROB",
-      bgGradient: "bg-gradient-to-b from-[#f8fafc] via-[#fbfcfe] to-[#f1f5f9]",
-      borderColor: "border-[#e2e8f0]",
-      crownBg: "bg-gradient-to-br from-[#f8fafc] via-[#e2e8f0] to-[#cbd5e1]",
-      crownBorder: "border-[#cbd5e1]",
-      metricBoxBg: "bg-white/90 border-[#e2e8f0]",
-    },
-    {
-      rank: 3 as const,
-      nodeId: top3 ? String(top3.userId || "10008") : "10008",
-      fullAddress: top3 ? top3.address : "0x6F7D5B89127c4D9081e7492c1945Eb8712392B9e",
-      displayAddress: top3 ? formatAddr(top3.address) : "0x6F7D...2B9e",
-      trend: "+12.4%",
-      trendPositive: true,
-      partners: top3 ? String(top3.directCount) : "840",
-      cycles: top3 ? `Slot ${top3.highestSlot}` : "76",
-      volume: top3 ? formatVolume(top3.totalEarned) : "31.0K",
-      volumeFull: top3 ? formatVolumeFull(top3.totalEarned) : "31,000.00 TROB",
-      bgGradient: "bg-gradient-to-b from-[#fffaf5] via-[#fffdfa] to-[#ffedd5]/40",
-      borderColor: "border-[#fed7aa]",
-      crownBg: "bg-gradient-to-br from-[#ffedd5] via-[#fed7aa] to-[#fdba74]",
-      crownBorder: "border-[#f97316]/40",
-      metricBoxBg: "bg-white/90 border-[#fed7aa]/80",
-    },
-  ];
+    top1
+      ? {
+          rank: 1 as const,
+          nodeId: String(top1.userId || "1"),
+          fullAddress: top1.address,
+          displayAddress: formatAddr(top1.address),
+          trend: "Leader",
+          trendPositive: true,
+          partners: String(top1.directCount),
+          cycles: `Slot ${top1.highestSlot}`,
+          volume: formatVolume(top1.totalEarned),
+          volumeFull: formatVolumeFull(top1.totalEarned),
+          bgGradient: "bg-gradient-to-b from-[#fefbf2] via-[#fffefc] to-[#fef8e8]",
+          borderColor: "border-[#fde68a]",
+          crownBg: "bg-gradient-to-br from-[#fef08a] via-[#fde047] to-[#eab308]",
+          crownBorder: "border-[#facc15]",
+          metricBoxBg: "bg-white/90 border-[#fef08a]/80",
+        }
+      : null,
+    top2
+      ? {
+          rank: 2 as const,
+          nodeId: String(top2.userId || "2"),
+          fullAddress: top2.address,
+          displayAddress: formatAddr(top2.address),
+          trend: "Rank #2",
+          trendPositive: true,
+          partners: String(top2.directCount),
+          cycles: `Slot ${top2.highestSlot}`,
+          volume: formatVolume(top2.totalEarned),
+          volumeFull: formatVolumeFull(top2.totalEarned),
+          bgGradient: "bg-gradient-to-b from-[#f8fafc] via-[#fbfcfe] to-[#f1f5f9]",
+          borderColor: "border-[#e2e8f0]",
+          crownBg: "bg-gradient-to-br from-[#f8fafc] via-[#e2e8f0] to-[#cbd5e1]",
+          crownBorder: "border-[#cbd5e1]",
+          metricBoxBg: "bg-white/90 border-[#e2e8f0]",
+        }
+      : null,
+    top3
+      ? {
+          rank: 3 as const,
+          nodeId: String(top3.userId || "3"),
+          fullAddress: top3.address,
+          displayAddress: formatAddr(top3.address),
+          trend: "Rank #3",
+          trendPositive: true,
+          partners: String(top3.directCount),
+          cycles: `Slot ${top3.highestSlot}`,
+          volume: formatVolume(top3.totalEarned),
+          volumeFull: formatVolumeFull(top3.totalEarned),
+          bgGradient: "bg-gradient-to-b from-[#fffaf5] via-[#fffdfa] to-[#ffedd5]/40",
+          borderColor: "border-[#fed7aa]",
+          crownBg: "bg-gradient-to-br from-[#ffedd5] via-[#fed7aa] to-[#fdba74]",
+          crownBorder: "border-[#f97316]/40",
+          metricBoxBg: "bg-white/90 border-[#fed7aa]/80",
+        }
+      : null,
+  ].filter(Boolean) as any[];
 
   return (
     <div className="space-y-3 w-full">

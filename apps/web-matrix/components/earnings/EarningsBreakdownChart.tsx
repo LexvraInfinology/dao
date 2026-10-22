@@ -2,16 +2,34 @@
 
 import React, { useState } from "react";
 
+import { useFinanceStore, useUserStore } from "@/lib/stores";
+
 export function EarningsBreakdownChart() {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const earnings = useFinanceStore((s) => s.earnings);
+  const profile = useUserStore((s) => s.profile);
+
+  const directAmount = Number(earnings?.breakdown?.directBonus ?? earnings?.breakdown?.directMatrixBonus ?? profile?.totalEarnings ?? 0);
+  const levelAmount = Number(earnings?.breakdown?.matrixPlacements ?? earnings?.breakdown?.levelOverrides ?? 0);
+  const referralAmount = Number(earnings?.breakdown?.poolShares ?? earnings?.breakdown?.leadershipPool ?? 0);
+  const totalAmount = directAmount + levelAmount + referralAmount;
+
+  const directPct = totalAmount > 0 ? (directAmount / totalAmount) * 100 : 0;
+  const levelPct = totalAmount > 0 ? (levelAmount / totalAmount) * 100 : 0;
+  const referralPct = totalAmount > 0 ? (referralAmount / totalAmount) * 100 : 0;
+
+  const circumference = 364.42; // 2 * pi * 58
+  const directStroke = (directPct / 100) * circumference;
+  const levelStroke = (levelPct / 100) * circumference;
+  const referralStroke = (referralPct / 100) * circumference;
 
   const breakdownData = [
     {
       id: "direct",
       name: "Direct Rewards",
       subText: "Instant Matrix spillover",
-      amount: "85.00 TROB",
-      percent: "59.6%",
+      amount: `${directAmount.toFixed(2)} TROB`,
+      percent: `${directPct.toFixed(1)}%`,
       color: "#0047cc", // Deep Royal Navy Blue
       dotClass: "bg-[#0047cc]",
     },
@@ -19,8 +37,8 @@ export function EarningsBreakdownChart() {
       id: "level",
       name: "Level Rewards",
       subText: "Tier matrix completions",
-      amount: "42.50 TROB",
-      percent: "29.8%",
+      amount: `${levelAmount.toFixed(2)} TROB`,
+      percent: `${levelPct.toFixed(1)}%`,
       color: "#0088ff", // Sky / Bright Blue
       dotClass: "bg-[#0088ff]",
     },
@@ -28,8 +46,8 @@ export function EarningsBreakdownChart() {
       id: "referral",
       name: "Referral Bonus",
       subText: "Invited network activation",
-      amount: "15.00 TROB",
-      percent: "10.5%",
+      amount: `${referralAmount.toFixed(2)} TROB`,
+      percent: `${referralPct.toFixed(1)}%`,
       color: "#38bdf8", // Light Cyan
       dotClass: "bg-[#38bdf8]",
     },
@@ -61,14 +79,14 @@ export function EarningsBreakdownChart() {
                       fill="none"
                     />
 
-                    {/* Segment 1: Direct Rewards (59.6% -> circumference = 2 * pi * 58 = 364.42 -> 217.19) */}
+                    {/* Segment 1: Direct Rewards */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#0047cc"
                       strokeWidth="24"
-                      strokeDasharray="217.19 364.42"
+                      strokeDasharray={`${directStroke} ${circumference}`}
                       strokeDashoffset="0"
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
@@ -76,30 +94,30 @@ export function EarningsBreakdownChart() {
                       onMouseLeave={() => setHoveredSegment(null)}
                     />
 
-                    {/* Segment 2: Level Rewards (29.8% -> 108.6) */}
+                    {/* Segment 2: Level Rewards */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#0088ff"
                       strokeWidth="24"
-                      strokeDasharray="108.6 364.42"
-                      strokeDashoffset="-217.19"
+                      strokeDasharray={`${levelStroke} ${circumference}`}
+                      strokeDashoffset={`-${directStroke}`}
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
                       onMouseEnter={() => setHoveredSegment("level")}
                       onMouseLeave={() => setHoveredSegment(null)}
                     />
 
-                    {/* Segment 3: Referral Bonus (10.5% -> 38.26) */}
+                    {/* Segment 3: Referral Bonus */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#38bdf8"
                       strokeWidth="24"
-                      strokeDasharray="38.26 364.42"
-                      strokeDashoffset="-325.79"
+                      strokeDasharray={`${referralStroke} ${circumference}`}
+                      strokeDashoffset={`-${directStroke + levelStroke}`}
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
                       onMouseEnter={() => setHoveredSegment("referral")}
@@ -110,7 +128,7 @@ export function EarningsBreakdownChart() {
                   {/* Centered Donut Value */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                     <span className="text-[22px] sm:text-[23px] font-black text-[#0f172a] leading-none tracking-tight">
-                      142.50
+                      {totalAmount.toFixed(2)}
                     </span>
                     <span className="text-[11px] font-black text-[#2563eb] tracking-wider uppercase mt-1">
                       TROB

@@ -233,7 +233,7 @@ services:
         NEXT_PUBLIC_NFT_ADDRESS: ${NEXT_PUBLIC_NFT_ADDRESS:-TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz}
         NEXT_PUBLIC_DAO_ADDRESS: ${NEXT_PUBLIC_DAO_ADDRESS:-TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT}
         NEXT_PUBLIC_VAULT_ADDRESS: ${NEXT_PUBLIC_VAULT_ADDRESS:-TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB}
-        NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE}
+        NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -243,7 +243,7 @@ services:
       BACKEND_API_URL: ${BACKEND_API_URL:-http://api:4000}
       NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-1000}
       NEXT_PUBLIC_RPC_URL: ${NEXT_PUBLIC_RPC_URL:-https://fullnode-one.trobchain.com}
-      NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE}
+      NEXT_PUBLIC_MATRIX_ADDRESS: ${NEXT_PUBLIC_MATRIX_ADDRESS:-TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2}
       NEXT_PUBLIC_TOKEN_ADDRESS: ${NEXT_PUBLIC_TOKEN_ADDRESS:-TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt}
     depends_on:
       api:
@@ -251,7 +251,7 @@ services:
     ports:
       - "${MATRIX_WEB_PORT:-3001}:3001"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 5

@@ -12,8 +12,8 @@ import {
   DashboardMobileCard,
 } from "@/components/dashboard";
 import { ReferralLinkCard } from "@/components/dashboard/ReferralLinkCard";
+import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
-import { DUMMY_TEST_ACCOUNTS } from "@/lib/web3Wallet";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -22,7 +22,13 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { address, changeAddress, dashboard, profile, refreshAll, loading } = useMatrixUser();
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { address, changeAddress, disconnect, dashboard, profile, refreshAll, loading } = useMatrixUser();
   const [seeding, setSeeding] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -35,14 +41,7 @@ export default function DashboardPage() {
       toast.success("Operative Loaded", `Inspecting wallet ${q.slice(0, 6)}...${q.slice(-4)}`);
       setSearchQuery("");
     } else if (/^\d+$/.test(q)) {
-      const match = DUMMY_TEST_ACCOUNTS.find((a) => a.name.includes(`#${q}`));
-      if (match) {
-        changeAddress(match.address);
-        toast.success("Operative Loaded", `Viewing ${match.name}`);
-        setSearchQuery("");
-      } else {
-        toast.info("Operative Search", `Looking up Operative #${q}...`);
-      }
+      toast.info("Operative Search", `Looking up Operative #${q}...`);
     } else {
       toast.error("Invalid Input", "Please enter a valid 0x wallet address or numeric operative ID.");
     }
@@ -147,7 +146,8 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex antialiased">
+    <MatrixAccessGate>
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex antialiased">
       {/* ═══════════ MOBILE SIDEBAR OVERLAY ═══════════ */}
       {sidebarOpen && (
         <div
@@ -328,19 +328,30 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setWalletModalOpen(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#f1f5f9] flex-shrink-0 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#f1f5f9] flex-shrink-0 cursor-pointer"
               title="Click to connect or switch wallet"
             >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
-                <rect x="1" y="3" width="12" height="9" rx="2" stroke="#64748b" strokeWidth="1.2" />
-                <path d="M10 8.5a.5.5 0 100-1 .5.5 0 000 1z" fill="#64748b" />
-              </svg>
-              <span className="text-[11px] sm:text-[12px] font-medium text-[#475569] whitespace-nowrap">
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
-              </span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
-                <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {mounted && address ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-[11px] sm:text-[12px] font-mono font-medium text-[#475569] whitespace-nowrap">
+                    {`${address.slice(0, 6)}...${address.slice(-4)}`}
+                  </span>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+                    <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+                    <rect x="1" y="3" width="12" height="9" rx="2" stroke="#2563eb" strokeWidth="1.2" />
+                    <path d="M10 8.5a.5.5 0 100-1 .5.5 0 000 1z" fill="#2563eb" />
+                  </svg>
+                  <span className="text-[11px] sm:text-[12px] font-semibold text-[#2563eb] whitespace-nowrap">
+                    Connect Wallet
+                  </span>
+                </>
+              )}
             </button>
 
             {/* Avatar */}
@@ -390,8 +401,10 @@ export default function DashboardPage() {
           onClose={() => setWalletModalOpen(false)}
           currentAddress={address || undefined}
           onSelectAddress={changeAddress}
+          onDisconnect={disconnect}
         />
       </div>
     </div>
+    </MatrixAccessGate>
   );
 }

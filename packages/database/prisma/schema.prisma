@@ -13,6 +13,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 // ------------------------------------------------------------------------------
@@ -96,6 +97,13 @@ model DaoMember {
   entryAmountUsdAtJoin  Decimal?            @db.Decimal(36, 18)
   priceSource           String?             // "onchain" | "offchain-estimate"
   pushedAmountBtt       Decimal             @default(0) @db.Decimal(36, 18)
+  retopupAmountBtt      Decimal             @default(0) @db.Decimal(36, 18)
+  retopupCount          Int                 @default(0)
+  lastRetopupAt         DateTime?
+  retopupDeadline       DateTime?
+  totalDepositsCount    Int                 @default(1)
+  totalDepositsUsd      Decimal             @default(0) @db.Decimal(36, 18)
+  deviceFingerprint     String?
   joinedAt              DateTime
   status                String              @default("active")
   txHash                String
@@ -107,6 +115,15 @@ model DaoMember {
 
   @@index([position])
   @@index([joinedAt])
+}
+
+model WhatsappVerification {
+  address     String    @id
+  phone       String?
+  verified    Boolean   @default(true)
+  verified_at DateTime? @default(now())
+
+  @@map("whatsapp_verifications")
 }
 
 model DaoEvent {

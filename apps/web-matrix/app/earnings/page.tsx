@@ -15,6 +15,7 @@ import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
+import { NETWORK_NAME } from "@/lib/contracts";
 
 export default function EarningsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -257,7 +258,7 @@ export default function EarningsPage() {
 
           <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
             <div
-              onClick={() => toast.info("Polygon Amoy testnet is operational and synced.", "Protocol Live")}
+              onClick={() => toast.info(`${NETWORK_NAME} is operational and synced.`, "Protocol Live")}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] cursor-pointer hover:bg-emerald-100/50 transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
@@ -288,7 +289,7 @@ export default function EarningsPage() {
               className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors cursor-pointer text-[#0f172a] text-[11px] sm:text-[12px] font-mono font-semibold"
             >
               <span className="w-2 h-2 rounded-full bg-[#2563eb] flex-shrink-0" />
-              <span className="truncate">{address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x..."}</span>
+              <span className="truncate" suppressHydrationWarning>{address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x..."}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#64748b] flex-shrink-0">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />

@@ -27,93 +27,6 @@ export interface LeaderboardRankingsTableProps {
 export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }: LeaderboardRankingsTableProps) {
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
-  const defaultNodes: LeaderboardNode[] = [
-    {
-      rank: 1,
-      id: "#10001",
-      address: "0x9A2C...F3c1",
-      slot: "SLOT 7",
-      slotTheme: "amber",
-      directPartners: 1245,
-      matrixCycles: 128,
-      totalVolume: 45200.0,
-      trend7d: 12.4,
-      volumeDisplay: "45,200.00 TROB",
-    },
-    {
-      rank: 2,
-      id: "#10024",
-      address: "0x3B8D...E1a9",
-      slot: "SLOT 8",
-      slotTheme: "blue",
-      directPartners: 982,
-      matrixCycles: 94,
-      totalVolume: 38150.0,
-      trend7d: 8.7,
-      volumeDisplay: "38,150.00 TROB",
-    },
-    {
-      rank: 3,
-      id: "#10008",
-      address: "0x6F7D...2B9e",
-      slot: "SLOT 10",
-      slotTheme: "blue",
-      directPartners: 840,
-      matrixCycles: 76,
-      totalVolume: 31000.0,
-      trend7d: -1.2,
-      volumeDisplay: "31,000.00 TROB",
-    },
-    {
-      rank: 4,
-      id: "#10012",
-      address: "0x4A9E...7D2c",
-      slot: "SLOT 9",
-      slotTheme: "blue",
-      directPartners: 620,
-      matrixCycles: 46,
-      totalVolume: 24850.5,
-      trend7d: 5.2,
-      volumeDisplay: "24,850.50 TROB",
-    },
-    {
-      rank: 5,
-      id: "#10019",
-      address: "0x2C8F...A6b1",
-      slot: "SLOT 6",
-      slotTheme: "slate",
-      directPartners: 514,
-      matrixCycles: 38,
-      totalVolume: 19420.0,
-      trend7d: 3.1,
-      volumeDisplay: "19,420.00 TROB",
-    },
-    {
-      rank: 6,
-      id: "#10033",
-      address: "0x7D1E...9C4a",
-      slot: "SLOT 5",
-      slotTheme: "slate",
-      directPartners: 468,
-      matrixCycles: 32,
-      totalVolume: 16780.75,
-      trend7d: 2.8,
-      volumeDisplay: "16,780.75 TROB",
-    },
-    {
-      rank: 7,
-      id: "#10041",
-      address: "0x9F3B...1E8d",
-      slot: "SLOTE 4",
-      slotTheme: "slate",
-      directPartners: 402,
-      matrixCycles: 28,
-      totalVolume: 14620.0,
-      trend7d: -0.6,
-      volumeDisplay: "14,620.00 TROB",
-    },
-  ];
-
   const rankingNodes: LeaderboardNode[] =
     entries && entries.length > 0
       ? entries.map((e) => ({
@@ -123,12 +36,12 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
           slot: `SLOT ${e.highestSlot}`,
           slotTheme: e.highestSlot >= 8 ? "amber" : "blue",
           directPartners: e.directCount,
-          matrixCycles: Math.max(Math.floor(e.totalEarned / 120), 1),
+          matrixCycles: Math.max(Math.floor(e.totalEarned / 120), 0),
           totalVolume: e.totalEarned,
-          trend7d: 12.4,
+          trend7d: 0,
           volumeDisplay: `${e.totalEarned.toFixed(2)} TROB`,
         }))
-      : defaultNodes;
+      : [];
 
   const sortedNodes = [...rankingNodes].sort((a, b) => {
     if (sortOrder === "desc") {
@@ -176,7 +89,14 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#f1f5f9] text-[13px]">
-                    {sortedNodes.map((node) => (
+                    {sortedNodes.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-[#94a3b8] text-[13px]">
+                          No ranked nodes found on-chain yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      sortedNodes.map((node) => (
                       <tr
                         key={node.id}
                         className="hover:bg-[#f8fafc]/80 transition-colors group cursor-pointer"
@@ -301,7 +221,8 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
                           </svg>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -309,7 +230,12 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
 
             {/* ──────── MOBILE CARDS VIEW (< md 768px) ──────── */}
             <div className="md:hidden flex flex-col gap-2.5">
-              {sortedNodes.map((node) => (
+              {sortedNodes.length === 0 ? (
+                <div className="py-10 text-center text-[#94a3b8] text-[13px] bg-white rounded-2xl border border-[#e2e8f0]">
+                  No ranked nodes found on-chain yet.
+                </div>
+              ) : (
+                sortedNodes.map((node) => (
                 <div
                   key={node.id}
                   className="bg-white rounded-2xl border border-[#e2e8f0] p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-2.5 hover:border-blue-200 transition-all cursor-pointer active:bg-slate-50/80"
@@ -395,7 +321,8 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
                     </svg>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
           </div>
   );

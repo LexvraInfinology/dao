@@ -1,10 +1,13 @@
 // ==============================================================================
-// EQUORA MATRIX PROTOCOL — READ-ONLY SAFE WEB3 WALLET CONNECTOR
-// (apps/web-matrix/lib/web3Wallet.ts)
-// Strictly Read-Only: Only reads public wallet address. NO blockchain writes.
+// EQUORA MATRIX PROTOCOL — WEB3 WALLET CONNECTOR (apps/web-matrix/lib/web3Wallet.ts)
+// Supports TrobSafe (TrobChain native L1) for Chrome Extension, Android APK & iOS.
+// Matches the exact wallet detection & connection standard of the DAO platform.
+// Preserves sandbox test accounts for zero-risk local / offline simulation.
 // ==============================================================================
 
-import { setStoredUserAddress } from "./api";
+import { setStoredUserAddress, clearStoredUserAddress } from "./api";
+import { toHexAddress } from "./contracts";
+import { wakeUpExtension } from "./walletConnect";
 
 export interface WalletProviderState {
   hasInjected: boolean;
@@ -37,74 +40,232 @@ export const DUMMY_TEST_ACCOUNTS = [
   },
 ];
 
-/** Check if MetaMask, TrustWallet, Rabby, or any EIP-1193 provider exists */
+/**
+ * Retrieves the TrobSafe provider across all supported environments:
+ * - Chrome / Brave extension (window.trobSafe, window.tronWeb, window.trobWeb)
+ * - Android APK WebView (window.trob, window.trobsafe, window.trobLink)
+ * - iOS TestFlight / Mobile Bridge (window.__trobsafeBridge, window.trobium)
+ */
+export function getTrobSafeProvider(): any {
+  if (typeof window === "undefined") return null;
+  const w = window as any;
+
+  // 1. Direct window properties (case variations and mobile app webview aliases)
+  const direct =
+    w.trobSafe ||
+    w.trobsafe ||
+    w.TrobSafe ||
+    w.trob ||
+    w.trobWeb ||
+    w.trobLink ||
+    w.troblink ||
+    w.trobkit ||
+    w.trobium ||
+    w.trobiumWeb ||
+    w.tronWeb ||
+    w.tronLink ||
+    w.trobSafeWallet ||
+    w.trobProvider ||
+    null;
+
+  if (direct) return direct;
+
+  // 2. Check window.ethereum or multi-provider arrays if marked as trobsafe/trob
+  if (w.ethereum) {
+    if (w.ethereum.isTrobSafe || w.ethereum.isTrob || w.ethereum.isTrobium) {
+      return w.ethereum;
+    }
+    if (Array.isArray(w.ethereum.providers)) {
+      const found = w.ethereum.providers.find(
+        (p: any) => p.isTrobSafe || p.isTrob || p.isTrobium
+      );
+      if (found) return found;
+    }
+  }
+
+  // 3. EIP-6963 announced provider
+  if (w.__eip6963TrobProvider) {
+    return w.__eip6963TrobProvider;
+  }
+
+  return null;
+}
+
+/** Check if TrobSafe provider exists */
+export function hasTrobSafeProvider(): boolean {
+  return !!getTrobSafeProvider();
+}
+
+/** Check if injected provider exists (TrobSafe is the exclusive provider) */
 export function hasInjectedProvider(): boolean {
-  if (typeof window === "undefined") return false;
-  return typeof (window as any).ethereum !== "undefined";
+  return hasTrobSafeProvider();
 }
 
 /**
- * Connect to injected Web3 wallet (MetaMask, Rabby, Trust, etc.)
- * Strictly READ-ONLY identity query: only retrieves public address.
- * Zero gas, zero blockchain transactions, 100% safe.
+ * Normalizes an address from either Base58 or Tron 41-hex into canonical 0x hex
  */
-export async function connectInjectedWallet(): Promise<string> {
-  if (typeof window === "undefined" || !(window as any).ethereum) {
+export function normalizeTo0x(raw: string): string {
+  if (!raw) return "";
+  let clean = String(raw).trim();
+  if (clean.startsWith("T") && clean.length === 34) {
+    try {
+      return toHexAddress(clean);
+    } catch {
+      return clean.toLowerCase();
+    }
+  }
+  if (clean.startsWith("41") && clean.length === 42) {
+    return "0x" + clean.slice(2).toLowerCase();
+  }
+  if (clean.startsWith("0x") || clean.startsWith("0X")) {
+    return clean.toLowerCase();
+  }
+  return clean.toLowerCase();
+}
+
+/**
+ * Checks if a wallet is already authorized without triggering any popup prompts.
+ * Dynamic detection on any device (Chrome extension, Android APK, iOS bridge).
+ * Respects explicit user disconnects.
+ */
+export function getInjectedAuthorizedAccount(): string | null {
+  if (typeof window === "undefined") return null;
+
+  // If user explicitly disconnected, do not auto-reconnect
+  try {
+    if (localStorage.getItem("equora_wallet_explicit_disconnect") === "true") {
+      return null;
+    }
+  } catch {}
+
+  const tw = getTrobSafeProvider();
+  if (tw) {
+    // 1. Check defaultAddress (TronWeb / TrobSafe standard)
+    if (tw.defaultAddress) {
+      const raw = tw.defaultAddress.base58 || tw.defaultAddress.hex;
+      if (raw && raw !== "0" && raw !== "0x0" && raw !== "410000000000000000000000000000000000000000") {
+        return normalizeTo0x(raw);
+      }
+    }
+    // 2. Check address property directly
+    if (tw.address && typeof tw.address === "string" && tw.address.length > 5) {
+      return normalizeTo0x(tw.address);
+    }
+    // 3. Check selectedAddress (EVM/TrobSafe dual provider)
+    if (tw.selectedAddress && typeof tw.selectedAddress === "string" && tw.selectedAddress.length > 5) {
+      return normalizeTo0x(tw.selectedAddress);
+    }
+  }
+
+  // 4. Sync with DAO platform's equora_auth_address if available in same browser
+  try {
+    const daoAuth = localStorage.getItem("equora_auth_address");
+    if (daoAuth && daoAuth.trim().length > 5 && daoAuth !== "0x0" && daoAuth !== "0") {
+      return normalizeTo0x(daoAuth.trim());
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Connect to TrobSafe specifically
+ */
+export async function connectTrobSafe(): Promise<string> {
+  if (typeof window === "undefined") throw new Error("Window not available");
+  wakeUpExtension();
+
+  const tw = getTrobSafeProvider();
+
+  if (!tw) {
     throw new Error(
-      "No Web3 browser wallet detected. Please install MetaMask, Rabby, or use a Web3 mobile browser."
+      "TrobSafe wallet was not detected. Please install TrobSafe extension or open this page inside the TrobSafe Mobile App."
     );
   }
 
-  const ethereum = (window as any).ethereum;
-
   try {
-    const accounts = await ethereum.request({
-      method: "eth_requestAccounts",
-    });
-
-    if (!accounts || accounts.length === 0) {
-      throw new Error("No accounts authorized in your wallet.");
+    if (tw.request) {
+      try {
+        await tw.request({ method: "tron_requestAccounts" });
+      } catch (e: any) {
+        if (e?.code === 4001 || e?.message?.includes("User rejected")) {
+          throw new Error("Connection request was rejected in TrobSafe.");
+        }
+      }
     }
 
-    const address = accounts[0].toLowerCase();
-    setStoredUserAddress(address);
-    return address;
+    if (typeof tw.enable === "function") {
+      try {
+        const res = await tw.enable();
+        if (res && Array.isArray(res) && res[0]) {
+          const clean = normalizeTo0x(res[0]);
+          setStoredUserAddress(clean);
+          return clean;
+        }
+      } catch {}
+    }
+
+    const rawAddr =
+      tw.defaultAddress?.base58 ||
+      tw.defaultAddress?.hex ||
+      tw.address ||
+      tw.selectedAddress;
+
+    if (!rawAddr || rawAddr === "0" || rawAddr === "0x0") {
+      throw new Error("Please unlock your TrobSafe wallet or approve connection.");
+    }
+    const clean = normalizeTo0x(rawAddr);
+    setStoredUserAddress(clean);
+    return clean;
   } catch (err: any) {
-    if (err.code === 4001) {
-      throw new Error("Wallet connection request was rejected.");
+    if (err?.code === 4001 || err?.message?.includes("User rejected")) {
+      throw new Error("Connection request was rejected in TrobSafe.");
     }
-    throw new Error(err.message || "Failed to connect wallet.");
+    throw new Error(err.message || "Failed to connect TrobSafe.");
   }
 }
 
 /**
- * Register listener for wallet account switches
+ * Connect to injected Web3 wallet (TrobSafe)
+ */
+export async function connectInjectedWallet(): Promise<string> {
+  return await connectTrobSafe();
+}
+
+/**
+ * Explicitly disconnect wallet
+ */
+export function disconnectWallet(): void {
+  clearStoredUserAddress();
+}
+
+/**
+ * Register listeners for wallet account changes and disconnects across TrobSafe
  */
 export function setupWalletListeners(
   onAccountChange: (newAddress: string) => void,
   onDisconnect: () => void
 ): () => void {
-  if (typeof window === "undefined" || !(window as any).ethereum) {
-    return () => {};
-  }
+  if (typeof window === "undefined") return () => {};
 
-  const ethereum = (window as any).ethereum;
-
-  const handleAccountsChanged = (accounts: string[]) => {
-    if (accounts.length > 0) {
-      const address = accounts[0].toLowerCase();
-      setStoredUserAddress(address);
-      onAccountChange(address);
-    } else {
+  const handleMessage = (e: MessageEvent) => {
+    if (e.data?.message?.action === "setAccount" || e.data?.action === "accountsChanged") {
+      const addr = e.data?.message?.data?.address || e.data?.data?.address;
+      if (addr) {
+        const clean = normalizeTo0x(addr);
+        setStoredUserAddress(clean);
+        onAccountChange(clean);
+      }
+    }
+    if (e.data?.action === "disconnect" || e.data?.message?.action === "disconnect") {
+      disconnectWallet();
       onDisconnect();
     }
   };
 
-  ethereum.on("accountsChanged", handleAccountsChanged);
+  window.addEventListener("message", handleMessage);
 
   return () => {
-    if (ethereum.removeListener) {
-      ethereum.removeListener("accountsChanged", handleAccountsChanged);
-    }
+    window.removeEventListener("message", handleMessage);
   };
 }

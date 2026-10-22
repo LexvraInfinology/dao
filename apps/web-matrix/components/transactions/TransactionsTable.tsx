@@ -18,16 +18,7 @@ export interface Transaction {
   txHash: string;
 }
 
-const transactions: Transaction[] = [
-  { id: 1, type: "Receive", from: "0x4A9E...7D2c", to: "You", amount: 250, amountDisplay: "+ 250.00", status: "Confirmed", date: "24 Sep 2026,", time: "11:42 AM", txHash: "0x8F3...9A2c" },
-  { id: 2, type: "Send", from: "You", to: "0x7D1E...9C4a", amount: -100, amountDisplay: "- 100.00", status: "Confirmed", date: "23 Sep 2026,", time: "06:12 PM", txHash: "0x3C1...5B7d" },
-  { id: 3, type: "Matrix Cycle", from: "System", to: "You", amount: 320, amountDisplay: "+ 320.00", status: "Confirmed", date: "22 Sep 2026,", time: "09:28 AM", txHash: "0x9A2...E1f3" },
-  { id: 4, type: "Partner Reward", from: "0x6F7D...2B9e", to: "You", amount: 150, amountDisplay: "+ 150.00", status: "Confirmed", date: "21 Sep 2026,", time: "04:15 PM", txHash: "0x1B4...C8e2" },
-  { id: 5, type: "Send", from: "You", to: "0x2C8F...A6b1", amount: -75, amountDisplay: "- 75.00", status: "Confirmed", date: "20 Sep 2026,", time: "01:03 PM", txHash: "0x5D7...9Ef1" },
-  { id: 6, type: "Receive", from: "0x9F3B...1E8d", to: "You", amount: 500, amountDisplay: "+ 500.00", status: "Confirmed", date: "19 Sep 2026,", time: "11:24 AM", txHash: "0x7A2...3dC9" },
-  { id: 7, type: "Matrix Cycle", from: "System", to: "You", amount: 280, amountDisplay: "+ 280.00", status: "Confirmed", date: "18 Sep 2026,", time: "03:44 PM", txHash: "0x4E9...8bF2" },
-  { id: 8, type: "Send", from: "You", to: "0x388D...E1a9", amount: -120, amountDisplay: "- 120.00", status: "Confirmed", date: "17 Sep 2026,", time: "07:11 PM", txHash: "0x6C1...2A9e" },
-];
+
 
 const TypeIcon = ({ type, sm = false }: { type: TxType; sm?: boolean }) => {
   const sz = sm ? 12 : 14;
@@ -128,9 +119,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
             txHash: t.txHash ? `${t.txHash.slice(0, 7)}...${t.txHash.slice(-4)}` : "0x000...0000",
           };
         })
-      : items !== undefined
-      ? []
-      : transactions;
+      : [];
 
   const filtered = activeTransactions.filter((tx) => {
     if (activeTab === "Received" && tx.type !== "Receive") return false;

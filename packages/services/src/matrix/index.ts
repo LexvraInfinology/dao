@@ -52,6 +52,8 @@ function getLevelForPosition(pos: number): number {
   return 3;
 }
 
+const inMemorySettingsCache = new Map<string, MatrixSettingsDTO>();
+
 export class MatrixService {
   // ── USER LIFECYCLE & PROFILE ──────────────────────────────────────────────
 
@@ -958,11 +960,91 @@ export class MatrixService {
   async getUserSettings(address: string): Promise<MatrixSettingsDTO> {
     const canonicalAddress = address.toLowerCase();
 
-    const settings = await prisma.matrixSettings.upsert({
-      where: { userAddress: canonicalAddress },
-      update: {},
-      create: {
-        userAddress: canonicalAddress,
+    try {
+      const user = await prisma.user.findUnique({
+        where: { address: canonicalAddress },
+      });
+
+      if (!user) {
+        const cached = inMemorySettingsCache.get(canonicalAddress);
+        if (cached) return cached;
+        return {
+          autoUpgrade: true,
+          autoReinvest: true,
+          telegramNotifications: true,
+          emailNotifications: false,
+          soundEffects: true,
+          currency: "USD",
+          theme: "dark",
+          matrixDisplayMode: "level",
+          hideZeroBalances: false,
+          email: null,
+          telegram: null,
+          notifications: {
+            telegramNotifications: true,
+            emailNotifications: false,
+            soundEffects: true,
+            matrixActivity: true,
+            levelUpdates: true,
+            referralJoined: true,
+            cycleCompletion: true,
+            earningsReward: true,
+            leaderboardRank: true,
+            announcements: false,
+          },
+        };
+      }
+
+      const settings = await prisma.matrixSettings.upsert({
+        where: { userAddress: canonicalAddress },
+        update: {},
+        create: {
+          userAddress: canonicalAddress,
+          autoUpgrade: true,
+          autoReinvest: true,
+          telegramNotifications: true,
+          emailNotifications: false,
+          soundEffects: true,
+          currency: "USD",
+          theme: "dark",
+          matrixDisplayMode: "level",
+        },
+      });
+
+      const dto: MatrixSettingsDTO = {
+        autoUpgrade: settings.autoUpgrade,
+        autoReinvest: settings.autoReinvest,
+        telegramNotifications: settings.telegramNotifications,
+        emailNotifications: settings.emailNotifications,
+        soundEffects: settings.soundEffects,
+        currency: settings.currency,
+        theme: settings.theme,
+        matrixDisplayMode: settings.matrixDisplayMode,
+        hideZeroBalances: settings.hideZeroBalances,
+        email: settings.email,
+        telegram: settings.telegram,
+        notifications: {
+          telegramNotifications: settings.telegramNotifications,
+          emailNotifications: settings.emailNotifications,
+          soundEffects: settings.soundEffects,
+          matrixActivity: settings.telegramNotifications,
+          levelUpdates: settings.telegramNotifications,
+          referralJoined: settings.telegramNotifications,
+          cycleCompletion: settings.telegramNotifications,
+          earningsReward: settings.telegramNotifications,
+          leaderboardRank: settings.telegramNotifications,
+          announcements: settings.emailNotifications,
+        },
+      };
+
+      inMemorySettingsCache.set(canonicalAddress, dto);
+      return dto;
+    } catch (err) {
+      console.warn(`[MatrixService] DB unreachable, returning fallback settings for ${canonicalAddress}`);
+      const cached = inMemorySettingsCache.get(canonicalAddress);
+      if (cached) return cached;
+
+      return {
         autoUpgrade: true,
         autoReinvest: true,
         telegramNotifications: true,
@@ -971,34 +1053,23 @@ export class MatrixService {
         currency: "USD",
         theme: "dark",
         matrixDisplayMode: "level",
-      },
-    });
-
-    return {
-      autoUpgrade: settings.autoUpgrade,
-      autoReinvest: settings.autoReinvest,
-      telegramNotifications: settings.telegramNotifications,
-      emailNotifications: settings.emailNotifications,
-      soundEffects: settings.soundEffects,
-      currency: settings.currency,
-      theme: settings.theme,
-      matrixDisplayMode: settings.matrixDisplayMode,
-      hideZeroBalances: settings.hideZeroBalances,
-      email: settings.email,
-      telegram: settings.telegram,
-      notifications: {
-        telegramNotifications: settings.telegramNotifications,
-        emailNotifications: settings.emailNotifications,
-        soundEffects: settings.soundEffects,
-        matrixActivity: settings.telegramNotifications,
-        levelUpdates: settings.telegramNotifications,
-        referralJoined: settings.telegramNotifications,
-        cycleCompletion: settings.telegramNotifications,
-        earningsReward: settings.telegramNotifications,
-        leaderboardRank: settings.telegramNotifications,
-        announcements: settings.emailNotifications,
-      },
-    };
+        hideZeroBalances: false,
+        email: null,
+        telegram: null,
+        notifications: {
+          telegramNotifications: true,
+          emailNotifications: false,
+          soundEffects: true,
+          matrixActivity: true,
+          levelUpdates: true,
+          referralJoined: true,
+          cycleCompletion: true,
+          earningsReward: true,
+          leaderboardRank: true,
+          announcements: false,
+        },
+      };
+    }
   }
 
   async updateUserSettings(
@@ -1047,62 +1118,98 @@ export class MatrixService {
         ? notifs.autoReinvest
         : undefined;
 
-    const updated = await prisma.matrixSettings.upsert({
-      where: { userAddress: canonicalAddress },
-      update: {
-        ...(effectiveAutoUpgrade !== undefined ? { autoUpgrade: effectiveAutoUpgrade } : {}),
-        ...(effectiveAutoReinvest !== undefined ? { autoReinvest: effectiveAutoReinvest } : {}),
-        ...(effectiveTelegram !== undefined ? { telegramNotifications: effectiveTelegram } : {}),
-        ...(effectiveEmail !== undefined ? { emailNotifications: effectiveEmail } : {}),
-        ...(effectiveSound !== undefined ? { soundEffects: effectiveSound } : {}),
-        ...(data.currency !== undefined ? { currency: data.currency } : {}),
-        ...(data.theme !== undefined ? { theme: data.theme } : {}),
-        ...(data.matrixDisplayMode !== undefined ? { matrixDisplayMode: data.matrixDisplayMode } : {}),
-        ...(data.hideZeroBalances !== undefined ? { hideZeroBalances: data.hideZeroBalances } : {}),
-        ...(data.email !== undefined ? { email: data.email } : {}),
-        ...(data.telegram !== undefined ? { telegram: data.telegram } : {}),
-      },
-      create: {
-        userAddress: canonicalAddress,
-        autoUpgrade: effectiveAutoUpgrade ?? true,
-        autoReinvest: effectiveAutoReinvest ?? true,
-        telegramNotifications: effectiveTelegram ?? true,
-        emailNotifications: effectiveEmail ?? false,
-        soundEffects: effectiveSound ?? true,
-        currency: data.currency ?? "USD",
-        theme: data.theme ?? "dark",
-        matrixDisplayMode: data.matrixDisplayMode ?? "level",
-        hideZeroBalances: data.hideZeroBalances ?? false,
-        email: data.email,
-        telegram: data.telegram,
-      },
-    });
+    try {
+      const user = await prisma.user.findUnique({
+        where: { address: canonicalAddress },
+      });
 
-    return {
-      autoUpgrade: updated.autoUpgrade,
-      autoReinvest: updated.autoReinvest,
-      telegramNotifications: updated.telegramNotifications,
-      emailNotifications: updated.emailNotifications,
-      soundEffects: updated.soundEffects,
-      currency: updated.currency,
-      theme: updated.theme,
-      matrixDisplayMode: updated.matrixDisplayMode,
-      hideZeroBalances: updated.hideZeroBalances,
-      email: updated.email,
-      telegram: updated.telegram,
-      notifications: {
+      if (!user) {
+        const existing = (await this.getUserSettings(canonicalAddress)) || ({} as any);
+        const merged: MatrixSettingsDTO = {
+          ...existing,
+          ...data,
+          notifications: {
+            ...(existing.notifications || {}),
+            ...(data.notifications || {}),
+          },
+        };
+        inMemorySettingsCache.set(canonicalAddress, merged);
+        return merged;
+      }
+
+      const updated = await prisma.matrixSettings.upsert({
+        where: { userAddress: canonicalAddress },
+        update: {
+          ...(effectiveAutoUpgrade !== undefined ? { autoUpgrade: effectiveAutoUpgrade } : {}),
+          ...(effectiveAutoReinvest !== undefined ? { autoReinvest: effectiveAutoReinvest } : {}),
+          ...(effectiveTelegram !== undefined ? { telegramNotifications: effectiveTelegram } : {}),
+          ...(effectiveEmail !== undefined ? { emailNotifications: effectiveEmail } : {}),
+          ...(effectiveSound !== undefined ? { soundEffects: effectiveSound } : {}),
+          ...(data.currency !== undefined ? { currency: data.currency } : {}),
+          ...(data.theme !== undefined ? { theme: data.theme } : {}),
+          ...(data.matrixDisplayMode !== undefined ? { matrixDisplayMode: data.matrixDisplayMode } : {}),
+          ...(data.hideZeroBalances !== undefined ? { hideZeroBalances: data.hideZeroBalances } : {}),
+          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.telegram !== undefined ? { telegram: data.telegram } : {}),
+        },
+        create: {
+          userAddress: canonicalAddress,
+          autoUpgrade: effectiveAutoUpgrade ?? true,
+          autoReinvest: effectiveAutoReinvest ?? true,
+          telegramNotifications: effectiveTelegram ?? true,
+          emailNotifications: effectiveEmail ?? false,
+          soundEffects: effectiveSound ?? true,
+          currency: data.currency ?? "USD",
+          theme: data.theme ?? "dark",
+          matrixDisplayMode: data.matrixDisplayMode ?? "level",
+          hideZeroBalances: data.hideZeroBalances ?? false,
+          email: data.email,
+          telegram: data.telegram,
+        },
+      });
+
+      const result: MatrixSettingsDTO = {
+        autoUpgrade: updated.autoUpgrade,
+        autoReinvest: updated.autoReinvest,
         telegramNotifications: updated.telegramNotifications,
         emailNotifications: updated.emailNotifications,
         soundEffects: updated.soundEffects,
-        matrixActivity: updated.telegramNotifications,
-        levelUpdates: updated.telegramNotifications,
-        referralJoined: updated.telegramNotifications,
-        cycleCompletion: updated.telegramNotifications,
-        earningsReward: updated.telegramNotifications,
-        leaderboardRank: updated.telegramNotifications,
-        announcements: updated.emailNotifications,
-      },
-    };
+        currency: updated.currency,
+        theme: updated.theme,
+        matrixDisplayMode: updated.matrixDisplayMode,
+        hideZeroBalances: updated.hideZeroBalances,
+        email: updated.email,
+        telegram: updated.telegram,
+        notifications: {
+          telegramNotifications: updated.telegramNotifications,
+          emailNotifications: updated.emailNotifications,
+          soundEffects: updated.soundEffects,
+          matrixActivity: updated.telegramNotifications,
+          levelUpdates: updated.telegramNotifications,
+          referralJoined: updated.telegramNotifications,
+          cycleCompletion: updated.telegramNotifications,
+          earningsReward: updated.telegramNotifications,
+          leaderboardRank: updated.telegramNotifications,
+          announcements: updated.emailNotifications,
+        },
+      };
+
+      inMemorySettingsCache.set(canonicalAddress, result);
+      return result;
+    } catch (err) {
+      console.warn(`[MatrixService] DB unreachable on updateUserSettings for ${canonicalAddress}, caching in-memory`);
+      const existing = (await this.getUserSettings(canonicalAddress)) || ({} as any);
+      const merged: MatrixSettingsDTO = {
+        ...existing,
+        ...data,
+        notifications: {
+          ...(existing.notifications || {}),
+          ...(data.notifications || {}),
+        },
+      };
+      inMemorySettingsCache.set(canonicalAddress, merged);
+      return merged;
+    }
   }
 
   // ── DIRECT MEMBERS ────────────────────────────────────────────────────────
@@ -1190,10 +1297,16 @@ export class MatrixService {
       const addr = dummyAddresses[i];
       const existing = await prisma.user.findUnique({ where: { address: addr } });
       if (!existing) {
+        const highestUser = await prisma.user.findFirst({
+          orderBy: { userId: "desc" },
+          select: { userId: true },
+        });
+        const nextId = (highestUser?.userId ?? 0) + 1;
+
         const dummyUser = await prisma.user.create({
           data: {
             address: addr,
-            userId: 100 + i,
+            userId: nextId,
             sponsorAddress: canonical,
             registrationTimestamp: new Date(Date.now() - (i + 1) * 86400000),
             matrixProfile: {

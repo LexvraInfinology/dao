@@ -1,14 +1,15 @@
 {
-  "name": "my-app",
+  "name": "@equora/web-matrix",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "next dev -p 3001 --webpack",
+    "build": "next build --webpack",
+    "start": "next start -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
+    "ethers": "^6.17.0",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",

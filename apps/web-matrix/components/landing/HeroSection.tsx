@@ -12,10 +12,16 @@ export function HeroSection() {
   const router = useRouter();
   const address = useUserStore((s) => s.address);
   const setAddress = useUserStore((s) => s.setAddress);
+  const disconnect = useUserStore((s) => s.disconnect);
+  const [mounted, setMounted] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeNav, setActiveNav] = useState("#about");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navLinks = [
     { label: "About", href: "#about" },
@@ -106,27 +112,31 @@ export function HeroSection() {
             <div className="flex items-center gap-3 shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  if (address) {
-                    router.push("/dashboard");
-                  } else {
-                    setWalletModalOpen(true);
-                  }
-                }}
+                onClick={() => setWalletModalOpen(true)}
                 className="hidden sm:inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <svg
-                  className="w-4 h-4 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="3" y="6" width="18" height="15" rx="3" />
-                  <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-                  <circle cx="12" cy="13" r="1.5" fill="currentColor" />
-                </svg>
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
+                {mounted && address ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span className="font-mono text-xs">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
+                    <span className="text-[10px] text-white/50">▼</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4 text-[#38bdf8]"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <rect x="3" y="6" width="18" height="15" rx="3" />
+                      <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+                      <circle cx="12" cy="13" r="1.5" fill="currentColor" />
+                    </svg>
+                    <span>Connect Wallet</span>
+                  </>
+                )}
               </button>
 
               {/* Mobile Menu Toggle Button */}
@@ -259,26 +269,31 @@ export function HeroSection() {
             type="button"
             onClick={() => {
               setMobileMenuOpen(false);
-              if (address) {
-                router.push("/dashboard");
-              } else {
-                setWalletModalOpen(true);
-              }
+              setWalletModalOpen(true);
             }}
             className="w-full py-3.5 px-4 rounded-2xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-[15px] font-bold flex items-center justify-center gap-2.5 shadow-md shadow-blue-500/25 transition-all cursor-pointer"
           >
-            <svg
-              className="w-5 h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <rect x="3" y="6" width="18" height="15" rx="3" />
-              <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-              <circle cx="12" cy="13" r="1.5" fill="currentColor" />
-            </svg>
-            {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
+            {mounted && address ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <rect x="3" y="6" width="18" height="15" rx="3" />
+                  <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+                  <circle cx="12" cy="13" r="1.5" fill="currentColor" />
+                </svg>
+                <span>Connect Wallet</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -417,6 +432,7 @@ export function HeroSection() {
           setAddress(newAddr);
           router.push("/dashboard");
         }}
+        onDisconnect={disconnect}
       />
     </>
   );

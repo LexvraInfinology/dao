@@ -28,11 +28,11 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
   const profile = props.profile ?? storeProfile;
   const buyingSlot = props.buyingSlot ?? storeBuyingSlot;
   const currentSlotSummary = slots?.find((s) => s.slotNumber === selectedSlotNumber);
-  const filledNodes = currentSlotSummary?.filledNodes ?? 8;
-  const currentCycle = currentSlotSummary?.currentCycle ?? 1;
-  const isUnlocked = currentSlotSummary?.isUnlocked ?? true;
+  const filledNodes = currentSlotSummary?.filledNodes ?? 0;
+  const currentCycle = currentSlotSummary?.currentCycle ?? (currentSlotSummary?.isUnlocked ? 1 : 0);
+  const isUnlocked = currentSlotSummary?.isUnlocked ?? false;
   const slotCost = currentSlotSummary?.cost ?? 30;
-  const totalEarned = profile?.totalEarnings ?? 142.5;
+  const totalEarned = profile?.totalEarnings ?? 0;
 
   return (
     <>

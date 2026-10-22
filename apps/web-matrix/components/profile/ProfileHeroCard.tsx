@@ -13,9 +13,10 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
   const storeProfile = useUserStore((s) => s.profile);
   const profile = props.profile !== undefined ? props.profile : storeProfile;
   const copy = props.copy ?? ((text: string) => navigator.clipboard?.writeText(text));
-  const userId = profile?.userId ?? 10014;
-  const address = profile?.address ?? "0x8A3F5B89127c4D9081e7492c1945Eb8712391F2";
-  const displayAddress = `${address.slice(0, 6)} . . . ${address.slice(-4)}`;
+  const storeAddress = useUserStore((s) => s.address);
+  const userId = profile?.userId ?? 1;
+  const address = profile?.address ?? storeAddress ?? "";
+  const displayAddress = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
   const username = profile?.username ?? `Operative #${userId}`;
   const rankName = profile?.rankName ?? "NONE";
 

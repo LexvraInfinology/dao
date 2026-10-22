@@ -7,6 +7,7 @@ import {
   useFinanceStore,
   useLeaderboardStore,
 } from "./stores";
+import { setupWalletListeners } from "./web3Wallet";
 
 export function useMatrixUser() {
   const address = useUserStore((s) => s.address);
@@ -14,6 +15,9 @@ export function useMatrixUser() {
   const settings = useUserStore((s) => s.settings);
   const loadingProfile = useUserStore((s) => s.loadingProfile);
   const userError = useUserStore((s) => s.error);
+  const eligibility = useUserStore((s) => s.eligibility);
+  const loadingEligibility = useUserStore((s) => s.loadingEligibility);
+  const fetchEligibility = useUserStore((s) => s.fetchEligibility);
   const initAddress = useUserStore((s) => s.initAddress);
   const setAddress = useUserStore((s) => s.setAddress);
   const fetchProfile = useUserStore((s) => s.fetchProfile);
@@ -38,10 +42,19 @@ export function useMatrixUser() {
 
   const leaderboard = useLeaderboardStore((s) => s.entries);
 
-  // Initialize address on mount if not set
+  // Initialize address on mount & subscribe to live TrobSafe wallet events
   useEffect(() => {
     initAddress();
-  }, [initAddress]);
+    const cleanup = setupWalletListeners(
+      (newAddr) => {
+        setAddress(newAddr);
+      },
+      () => {
+        useUserStore.getState().disconnect();
+      }
+    );
+    return cleanup;
+  }, [initAddress, setAddress]);
 
   const refreshAll = useCallback(
     async (force = false) => {
@@ -80,6 +93,14 @@ export function useMatrixUser() {
     [setAddress]
   );
 
+  const disconnectUser = useUserStore((s) => s.disconnect);
+
+  const disconnect = useCallback(() => {
+    useMatrixStore.getState().reset();
+    useFinanceStore.getState().reset();
+    disconnectUser();
+  }, [disconnectUser]);
+
   const loadSlot = useCallback(
     async (slotNum: number, cycle?: number) => {
       await selectSlot(slotNum, cycle);
@@ -88,8 +109,8 @@ export function useMatrixUser() {
   );
 
   const buySlot = useCallback(
-    async (slotNum: number) => {
-      return await buySlotStore(slotNum);
+    async (slotNum: number, txHash?: string) => {
+      return await buySlotStore(slotNum, undefined, txHash);
     },
     [buySlotStore]
   );
@@ -100,6 +121,7 @@ export function useMatrixUser() {
   return {
     address,
     changeAddress,
+    disconnect,
     profile,
     dashboard,
     slots,
@@ -107,6 +129,9 @@ export function useMatrixUser() {
     slotDetails,
     earnings,
     settings,
+    eligibility,
+    loadingEligibility,
+    fetchEligibility,
     leaderboard,
     loading,
     error,

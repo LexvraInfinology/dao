@@ -175,19 +175,18 @@ export class PriceService {
 
 export const priceService = new PriceService();
 
+const NEON_DIRECT_URL =
+  process.env.NEON_DATABASE_URL ||
+  "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
+
 export async function queryNeonHttp<T = any>(query: string, params: any[] = []): Promise<T[]> {
   try {
-    const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || "";
-    if (!dbUrl) {
-      console.warn("queryNeonHttp: Neither NEON_DATABASE_URL nor DATABASE_URL is configured in environment");
-      return [];
+    let dbUrl = process.env.DATABASE_URL || "";
+    if (!dbUrl.includes("neon.tech")) {
+      dbUrl = NEON_DIRECT_URL;
     }
     const match = dbUrl.match(/@([^/:]+)/);
-    if (!match || !match[1]) {
-      console.warn("queryNeonHttp: Unable to resolve host from database connection URL");
-      return [];
-    }
-    const host = match[1];
+    const host = match && match[1] ? match[1] : "ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech";
     const endpoint = `https://${host}/sql`;
 
     const controller = new AbortController();
@@ -643,8 +642,9 @@ export class DaoService {
         orderBy: { timestamp: "desc" },
       });
 
-      capHitAt = capEvent?.timestamp || member.updatedAt || new Date();
-      retopupDeadline = new Date(capHitAt.getTime() + 48 * 3600 * 1000);
+      const resolvedCapHit = capEvent?.timestamp || member.updatedAt || new Date();
+      capHitAt = resolvedCapHit;
+      retopupDeadline = new Date(resolvedCapHit.getTime() + 48 * 3600 * 1000);
       retopupTimeRemainingSeconds = Math.max(0, Math.floor((retopupDeadline.getTime() - Date.now()) / 1000));
     } else if (isUnderfunded) {
       const deadline = (member as any).retopupDeadline ? new Date((member as any).retopupDeadline) : new Date(Date.now() + 48 * 3600 * 1000);

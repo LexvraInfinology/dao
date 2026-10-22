@@ -11,6 +11,7 @@ import {
   MatrixTreeView,
   MatrixPositionDetails,
   MatrixDirectMembers,
+  MatrixAccessGate,
 } from "@/components/matrix";
 import { SlotPurchaseModal } from "@/components/matrix/SlotPurchaseModal";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
@@ -26,10 +27,16 @@ export default function MatrixPage() {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [pendingSlotNumber, setPendingSlotNumber] = useState<number>(5);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     address,
     changeAddress,
+    disconnect,
     slots,
     selectedSlotNumber,
     slotDetails,
@@ -49,10 +56,10 @@ export default function MatrixPage() {
     setPurchaseModalOpen(true);
   };
 
-  const handleConfirmBuySlot = async (slotNum: number) => {
+  const handleConfirmBuySlot = async (slotNum: number, txHash?: string) => {
     setBuyingSlot(true);
     try {
-      await buySlot(slotNum);
+      await buySlot(slotNum, txHash);
     } finally {
       setBuyingSlot(false);
     }
@@ -141,7 +148,8 @@ export default function MatrixPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans antialiased selection:bg-blue-600 selection:text-white flex">
+    <MatrixAccessGate>
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans antialiased selection:bg-blue-600 selection:text-white flex">
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* MOBILE DRAWER / SIDEBAR OVERLAY                                 */}
       {/* ═══════════════════════════════════════════════════════════════ */}
@@ -309,16 +317,25 @@ export default function MatrixPage() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-semibold text-[#334155] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
               title="Click to connect or switch wallet"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="5" width="20" height="14" rx="2" />
-                <line x1="2" y1="10" x2="22" y2="10" />
-              </svg>
-              <span className="font-mono">
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x8A3F...91F2"}
-              </span>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {mounted && address ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="font-mono text-xs">
+                    {`${address.slice(0, 6)}...${address.slice(-4)}`}
+                  </span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M3 4.5L6 7.5L9 4.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                  <span className="font-semibold text-[#2563eb]">Connect Wallet</span>
+                </>
+              )}
             </button>
 
             {/* User 3D Avatar Sphere */}
@@ -373,11 +390,20 @@ export default function MatrixPage() {
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] border border-[#e2e8f0] text-[10.5px] sm:text-[11px] font-semibold text-[#1e293b] cursor-pointer transition-colors"
                 title="Click to connect or switch wallet"
               >
-                <span className="w-2 h-2 rounded-full bg-[#2563eb] flex-shrink-0" />
-                <span className="font-mono">
-                  {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
-                </span>
-                <span className="text-[9px] text-[#64748b]">▼</span>
+                {mounted && address ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="font-mono">
+                      {`${address.slice(0, 6)}...${address.slice(-4)}`}
+                    </span>
+                    <span className="text-[9px] text-[#64748b]">▼</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-[#2563eb] flex-shrink-0" />
+                    <span className="font-semibold text-[#2563eb]">Connect</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -403,7 +429,12 @@ export default function MatrixPage() {
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5 mb-5 items-start">
             {/* ──────── LEFT CARD: LEVEL VIEW, LIST VIEW, or MATRIX VIEW ──────── */}
             {activeTab === "level" ? (
-              <MatrixLevelView onSelectSlot={loadSlot} selectedSlotNumber={selectedSlotNumber} slots={slots} />
+              <MatrixLevelView
+                onSelectSlot={loadSlot}
+                selectedSlotNumber={selectedSlotNumber}
+                slots={slots}
+                onBuySlot={handleOpenBuyModal}
+              />
             ) : activeTab === "list" ? (
               <MatrixListView handleCopy={handleCopy} />
             ) : (
@@ -411,7 +442,7 @@ export default function MatrixPage() {
             )}
 
             {/* ──────── RIGHT CARD: POSITION DETAILS (Desktop) / NODE 1 (Mobile) ──────── */}
-            <MatrixPositionDetails handleCopy={handleCopy} />
+            <MatrixPositionDetails handleCopy={handleCopy} onBuySlot={handleOpenBuyModal} />
           </div>
 
           {/* ═══════════ DIRECT MEMBERS (LEVEL 1) SECTION ═══════════ */}
@@ -436,8 +467,10 @@ export default function MatrixPage() {
           onClose={() => setWalletModalOpen(false)}
           currentAddress={address || undefined}
           onSelectAddress={changeAddress}
+          onDisconnect={disconnect}
         />
       </div>
     </div>
+    </MatrixAccessGate>
   );
 }

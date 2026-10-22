@@ -5,3 +5,4 @@ export * from "./MatrixListView";
 export * from "./MatrixTreeView";
 export * from "./MatrixPositionDetails";
 export * from "./MatrixDirectMembers";
+export * from "./MatrixAccessGate";

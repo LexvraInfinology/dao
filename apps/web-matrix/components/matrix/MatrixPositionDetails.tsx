@@ -7,6 +7,7 @@ export interface MatrixPositionDetailsProps {
   slotDetails?: MatrixSlotDetails | null;
   selectedSlotNumber?: number;
   address?: string;
+  onBuySlot?: (slotNum: number) => void;
 }
 
 export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
@@ -14,13 +15,15 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
   const storeAddress = useUserStore((s) => s.address);
   const profile = useUserStore((s) => s.profile);
+  const storeBuySlot = useMatrixStore((s) => s.buySlot);
 
   const slotDetails = props.slotDetails !== undefined ? props.slotDetails : storeSlotDetails;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const address = props.address ?? storeAddress;
   const handleCopy = props.handleCopy ?? ((t: string) => navigator.clipboard?.writeText(t));
+  const onBuySlot = props.onBuySlot;
   const slotNum = selectedSlotNumber || slotDetails?.slotNumber || 1;
-  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x71c8...4982";
+  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
 
   const joinedDate = profile?.joinedAt
     ? new Date(profile.joinedAt).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
@@ -55,13 +58,24 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
           </div>
         </div>
 
+        {/* If Locked, show Unlock Button */}
+        {!slotDetails?.isUnlocked && (
+          <button
+            type="button"
+            onClick={() => onBuySlot && onBuySlot(slotNum)}
+            className="w-full mt-3.5 py-2.5 px-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[12.5px] font-bold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>⚡ Unlock Tier #{String(slotNum).padStart(2, "0")}</span>
+          </button>
+        )}
+
         {/* Detail Key-Value List */}
         <div className="mt-4 sm:mt-5 space-y-3 sm:space-y-3.5 bg-[#f8fafc] border border-[#f1f5f9] rounded-xl p-3.5 sm:p-4">
           <div className="flex items-center justify-between text-[12.5px] sm:text-[13px]">
             <span className="text-[#64748b]">Wallet Address</span>
             <button
               type="button"
-              onClick={() => handleCopy(address || "0x71c85d7b561e723908f9c162590214b7e8d24982")}
+              onClick={() => address && handleCopy(address)}
               className="font-mono font-bold text-[#0f172a] flex items-center gap-1.5 hover:text-[#2563eb] transition-colors cursor-pointer"
             >
               <span>{displayAddress}</span>

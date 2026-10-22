@@ -1,6 +1,5 @@
-"use client";
-
 import React from "react";
+import { useUserStore } from "@/lib/stores";
 
 export interface LeaderboardHeaderProps {
   timeframe: "All Time" | "30 Days" | "7 Days";
@@ -9,6 +8,16 @@ export interface LeaderboardHeaderProps {
 }
 
 export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: LeaderboardHeaderProps) {
+  const address = useUserStore((s) => s.address);
+  const profile = useUserStore((s) => s.profile);
+  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+  const partnersCount = profile?.directReferralsCount ?? 0;
+  const lifetimeEarned = Number(profile?.totalEarnings ?? 0);
+  const cyclesCount = Math.floor(lifetimeEarned / 180);
+  const rankDisplay = profile?.rankTier ? `#${profile.rankTier}` : "Active";
+  const targetPartners = 10;
+  const remainingPartners = Math.max(0, targetPartners - partnersCount);
+  const progressPercent = Math.min(100, Math.round((partnersCount / targetPartners) * 100));
   return (
     <>
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3 lg:gap-4">
@@ -81,10 +90,10 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleCopy("0x8A3F5B89127c4D9081e7492c1945Eb8712391F2")}
+                    onClick={() => address && handleCopy(address)}
                     className="flex items-center gap-1 mt-0.5 text-[11.5px] font-mono text-[#94a3b8] hover:text-[#2563eb] transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    <span className="font-semibold">0x8A3F...91F2</span>
+                    <span className="font-semibold">{displayAddress}</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="9" y="9" width="13" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round" strokeLinejoin="round" />
@@ -100,9 +109,9 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">CURRENT RANK</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-2xl font-black text-[#2563eb] leading-none">#14</span>
+                  <span className="text-2xl font-black text-[#2563eb] leading-none">{rankDisplay}</span>
                   <span className="bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0] text-[9.5px] font-bold px-2 py-0.5 rounded-full">
-                    Top 1%
+                    On-Chain
                   </span>
                 </div>
               </div>
@@ -117,7 +126,7 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                   </svg>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-[#0f172a] leading-tight">4</div>
+                  <div className="text-2xl font-black text-[#0f172a] leading-tight">{partnersCount}</div>
                   <div className="text-[12px] font-bold text-[#0f172a] leading-tight mt-0.5">Direct Partners</div>
                   <div className="text-[10.5px] text-[#94a3b8]">L1 personally invited</div>
                 </div>
@@ -134,7 +143,7 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                   </svg>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-[#0f172a] leading-tight">12</div>
+                  <div className="text-2xl font-black text-[#0f172a] leading-tight">{cyclesCount}</div>
                   <div className="text-[12px] font-bold text-[#0f172a] leading-tight mt-0.5">Matrix Cycles</div>
                   <div className="text-[10.5px] text-[#94a3b8]">14-node board resets</div>
                 </div>
@@ -153,7 +162,7 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                   </svg>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-[#0f172a] leading-tight">4,250.00</div>
+                  <div className="text-2xl font-black text-[#0f172a] leading-tight">{lifetimeEarned.toFixed(2)}</div>
                   <div className="text-[12px] font-bold text-[#0f172a] leading-tight mt-0.5">Total Volume</div>
                   <div className="text-[10.5px] text-[#94a3b8]">TROB</div>
                 </div>
@@ -165,11 +174,13 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
               {/* Progress Column: Apex Sovereign Rank */}
               <div className="flex flex-col min-w-[210px] xl:min-w-[240px]">
                 <div className="flex items-center justify-between text-[11px] mb-2">
-                  <span className="font-bold text-[#0f172a]">6 Partners to Apex Sovereign Rank</span>
-                  <span className="font-extrabold text-[#0f172a]">4 / 10</span>
+                  <span className="font-bold text-[#0f172a]">
+                    {remainingPartners > 0 ? `${remainingPartners} Partners to Apex Sovereign` : "Apex Sovereign Achieved"}
+                  </span>
+                  <span className="font-extrabold text-[#0f172a]">{partnersCount} / {targetPartners}</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[#f1f5f9] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#2563eb] w-[40%] transition-all duration-500" />
+                  <div className="h-full rounded-full bg-[#2563eb] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
                 </div>
               </div>
             </div>
@@ -197,10 +208,10 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleCopy("0x8A3F5B89127c4D9081e7492c1945Eb8712391F2")}
+                      onClick={() => address && handleCopy(address)}
                       className="flex items-center gap-1 mt-0.5 text-[11px] font-mono text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"
                     >
-                      <span className="truncate">0x8A3F...91F2</span>
+                      <span className="truncate">{displayAddress}</span>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
                         <rect x="9" y="9" width="13" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
                         <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" strokeLinecap="round" strokeLinejoin="round" />
@@ -213,9 +224,9 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                 <div className="text-right flex-shrink-0">
                   <div className="text-[8.5px] font-bold text-[#94a3b8] uppercase tracking-wider">CURRENT RANK</div>
                   <div className="flex items-center gap-1 justify-end mt-0.5">
-                    <span className="text-2xl font-black text-[#2563eb] leading-none">#14</span>
+                    <span className="text-2xl font-black text-[#2563eb] leading-none">{rankDisplay}</span>
                     <span className="bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0] text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                      Top 1%
+                      On-Chain
                     </span>
                   </div>
                 </div>
@@ -225,31 +236,34 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
               <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-[#f1f5f9]">
                 <div className="min-w-0">
                   <div className="text-[10px] text-[#94a3b8] font-medium truncate">Direct Partners</div>
-                  <div className="text-lg font-black text-[#0f172a] mt-0.5">4</div>
+                  <div className="text-lg font-black text-[#0f172a] mt-0.5">{partnersCount}</div>
                   <div className="text-[9.5px] text-[#94a3b8] truncate">L1 invited</div>
                 </div>
                 <div className="min-w-0">
                   <div className="text-[10px] text-[#94a3b8] font-medium truncate">Matrix Cycles</div>
-                  <div className="text-lg font-black text-[#0f172a] mt-0.5">12</div>
+                  <div className="text-lg font-black text-[#0f172a] mt-0.5">{cyclesCount}</div>
                   <div className="text-[9.5px] text-[#94a3b8] truncate">14-node resets</div>
                 </div>
                 <div className="min-w-0">
                   <div className="text-[10px] text-[#94a3b8] font-medium truncate">Total Volume</div>
                   <div className="text-base sm:text-lg font-black text-[#2563eb] mt-0.5 flex flex-wrap items-baseline gap-0.5">
-                    <span>4,250</span> <span className="text-[9.5px] font-medium text-[#64748b]">TROB</span>
+                    <span>{lifetimeEarned.toFixed(2)}</span> <span className="text-[9.5px] font-medium text-[#64748b]">TROB</span>
                   </div>
-                  <div className="text-[10px] font-bold text-[#16a34a]">+18.4%</div>
                 </div>
               </div>
 
               {/* Bottom Progress Bar */}
               <div className="pt-2 border-t border-[#f1f5f9]">
                 <div className="flex items-center justify-between text-[11px] mb-1.5 gap-2">
-                  <span className="font-bold text-[#0f172a] truncate text-[10px] sm:text-[11px]">6 Partners to Apex Sovereign Rank</span>
-                  <span className="font-extrabold text-[#2563eb] text-[10px] sm:text-[11px] flex-shrink-0">4 / 10</span>
+                  <span className="font-bold text-[#0f172a] truncate text-[10px] sm:text-[11px]">
+                    {remainingPartners > 0 ? `${remainingPartners} Partners to Apex Sovereign` : "Apex Sovereign Achieved"}
+                  </span>
+                  <span className="font-extrabold text-[#2563eb] text-[10px] sm:text-[11px] flex-shrink-0">
+                    {partnersCount} / {targetPartners}
+                  </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[#f1f5f9] overflow-hidden">
-                  <div className="h-full rounded-full bg-[#2563eb] w-[40%]" />
+                  <div className="h-full rounded-full bg-[#2563eb] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
                 </div>
               </div>
             </div>

@@ -662,8 +662,15 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             position == 11 || position == 12
         ) {
             // P3, P6, P8, P9, P11, P12 → Owner direct income
-            _creditOwner(matrixOwner, slot, cost);
-            emit DistributionExecuted(matrixOwner, cost, PayoutType.OWNER_DIRECT, s, cycle, p);
+            // Strict 2 direct referrals requirement: if not yet qualified, route to protocol pools!
+            if (isMatrixQualified(matrixOwner)) {
+                _creditOwner(matrixOwner, slot, cost);
+                emit DistributionExecuted(matrixOwner, cost, PayoutType.OWNER_DIRECT, s, cycle, p);
+            } else {
+                _forwardToVault(matrixOwner, cost);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
+                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+            }
 
         } else if (position == 4 || position == 5 || position == 14) {
             // P4, P5, P14 → Protocol Pools via EquoraVault (35% Ecosystem & DAO Pool, 40% Royalty Pool, 15% Level Rewards, 10% Magic Blind Box)

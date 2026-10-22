@@ -642,8 +642,9 @@ export class DaoService {
         orderBy: { timestamp: "desc" },
       });
 
-      capHitAt = capEvent?.timestamp || member.updatedAt || new Date();
-      retopupDeadline = new Date(capHitAt.getTime() + 48 * 3600 * 1000);
+      const resolvedCapHit = capEvent?.timestamp || member.updatedAt || new Date();
+      capHitAt = resolvedCapHit;
+      retopupDeadline = new Date(resolvedCapHit.getTime() + 48 * 3600 * 1000);
       retopupTimeRemainingSeconds = Math.max(0, Math.floor((retopupDeadline.getTime() - Date.now()) / 1000));
     } else if (isUnderfunded) {
       const deadline = (member as any).retopupDeadline ? new Date((member as any).retopupDeadline) : new Date(Date.now() + 48 * 3600 * 1000);

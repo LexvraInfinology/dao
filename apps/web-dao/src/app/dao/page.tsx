@@ -21,6 +21,7 @@ import {
 import { VideoModal } from '@/components/ui/VideoModal';
 import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { GenesisMatrixPriorityBanner } from '@/components/dao/matrix/GenesisMatrixPriorityBanner';
 import { useWallet } from '@/context/WalletContext';
 import {
   useDaoMember,
@@ -79,6 +80,7 @@ export default function DaoDashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6 animate-fadeIn w-full max-w-full overflow-x-hidden font-sans">
       <UnderfundedAlertBanner />
+      <GenesisMatrixPriorityBanner isMember={isMember} position={myPosition} />
 
       {/* =======================================================================
           1. HERO SECTION — Member-Aware, Trobium Styled & Tightly Packed

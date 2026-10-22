@@ -24,6 +24,7 @@ import {
 } from "@equora/services";
 import prisma from "@equora/database";
 import { createPublicClient, http, parseAbi } from "viem";
+import { matrixRouter } from "./routes/matrixRouter";
 
 export function createApp(): Express {
   const app = express();
@@ -1078,14 +1079,14 @@ export function createApp(): Express {
 
       if (isTakeover) {
         // In EquoraDAO.sol: _distributeRetopup distributes ENTRY_FEE to all OTHER active members
-        activeRecipients = existingMembers.filter((m) => m.position !== assignedPosition && m.status === "active");
+        activeRecipients = existingMembers.filter((m: any) => m.position !== assignedPosition && m.status === "active");
         if (activeRecipients.length > 0) {
           cashbackPerMemberTrob = Number((entryFeeTrob / activeRecipients.length).toFixed(4));
           cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeRecipients.length).toFixed(2));
         }
       } else {
         // In EquoraDAO.sol: _distributeEntryFee distributes ENTRY_FEE to all active members from 1 to assignedPosition (including new joiner)
-        activeRecipients = existingMembers.filter((m) => m.position < assignedPosition && m.status === "active");
+        activeRecipients = existingMembers.filter((m: any) => m.position < assignedPosition && m.status === "active");
         const activeCount = activeRecipients.length + 1; // plus the new joiner
         cashbackPerMemberTrob = Number((entryFeeTrob / activeCount).toFixed(4));
         cashbackPerMemberUsd = Number((SEAT_ENTRY_USD / activeCount).toFixed(2));
@@ -1123,7 +1124,7 @@ export function createApp(): Express {
         ...(activeRecipients.length > 0
           ? [
               prisma.daoMember.updateMany({
-                where: { id: { in: activeRecipients.map((r) => r.id) } },
+                where: { id: { in: activeRecipients.map((r: any) => r.id) } },
                 data: {
                   pushedAmountBtt: {
                     increment: cashbackPerMemberTrob,
@@ -1431,12 +1432,12 @@ export function createApp(): Express {
       });
 
       const highestSlot = user?.matrixSlots?.reduce(
-        (max, s) => (s.isUnlocked && s.slotNumber > max ? s.slotNumber : max),
+        (max: number, s: any) => (s.isUnlocked && s.slotNumber > max ? s.slotNumber : max),
         0
       ) ?? 0;
 
       const totalEarnedBtt = user?.matrixSlots?.reduce(
-        (sum, s) => sum + Number(s.totalEarned),
+        (sum: number, s: any) => sum + Number(s.totalEarned),
         0
       ) ?? 0;
 
@@ -1456,7 +1457,7 @@ export function createApp(): Express {
           isQualified: user?.isQualified ?? false,
           registrationTimestamp: user?.registrationTimestamp ?? null,
           highestMatrixSlot: highestSlot,
-          matrixSlots: user?.matrixSlots?.map((s) => ({
+          matrixSlots: user?.matrixSlots?.map((s: any) => ({
             slotNumber: s.slotNumber,
             isUnlocked: s.isUnlocked,
             currentCycle: s.currentCycle,
@@ -1464,12 +1465,12 @@ export function createApp(): Express {
             totalEarned: Number(s.totalEarned),
             totalEarnedUsd: Number(s.totalEarned) * priceData.priceUsd,
           })) ?? [],
-          nftBadges: user?.nftBadges?.map((b) => ({
+          nftBadges: user?.nftBadges?.map((b: any) => ({
             tokenId: b.tokenId,
             rank: b.rank,
             mintedAt: b.mintedAt,
           })) ?? [],
-          poolCards: poolCards.map((c) => ({
+          poolCards: poolCards.map((c: any) => ({
             tier: c.tier,
             tierName: c.tierName,
             unlockedAt: c.unlockedAt,
@@ -1517,7 +1518,7 @@ export function createApp(): Express {
       });
 
       const unclaimedTrob = unclaimedFallback.reduce(
-        (sum, c) => sum + Number(c.amountBtt),
+        (sum: number, c: any) => sum + Number(c.amountBtt),
         0
       );
 
@@ -1552,7 +1553,7 @@ export function createApp(): Express {
       });
 
       const totalMatrixEarned = matrixSlots.reduce(
-        (sum, s) => sum + Number(s.totalEarned),
+        (sum: number, s: any) => sum + Number(s.totalEarned),
         0
       );
 
@@ -1603,11 +1604,11 @@ export function createApp(): Express {
               label: "Matrix Spillover",
               earnedBtt: totalMatrixEarned,
               earnedUsd: totalMatrixEarned * priceData.priceUsd,
-              highestSlot: matrixSlots.filter((s) => s.isUnlocked).length,
+              highestSlot: matrixSlots.filter((s: any) => s.isUnlocked).length,
             },
             rankPools: {
               label: "Rank Pool Rewards",
-              unlockedPools: poolCards.map((c) => c.tierName),
+              unlockedPools: poolCards.map((c: any) => c.tierName),
             },
           },
           bttPriceUsd: priceData.priceUsd,
@@ -1966,8 +1967,8 @@ export function createApp(): Express {
 
       // Update vote tallies
       const allVotes = await prisma.daoVote.findMany({ where: { proposalId } });
-      const votesFor = allVotes.filter((v) => v.support).length;
-      const votesAgainst = allVotes.filter((v) => !v.support).length;
+      const votesFor = allVotes.filter((v: any) => v.support).length;
+      const votesAgainst = allVotes.filter((v: any) => !v.support).length;
 
       await prisma.daoProposal.update({
         where: { proposalId },
@@ -1994,6 +1995,10 @@ export function createApp(): Express {
       next(err);
     }
   });
+
+  // ── MATRIX PROTOCOL ROUTES ───────────────────────────────────────────────
+  app.use("/api/matrix", matrixRouter);
+  app.use("/api/v1/matrix", matrixRouter);
 
   // ── tRPC ──────────────────────────────────────────────────────────────────
   app.use(

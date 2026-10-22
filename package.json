@@ -9,6 +9,7 @@
     "dev:apps": "turbo run dev --filter=!@equora/hardhat",
     "dev:web": "pnpm --filter equora-app dev",
     "dev:dao": "pnpm --filter equora-app dev",
+    "dev:matrix": "pnpm --filter @equora/web-matrix dev",
     "dev:api": "pnpm --filter @equora/api dev",
     "dev:indexer": "pnpm --filter @equora/indexer dev",
     "dev:queue": "pnpm --filter @equora/queue dev",
@@ -20,15 +21,20 @@
     "lint": "turbo run lint",
     "build": "turbo run build",
     "build:dao": "turbo run build --filter=equora-app",
+    "build:matrix": "turbo run build --filter=@equora/web-matrix",
     "db:generate": "pnpm --filter @equora/database db:generate",
     "db:push": "pnpm --filter @equora/database db:push",
     "db:migrate": "pnpm --filter @equora/database db:migrate",
     "db:studio": "pnpm --filter @equora/database db:studio",
     "clean": "turbo run clean",
+    "seed:matrix:clean": "tsx scripts/seed_matrix_clean.ts",
     "postinstall": "node scripts/patch-qr.js"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "turbo": "^2.11.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/minimatch": "^6.0.0"
+  }
 }

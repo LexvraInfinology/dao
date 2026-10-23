@@ -48,3 +48,4 @@ bootstrap().catch((err) => {
   console.error("❌ Fatal error starting API server:", err);
   process.exit(1);
 });
+// Trigger tsx watch reload: 2026-10-22T14:00:30

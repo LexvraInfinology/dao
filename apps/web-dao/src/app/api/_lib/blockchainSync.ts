@@ -661,35 +661,34 @@ async function syncOnChainMembersToDb(
 
   for (const m of members) {
     try {
+      const posInt = parseInt(String(m.position), 10);
       // 1. Ensure User record exists safely without unique userId collision
       const existingUser = await queryNeon<any>(
         `SELECT id FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
         [m.user]
       );
       if (existingUser.rows.length === 0) {
-        const maxIdRes = await queryNeon<any>(`SELECT COALESCE(MAX("userId"), 0) + 1 AS next_id FROM "User"`);
-        const nextId = parseInt(maxIdRes.rows[0]?.next_id || '10001', 10);
         await queryNeon(
           `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-           VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+           VALUES (gen_random_uuid(), $1, (SELECT COALESCE(MAX("userId"), 0) + 1 FROM "User"), $2, NOW(), NOW())
            ON CONFLICT (address) DO NOTHING`,
-          [m.user, nextId, m.timestamp]
+          [m.user, m.timestamp]
         );
       }
 
       // 2. Ensure DaoMember record exists and matches on-chain position
       const existing = await queryNeon<any>(
         `SELECT id, position, address, status, "joinedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
-        [m.position]
+        [posInt]
       );
 
-      const cashbackTrob = Math.round((m.paidAmountTrob / m.position) * 100) / 100;
+      const cashbackTrob = Math.round((m.paidAmountTrob / posInt) * 100) / 100;
 
       if (existing.rows.length === 0) {
         await queryNeon(
           `INSERT INTO "DaoMember" (id, address, position, "joinedAt", "txHash", "blockNumber", "entryAmountBtt", "entryAmountUsdAtJoin", "nftTokenId", "priceSource", "pushedAmountBtt", status, "createdAt", "updatedAt")
            VALUES (gen_random_uuid(), $1, $2, $3, $4, 1, $5, 300, $6, 'blockchain-onchain', $7, 'active', NOW(), NOW())`,
-          [m.user, m.position, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
+          [m.user, posInt, m.timestamp, m.txHash, m.paidAmountTrob, m.tokenId, cashbackTrob]
         );
       } else if (existing.rows[0].status === 'underfunded') {
         if ((m as any).isCompleteSeat) {
@@ -704,7 +703,7 @@ async function syncOnChainMembersToDb(
                  "nftTokenId" = $3,
                  "updatedAt" = NOW()
              WHERE position = $4`,
-            [m.paidAmountTrob, m.txHash, m.tokenId, m.position]
+            [m.paidAmountTrob, m.txHash, m.tokenId, posInt]
           );
         }
       } else if (
@@ -715,7 +714,7 @@ async function syncOnChainMembersToDb(
           `UPDATE "DaoMember"
            SET address = $1, status = 'active', "retopupDeadline" = NULL, "entryAmountBtt" = $2, "entryAmountUsdAtJoin" = 300, "txHash" = $3, "nftTokenId" = $4, "updatedAt" = NOW()
            WHERE position = $5`,
-          [m.user, m.paidAmountTrob, m.txHash, m.tokenId, m.position]
+          [m.user, m.paidAmountTrob, m.txHash, m.tokenId, posInt]
         );
       }
 
@@ -730,7 +729,7 @@ async function syncOnChainMembersToDb(
           `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
            VALUES (gen_random_uuid(), 'joined', $1, $2, $2, $3, 1, $4, NOW(), $5, 300, 'blockchain-onchain', $6)
            ON CONFLICT DO NOTHING`,
-          [m.user, m.position, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${m.position} Activated`]
+          [m.user, posInt, m.txHash, m.timestamp, m.paidAmountTrob, `Council Seat #${posInt} Activated`]
         );
 
         // Insert instant cashback event (autonomously transferred by smart contract)
@@ -740,23 +739,23 @@ async function syncOnChainMembersToDb(
            ON CONFLICT DO NOTHING`,
           [
             m.user,
-            m.position,
+            posInt,
             `${m.txHash}-cashback`,
             m.timestamp,
             cashbackTrob,
-            parseFloat((300 / m.position).toFixed(2)),
-            `Instant Cashback (Seat #${m.position})`,
+            parseFloat((300 / posInt).toFixed(2)),
+            `Instant Cashback (Seat #${posInt})`,
           ]
         );
 
         // If Seat > 1, batch record autonomous on-chain dividend push to prior active members atomically
-        if (m.position > 1) {
-          const pushUsd = parseFloat((300 / m.position).toFixed(2));
+        if (posInt > 1) {
+          const pushUsd = parseFloat((300 / posInt).toFixed(2));
           await queryNeon(
             `UPDATE "DaoMember"
              SET "pushedAmountBtt" = "pushedAmountBtt" + $1, "updatedAt" = NOW()
-             WHERE position < $2 AND LOWER(status) = 'active'`,
-            [cashbackTrob, m.position]
+             WHERE position < $2::int AND LOWER(status) = 'active'`,
+            [cashbackTrob, posInt]
           );
           await queryNeon(
             `INSERT INTO "DaoEvent" (
@@ -765,13 +764,13 @@ async function syncOnChainMembersToDb(
                "amountUsdEst", "priceSource", reason
              )
              SELECT
-               gen_random_uuid(), 'pushed', address, $1, NULL,
+               gen_random_uuid(), 'pushed', address, $1::int, NULL,
                $2 || '-pushed-' || position, 1, $3, NOW(), $4, $5, 'blockchain-onchain',
                'Dividend push from Seat #' || $1
              FROM "DaoMember"
-             WHERE position < $1 AND LOWER(status) = 'active'
+             WHERE position < $1::int AND LOWER(status) = 'active'
              ON CONFLICT DO NOTHING`,
-            [m.position, m.txHash, m.timestamp, cashbackTrob, pushUsd]
+            [posInt, m.txHash, m.timestamp, cashbackTrob, pushUsd]
           );
         }
       }

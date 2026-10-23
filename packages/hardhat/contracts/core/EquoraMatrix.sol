@@ -661,6 +661,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             position == 8  || position == 9  ||
             position == 11 || position == 12
         ) {
+            // P3, P6, P8, P9, P11, P12 → Owner direct income
             // Strict 2 direct referrals requirement: if not yet qualified, route to protocol pools!
             if (isMatrixQualified(matrixOwner)) {
                 _creditOwner(matrixOwner, slot, cost);

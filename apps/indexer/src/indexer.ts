@@ -80,17 +80,17 @@ function hexToTrobBase58(addr: string): string {
 }
 
 async function queryNeonDirect<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
-  const dbUrl =
-    process.env.DATABASE_URL ||
-    "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
-  const match = dbUrl.match(/@([^/:]+)/);
+  const dbUrl = process.env.DATABASE_URL || "";
+  if (!dbUrl) return { rows: [] };
+  const directUrl = dbUrl.replace("-pooler.", ".");
+  const match = directUrl.match(/@([^/:]+)/);
   if (match && match[1]) {
     const endpoint = `https://${match[1]}/sql`;
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Neon-Connection-String": dbUrl,
+          "Neon-Connection-String": directUrl,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query: sql, params }),
@@ -209,7 +209,8 @@ export class BlockchainIndexer {
     const currentBlock = BigInt(blockData.block_header?.raw_data?.number || 0);
 
     if (!this.hasLoggedOnline || this.wasOffline) {
-      logger.info(`🔗 TrobChain Mainnet Connected (Block #${currentBlock})`);
+      const netName = config.rpcUrl.includes("testnet") ? "TrobChain Testnet" : "TrobChain Mainnet";
+      logger.info(`🔗 ${netName} Connected (Block #${currentBlock})`);
       this.hasLoggedOnline = true;
       this.wasOffline = false;
     }

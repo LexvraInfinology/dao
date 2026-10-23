@@ -1,7 +1,11 @@
 async function migrate() {
-  const dbUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
-  const match = dbUrl.match(/@([^/:]+)/);
-  const host = match ? match[1] : 'ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech';
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+  const directUrl = dbUrl.replace("-pooler.", ".");
+  const match = directUrl.match(/@([^/:]+)/);
+  const host = match ? match[1] : "";
   const endpoint = `https://${host}/sql`;
 
   const ddlStatements = [

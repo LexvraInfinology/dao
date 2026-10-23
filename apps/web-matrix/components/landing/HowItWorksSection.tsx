@@ -133,7 +133,7 @@ export function HowItWorksSection() {
                 Activate Slot 1
               </h3>
               <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed mb-7 flex-1 max-w-[270px]">
-                Make a one-time payment of $30 USDT to join the Matrix. Get your
+                Make a one-time entry of 30 TROB ($30) to join the Matrix. Get your
                 unique 5-digit ID.
               </p>
 

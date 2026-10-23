@@ -13,24 +13,24 @@ export function FaqSection() {
 
   const faqItems = [
     {
-      q: "What is Equimatrix (EQM)?",
-      a: "Equimatrix is a next-generation decentralized matrix protocol engineered for automated yield generation, fair community spillovers, and transparent on-chain smart contract execution.",
+      q: "What is Equora Matrix?",
+      a: "Equora Matrix is a next-generation decentralized matrix protocol engineered for automated distribution, fair community spillovers, and transparent on-chain smart contract execution on TrobChain.",
     },
     {
       q: "How do spillovers and matrix cycles work?",
-      a: "Equimatrix employs a decentralized binary matrix structure where active uplines and downlines automatically place partners into open slots in your matrix, accelerating cycle completion and generating passive returns.",
+      a: "Equora Matrix employs an algorithmic 2-level matrix structure where active uplines and downlines automatically place partners into open slots in your matrix, accelerating cycle completion and generating peer-to-peer rewards.",
     },
     {
-      q: "How do I participate and activate a tier?",
-      a: "Simply connect your Web3 wallet (MetaMask, Trust Wallet, etc.), select the matrix tier you wish to join starting from Tier 1, and approve the activation transaction on-chain.",
+      q: "How do I participate and activate a slot?",
+      a: "Simply connect your Web3 wallet (MetaMask, TrobSafe, etc.), select the matrix slot you wish to join starting from Slot 1 (30 TROB), and approve the activation transaction on-chain.",
     },
     {
       q: "Are the smart contracts audited and secure?",
-      a: "Yes, all Equimatrix smart contracts are fully verified, immutable, and undergo comprehensive third-party security audits to ensure complete protocol safety.",
+      a: "Yes, all Equora Matrix smart contracts are fully verified, immutable, and deployed directly on the TrobChain network to ensure complete protocol safety and non-custodial execution.",
     },
     {
-      q: "What currencies are supported for activation?",
-      a: "Tiers are activated using USDT on supported networks, ensuring price stability while all cycle rewards and spillover bonuses are paid directly to your wallet in real time.",
+      q: "What currency is supported for activation?",
+      a: "Slots are activated using TROB coins on TrobChain. 100% of deposit volume is programmatically distributed to peer matrix nodes and protocol reward pools with zero platform custody.",
     },
   ];
 
@@ -49,7 +49,7 @@ export function FaqSection() {
               Got <span className="text-[#2563eb]">Questions?</span>
             </h2>
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Find answers to common questions about Equimatrix, how the matrix
+              Find answers to common questions about Equora Matrix, how the matrix
               system works, and how to start.
             </p>
           </div>

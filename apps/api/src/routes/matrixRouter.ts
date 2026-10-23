@@ -200,11 +200,11 @@ matrixRouter.get("/earnings/:address", async (req: Request, res: Response, next:
  */
 matrixRouter.post("/withdraw", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userAddress, amount } = req.body;
+    const { userAddress, amount, txHash } = req.body;
     if (!userAddress || !amount) {
       return res.status(400).json({ success: false, error: "userAddress and amount are required" });
     }
-    const result = await matrixService.requestWithdrawal(userAddress, Number(amount));
+    const result = await matrixService.requestWithdrawal(userAddress, Number(amount), txHash);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message || "Withdrawal failed" });

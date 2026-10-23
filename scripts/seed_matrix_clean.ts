@@ -31,7 +31,7 @@ async function main() {
 
   console.log("1. Purging simulation ledger placements & cycles...");
   await prisma.matrixPlacement.deleteMany({});
-  await prisma.matrixCycle.deleteMany({});
+  await prisma.matrixCycleEvent.deleteMany({});
   await prisma.matrixActivity.deleteMany({});
   await prisma.matrixTransaction.deleteMany({});
   console.log("   ✓ Purged matrix placements, cycles, activities, transactions.");

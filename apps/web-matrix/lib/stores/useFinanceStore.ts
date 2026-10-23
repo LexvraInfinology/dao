@@ -31,7 +31,8 @@ export interface FinanceState {
   ) => Promise<void>;
   withdraw: (
     amount: number,
-    userAddress?: string
+    userAddress?: string,
+    txHash?: string
   ) => Promise<{ success: boolean; amountWithdrawn: number; txHash: string; remainingBalance: number }>;
   reset: () => void;
 }
@@ -88,13 +89,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }
   },
 
-  withdraw: async (amount: number, userAddress?: string) => {
+  withdraw: async (amount: number, userAddress?: string, txHash?: string) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) throw new Error("No wallet connected for withdrawal");
 
     set({ withdrawing: true, error: null });
     try {
-      const res = await matrixApi.withdraw(addr, amount);
+      const res = await matrixApi.withdraw(addr, amount, txHash);
       // Re-fetch earnings & profile balance
       await get().fetchEarnings(addr, true);
       await get().fetchTransactions({ page: 1, limit: 30 }, addr, true);

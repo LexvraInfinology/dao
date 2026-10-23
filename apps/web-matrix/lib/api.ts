@@ -371,11 +371,12 @@ export const matrixApi = {
 
   async withdraw(
     userAddress: string,
-    amount: number
+    amount: number,
+    txHash?: string
   ): Promise<{ success: boolean; amountWithdrawn: number; txHash: string; remainingBalance: number }> {
     return apiFetch(`/withdraw`, {
       method: "POST",
-      body: JSON.stringify({ userAddress: userAddress.toLowerCase(), amount }),
+      body: JSON.stringify({ userAddress: userAddress.toLowerCase(), amount, txHash }),
     });
   },
 

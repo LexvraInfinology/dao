@@ -97,3 +97,6 @@ utho_deploy_key*
 __pycache__/
 **/__pycache__/
 scratch_*.png
+*.zip
+*.node
+packages/database/src/generated/

@@ -66,6 +66,7 @@ export function createApp(): Express {
           origin.startsWith("https://localhost:") ||
           configuredOrigins.includes(origin) ||
           /https?:\/\/([a-zA-Z0-9-]+\.)*equorafidao\.com(:\d+)?$/.test(origin) ||
+          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafimatrix\.com(:\d+)?$/.test(origin) ||
           /https?:\/\/([a-zA-Z0-9-]+\.)*equorafi\.com(:\d+)?$/.test(origin)
         ) {
           return callback(null, true);
@@ -119,6 +120,7 @@ export function createApp(): Express {
         authVerify: `${proto}://${host}/api/auth/verify`,
         authSession: `${proto}://${host}/api/auth/session`,
         health: `${proto}://${host}/health`,
+        matrix: `${proto}://${host}/api/matrix`,
         trpc: `${proto}://${host}/trpc`,
       },
       chainId: config.blockchain.chainId,

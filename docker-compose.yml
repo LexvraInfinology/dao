@@ -216,11 +216,11 @@ services:
       context: .
       dockerfile: docker/Dockerfile.matrix
       args:
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-${NEXT_PUBLIC_MATRIX_APP_URL:-https://equorafi.com}}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-${NEXT_PUBLIC_MATRIX_APP_URL:-https://equorafimatrix.com}}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-${NEXT_PUBLIC_MATRIX_API_URL:-https://api.equorafidao.com}}
-        NEXT_PUBLIC_MATRIX_DOMAIN: ${NEXT_PUBLIC_MATRIX_DOMAIN:-equorafi.com}
+        NEXT_PUBLIC_MATRIX_DOMAIN: ${NEXT_PUBLIC_MATRIX_DOMAIN:-equorafimatrix.com}
         NEXT_PUBLIC_DAO_DOMAIN: ${NEXT_PUBLIC_DAO_DOMAIN:-equorafidao.com}
-        NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafi.com}
+        NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafimatrix.com}
         NEXT_PUBLIC_DAO_URL: ${NEXT_PUBLIC_DAO_URL:-https://equorafidao.com}
         NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-${CHAIN_ID:-1000}}
         NEXT_PUBLIC_TARGET_NETWORK: ${NEXT_PUBLIC_TARGET_NETWORK:-mainnet}
@@ -238,7 +238,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-${NEXT_PUBLIC_MATRIX_APP_URL:-https://equorafi.com}}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-${NEXT_PUBLIC_MATRIX_APP_URL:-https://equorafimatrix.com}}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-${NEXT_PUBLIC_MATRIX_API_URL:-https://api.equorafidao.com}}
       BACKEND_API_URL: ${BACKEND_API_URL:-http://api:4000}
       NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-1000}

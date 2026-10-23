@@ -115,9 +115,9 @@ NEXT_PUBLIC_TROB_PRICE_API_URL=https://backend.trobchain.com/v1/market/price
 DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 # Domains & Security
-CORS_ORIGIN="https://equorafidao.com,https://www.equorafidao.com,https://equorafi.com,https://www.equorafi.com,http://localhost:3000"
+CORS_ORIGIN="https://equorafidao.com,https://www.equorafidao.com,https://equorafimatrix.com,https://www.equorafimatrix.com,http://localhost:3000,http://localhost:3001"
 NEXT_PUBLIC_APP_URL="https://equorafidao.com"
-NEXT_PUBLIC_MATRIX_URL="https://equorafi.com"
+NEXT_PUBLIC_MATRIX_URL="https://equorafimatrix.com"
 NEXT_PUBLIC_DAO_URL="https://equorafidao.com"
 ```
 

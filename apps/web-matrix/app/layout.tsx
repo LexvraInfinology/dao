@@ -10,8 +10,20 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "EQUORA.FI | The Matrix Built to Move",
-  description: "Next-gen decentralized multi-layered matrix system engineered for sustainable yield, automated spillover, and verified on-chain transparency.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://equorafimatrix.com"),
+  title: "Equora Matrix | The Matrix Built to Move",
+  description: "Next-gen decentralized multi-layered matrix system engineered for sustainable peer-to-peer distribution, automated spillover, and verified on-chain transparency on TrobChain.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Equora Matrix | The Matrix Built to Move",
+    description: "Algorithmic 12-Slot, 14-Node decentralized matrix protocol with non-custodial payouts on TrobChain.",
+    url: "https://equorafimatrix.com",
+    siteName: "Equora Matrix",
+    locale: "en_US",
+    type: "website",
+  },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

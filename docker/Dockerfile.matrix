@@ -25,7 +25,7 @@ RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
 
 FROM dependencies AS builder
 
-ARG NEXT_PUBLIC_APP_URL=https://equorafi.com
+ARG NEXT_PUBLIC_APP_URL=https://equorafimatrix.com
 ARG NEXT_PUBLIC_API_URL=https://api.equorafidao.com/api/matrix
 ARG NEXT_PUBLIC_RPC_URL=https://fullnode-one.trobchain.com
 ARG NEXT_PUBLIC_MATRIX_ADDRESS=TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2

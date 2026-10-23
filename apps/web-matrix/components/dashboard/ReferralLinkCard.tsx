@@ -15,7 +15,7 @@ export function ReferralLinkCard({
   sponsorAddress,
 }: ReferralLinkCardProps) {
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState("https://equorafi.com");
+  const [origin, setOrigin] = useState(process.env.NEXT_PUBLIC_APP_URL || "https://equorafimatrix.com");
 
   useEffect(() => {
     if (typeof window !== "undefined") {

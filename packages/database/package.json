@@ -9,7 +9,7 @@
     "db:push": "node node_modules/prisma/build/index.js db push",
     "db:migrate": "node node_modules/prisma/build/index.js migrate dev",
     "db:studio": "node node_modules/prisma/build/index.js studio",
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs'); if(fs.existsSync('src/generated')) fs.cpSync('src/generated','dist/generated',{recursive:true});\"",
     "clean": "rimraf dist"
   },
   "dependencies": {

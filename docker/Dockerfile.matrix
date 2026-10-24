@@ -18,7 +18,18 @@ FROM base AS dependencies
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
 COPY scripts/patch-qr.js scripts/patch-qr.js
+COPY apps/api/package.json apps/api/package.json
+COPY apps/indexer/package.json apps/indexer/package.json
+COPY apps/queue/package.json apps/queue/package.json
+COPY apps/web-dao/package.json apps/web-dao/package.json
 COPY apps/web-matrix/package.json apps/web-matrix/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/hardhat/package.json packages/hardhat/package.json
+COPY packages/logger/package.json packages/logger/package.json
+COPY packages/services/package.json packages/services/package.json
+COPY packages/trpc/package.json packages/trpc/package.json
+COPY packages/tsconfig/package.json packages/tsconfig/package.json
+COPY packages/types/package.json packages/types/package.json
 
 RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
@@ -26,18 +37,55 @@ RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
 FROM dependencies AS builder
 
 ARG NEXT_PUBLIC_APP_URL=https://equorafimatrix.com
-ARG NEXT_PUBLIC_API_URL=https://api.equorafidao.com/api/matrix
+ARG NEXT_PUBLIC_API_URL=https://api.equorafidao.com
 ARG NEXT_PUBLIC_RPC_URL=https://fullnode-one.trobchain.com
+ARG NEXT_PUBLIC_CHAIN_ID=1000
+ARG NEXT_PUBLIC_TARGET_NETWORK=mainnet
+ARG NEXT_PUBLIC_EXPLORER_URL=https://trobchain.com
+ARG NEXT_PUBLIC_EXPLORER_API_URL=https://backend.trobchain.com/v1
+ARG NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=7663d51173c43f7ad40158edb7e88859
 ARG NEXT_PUBLIC_MATRIX_ADDRESS=TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2
+ARG NEXT_PUBLIC_TOKEN_ADDRESS=TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt
+ARG NEXT_PUBLIC_REGISTRY_ADDRESS=TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy
+ARG NEXT_PUBLIC_NFT_ADDRESS=TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz
+ARG NEXT_PUBLIC_DAO_ADDRESS=TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT
+ARG NEXT_PUBLIC_VAULT_ADDRESS=TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB
 
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_RPC_URL=$NEXT_PUBLIC_RPC_URL \
+    NEXT_PUBLIC_CHAIN_ID=$NEXT_PUBLIC_CHAIN_ID \
+    NEXT_PUBLIC_TARGET_NETWORK=$NEXT_PUBLIC_TARGET_NETWORK \
+    NEXT_PUBLIC_EXPLORER_URL=$NEXT_PUBLIC_EXPLORER_URL \
+    NEXT_PUBLIC_EXPLORER_API_URL=$NEXT_PUBLIC_EXPLORER_API_URL \
+    NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=$NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID \
     NEXT_PUBLIC_MATRIX_ADDRESS=$NEXT_PUBLIC_MATRIX_ADDRESS \
+    NEXT_PUBLIC_TOKEN_ADDRESS=$NEXT_PUBLIC_TOKEN_ADDRESS \
+    NEXT_PUBLIC_REGISTRY_ADDRESS=$NEXT_PUBLIC_REGISTRY_ADDRESS \
+    NEXT_PUBLIC_NFT_ADDRESS=$NEXT_PUBLIC_NFT_ADDRESS \
+    NEXT_PUBLIC_DAO_ADDRESS=$NEXT_PUBLIC_DAO_ADDRESS \
+    NEXT_PUBLIC_VAULT_ADDRESS=$NEXT_PUBLIC_VAULT_ADDRESS \
     NEXT_TELEMETRY_DISABLED=1
 
 COPY . .
 RUN pnpm --filter @equora/web-matrix build
+RUN CI=true pnpm install --prod --filter=@equora/web-matrix --frozen-lockfile --ignore-scripts
+RUN set -eux; \
+    rm -rf /out; \
+    mkdir -p /out/apps/web-matrix; \
+    cp package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc /out/; \
+    cp apps/web-matrix/package.json /out/apps/web-matrix/package.json; \
+    cp -R apps/web-matrix/.next /out/apps/web-matrix/.next; \
+    cp -R apps/web-matrix/public /out/apps/web-matrix/public; \
+    cp apps/web-matrix/next.config.ts /out/apps/web-matrix/next.config.ts
+
+FROM base AS production-dependencies
+
+WORKDIR /app
+
+COPY --from=builder /out/ ./
+RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
+    CI=true pnpm install --prod --filter=@equora/web-matrix --frozen-lockfile --ignore-scripts
 
 FROM base AS runtime
 
@@ -45,12 +93,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
-COPY --from=builder /workspace/apps/web-matrix/.next /app/apps/web-matrix/.next
-COPY --from=builder /workspace/apps/web-matrix/public /app/apps/web-matrix/public
-COPY --from=builder /workspace/apps/web-matrix/package.json /app/apps/web-matrix/package.json
-COPY --from=builder /workspace/apps/web-matrix/next.config.ts /app/apps/web-matrix/next.config.ts
-COPY --from=builder /workspace/node_modules /app/node_modules
-COPY --from=builder /workspace/apps/web-matrix/node_modules /app/apps/web-matrix/node_modules
+COPY --from=production-dependencies /app/ ./
 
 USER node
 EXPOSE 3001

@@ -25,7 +25,7 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const slotNum = selectedSlotNumber || slotDetails?.slotNumber || 1;
   const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
 
-  const joinedDate = profile?.joinedAt
+  const joinedDate = profile?.joinedAt && !isNaN(new Date(profile.joinedAt).getTime())
     ? new Date(profile.joinedAt).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
     : "Active Member";
   const filledNodes = slotDetails?.filledNodes ?? 0;

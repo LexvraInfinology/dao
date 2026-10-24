@@ -19,10 +19,15 @@ export default function LeaderboardPage() {
   const { address, changeAddress } = useMatrixUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const timeframe = useLeaderboardStore((s) => s.timeframe);
   const setTimeframe = useLeaderboardStore((s) => s.setTimeframe);
   const leaderboard = useLeaderboardStore((s) => s.entries);
   const fetchLeaderboard = useLeaderboardStore((s) => s.fetchLeaderboard);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     fetchLeaderboard();
@@ -303,7 +308,7 @@ return (
               >
                 <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
                 <span className="font-mono font-semibold text-[#1e40af]">
-                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
+                  {mounted && address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
                 </span>
               </button>
             </div>
@@ -320,7 +325,7 @@ return (
                 <circle cx="11.5" cy="9.5" r="1" fill="#64748b" />
               </svg>
               <span className="text-[12.5px] font-medium text-[#334155] font-mono whitespace-nowrap">
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
+                {mounted && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
               </span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

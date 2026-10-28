@@ -147,8 +147,31 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // Genesis DAO Seat from URL query (if referred from DAO)
   const [daoSeat, setDaoSeat] = useState<number | null>(null);
 
-  // Fixed $30.00 USD entry cost (1:1 pegged value on-chain)
-  const requiredTrob = 30;
+  // Dynamic $30.00 USD entry cost based on live TrobChain oracle
+  const [slotCostSun, setSlotCostSun] = useState<number>(945179584);
+  const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.03174);
+
+  useEffect(() => {
+    getOnChainSlotCostSun(1)
+      .then((sun) => {
+        if (sun > 0) setSlotCostSun(sun);
+      })
+      .catch(() => {});
+
+    fetch("https://backend.trobchain.com/v1/market/price")
+      .then((r) => r.json())
+      .then((res) => {
+        const p = res?.data?.priceUsd;
+        if (p && !isNaN(p) && p > 0) {
+          setTrobPriceUsd(p);
+          const computedSun = Math.round((30 / p) * 1e6);
+          setSlotCostSun(computedSun);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const requiredTrob = Number((slotCostSun / 1_000_000).toFixed(2));
 
   // Helper to extract clean address from full URL or raw string
   const cleanSponsorInput = (raw: string): string => {
@@ -488,11 +511,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     };
   }, []);
 
-  // 3. Auto-Detect Installed Wallet
+  // 3. Auto-Detect Installed Wallet (Extension, Android APK, iOS Bridge)
   useEffect(() => {
     wakeUpExtension();
     const tryAutoConnect = async () => {
-      if (address) return;
       if (typeof window !== "undefined" && localStorage.getItem("equora_wallet_explicit_disconnect") === "true") {
         return;
       }
@@ -511,8 +533,55 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         } catch {}
       }
     };
+
     tryAutoConnect();
-  }, [address, setAddress]);
+
+    // Fast poll for the first 3 seconds (handles deferred extension/APK injection)
+    let pollCount = 0;
+    const fastPoll = setInterval(() => {
+      pollCount++;
+      if (useUserStore.getState().address) {
+        clearInterval(fastPoll);
+        return;
+      }
+      tryAutoConnect();
+      if (pollCount >= 15) {
+        clearInterval(fastPoll);
+      }
+    }, 200);
+
+    const onProviderReady = () => {
+      clearInterval(fastPoll);
+      tryAutoConnect();
+    };
+
+    // Direct inpage bridge broadcast listener
+    const handleInpageMessage = (event: MessageEvent) => {
+      if (typeof window === "undefined" || event.source !== window) return;
+      const data = event.data;
+      if (!data) return;
+      if (data.__trobsafe || data.type?.includes("TROBSAFE")) {
+        onProviderReady();
+      }
+    };
+
+    window.addEventListener("message", handleInpageMessage);
+    window.addEventListener("trobSafe_ready", onProviderReady);
+    window.addEventListener("trobsafe_ready", onProviderReady);
+    window.addEventListener("trobReady", onProviderReady);
+    window.addEventListener("trobLinkReady", onProviderReady);
+    window.addEventListener("ethereum#initialized", onProviderReady);
+
+    return () => {
+      clearInterval(fastPoll);
+      window.removeEventListener("message", handleInpageMessage);
+      window.removeEventListener("trobSafe_ready", onProviderReady);
+      window.removeEventListener("trobsafe_ready", onProviderReady);
+      window.removeEventListener("trobReady", onProviderReady);
+      window.removeEventListener("trobLinkReady", onProviderReady);
+      window.removeEventListener("ethereum#initialized", onProviderReady);
+    };
+  }, [setAddress]);
 
   // 4. Fetch Two Mandatory Eligibility Conditions (PDF Deposit Logics)
   const fetchEligibility = useCallback(async (userAddr: string) => {
@@ -938,83 +1007,88 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const isEligibleToDeposit = Boolean(eligibility?.eligibleToDeposit);
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] text-[#0f172a] flex flex-col justify-between py-6 px-4 sm:px-6 relative select-none font-sans">
+    <div className="min-h-screen w-full bg-[#f3f8ff] text-[#102341] flex flex-col justify-between py-6 px-4 sm:px-6 relative select-none font-sans">
       {/* ── TOP HEADER ─────────────────────────────────────────────────── */}
       <div className="max-w-2xl w-full mx-auto flex items-center justify-between pb-4 sm:pb-6">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 shadow-2xs p-1 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-white border border-[#e0eaf7] shadow-xs p-1.5 flex items-center justify-center">
             <Image
               src="/new-logo.png"
               alt="Equora"
-              width={22}
-              height={22}
+              width={24}
+              height={24}
               className="w-full h-full object-contain"
               priority
             />
           </div>
-          <span className="text-[15px] font-bold tracking-tight text-[#0f172a]">
-            EQUORA MATRIX
-          </span>
+          <div>
+            <span className="text-[15px] font-bold tracking-tight text-[#102341]">
+              EQUORA MATRIX
+            </span>
+            <span className="block text-[10px] font-medium text-[#2868e8] tracking-wide">
+              Peer-to-Peer Cyclic Engine
+            </span>
+          </div>
         </Link>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-medium">
+          <span className="px-2.5 py-1 rounded-full bg-white border border-[#e0eaf7] text-[#2868e8] font-medium shadow-2xs">
             {NETWORK_NAME}
           </span>
           {address && (
             <button
               type="button"
               onClick={handleDisconnectWallet}
-              className="px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 hover:text-rose-700 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
               title="Disconnect active wallet"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Disconnect Wallet</span>
+              <span>Disconnect</span>
             </button>
           )}
         </div>
       </div>
 
       {/* ── CENTRAL ACTIVATION CARD ────────────────────────────────────── */}
-      <div className="max-w-[460px] w-full mx-auto my-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 space-y-5">
+      <div className="max-w-[480px] w-full mx-auto my-auto bg-white rounded-2xl border border-[#e0eaf7] shadow-[0_4px_24px_-4px_rgba(40,104,232,0.08)] p-6 sm:p-7 space-y-5">
         {/* Title */}
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Slot 1 Activation
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa] text-[11px] font-semibold mb-2">
+            <Sparkles className="w-3 h-3 text-[#2868e8]" />
+            <span>Genesis Board Entry</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#102341] tracking-tight">
+            Matrix Slot 1 Activation
           </h1>
-          <p className="text-xs text-slate-500 mt-1 leading-normal">
-            One-time entry deposit of <span className="font-semibold text-slate-700">$30.00 USD</span>. Higher slots auto-escalate on-chain.
+          <p className="text-xs text-[#526682] mt-1 leading-normal">
+            Entry cost: <span className="font-semibold text-[#102341]">$30.00 USD</span> (~{requiredTrob.toFixed(2)} TROB at ${trobPriceUsd.toFixed(5)}). Higher slots recycle and auto-escalate on-chain.
           </p>
         </div>
 
         {/* Account & Pricing Summary */}
-        <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-3.5 space-y-2.5 text-xs">
+        <div className="bg-[#f8faff] rounded-xl border border-[#e0eaf7] p-3.5 space-y-2.5 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500">Entry Cost</span>
-            <span className="font-bold text-slate-900 font-mono">$30.00 USD</span>
+            <span className="text-[#526682]">Entry Cost</span>
+            <div className="text-right">
+              <span className="font-bold text-[#102341] font-mono">$30.00 USD</span>
+              <span className="text-[11px] text-[#2868e8] font-mono ml-1.5 font-medium">
+                (~{requiredTrob.toFixed(2)} TROB)
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-            <span className="text-slate-500">Connected Wallet</span>
+          <div className="flex items-center justify-between pt-2 border-t border-[#e0eaf7]">
+            <span className="text-[#526682]">Connected Wallet</span>
             {address ? (
-              <div className="flex items-center gap-1.5 font-mono text-slate-800 font-semibold">
+              <div className="flex items-center gap-1.5 font-mono text-[#102341] font-semibold">
                 <span>{displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}</span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  className="text-[#526682] hover:text-[#2868e8] transition-colors cursor-pointer"
                   title="Copy address"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDisconnectWallet}
-                  className="px-2 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 hover:text-rose-700 text-[11px] font-sans font-semibold ml-1 cursor-pointer flex items-center gap-1 transition-colors"
-                  title="Disconnect wallet"
-                >
-                  <LogOut className="w-3 h-3" />
-                  <span>Disconnect</span>
                 </button>
               </div>
             ) : (
@@ -1023,27 +1097,34 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           </div>
 
           {address && (
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-              <span className="text-slate-500">Wallet Balance</span>
-              <span className="font-mono text-slate-800 font-semibold">
-                {tokenBalance !== null ? `$${tokenBalance.toFixed(2)} USD` : "Loading..."}
-              </span>
+            <div className="flex items-center justify-between pt-2 border-t border-[#e0eaf7]">
+              <span className="text-[#526682]">Liquid Balance</span>
+              <div className="text-right">
+                <span className={`font-mono font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-amber-600"}`}>
+                  {tokenBalance !== null ? `${tokenBalance.toFixed(2)} TROB` : "Loading..."}
+                </span>
+                {tokenBalance !== null && (
+                  <span className="text-[10px] text-[#526682] ml-1">
+                    (${ (tokenBalance * trobPriceUsd).toFixed(2) } USD)
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Sponsor / Referral */}
         <div className="space-y-1.5 text-xs">
-          <div className="flex items-center justify-between text-slate-600 font-medium">
-            <span>Sponsor / Upline</span>
+          <div className="flex items-center justify-between text-[#526682] font-medium">
+            <span>Sponsor / Upline Node</span>
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
               isVaultSponsor
-                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                ? "bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa]"
                 : sponsorStatus.isValid
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 : "bg-rose-50 text-rose-700 border border-rose-200"
             }`}>
-              {isVaultSponsor ? "Protocol Vault (Apex Root)" : sponsorStatus.isValid ? "Verified Upline" : "Invalid"}
+              {isVaultSponsor ? "Protocol Vault (Apex Root)" : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
             </span>
           </div>
 
@@ -1052,16 +1133,16 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               type="text"
               value={sponsorInput}
               onChange={(e) => handleSponsorInputChange(e.target.value)}
-              placeholder="Sponsor address or referral code..."
-              className={`w-full bg-slate-50 border rounded-xl py-2 px-3 pr-16 text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white transition-colors ${
-                !sponsorStatus.isValid ? "border-rose-300" : "border-slate-200 focus:border-blue-500"
+              placeholder="Sponsor Base58 address or 5-digit code..."
+              className={`w-full bg-[#f8faff] border rounded-xl py-2 px-3 pr-16 text-xs font-mono text-[#102341] placeholder:text-slate-400 focus:outline-none focus:bg-white transition-colors ${
+                !sponsorStatus.isValid ? "border-rose-300" : "border-[#e0eaf7] focus:border-[#2868e8]"
               }`}
             />
             <div className="absolute right-1 flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={handlePasteSponsor}
-                className="px-2 py-1 rounded-md text-[10.5px] font-medium text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
+                className="px-2 py-1 rounded-md text-[10.5px] font-medium text-[#2868e8] hover:bg-[#f0f6ff] transition-colors cursor-pointer"
               >
                 Paste
               </button>
@@ -1082,16 +1163,16 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           )}
         </div>
 
-        {/* Prerequisites Checklist (Only when connected) */}
+        {/* Prerequisites Checklist (When connected) */}
         {address && (
-          <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-3 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-slate-600 font-medium pb-1 border-b border-slate-200/60">
-              <span>Prerequisites</span>
+          <div className="bg-[#f8faff] rounded-xl border border-[#e0eaf7] p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between text-[#102341] font-semibold pb-1 border-b border-[#e0eaf7]">
+              <span>Matrix Prerequisites (Logics Verification)</span>
               <button
                 type="button"
                 onClick={() => fetchEligibility(address)}
                 disabled={eligibilityLoading}
-                className="text-blue-600 hover:underline flex items-center gap-1 font-semibold text-[10.5px] cursor-pointer"
+                className="text-[#2868e8] hover:underline flex items-center gap-1 font-semibold text-[10.5px] cursor-pointer"
               >
                 <RefreshCw className={`w-2.5 h-2.5 ${eligibilityLoading ? "animate-spin" : ""}`} />
                 Recheck
@@ -1099,16 +1180,30 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Wallet Date (1 Oct 2026 onwards)</span>
+              <span className="text-[#526682]">1. Wallet Date (1 Oct 2026 onwards)</span>
               <span className={`text-[10.5px] font-semibold ${condition1Passed ? "text-emerald-600" : "text-rose-600"}`}>
                 {condition1Passed ? "Passed" : "Blocked"}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Network Resources & SR Vote</span>
-              <span className={`text-[10.5px] font-semibold ${condition2Passed ? "text-emerald-600" : "text-amber-600"}`}>
-                {condition2Passed ? "Active" : "Required"}
+              <span className="text-[#526682]">2. Staked Energy (Min 107 TROB)</span>
+              <span className={`text-[10.5px] font-semibold ${energyStaked >= 107 ? "text-emerald-600" : "text-amber-600"}`}>
+                {energyStaked} / 107 TROB {energyStaked >= 107 ? "✓" : "Required"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[#526682]">3. Super Representative Witness Vote</span>
+              <span className={`text-[10.5px] font-semibold ${srVoted ? "text-emerald-600" : "text-amber-600"}`}>
+                {srVoted ? "Voted ✓" : "Pending Vote"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[#526682]">4. Liquid Balance</span>
+              <span className={`text-[10.5px] font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-amber-600"}`}>
+                {tokenBalance !== null ? tokenBalance.toFixed(2) : 0} / {requiredTrob.toFixed(2)} TROB
               </span>
             </div>
 
@@ -1117,7 +1212,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 type="button"
                 onClick={handleStakeAndVote}
                 disabled={isStakingHelper}
-                className="w-full mt-2 py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full mt-2 py-2 px-3 rounded-lg bg-[#2868e8] hover:bg-[#1d53c2] text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 {isStakingHelper ? (
                   <>
@@ -1127,7 +1222,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 ) : (
                   <>
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Stake Resources & Vote for SR</span>
+                    <span>One-Click: Stake 107 TROB & Vote for SR</span>
                   </>
                 )}
               </button>
@@ -1145,14 +1240,43 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         {/* Primary Action Button */}
         <div>
           {!address ? (
-            <button
-              type="button"
-              onClick={handleConnectWallet}
-              className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Wallet className="w-4 h-4" />
-              <span>Connect TrobSafe Wallet</span>
-            </button>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleConnectWallet}
+                className="w-full py-3 px-4 rounded-xl bg-[#2868e8] hover:bg-[#1d53c2] text-white text-sm font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Connect TrobSafe Wallet</span>
+              </button>
+              <div className="flex items-center justify-center gap-3 text-[11px] text-[#526682]">
+                <a
+                  href="https://chromewebstore.google.com/detail/trobsafe-wallet/hmijkpcbnkmkijljblhojfndfapidkkk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#2868e8] underline transition-colors"
+                >
+                  Chrome Extension
+                </a>
+                <span>•</span>
+                <a
+                  href="/downloads/trobsafe.apk"
+                  download="trobsafe.apk"
+                  className="hover:text-[#2868e8] underline transition-colors"
+                >
+                  Android APK
+                </a>
+                <span>•</span>
+                <a
+                  href="https://testflight.apple.com/join/trobsafe"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#2868e8] underline transition-colors"
+                >
+                  iOS App
+                </a>
+              </div>
+            </div>
           ) : !isEligibleToDeposit ? (
             <button
               type="button"
@@ -1160,7 +1284,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               className="w-full py-3 px-4 rounded-xl bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Lock className="w-4 h-4" />
-              <span>Prerequisites Required</span>
+              <span>Prerequisites Required (Stake / Vote)</span>
             </button>
           ) : !hasEnoughBalance ? (
             <button
@@ -1169,7 +1293,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               className="w-full py-3 px-4 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
             >
               <AlertTriangle className="w-4 h-4" />
-              <span>Insufficient Balance ($30.00 USD Required)</span>
+              <span>Insufficient Balance (~{requiredTrob.toFixed(2)} TROB Required)</span>
             </button>
           ) : !sponsorStatus.isValid || !sponsorAddress ? (
             <button
@@ -1184,7 +1308,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               type="button"
               onClick={handleActivateSlot1}
               disabled={isJoining}
-              className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl bg-[#2868e8] hover:bg-[#1d53c2] text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               {isJoining ? (
                 <>
@@ -1192,25 +1316,25 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                   <span>Confirming in Wallet...</span>
                 </>
               ) : (
-                <span>Activate Slot 1 ($30.00 USD)</span>
+                <span>Activate Slot 1 ($30.00 USD / ~{requiredTrob.toFixed(2)} TROB)</span>
               )}
             </button>
           )}
 
-          <p className="text-center text-[11px] text-slate-400 mt-2">
+          <p className="text-center text-[11px] text-[#526682] mt-2">
             Non-custodial smart contract interaction on TrobChain.
           </p>
         </div>
       </div>
 
       {/* ── FOOTER ─────────────────────────────────────────────────────── */}
-      <div className="max-w-2xl w-full mx-auto text-center pt-4 text-[11px] text-slate-400 flex items-center justify-between">
+      <div className="max-w-2xl w-full mx-auto text-center pt-4 text-[11px] text-[#526682] flex items-center justify-between">
         <span>Equora Matrix Engine</span>
         <a
           href={EXPLORER_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-slate-600 transition-colors flex items-center gap-1"
+          className="hover:text-[#2868e8] transition-colors flex items-center gap-1"
         >
           <span>TrobChain Explorer</span>
           <ExternalLink className="w-2.5 h-2.5" />

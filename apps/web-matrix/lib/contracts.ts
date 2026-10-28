@@ -16,24 +16,24 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
 
 export const MAINNET_DEFAULT_ADDRESSES = {
-  matrix: "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
+  matrix: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
   token: "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-  registry: "TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy",
-  vault: "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
-  dao: "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
+  registry: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
+  vault: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+  dao: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
   nft: "TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz",
 };
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TWZZ1ZvU2WmiEYzoXkeKjeKY66nyww2GbY",
+  matrix: "TVY743Ptt3FA9XKx7gE96g4vWNwcx6Brxi",
   token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
-  registry: "TCcHDFibnBsSwZhCRyvevXQfoAQ6NMyYWN",
-  vault: "TPQyyruMPLn1S7szNTGWBtB1Yv1Noc1BRX",
-  salaryPool: "TLecfvBRdFetBn3c4uMguAKEmqdJdggqvx",
-  rewardPool: "TUTGW96GTQN84LPaS8iki15B6R9LBqM1LE",
-  magicBoxPool: "TMskpNoL2qUUArzo2ECHjCKVeYCnnU5W1C",
-  dao: "TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr",
-  nft: "TQDJwbuFQEXDsSaeGVcU1iRF3WPjRfeLdi",
+  registry: "TTCw6VnPAMZktcoTMHKf5aKi2ffDxDw6Tq",
+  vault: "TLgQNQpmjUHceztWyrSqQiw9nuk2MsP4G6",
+  salaryPool: "TTgVZdoBVDkQSw1j62vMsUfZMEpx3Vqcmj",
+  rewardPool: "TBbVrdYQjeJqQGGg19J6SPBCqiqq2btmAH",
+  magicBoxPool: "TLGFnvCQeCwJ83KPerHY3fGLFSx5k8WZaA",
+  dao: "TT79jxBtcdjXm5V7t25fnGkfD5K9L43Ncg",
+  nft: "TNbiZne6wwaM3jKzsQnSnJRGXafuRWtiUm",
 };
 
 // Strict Network-Guarded Address Resolver
@@ -463,11 +463,22 @@ export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<num
       }
     }
   } catch (err) {
-    console.warn("[OnChain] Could not query slotCosts directly, using benchmark floor:", err);
+    console.warn("[OnChain] Could not query slotCosts directly, using dynamic market price:", err);
   }
 
-  // Live fallback: ~535.71 TROB ($30 USD at $0.056 benchmark rate)
-  return 535_714_285;
+  // Dynamic fallback: calculate $30 USD in SUN from live market oracle (no hardcoded 535 TROB)
+  try {
+    const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? 0.03174);
+      if (price > 0) {
+        return Math.max(300_000_000, Math.round((30 / price) * 1_000_000));
+      }
+    }
+  } catch {}
+
+  return 945_179_584; // Dynamic $30 at current $0.03174 market rate
 }
 
 /** Fetch full 14-node placement data directly on-chain */

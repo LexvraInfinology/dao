@@ -494,7 +494,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     function joinSlot(uint256 slot, address sponsor) external payable nonReentrant {
         require(isMatrixOpen(), "EquoraMatrix: matrix locked during 21-day Genesis DAO phase");
         require(slot >= 1 && slot <= TOTAL_SLOTS,         "EquoraMatrix: invalid slot");
-        require(slot == 1,                                "EquoraMatrix: only slot 1 can be joined directly; higher slots are auto-unlocked");
+        if (slot > 1) {
+            require(userSlots[msg.sender][slot - 1].isUnlocked, "EquoraMatrix: previous slot must be unlocked");
+        }
         require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
 
         uint256 cost = slotCosts[slot];

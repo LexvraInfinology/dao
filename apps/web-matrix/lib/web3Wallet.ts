@@ -109,12 +109,19 @@ export function hasInjectedProvider(): boolean {
 }
 
 /**
- * Normalizes an address from either Base58 or Tron 41-hex into canonical 0x hex
+ * Normalizes an address from either Base58, Tron 41-hex, or JSON storage into canonical 0x hex
  */
 export function normalizeTo0x(raw: string): string {
   if (!raw) return "";
   let clean = String(raw).trim();
-  if (clean.startsWith("T") && clean.length === 34) {
+  if (clean.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(clean);
+      if (parsed.hex) return normalizeTo0x(parsed.hex);
+      if (parsed.base58) return normalizeTo0x(parsed.base58);
+    } catch {}
+  }
+  if (clean.startsWith("T") && clean.length >= 33 && clean.length <= 35) {
     try {
       return toHexAddress(clean);
     } catch {
@@ -151,27 +158,48 @@ export function getInjectedAuthorizedAccount(): string | null {
     if (tw.defaultAddress) {
       const raw = tw.defaultAddress.base58 || tw.defaultAddress.hex;
       if (raw && raw !== "0" && raw !== "0x0" && raw !== "410000000000000000000000000000000000000000") {
-        return normalizeTo0x(raw);
+        const norm = normalizeTo0x(raw);
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
       }
     }
     // 2. Check address property directly
     if (tw.address && typeof tw.address === "string" && tw.address.length > 5) {
-      return normalizeTo0x(tw.address);
+      const norm = normalizeTo0x(tw.address);
+      if (norm.startsWith("0x") && norm.length === 42) return norm;
     }
     // 3. Check selectedAddress (EVM/TrobSafe dual provider)
     if (tw.selectedAddress && typeof tw.selectedAddress === "string" && tw.selectedAddress.length > 5) {
-      return normalizeTo0x(tw.selectedAddress);
+      const norm = normalizeTo0x(tw.selectedAddress);
+      if (norm.startsWith("0x") && norm.length === 42) return norm;
     }
   }
 
   // 4. Sync with DAO platform's equora_auth_address, trobsafe_address, or matrix storage
   try {
-    const candidate =
-      localStorage.getItem("trobsafe_address") ||
-      localStorage.getItem("equora_auth_address") ||
-      localStorage.getItem("equora_matrix_address");
-    if (candidate && candidate.trim().length > 5 && candidate !== "0x0" && candidate !== "0") {
-      return normalizeTo0x(candidate.trim());
+    const rawStored = localStorage.getItem("trobsafe_address");
+    if (rawStored) {
+      try {
+        const parsed = JSON.parse(rawStored);
+        const val = parsed.hex || parsed.base58;
+        if (val && typeof val === "string") {
+          const norm = normalizeTo0x(val);
+          if (norm.startsWith("0x") && norm.length === 42) return norm;
+        }
+      } catch {
+        const norm = normalizeTo0x(rawStored.trim());
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
+      }
+    }
+    const candidates = [
+      localStorage.getItem("equora_auth_address"),
+      localStorage.getItem("equora_user_address"),
+      localStorage.getItem("equora_matrix_address"),
+    ];
+    for (const c of candidates) {
+      if (c && c.trim().length > 5 && c !== "0x0" && c !== "0") {
+        const norm = normalizeTo0x(c.trim());
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
+      }
     }
   } catch {}
 
@@ -193,7 +221,7 @@ export async function autoDetectAndConnectTrobSafe(): Promise<string | null> {
     return authorized;
   }
 
-  // 2. If provider is present, attempt connection
+  // 2. If provider is present and already unlocked, attempt connection
   if (hasTrobSafeProvider()) {
     try {
       const address = await connectTrobSafe();

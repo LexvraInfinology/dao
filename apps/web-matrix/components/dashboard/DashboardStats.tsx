@@ -17,14 +17,24 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
   const isSlotActive = true;
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
 
-  // Strict separation of Matrix P2P payouts from DAO governance pool
-  // Pegged: 1 Matrix Slot Payout = 535.714285 TROB = $30.00 USD (at $0.056/TROB)
-  const TROB_PRICE = 0.056;
-  const totalEarnedTrob = data?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (profile?.totalEarnings ? profile.totalEarnings / TROB_PRICE : 0));
-  const totalEarnedUsd = data?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (totalEarnedTrob * TROB_PRICE));
+  // Dynamic Market Oracle Peg: 1 Matrix Slot Payout = $30.00 USD
+  const [trobPrice, setTrobPrice] = React.useState<number>(0.03174);
 
-  const availableWithdrawTrob = data?.availableWithdrawTrob ?? (profile?.availableBalanceTrob ?? (profile?.availableBalance ? profile.availableBalance / TROB_PRICE : 0));
-  const availableWithdrawUsd = data?.availableWithdrawUsd ?? (profile?.availableBalanceUsd ?? (availableWithdrawTrob * TROB_PRICE));
+  React.useEffect(() => {
+    fetch("https://backend.trobchain.com/v1/market/price")
+      .then((r) => r.json())
+      .then((j) => {
+        const p = Number(j?.data?.priceUsd ?? j?.priceUsd);
+        if (p > 0) setTrobPrice(p);
+      })
+      .catch(() => {});
+  }, []);
+
+  const totalEarnedTrob = data?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (profile?.totalEarnings ? profile.totalEarnings / trobPrice : 0));
+  const totalEarnedUsd = data?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (totalEarnedTrob * trobPrice));
+
+  const availableWithdrawTrob = data?.availableWithdrawTrob ?? (profile?.availableBalanceTrob ?? (profile?.availableBalance ? profile.availableBalance / trobPrice : 0));
+  const availableWithdrawUsd = data?.availableWithdrawUsd ?? (profile?.availableBalanceUsd ?? (availableWithdrawTrob * trobPrice));
 
   const nextSlot = Math.min(currentSlot + 1, 12);
   const nextSlotStr = nextSlot.toString().padStart(2, "0");

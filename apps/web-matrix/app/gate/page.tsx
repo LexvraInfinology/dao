@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MatrixAccessGate } from "@/components/matrix/MatrixAccessGate";
 import { useUserStore } from "@/lib/stores";
 import { isUserRegisteredInMatrix } from "@/lib/contracts";
+import { getInjectedAuthorizedAccount } from "@/lib/web3Wallet";
 
 function GateContent() {
   const router = useRouter();
@@ -16,13 +17,9 @@ function GateContent() {
     const checkStatus = async () => {
       const active =
         address ||
-        (typeof window !== "undefined"
-          ? localStorage.getItem("equora_auth_address") ||
-            localStorage.getItem("trobsafe_address") ||
-            localStorage.getItem("equora_matrix_address")
-          : null);
+        (typeof window !== "undefined" ? getInjectedAuthorizedAccount() : null);
 
-      if (active) {
+      if (active && active.startsWith("0x")) {
         const registered = await isUserRegisteredInMatrix(active);
         if (registered && isMounted) {
           setIsRegistered(true);

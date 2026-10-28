@@ -227,8 +227,8 @@ export default function CouncilSeatsPage() {
         }),
       }).catch(() => null);
 
-      if (!res) {
-        res = await fetch('https://api.equorafidao.com/api/dao/claim', {
+      if (!res && process.env.NEXT_PUBLIC_API_URL) {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/api/dao/claim`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

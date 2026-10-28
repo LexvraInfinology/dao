@@ -29,7 +29,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
       nodesFilled: 0,
       totalNodes: 14,
       progress: 0,
-      earned: "0.00 TROB",
+      earned: "$0.00",
       isActive: lvl === 1,
       cost: 30,
     };
@@ -37,19 +37,23 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
 
   const progressionLevels =
     slots && slots.length > 0
-      ? slots.map((s) => ({
-          level: s.slotNumber,
-          num: String(s.slotNumber).padStart(2, "0"),
-          status: s.isUnlocked ? "Active" : "Locked",
-          statusType: s.isUnlocked ? "active" : "locked",
-          nodesFilled: s.filledNodes,
-          totalNodes: 14,
-          progress: Math.min(100, Math.round((s.filledNodes / 14) * 100)),
-          earned: `${s.totalEarned.toFixed(2)} TROB`,
-          isActive: s.isUnlocked,
-          cost: s.cost,
-        }))
-      : defaultProgressionLevels;
+      ? slots.map((s) => {
+          const isStandby = Boolean(s.isUnlocked && s.isLive === false);
+          return {
+            level: s.slotNumber,
+            num: String(s.slotNumber).padStart(2, "0"),
+            status: s.isUnlocked ? (isStandby ? "Standby" : "Active") : "Locked",
+            statusType: s.isUnlocked ? (isStandby ? "standby" : "active") : "locked",
+            nodesFilled: s.filledNodes,
+            totalNodes: 14,
+            progress: Math.min(100, Math.round((s.filledNodes / 14) * 100)),
+            earned: `$${s.totalEarned.toFixed(2)}`,
+            isActive: s.isUnlocked,
+            isStandby,
+            cost: s.cost,
+          };
+        })
+      : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false }));
 
   const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 0;
 
@@ -79,7 +83,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                         {/* Step Circle Marker on the Line */}
                         <div className="relative z-10 flex items-center justify-center flex-shrink-0 w-3">
                           {lvl.isActive ? (
-                            <div className="w-3 h-3 rounded-full bg-[#2563eb] shadow-xs" />
+                            <div className={`w-3 h-3 rounded-full ${lvl.isStandby ? "bg-amber-500 animate-pulse" : "bg-[#2563eb]"} shadow-xs`} />
                           ) : (
                             <div className="w-3 h-3 rounded-full bg-white border-[1.5px] border-[#2563eb]" />
                           )}
@@ -87,18 +91,20 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
 
                         {/* Progression Card */}
                         {lvl.isActive ? (
-                          /* Level 1 - Active */
+                          /* Level - Active or Standby */
                           <div
                             onClick={() => onSelectSlot && onSelectSlot(lvl.level)}
                             className={`w-full bg-white border rounded-[20px] p-3.5 sm:p-4 shadow-xs flex items-center justify-between transition-all cursor-pointer ${
                               selectedSlotNumber === lvl.level
                                 ? "border-[#2563eb] ring-2 ring-blue-500/20 bg-[#eff6ff]/30"
+                                : lvl.isStandby
+                                ? "border-amber-300 hover:border-amber-500 bg-amber-50/20"
                                 : "border-[#bfdbfe] hover:border-[#2563eb] hover:bg-[#f8fafc]"
                             }`}
                           >
                             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                               {/* Large Blue Badge */}
-                              <div className="w-[46px] h-[46px] sm:w-[48px] sm:h-[48px] rounded-full bg-[#2563eb] text-white font-extrabold text-[17px] sm:text-[18px] flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20">
+                              <div className={`w-[46px] h-[46px] sm:w-[48px] sm:h-[48px] rounded-full ${lvl.isStandby ? "bg-amber-500 text-white shadow-amber-500/20" : "bg-[#2563eb] text-white shadow-blue-500/20"} font-extrabold text-[17px] sm:text-[18px] flex items-center justify-center flex-shrink-0 shadow-md`}>
                                 {lvl.num}
                               </div>
 
@@ -107,14 +113,23 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                   <h3 className="font-extrabold text-[15px] sm:text-[16px] text-[#0f172a]">
                                     Level {lvl.level}
                                   </h3>
-                                  <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                                    Active
-                                  </span>
+                                  {lvl.isStandby ? (
+                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-amber-600 ml-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                      Standby Reserved
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                                      Active
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="text-[11.5px] font-medium text-[#475569] mt-1">
-                                  {lvl.nodesFilled} / {lvl.totalNodes} Nodes
+                                  {lvl.isStandby
+                                    ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Board Complete"
+                                    : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes`}
                                 </div>
 
                                 {/* Progress bar */}
@@ -195,17 +210,9 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                             </div>
 
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (onBuySlot) onBuySlot(lvl.level);
-                                  else if (onSelectSlot) onSelectSlot(lvl.level);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-bold shadow-2xs transition-all cursor-pointer"
-                              >
-                                Unlock
-                              </button>
+                              <span className="px-2.5 py-1 rounded-lg bg-[#f1f5f9] border border-slate-200/80 text-[#64748b] text-[10.5px] font-bold">
+                                Auto-Progression
+                              </span>
                               <svg
                                 width="18"
                                 height="18"

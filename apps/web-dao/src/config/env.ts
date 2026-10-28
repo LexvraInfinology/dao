@@ -9,38 +9,53 @@ export const WHATSAPP_DAO_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_DAO_GROUP_URL ||
   'https://chat.whatsapp.com/CncHdH2u76s95lRSURuKaW?s=cl&p=a&mlu=4&ilr=4';
 
-export const TARGET_NETWORK = (
-  process.env.NEXT_PUBLIC_TARGET_NETWORK ||
-  process.env.TARGET_NETWORK ||
-  'testnet'
-).toLowerCase();
+const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
+export const IS_MAINNET = rawMainnetEnv !== undefined
+  ? (String(rawMainnetEnv).trim().toLowerCase() === 'true' || String(rawMainnetEnv).trim() === '1')
+  : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || 'testnet').trim().toLowerCase() === 'mainnet';
 
-export const IS_MAINNET = TARGET_NETWORK === 'mainnet';
+export const TARGET_NETWORK = IS_MAINNET ? 'mainnet' : 'testnet';
 export const NETWORK_NAME = IS_MAINNET ? 'TrobChain Mainnet' : 'TrobChain Testnet';
 
 // Trobium Explorer Web URL
-export const EXPLORER_BASE_URL =
-  process.env.NEXT_PUBLIC_EXPLORER_URL ||
-  (IS_MAINNET ? 'https://trobchain.com' : 'https://testnet.trobchain.com');
+export const EXPLORER_BASE_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_EXPLORER_URL ||
+      (process.env.NEXT_PUBLIC_EXPLORER_URL && !process.env.NEXT_PUBLIC_EXPLORER_URL.includes("testnet")
+        ? process.env.NEXT_PUBLIC_EXPLORER_URL
+        : 'https://trobchain.com'))
+  : (process.env.NEXT_PUBLIC_TESTNET_EXPLORER_URL ||
+      process.env.NEXT_PUBLIC_EXPLORER_URL ||
+      'https://testnet.trobchain.com');
 
 // Trobium Explorer Backend REST API URL (account transactions, detail lookup)
-export const EXPLORER_API_URL =
-  process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
-  process.env.TROB_BACKEND_EXPLORER_API_URL ||
-  (IS_MAINNET ? 'https://backend.trobchain.com/v1' : 'https://testnet-backend.trobchain.com/v1');
+export const EXPLORER_API_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API_URL ||
+      (process.env.NEXT_PUBLIC_EXPLORER_API_URL && !process.env.NEXT_PUBLIC_EXPLORER_API_URL.includes("testnet")
+        ? process.env.NEXT_PUBLIC_EXPLORER_API_URL
+        : 'https://backend.trobchain.com/v1'))
+  : (process.env.NEXT_PUBLIC_TESTNET_EXPLORER_API_URL ||
+      process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
+      'https://testnet-backend.trobchain.com/v1');
 
 // Fullnode RPC Node URL (wallet/getaccount, triggersmartcontract, createtransaction)
-export const FULLNODE_RPC_URL =
-  process.env.FULLNODE_URL ||
-  process.env.RPC_URL ||
-  process.env.NEXT_PUBLIC_RPC_URL ||
-  (IS_MAINNET ? 'https://fullnode-one.trobchain.com' : 'https://fullnode-one-testnet.trobchain.com');
+export const FULLNODE_RPC_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
+      (process.env.NEXT_PUBLIC_RPC_URL && !process.env.NEXT_PUBLIC_RPC_URL.includes("testnet")
+        ? process.env.NEXT_PUBLIC_RPC_URL
+        : 'https://fullnode-one.trobchain.com'))
+  : (process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
+      process.env.NEXT_PUBLIC_RPC_URL ||
+      'https://fullnode-one-testnet.trobchain.com');
 
 // Live TROB Market Price API URL
-export const TROB_PRICE_API_URL =
-  process.env.TROB_PRICE_API_URL ||
-  process.env.NEXT_PUBLIC_TROB_PRICE_API_URL ||
-  (IS_MAINNET ? 'https://backend.trobchain.com/v1/market/price' : 'https://testnet-backend.trobchain.com/v1/market/price');
+export const TROB_PRICE_API_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_TROB_PRICE_API_URL ||
+      (process.env.NEXT_PUBLIC_TROB_PRICE_API_URL && !process.env.NEXT_PUBLIC_TROB_PRICE_API_URL.includes("testnet")
+        ? process.env.NEXT_PUBLIC_TROB_PRICE_API_URL
+        : 'https://backend.trobchain.com/v1/market/price'))
+  : (process.env.NEXT_PUBLIC_TESTNET_TROB_PRICE_API_URL ||
+      process.env.NEXT_PUBLIC_TROB_PRICE_API_URL ||
+      'https://testnet-backend.trobchain.com/v1/market/price');
 
 // Official Super Representative (SR) Addresses for Governance Staking & Voting
 export const OFFICIAL_SR_TESTNET =
@@ -53,15 +68,31 @@ export const OFFICIAL_SR_MAINNET =
 
 export const OFFICIAL_SR = IS_MAINNET ? OFFICIAL_SR_MAINNET : OFFICIAL_SR_TESTNET;
 
-// DAO Contract Address & Hex
-export const ACTIVE_DAO_CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_DAO_ADDRESS ||
-  process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-  (IS_MAINNET ? 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto' : 'TLXYmgeyBpUQJaSh5LuumrufaQs6GmrGqz');
+// DAO Contract Address & Hex (Strictly Network Guarded)
+export const ACTIVE_DAO_CONTRACT_ADDRESS = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS ||
+      (process.env.NEXT_PUBLIC_DAO_ADDRESS && process.env.NEXT_PUBLIC_DAO_ADDRESS !== 'TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr'
+        ? process.env.NEXT_PUBLIC_DAO_ADDRESS
+        : null) ||
+      'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto')
+  : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS ||
+      process.env.NEXT_PUBLIC_DAO_ADDRESS ||
+      'TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr');
 
-export const ACTIVE_DAO_CONTRACT_HEX =
-  process.env.NEXT_PUBLIC_DAO_HEX ||
-  (IS_MAINNET ? '0x0a59d6a2dcd3b18687c1efe1625642ad85679377' : '0x7623910543e34346067b5e40854497b095ce8ca0');
+export const ACTIVE_DAO_CONTRACT_HEX = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_HEX || '0x0a59d6a2dcd3b18687c1efe1625642ad85679377')
+  : (process.env.NEXT_PUBLIC_TESTNET_DAO_HEX || '0x9927344a18809582c7a97fb18be456fdd73171aa');
+
+// Matrix Contract Address (Strictly Network Guarded)
+export const ACTIVE_MATRIX_CONTRACT_ADDRESS = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS ||
+      (process.env.NEXT_PUBLIC_MATRIX_ADDRESS && process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== 'TEbnspqeni1LSvBcnk1XGj3p3DE8J65JV1'
+        ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
+        : null) ||
+      'TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE')
+  : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS ||
+      process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
+      'TEbnspqeni1LSvBcnk1XGj3p3DE8J65JV1');
 
 // Chain ID (Supports 1000, 1001 or custom)
 export const CHAIN_ID = parseInt(
@@ -72,12 +103,29 @@ export const CHAIN_ID = parseInt(
 // Backend API Host, Port & URLs with Docker and local dev fallbacks (Backend port 4000, Web port 3000)
 export const BACKEND_API_PORT = parseInt(process.env.API_PORT || process.env.BACKEND_API_PORT || '4000', 10);
 export const WEB_PORT = parseInt(process.env.WEB_PORT || process.env.PORT || '3000', 10);
-export const BACKEND_API_HOST = process.env.API_HOST || 'api.equorafidao.com';
-export const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.equorafidao.com';
-export const NEXT_PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.equorafidao.com';
+export const BACKEND_API_HOST = process.env.API_HOST || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'localhost:4000' : 'api.equorafidao.com');
+export const BACKEND_API_URL =
+  process.env.BACKEND_API_URL ||
+  (process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    ? 'http://localhost:4000'
+    : 'https://api.equorafidao.com');
+export const NEXT_PUBLIC_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? ''
+    : 'https://api.equorafidao.com');
 
-// External Matrix URL (disabled for now as Matrix app code is not completed; Matrix Bridge is retained)
-export const MATRIX_URL = '';
+// External URLs (Port 3001: equorafimatrix.com, Port 3000: equorafidao.com)
+export const MATRIX_URL =
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:3001'
+    : (process.env.NEXT_PUBLIC_MATRIX_URL || 'http://localhost:3001');
+
+export const DAO_URL =
+  process.env.NEXT_PUBLIC_DAO_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : 'https://equorafidao.com');
 
 // TrobSafe APK Download URL
 export const TROBSAFE_APK_URL =

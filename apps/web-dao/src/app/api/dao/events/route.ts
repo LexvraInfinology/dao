@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
+import { IS_MAINNET } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,8 @@ function toIsoUtc(ts: any): string {
 
 /**
  * Fast Real-Time Blockchain & Protocol Activity Feed
- * Queries indexed events from Neon DB first (sub-50ms) and merges with
- * live on-chain cached ledger events without blocking or timing out.
+ * Queries indexed events from Neon DB first on Mainnet,
+ * or queries strictly on-chain testnet transactions when in Testnet mode.
  */
 let cachedEventsMap = new Map<number, { data: any[]; time: number }>();
 
@@ -35,17 +36,18 @@ export async function GET(req: NextRequest) {
     const eventsList: any[] = [];
     const seenKeys = new Set<string>();
 
-    // 1. Query high-performance Neon DB confirmed protocol events
-    try {
-      const dbRes = await queryNeon<any>(
-        `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount",
-                "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst",
-                "priceSource", reason
-         FROM "DaoEvent"
-         ORDER BY "timestamp" DESC
-         LIMIT $1`,
-        [Math.max(limit * 20, 300)]
-      );
+    // 1. Query high-performance Neon DB confirmed protocol events (Mainnet only)
+    if (IS_MAINNET) {
+      try {
+        const dbRes = await queryNeon<any>(
+          `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount",
+                  "txHash", "blockNumber", "timestamp", "amountBtt", "amountUsdEst",
+                  "priceSource", reason
+           FROM "DaoEvent"
+           ORDER BY "timestamp" DESC
+           LIMIT $1`,
+          [Math.max(limit * 20, 300)]
+        );
 
       for (const row of dbRes.rows) {
         const txHash = row.txHash || '';
@@ -142,6 +144,7 @@ export async function GET(req: NextRequest) {
     } catch (dbErr) {
       console.warn('[Events API] Neon DB query note:', dbErr);
     }
+  }
 
     // 2. Safely merge recent on-chain transactions without blocking (fast cache)
     try {

@@ -1,0 +1,105 @@
+[
+  {
+    "memberNumber": 2,
+    "base58": "TVoEt3gh8Wc8dFik6RigZpbjvgTnRGnKDy",
+    "evm": "0xd97fecb63b8f816bd29af5d7d2a2930afc150dd1",
+    "privateKey": "0xd5b89a4d89703f91c3711c9c6e2b8774d68ce877ebd49e4ea62640589da85fb5",
+    "txHash": "0x9ce52a4563104750025a7a6fe32b7328c41f093df976c607c695059b51f3d8b5",
+    "positionFilled": 1,
+    "timestamp": "2026-10-27T10:18:12.297Z"
+  },
+  {
+    "memberNumber": 3,
+    "base58": "TJJ1dYpQ7nbdNi5yfRSx3qvULhJiZw4RUP",
+    "evm": "0x5b4f6ae9f15c1bc94d5fdd58393848a77b93f86a",
+    "privateKey": "0x7a99e0d5c6a1a961ef4226d16eb4e67f9c73114a042b6c452b17f08070c01f1f",
+    "txHash": "0xfd98e0661c7c6cb3e397cf7a3a1fa496050c1d95aabb551511a6dcbbee081945",
+    "positionFilled": 2,
+    "timestamp": "2026-10-27T10:18:46.821Z"
+  },
+  {
+    "memberNumber": 4,
+    "base58": "TL4Y4JoQeYs2PeKnr3ykrVRFrHQMg4kEVu",
+    "evm": "0x6eb33eab862e09652dcabb17dae6d06ced607200",
+    "privateKey": "0x03805afa751399e456215ef413c5451b31489952faffc57afd0fc35d76a04249",
+    "txHash": "0xdd7beb931737d55267ef425cab68808d38c461ebd2074221e08528124c432968",
+    "positionFilled": 3,
+    "timestamp": "2026-10-27T10:19:15.894Z"
+  },
+  {
+    "memberNumber": 7,
+    "base58": "TL3KZ98kS9gE4hTDnAvRCAGjiPXfXXny24",
+    "evm": "0x6e7864582104b0e6e4cee38108fd1fc0bd9b391d",
+    "privateKey": "0x0eb46fd7646549a3a73fb7d5b8fc0e3b324c61b8503db24e552670aed015eae8",
+    "sponsor": "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02",
+    "txHash": "0x789eb9612baacf3ae27c2b1fab42fca8d5b95543d562ffb1a7fb775b75a89fa6",
+    "positionFilled": 4,
+    "timestamp": "2026-10-27T11:19:44.174Z"
+  },
+  {
+    "memberNumber": 5,
+    "base58": "TNsYiYK73DiW8yMywCVfpB3zYMmdtkz5AV",
+    "evm": "0x8d8798ca7ce665039d5b64a37bc2f53b00fe61e0",
+    "privateKey": "0xb07e56c95c1655eb189a8cc1825725ea85b8128bfe18ef81cfd8917ac0bcc898",
+    "sponsor": "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02",
+    "txHash": "0x705807e784e59d99fff5e719a7c56a86f71645f8de392510a9fcf33a76a6ca71",
+    "timestamp": "2026-10-27T12:34:26.165Z"
+  },
+  {
+    "memberNumber": 6,
+    "base58": "TSCXeWqvvtuApgBk82ndRWMfEr5tryME12",
+    "evm": "0xb206fc1a18216f8ce4fb02997375ec59fcab5c22",
+    "privateKey": "0x62dc7f520a7fec85971bf690a2043f906af73a9f8748888421d628a87e05e304",
+    "sponsor": "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02",
+    "txHash": "0x45fa4297a7a91ee0c8917e4e6aafc87e6ab3b2aeae39bcdc789f8cd7f056a866",
+    "timestamp": "2026-10-27T12:34:44.408Z"
+  },
+  {
+    "memberNumber": 8,
+    "base58": "TA3fKBb4pPwqFfjotVz2ZeYWKST4nt1CHH",
+    "evm": "0x00d7a0df4459c30f0696bca7ebd8eeb81da6a9f8",
+    "privateKey": "0x2580399d1655d4a61e310960c22ee71d669040f10c99a7680a8b4e96c9770e75",
+    "sponsor": "0xd97fecb63b8f816bd29af5d7d2a2930afc150dd1",
+    "txHash": "0xff3b97556cb9950cf55e0ccb44a814095d17bcd77392927ea65567d85b620ed3",
+    "timestamp": "2026-10-27T12:35:10.889Z"
+  },
+  {
+    "memberNumber": 9,
+    "base58": "TBGK3BT5hcDyLqLYnhYbvLF5Lc24SiNHMb",
+    "evm": "0x0e343c7911a1257720df770865264fbeeab66b42",
+    "privateKey": "0x1c5cd24a7b9f0bdf931bc5d9a9f8828036de65d596149ed010ed97733eefb026",
+    "sponsor": "0xd97fecb63b8f816bd29af5d7d2a2930afc150dd1",
+    "txHash": "0x745e40372b78f2fd4200aca4f16f484d22e31e69be871cb476fc3866d85a308e",
+    "timestamp": "2026-10-27T12:35:35.514Z"
+  },
+  {
+    "memberNumber": 10,
+    "base58": "TXJHtHU4P3fbQqTmWeFe1ty4MtjQDcoNPB",
+    "evm": "0xe9f69efb8178c0f4f4cbee0c02bedad0dac707fe",
+    "privateKey": "0x4bf8165b02ac04aa492c0d8386484fe7bfe088f4dedb80e1a57d139f63b4f7f6",
+    "sponsor": "0x5b4f6ae9f15c1bc94d5fdd58393848a77b93f86a",
+    "txHash": "0xbecf6c8f266e2f2ee584519bf7daedc0351d779d3764a91f366c426206670108",
+    "timestamp": "2026-10-27T12:35:55.088Z"
+  },
+  {
+    "memberNumber": 11,
+    "base58": "TNf3iGj2akk21K875hoLphozQG2seZp2V2",
+    "evm": "0x8b2a64b9197a2da7679a1a0d362837e92056e947",
+    "privateKey": "0x65e7d18ed1f29a52d1046e1a9664f0c98bf029a5cdde76ac96ac77e4919f2edd",
+    "sponsor": "0x5b4f6ae9f15c1bc94d5fdd58393848a77b93f86a",
+    "txHash": "0x773aad723b242aa429e7f55c177701ec9efce94d969f9da1672d6745d6c48106",
+    "timestamp": "2026-10-27T12:36:31.962Z"
+  },
+  {
+    "memberNumber": 12,
+    "base58": "TLjrjspX3P3jkfRHxLj1zxPgmyf8xHJurB",
+    "evm": "0x76230ffcfe70db6101b533a85bd75a5999955bb4",
+    "privateKey": "0xff8bb1309a75c74a28e98707e14518fd59d071e7659842caf167df584fe52b45",
+    "sponsor": "0x5b4f6ae9f15c1bc94d5fdd58393848a77b93f86a",
+    "sponsorCode": 63550,
+    "vaultTxHash": "0x892888b98c572a18371bd4e4c2b9bb076a8005b0ec26c338a5fc3aab38aabf4f",
+    "matrixTxHash": "0x31ad71c6a93b0fff2ac25500d3210f8097b06d9922df779868a95d4fbc6634ef",
+    "positionFilled": 4,
+    "timestamp": "2026-10-28T07:30:32.892Z"
+  }
+]

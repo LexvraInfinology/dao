@@ -3,6 +3,7 @@
 import React from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export interface ProfileHeroCardProps {
   copy?: (text: string) => void;
@@ -16,7 +17,7 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
   const storeAddress = useUserStore((s) => s.address);
   const userId = profile?.userId ?? 1;
   const address = profile?.address ?? storeAddress ?? "";
-  const displayAddress = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
+  const displayAddress = address ? formatAddress(address, "spaced") : "Not Connected";
   const username = profile?.username ?? `Operative #${userId}`;
   const rankName = profile?.rankName ?? "NONE";
 
@@ -75,7 +76,7 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
               <span className="text-[12px] lg:text-[12.5px] font-mono text-[#64748b]">{displayAddress}</span>
               <button
                 type="button"
-                onClick={() => copy(address)}
+                onClick={() => copy(toTrobBase58(address))}
                 className="text-[#94a3b8] hover:text-[#2563eb] cursor-pointer transition-colors p-0.5"
                 title="Copy Address"
               >
@@ -90,6 +91,37 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
 
         {/* Badges Row */}
         <div className="flex items-center gap-2 mt-2 sm:mt-0 flex-wrap">
+          {profile?.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000" ? (
+            <>
+              <div
+                onClick={() => copy(toTrobBase58(profile.sponsorAddress!))}
+                title="Click to copy Upline 1 (Sponsor) address"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[11.5px] font-semibold text-blue-700 shadow-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
+                <span>Upline 1: {toTrobBase58(profile.sponsorAddress).slice(0, 5)}...{toTrobBase58(profile.sponsorAddress).slice(-4)}</span>
+              </div>
+              {profile?.upline2Address && profile.upline2Address !== "0x0000000000000000000000000000000000000000" && (
+                <div
+                  onClick={() => copy(toTrobBase58(profile.upline2Address!))}
+                  title="Click to copy Upline 2 address"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11.5px] font-semibold text-indigo-700 shadow-xs cursor-pointer hover:bg-indigo-100 transition-colors"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"/>
+                  <span>Upline 2: {toTrobBase58(profile.upline2Address).slice(0, 5)}...{toTrobBase58(profile.upline2Address).slice(-4)}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div
+              onClick={() => copy("TPQyyruMPLn1S7szNTGWBtB1Yv1Noc1BRX")}
+              title="Root Upline: Protocol 4 Pools Vault (Click to copy)"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[11.5px] font-semibold text-purple-700 shadow-xs cursor-pointer hover:bg-purple-100 transition-colors"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"/>
+              <span>Upline: 4 Protocol Pools (Vault: TPQyy...1BRX)</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#86efac] text-[11.5px] font-semibold text-[#16a34a] shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]"/>
             Active Node

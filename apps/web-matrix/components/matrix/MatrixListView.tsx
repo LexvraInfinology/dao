@@ -21,6 +21,7 @@ export interface MatrixMember {
 
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore } from "@/lib/stores";
+import { formatAddress, formatDateSafe } from "@/lib/format";
 
 export interface MatrixListViewProps {
   handleCopy?: (text: string) => void;
@@ -64,16 +65,8 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
       const posStr = String(posNum).padStart(2, "0");
       if (node && node.filled) {
         const addr = node.placedUser || "";
-        const shortAddr = addr
-          ? `${addr.slice(0, 6)}...${addr.slice(-4)}`
-          : `Member #${posNum}`;
-        const joinedDate = node.timestamp
-          ? new Date(node.timestamp).toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })
-          : "Active";
+        const shortAddr = addr ? formatAddress(addr) : `Member #${posNum}`;
+        const joinedDate = formatDateSafe(node.timestamp, "On-Chain Active");
         return {
           pos: posStr,
           isYou: posNum === 1,
@@ -85,7 +78,7 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
           joined: joinedDate,
           joinedShort: `${joinedDate} • S${selectedSlotNumber}`,
           level: `Slot ${selectedSlotNumber}`,
-          earned: `${Number(node.amount || 0).toFixed(2)} TROB`,
+          earned: `$${Number(node.amount || 0).toFixed(2)}`,
           avatarBg:
             posNum === 1
               ? "bg-[#2563eb]"

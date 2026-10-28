@@ -8,6 +8,7 @@ import {
 import type { TransactionItem } from '@/hooks/useApi';
 import { getExplorerTxUrl, getExplorerAddressUrl, getExplorerBlockUrl } from '@/utils/explorer';
 import { formatUsd, formatTrob } from '@/utils/formatAmount';
+import { NETWORK_NAME } from '@/config/env';
 
 interface TransactionDetailModalProps {
   tx: TransactionItem | null;
@@ -80,7 +81,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <h3 className="text-sm sm:text-base font-bold font-jakarta text-[#071A4A]">
                 {isDividend ? 'Dividend Payout Details' : isSeatJoined ? 'Council Seat Activation' : 'Transaction Details'}
               </h3>
-              <p className="text-[11px] text-[#60739A] font-jakarta">Live On-Chain Ledger • TrobChain Mainnet</p>
+              <p className="text-[11px] text-[#60739A] font-jakarta">Live On-Chain Ledger • {NETWORK_NAME}</p>
             </div>
           </div>
           <button
@@ -153,7 +154,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                   <strong className="text-[#071A4A]">Instant Cashback Rule:</strong> Under the Equora DAO protocol rules, activating members receive an instant cashback portion of <strong>${formatUsd(tx.amountUsd)} USD ({formatTrob(trobAmt)} TROB)</strong> immediately credited back upon deposit confirmation.
                 </p>
                 <p>
-                  <strong className="text-[#071A4A]">Verification:</strong> Dispatched autonomously by smart contract {tx.contractAddress ? tx.contractAddress.slice(0, 8) + '…' : 'EquoraDAO'} on TrobChain Mainnet.
+                  <strong className="text-[#071A4A]">Verification:</strong> Dispatched autonomously by smart contract {tx.contractAddress ? tx.contractAddress.slice(0, 8) + '…' : 'EquoraDAO'} on {NETWORK_NAME}.
                 </p>
               </div>
             ) : isDividend ? (
@@ -183,7 +184,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             ) : isSeatJoined ? (
               <div className="space-y-1.5 text-[#4F6184] text-[11px] leading-relaxed">
                 <p>
-                  <strong className="text-[#071A4A]">Seat Activation:</strong> Council Seat #{pos} was activated on TrobChain Mainnet with the required $300.00 USD fixed deposit.
+                  <strong className="text-[#071A4A]">Seat Activation:</strong> Council Seat #{pos} was activated on {NETWORK_NAME} with the required $300.00 USD fixed deposit.
                 </p>
                 <p>
                   <strong className="text-[#071A4A]">Member Entitlements:</strong> Unlocks permanent Soulbound NFT ownership, DAO voting rights, and continuous automated dividend pushes from all subsequent seats joining the protocol.

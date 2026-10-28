@@ -3,6 +3,7 @@
 import React from 'react';
 import { Gem, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { IS_MAINNET } from '@/config/env';
 
 export default function WalletInformationCard() {
   const wallet = useWallet();
@@ -34,7 +35,7 @@ export default function WalletInformationCard() {
               </div>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-[#155EEF] text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-                <span>Mainnet</span>
+                <span>{IS_MAINNET ? 'Mainnet' : 'Testnet'}</span>
               </span>
             </div>
           </div>
@@ -94,7 +95,7 @@ export default function WalletInformationCard() {
                 <span className="truncate">Trobium Blockchain</span>
               </div>
               <span className="px-2 py-0.5 rounded-md bg-[#EEF5FF] text-[#155EEF] text-[10px] font-semibold shrink-0">
-                Mainnet
+                {IS_MAINNET ? 'Mainnet' : 'Testnet'}
               </span>
             </div>
           </div>

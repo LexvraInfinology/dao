@@ -9,7 +9,7 @@ import {
   WalletEligibility,
 } from "../api";
 import { getOnChainUserProfile } from "../contracts";
-import { getInjectedAuthorizedAccount, disconnectWallet } from "../web3Wallet";
+import { getInjectedAuthorizedAccount, disconnectWallet, normalizeTo0x } from "../web3Wallet";
 
 export interface UserState {
   address: string;
@@ -57,20 +57,25 @@ export const useUserStore = create<UserState>((set, get) => ({
           return true;
         }
 
-        const stored = getStoredUserAddress();
-        if (stored) {
-          set({ address: stored });
-          get().fetchEligibility();
-          return true;
-        }
-
+        // 1. Prioritize live injected wallet from browser / APK
         const injected = getInjectedAuthorizedAccount();
         if (injected) {
           setStoredUserAddress(injected);
           set({ address: injected });
           get().fetchEligibility();
+          get().fetchProfile(true);
           return true;
         }
+
+        // 2. Fall back to persisted address
+        const stored = getStoredUserAddress();
+        if (stored) {
+          set({ address: stored });
+          get().fetchEligibility();
+          get().fetchProfile(true);
+          return true;
+        }
+
         return false;
       };
 
@@ -79,7 +84,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         let pollCount = 0;
         const interval = setInterval(() => {
           pollCount++;
-          if (tryDetect() || pollCount >= 20) {
+          if (tryDetect() || pollCount >= 30) {
             clearInterval(interval);
           }
         }, 100);
@@ -88,8 +93,12 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   setAddress: (newAddress: string) => {
-    const clean = newAddress.toLowerCase().trim();
-    setStoredUserAddress(clean);
+    const clean = newAddress ? normalizeTo0x(newAddress) : "";
+    if (clean) {
+      setStoredUserAddress(clean);
+    } else {
+      clearStoredUserAddress();
+    }
     set({
       address: clean,
       profile: null,
@@ -99,6 +108,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     });
     if (clean) {
       get().fetchEligibility(true);
+      get().fetchProfile(true);
     }
   },
 
@@ -151,10 +161,20 @@ export const useUserStore = create<UserState>((set, get) => ({
       ]);
 
       if (onChainProf && dbProf) {
-        // Merge: retain live on-chain balances/status, preserve user custom profile data
+        // Retain live on-chain balances/status as absolute truth, preserve user custom profile data
         const merged = {
           ...dbProf,
           ...onChainProf,
+          highestUnlockedSlot: onChainProf.highestUnlockedSlot,
+          totalEarnings: onChainProf.totalEarnings,
+          directEarnings: onChainProf.directEarnings,
+          matrixEarnings: onChainProf.matrixEarnings,
+          availableBalance: onChainProf.availableBalance,
+          withdrawnTotal: onChainProf.withdrawnTotal,
+          directReferralsCount: onChainProf.directReferralsCount,
+          activeDirectsCount: onChainProf.activeDirectsCount,
+          isQualified: onChainProf.isQualified,
+          rankTier: onChainProf.rankTier,
           username: dbProf.username || onChainProf.username,
           avatarUrl: dbProf.avatarUrl || onChainProf.avatarUrl,
           bio: dbProf.bio || onChainProf.bio,

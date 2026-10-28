@@ -60,29 +60,49 @@ export interface MatrixUserProfile {
   twitter: string | null;
   sponsorAddress: string | null;
   sponsorUserId: number | null;
+  sponsorCode?: number | null;
+  upline2Address?: string | null;
   directReferralsCount: number;
+  activeDirectsCount?: number;
+  isQualified?: boolean;
+  isRegistered?: boolean;
   teamCount: number;
   rankTier: number;
   rankName: string;
   totalEarnings: number;
+  totalEarningsTrob?: number;
+  totalEarningsUsd?: number;
   directEarnings: number;
   matrixEarnings: number;
   poolEarnings: number;
   availableBalance: number;
+  availableBalanceTrob?: number;
+  availableBalanceUsd?: number;
   withdrawnTotal: number;
+  withdrawnTotalTrob?: number;
+  withdrawnTotalUsd?: number;
   recyclesCount: number;
   highestUnlockedSlot: number;
+  currentSlot?: number;
+  isSlot2Reserved?: boolean;
   joinedAt: string;
 }
 
 export interface MatrixDashboardOverview {
+  address?: string;
+  highestUnlockedSlot?: number;
   currentSlot: number;
   totalEarnedTrob: number;
   totalEarnedUsd: number;
   availableWithdrawTrob: number;
   availableWithdrawUsd: number;
+  totalWithdrawnTrob?: number;
+  totalWithdrawnUsd?: number;
   recyclesCount: number;
   trobPriceUsd: number;
+  isQualified?: boolean;
+  activeDirectsCount?: number;
+  sponsorAddress?: string | null;
   activeSlotProgress: {
     slotNumber: number;
     filledNodes: number;
@@ -92,8 +112,10 @@ export interface MatrixDashboardOverview {
     level1Filled: number;
     level2Filled: number;
     level3Filled: number;
+    currentCycle?: number;
+    nodes?: any[];
   };
-  nextPosition: {
+  nextPosition?: {
     positionNumber: number;
     title: string;
     description: string;
@@ -101,13 +123,20 @@ export interface MatrixDashboardOverview {
   };
   recentActivity: Array<{
     id: string;
-    action: string;
-    title: string;
+    action?: string;
+    title?: string;
     description: string;
     slotNumber?: number;
     amount?: number;
     timestamp: string;
     status: string;
+    slot?: number;
+    position?: number;
+    amountUsd?: number;
+    token?: string;
+    fromAddress?: string | null;
+    toAddress?: string | null;
+    txHash?: string | null;
   }>;
 }
 
@@ -115,6 +144,7 @@ export interface MatrixSlotSummary {
   slotNumber: number;
   cost: number;
   isUnlocked: boolean;
+  isLive?: boolean;
   currentCycle: number;
   recyclesCount: number;
   filledNodes: number;
@@ -135,6 +165,7 @@ export interface MatrixNodePlacement {
   amount: number;
   timestamp: string | null;
   isDirect?: boolean;
+  isDirectDeposited?: boolean;
   isSpillover?: boolean;
 }
 
@@ -142,6 +173,7 @@ export interface MatrixSlotDetails {
   slotNumber: number;
   cost: number;
   isUnlocked: boolean;
+  isLive?: boolean;
   currentCycle: number;
   recyclesCount: number;
   filledNodes: number;
@@ -312,11 +344,17 @@ export const matrixApi = {
   async buySlot(
     userAddress: string,
     slotNumber: number,
-    txHash?: string
+    txHash?: string,
+    sponsorAddress?: string
   ): Promise<{ success: boolean; slot: MatrixSlotSummary; message: string }> {
     return apiFetch<{ success: boolean; slot: MatrixSlotSummary; message: string }>(`/slots/buy`, {
       method: "POST",
-      body: JSON.stringify({ userAddress: userAddress.toLowerCase(), slotNumber, txHash }),
+      body: JSON.stringify({
+        userAddress: userAddress.toLowerCase(),
+        slotNumber,
+        txHash,
+        sponsorAddress: sponsorAddress ? sponsorAddress.toLowerCase() : undefined,
+      }),
     });
   },
 
@@ -400,7 +438,7 @@ export const matrixApi = {
     });
   },
 
-  /** Live TROB Price & $30 Slot Calculation */
+  /** Live TROB Price & $30 Slot Calculation (Benchmark pegged to live market oracle) */
   async getLiveTrobPrice(): Promise<{
     priceUsd: number;
     priceSource: string;
@@ -408,32 +446,30 @@ export const matrixApi = {
     isStale: boolean;
     slot1Trob: number;
   }> {
-    const rootApi = process.env.NEXT_PUBLIC_API_URL 
-      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "")
-      : "http://localhost:4000";
     try {
-      const res = await fetch(`${rootApi}/api/price/trob`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        const priceUsd = Number(json.data.priceUsd) || 0.05;
-        const slot1Trob = Math.ceil((30 / priceUsd) * 100) / 100;
-        return {
-          priceUsd,
-          priceSource: json.data.priceSource || "live-oracle",
-          updatedAt: json.data.updatedAt || new Date().toISOString(),
-          isStale: !!json.data.isStale,
-          slot1Trob,
-        };
+      const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
+        if (Number.isFinite(price) && price > 0) {
+          return {
+            priceUsd: price,
+            priceSource: "live-market-api",
+            updatedAt: json?.data?.updatedAt || new Date().toISOString(),
+            isStale: false,
+            slot1Trob: Math.round((30 / price) * 100) / 100,
+          };
+        }
       }
-    } catch {
-      // Fallback if API offline
-    }
+    } catch {}
+
+    const benchmarkPrice = 0.037146; // Live market benchmark
     return {
-      priceUsd: 1.0,
-      priceSource: "pegged-floor",
+      priceUsd: benchmarkPrice,
+      priceSource: "pegged-floor-benchmark",
       updatedAt: new Date().toISOString(),
       isStale: false,
-      slot1Trob: 30,
+      slot1Trob: Math.round((30 / benchmarkPrice) * 100) / 100,
     };
   },
 

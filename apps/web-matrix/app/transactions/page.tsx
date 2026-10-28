@@ -9,10 +9,13 @@ import {
   TransactionsTable,
   TimeframeTab,
 } from "@/components/transactions";
+import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export default function TransactionsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,7 +31,7 @@ export default function TransactionsPage() {
   }, [fetchTransactions, address]);
 
   const copy = (t: string) => {
-    toast.copy(t, "Transaction / Wallet");
+    toast.copy(toTrobBase58(t), "Transaction / Wallet");
   };
 
   const navItems = [
@@ -95,7 +98,8 @@ export default function TransactionsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased overflow-x-hidden">
+    <MatrixAccessGate>
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased overflow-x-hidden">
 
       {/* MOBILE OVERLAY */}
       {sidebarOpen && (
@@ -151,8 +155,15 @@ export default function TransactionsPage() {
             A Stronger Tomorrow,<br />Built Together.
           </p>
           <div className="pt-1 border-t border-white/15">
-            <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORA_FI</div>
-            <div className="text-[9px] text-white/70 mt-0.5">Genesis DAO • dao.equora.fi</div>
+            <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORAFI DAO</div>
+            <a
+              href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-white/70 hover:text-white underline mt-0.5 transition-colors block"
+            >
+              Genesis DAO • {process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com"}
+            </a>
           </div>
         </div>
       </aside>
@@ -216,27 +227,7 @@ export default function TransactionsPage() {
               </svg>
               <span className="absolute top-2 right-2 w-[7px] h-[7px] bg-[#ef4444] rounded-full border border-white" />
             </button>
-            <div className="lg:hidden flex items-center gap-1.5">
-              <button type="button" onClick={() => setWalletModalOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-[11px] font-medium cursor-pointer">
-                <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
-                <span className="font-mono font-semibold text-[#1e40af]">
-                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
-                </span>
-              </button>
-            </div>
-            <button type="button" onClick={() => setWalletModalOpen(true)} className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#f1f5f9] cursor-pointer">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <rect x="1.5" y="3.5" width="13" height="9.5" rx="2" stroke="#64748b" strokeWidth="1.3" />
-                <path d="M1.5 6.5h13" stroke="#64748b" strokeWidth="1.3" />
-                <circle cx="11.5" cy="9.5" r="1" fill="#64748b" />
-              </svg>
-              <span className="text-[12.5px] font-medium text-[#334155] font-mono">
-                {address ? `${address.slice(0, 6)} . . ${address.slice(-4)}` : "Connect Wallet"}
-              </span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            <WalletDropdown />
             <Link href="/profile" title="View Profile" className="hidden lg:flex w-[38px] h-[38px] rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">
               <div className="w-full h-full rounded-full relative overflow-hidden" style={{ background: "radial-gradient(circle at 35% 30%, #93c5fd 0%, #3b82f6 35%, #1d4ed8 75%, #0f172a 100%)", boxShadow: "0 3px 6px -1px rgba(29,78,216,0.45), inset 0 2px 3px rgba(255,255,255,0.7), inset 0 -2px 3px rgba(0,0,0,0.4)" }}>
                 <div className="absolute top-1 left-2 w-2 h-1.5 rounded-full bg-white/40 blur-[0.5px] transform -rotate-12" />
@@ -269,5 +260,6 @@ export default function TransactionsPage() {
         }}
       />
     </div>
+    </MatrixAccessGate>
   );
 }

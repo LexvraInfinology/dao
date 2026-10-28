@@ -259,7 +259,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   My Total Deposited
                 </span>
                 <span className="text-sm font-black font-jakarta text-[#071A4A]">${formatUsd(userInflowUsd)}</span>
-                <span className="text-[10px] text-[#60739A] font-medium ml-1.5">({formatTrob(userInflowTrob)} TROB Outflow)</span>
+                <span className="text-[10px] text-[#60739A] font-medium ml-1.5">({formatTrob(userInflowTrob)} TROB Deposited)</span>
               </div>
             </div>
 
@@ -287,7 +287,7 @@ export const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   </span>
                 </div>
                 <span className="text-sm font-black font-jakarta text-[#059669]">${formatUsd(userOutflowUsd)}</span>
-                <span className="text-[10px] text-[#60739A] font-medium ml-1.5">({formatTrob(userOutflowTrob)} TROB Inflow)</span>
+                <span className="text-[10px] text-[#60739A] font-medium ml-1.5">({formatTrob(userOutflowTrob)} TROB Received)</span>
               </div>
             </div>
 

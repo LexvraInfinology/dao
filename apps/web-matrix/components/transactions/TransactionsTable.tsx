@@ -77,6 +77,7 @@ const ExternalIcon = () => (
 
 import { MatrixTransaction } from "@/lib/api";
 import { useFinanceStore } from "@/lib/stores";
+import { formatAddress, formatDateSafe } from "@/lib/format";
 
 export interface TransactionsTableProps {
   copy: (t: string) => void;
@@ -92,7 +93,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
 
   const ALL_TABS: FilterTab[] = ["All Transactions", "Received", "Sent", "Rewards", "Matrix", "Partner", "System"];
 
-  const activeTransactions: Transaction[] =
+  const activeTransactions: (Transaction & { rawTxHash?: string | null })[] =
     items && items.length > 0
       ? items.map((t, idx) => {
           const isSend = t.type === "WITHDRAWAL" || t.type === "SLOT_PURCHASE";
@@ -105,18 +106,28 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
               ? "Send"
               : "Receive";
 
-          const d = new Date(t.timestamp);
+          let timeStr = "";
+          try {
+            const d = new Date(t.timestamp);
+            if (!isNaN(d.getTime())) {
+              timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            }
+          } catch {
+            timeStr = "";
+          }
+
           return {
             id: idx + 1,
             type: txType,
-            from: isSend ? "You" : t.fromAddress ? `${t.fromAddress.slice(0, 6)}...` : "Network",
-            to: isSend ? (t.toAddress ? `${t.toAddress.slice(0, 6)}...` : "System") : "You",
+            from: isSend ? "You" : t.fromAddress ? formatAddress(t.fromAddress) : "Network",
+            to: isSend ? (t.toAddress ? formatAddress(t.toAddress) : "System") : "You",
             amount: isSend ? -t.amount : t.amount,
-            amountDisplay: `${isSend ? "-" : "+"} ${Number(t.amount).toFixed(2)}`,
+            amountDisplay: `${isSend ? "-" : "+"} $${Number(t.amount).toFixed(2)}`,
             status: t.status === "COMPLETED" ? "Confirmed" : t.status === "PENDING" ? "Pending" : "Failed",
-            date: d.toLocaleDateString(),
-            time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            txHash: t.txHash ? `${t.txHash.slice(0, 7)}...${t.txHash.slice(-4)}` : "0x000...0000",
+            date: formatDateSafe(t.timestamp),
+            time: timeStr,
+            txHash: t.txHash ? `${t.txHash.slice(0, 8)}...${t.txHash.slice(-4)}` : "—",
+            rawTxHash: t.txHash,
           };
         })
       : [];
@@ -213,7 +224,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>{tx.amountDisplay}</div>
-                          <div className="text-[10.5px] font-semibold text-[#94a3b8]">TROB</div>
+                          <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD</div>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-semibold bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0]">{tx.status}</span>
@@ -225,7 +236,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-[12px] text-[#64748b]">{tx.txHash}</span>
-                            <button type="button" onClick={() => copy(tx.txHash)} className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><CopyIcon /></button>
+                            <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
                             <button type="button" className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><ExternalIcon /></button>
                           </div>
                         </td>
@@ -255,7 +266,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>
-                          {tx.amountDisplay} TROB
+                          {tx.amountDisplay} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
                         </div>
                         <div className="text-[10px] font-semibold text-[#16a34a] mt-0.5">{tx.status}</div>
                       </div>
@@ -270,7 +281,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <span className="font-mono text-[10px] text-[#94a3b8]">{tx.txHash}</span>
-                        <button type="button" onClick={() => copy(tx.txHash)} className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><CopyIcon /></button>
+                        <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
                         <button type="button" className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><ExternalIcon /></button>
                       </div>
                     </div>

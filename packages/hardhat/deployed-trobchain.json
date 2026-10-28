@@ -22,22 +22,47 @@
       "txHash": "0x52d7a67e321027fc5b78c24f19d22692360adacc05ac1ac37e726a3d6456dab3"
     },
     "EquoraDAO": {
-      "name": "EquoraDAO",
-      "addressBase58": "TLXYmgeyBpUQJaSh5LuumrufaQs6GmrGqz",
-      "addressHex": "4173cf123fa557b217be44e1df7a8eb2b05797a2ac",
-      "txHash": "0x4a78ae09c98be8a5fce37067b72edd00ec1138e9ac85ecc2062913329cd552ef"
+      "name": "EquoraDAOv2",
+      "addressBase58": "TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr",
+      "addressHex": "419927344a18809582c7a97fb18be456fdd73171aa",
+      "txHash": "0xae3d752215f594b522427195235ee40d9c99c6e5d3de29def4af419e94ecf61c"
     },
     "EquoraVault": {
       "name": "EquoraVault",
-      "addressBase58": "TDMZ2y9xpqtuZRm4QbEDctuaWQR4KY4Gnq",
-      "addressHex": "412522404bfad3739e939b9f5870d4eb7f3b2db3f8",
-      "txHash": "0xbf3fdbb790b8df920e796c21ef9be6981a63cb28cdc748d8e07c233820dab9a5"
+      "addressBase58": "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
+      "addressHex": "411cc36e93d6001981e09d0280e8655ab6464191f2",
+      "txHash": "0x9ffc0b796e105e9ed8b0f9d86e70eadd4fd683d1161c485ade80f13bcef648e8"
     },
     "EquoraMatrix": {
       "name": "EquoraMatrix",
-      "addressBase58": "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
-      "addressHex": "41ed9767ce67dfe17e78a5fec5e486c43cb8b25ed9",
-      "txHash": "0xc8c4906503dd116e1677afe1fbadbd020dbaa42c94332df24ebe484e75a47dd5"
+      "addressBase58": "TWZZ1ZvU2WmiEYzoXkeKjeKY66nyww2GbY",
+      "addressHex": "41e1e15c61d1c6bf71df66644c792d50e7c64dbe69",
+      "txHash": "0xf9974462bd0aed47d4b54ebb74bd366a0bc4f431a9c3c66675e76890b33de8eb"
+    },
+    "EquoraDAOv2": {
+      "name": "EquoraDAOv2",
+      "addressBase58": "TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr",
+      "addressHex": "419927344a18809582c7a97fb18be456fdd73171aa",
+      "txHash": "0xae3d752215f594b522427195235ee40d9c99c6e5d3de29def4af419e94ecf61c"
+    },
+    "EquoraSalaryPool": {
+      "name": "EquoraSalaryPool",
+      "addressBase58": "TLecfvBRdFetBn3c4uMguAKEmqdJdggqvx",
+      "addressHex": "4175253d3260729bd6ec83dcc320303e71d13fde3a",
+      "txHash": "0x040ffe787a8b66279c19457622aa8a612647187debdc05f2cf16653faf28bc97"
+    },
+    "EquoraRewardPool": {
+      "name": "EquoraRewardPool",
+      "addressBase58": "TUTGW96GTQN84LPaS8iki15B6R9LBqM1LE",
+      "addressHex": "41cac0d577ee84f7b6ae4b6c3f78c2a77112275692",
+      "txHash": "0x9ad59a8e61f39de4e4743d1bec2e3ff297b9817027e2be949b67577d633a15ea"
+    },
+    "EquoraMagicBox": {
+      "name": "EquoraMagicBox",
+      "addressBase58": "TMskpNoL2qUUArzo2ECHjCKVeYCnnU5W1C",
+      "addressHex": "418299927819553fa01850b9523d1d8e60964f55b8",
+      "txHash": "0xbf5825051c173f27248087ca30876f132b4c33d4325ae4bbf05fc3e83d63bc91"
     }
-  }
+  },
+  "updatedAt": "2026-10-28T07:08:51.759Z"
 }

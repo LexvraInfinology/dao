@@ -6,12 +6,12 @@ export const getUserSlotsInput = z.object({
 
 export const getSlotDetailsInput = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM wallet address"),
-  slotNumber: z.number().int().min(1).max(12),
+  slotNumber: z.number().int().min(1),
 });
 
 export const getUserCyclesInput = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM wallet address"),
-  slotNumber: z.number().int().min(1).max(12).optional(),
+  slotNumber: z.number().int().min(1).optional(),
 });
 
 export const getPlacementHistoryInput = z.object({
@@ -22,6 +22,6 @@ export const getPlacementHistoryInput = z.object({
 
 export const getCycleHistoryInput = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM wallet address"),
-  slotNumber: z.number().int().min(1).max(12),
+  slotNumber: z.number().int().min(1),
 });
 

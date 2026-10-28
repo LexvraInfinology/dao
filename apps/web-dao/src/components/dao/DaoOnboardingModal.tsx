@@ -181,10 +181,9 @@ export const DaoOnboardingModal: React.FC = () => {
         throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
       }
 
-      // 2. Register membership in database via backend API & Anti-Sybil device fingerprint
-      const apiUrl = 'https://api.equorafidao.com';
+      // 2. Register membership in database via API route & Anti-Sybil device fingerprint
       const deviceFingerprint = await getDeviceFingerprint();
-      const res = await fetch(`${apiUrl}/api/dao/claim`, {
+      const res = await fetch('/api/dao/claim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

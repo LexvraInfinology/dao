@@ -13,24 +13,24 @@ export function FaqSection() {
 
   const faqItems = [
     {
-      q: "What is Equora Matrix?",
-      a: "Equora Matrix is a next-generation decentralized matrix protocol engineered for automated distribution, fair community spillovers, and transparent on-chain smart contract execution on TrobChain.",
+      q: "What is EquoraFiMatrix?",
+      a: "EquoraFiMatrix is a next-generation decentralized matrix protocol engineered for automated distribution, fair community spillovers, and transparent on-chain smart contract execution on TrobChain.",
     },
     {
       q: "How do spillovers and matrix cycles work?",
-      a: "Equora Matrix employs an algorithmic 2-level matrix structure where active uplines and downlines automatically place partners into open slots in your matrix, accelerating cycle completion and generating peer-to-peer rewards.",
+      a: "EquoraFiMatrix employs an algorithmic 2-level matrix structure where active uplines and downlines automatically place partners into open slots in your matrix, accelerating cycle completion and generating peer-to-peer rewards.",
     },
     {
       q: "How do I participate and activate a slot?",
-      a: "Simply connect your Web3 wallet (MetaMask, TrobSafe, etc.), select the matrix slot you wish to join starting from Slot 1 (30 TROB), and approve the activation transaction on-chain.",
+      a: "Simply connect your official TrobSafe wallet, select the matrix slot you wish to join starting from Slot 1 ($30 USD), and approve the activation transaction on-chain.",
     },
     {
       q: "Are the smart contracts audited and secure?",
-      a: "Yes, all Equora Matrix smart contracts are fully verified, immutable, and deployed directly on the TrobChain network to ensure complete protocol safety and non-custodial execution.",
+      a: "Yes, all EquoraFiMatrix smart contracts are fully verified, immutable, and deployed directly on the TrobChain network to ensure complete protocol safety and non-custodial execution.",
     },
     {
       q: "What currency is supported for activation?",
-      a: "Slots are activated using TROB coins on TrobChain. 100% of deposit volume is programmatically distributed to peer matrix nodes and protocol reward pools with zero platform custody.",
+      a: "Slots are activated with a fixed USD-pegged value starting at $30 USD for Slot 1 in native TROB coin. 100% of deposit volume is programmatically distributed to peer matrix nodes and protocol reward pools with zero platform custody.",
     },
   ];
 
@@ -49,7 +49,7 @@ export function FaqSection() {
               Got <span className="text-[#2563eb]">Questions?</span>
             </h2>
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-              Find answers to common questions about Equora Matrix, how the matrix
+              Find answers to common questions about EquoraFiMatrix, how the matrix
               system works, and how to start.
             </p>
           </div>

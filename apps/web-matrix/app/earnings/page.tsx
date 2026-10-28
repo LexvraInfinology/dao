@@ -11,17 +11,26 @@ import {
   RecentPayoutsTable,
   WithdrawModal,
 } from "@/components/earnings";
+import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
 import { NETWORK_NAME } from "@/lib/contracts";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export default function EarningsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
-  const { address, changeAddress } = useMatrixUser();
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { address, changeAddress, refreshAll } = useMatrixUser();
   const earnings = useFinanceStore((s) => s.earnings);
   const fetchEarnings = useFinanceStore((s) => s.fetchEarnings);
 
@@ -31,7 +40,7 @@ export default function EarningsPage() {
 
   const handleCopyWallet = () => {
     if (address) {
-      toast.copy(address, "Wallet Address");
+      toast.copy(toTrobBase58(address), "Wallet Address");
     }
   };
 
@@ -113,7 +122,8 @@ export default function EarningsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased selection:bg-blue-600 selection:text-white">
+    <MatrixAccessGate>
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased selection:bg-blue-600 selection:text-white">
       {/* ── MOBILE OVERLAY ── */}
       {sidebarOpen && (
         <div
@@ -209,8 +219,15 @@ export default function EarningsPage() {
             </p>
 
             <div className="relative z-10 pt-1 border-t border-white/10">
-              <div className="text-[10px] font-extrabold text-white/90 tracking-wider uppercase">EQUORA_FI</div>
-              <div className="text-[9px] text-white/60 mt-0.5">Genesis DAO • dao.equora.fi</div>
+              <div className="text-[10px] font-extrabold text-white/90 tracking-wider uppercase">EQUORAFI DAO</div>
+              <a
+                href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] text-white/70 hover:text-white underline mt-0.5 transition-colors block"
+              >
+                Genesis DAO • {process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com"}
+              </a>
             </div>
           </div>
         </div>
@@ -283,18 +300,7 @@ export default function EarningsPage() {
               <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] bg-[#ef4444] rounded-full border border-white" />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setWalletModalOpen(true)}
-              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors cursor-pointer text-[#0f172a] text-[11px] sm:text-[12px] font-mono font-semibold"
-            >
-              <span className="w-2 h-2 rounded-full bg-[#2563eb] flex-shrink-0" />
-              <span className="truncate" suppressHydrationWarning>{address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "0x..."}</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#64748b] flex-shrink-0">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-            </button>
+            <WalletDropdown />
 
             <Link href="/profile" title="View Profile" className="hidden lg:flex w-[36px] h-[36px] rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">
               <div className="w-full h-full rounded-full relative overflow-hidden" style={{ background: "radial-gradient(circle at 35% 30%, #93c5fd 0%, #3b82f6 35%, #1d4ed8 75%, #0f172a 100%)", boxShadow: "0 3px 6px -1px rgba(29,78,216,0.45), inset 0 2px 3px rgba(255,255,255,0.7), inset 0 -2px 3px rgba(0,0,0,0.4)" }}>
@@ -310,7 +316,10 @@ export default function EarningsPage() {
           <EarningsHeader />
 
           {/* ═══════════ TOP 4 STAT CARDS ═══════════ */}
-          <EarningsStatsGrid onWithdrawClick={() => setWithdrawModalOpen(true)} earnings={earnings} />
+          <EarningsStatsGrid
+            earnings={earnings}
+            onWithdrawClick={() => setWithdrawModalOpen(true)}
+          />
 
           {/* ═══════════ MIDDLE SECTION: OVERVIEW (BAR CHART) & BREAKDOWN (DONUT) ═══════════ */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
@@ -323,13 +332,14 @@ export default function EarningsPage() {
         </main>
       </div>
 
-      {/* ═══════════ WITHDRAW MODAL ═══════════ */}
       <WithdrawModal
         isOpen={withdrawModalOpen}
         onClose={() => setWithdrawModalOpen(false)}
+        address={address || undefined}
         earnings={earnings}
-        address={address}
-        onSuccess={() => fetchEarnings(address, true)}
+        onSuccess={() => {
+          refreshAll(true, true);
+        }}
       />
 
       <WalletConnectModal
@@ -341,6 +351,7 @@ export default function EarningsPage() {
           setWalletModalOpen(false);
         }}
       />
-    </div>
+      </div>
+    </MatrixAccessGate>
   );
 }

@@ -101,9 +101,10 @@ export const HeroVideo = React.memo(function HeroVideo({ className = "" }: HeroV
           <video
             ref={videoRefA}
             src="/hero_section.mp4"
+            poster="/hero-character-cropped.png"
             muted
             playsInline
-            preload="auto"
+            preload="metadata"
             disablePictureInPicture
             disableRemotePlayback
             className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ease-in-out ${
@@ -115,9 +116,10 @@ export const HeroVideo = React.memo(function HeroVideo({ className = "" }: HeroV
           <video
             ref={videoRefB}
             src="/hero_section.mp4"
+            poster="/hero-character-cropped.png"
             muted
             playsInline
-            preload="auto"
+            preload="none"
             disablePictureInPicture
             disableRemotePlayback
             className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ease-in-out ${

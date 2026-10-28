@@ -34,7 +34,7 @@ export const GENESIS_MATRIX_GATEWAYS: GenesisGateway[] = [
     name: "Gateway 1 (ID 4 • Left-Left)",
     minSeat: 1,
     maxSeat: 25,
-    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_1_SPONSOR || "0xE5d1e6b17525e18649F78c54e132Ff1e1Efdd90C",
+    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_1_SPONSOR || "",
     description: "Assigned to Founding DAO Council Seats 1 to 25",
   },
   {
@@ -43,7 +43,7 @@ export const GENESIS_MATRIX_GATEWAYS: GenesisGateway[] = [
     name: "Gateway 2 (ID 5 • Left-Right)",
     minSeat: 26,
     maxSeat: 50,
-    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_2_SPONSOR || "0x2A58f8C6d06EcD7a31A334B81cb15D394142f10b",
+    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_2_SPONSOR || "",
     description: "Assigned to Founding DAO Council Seats 26 to 50",
   },
   {
@@ -52,7 +52,7 @@ export const GENESIS_MATRIX_GATEWAYS: GenesisGateway[] = [
     name: "Gateway 3 (ID 6 • Right-Left)",
     minSeat: 51,
     maxSeat: 75,
-    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_3_SPONSOR || "0x8898144EbDbE4d4e680a6519E868D8494b8A072F",
+    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_3_SPONSOR || "",
     description: "Assigned to Founding DAO Council Seats 51 to 75",
   },
   {
@@ -61,7 +61,7 @@ export const GENESIS_MATRIX_GATEWAYS: GenesisGateway[] = [
     name: "Gateway 4 (ID 7 • Right-Right)",
     minSeat: 76,
     maxSeat: 100,
-    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_4_SPONSOR || "0x4f4943E4E8062D637e6b0606B89E23d069634825",
+    sponsorAddress: process.env.NEXT_PUBLIC_GATEWAY_4_SPONSOR || "",
     description: "Assigned to Founding DAO Council Seats 76 to 100",
   },
 ];

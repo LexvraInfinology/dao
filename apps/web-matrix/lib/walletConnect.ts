@@ -49,14 +49,16 @@ export function isIOSDevice(): boolean {
  */
 export function openInTrobSafeApp(targetUrl?: string): void {
   if (typeof window === "undefined") return;
-  const current = targetUrl || window.location.href;
+  const path = targetUrl || "/matrix";
+  const current = path.startsWith("http") ? path : `${window.location.origin}${path}`;
   const encoded = encodeURIComponent(current);
 
   const isAndroid = isAndroidDevice();
   const deepLink = `trobsafe://browser?url=${encoded}`;
 
   if (isAndroid) {
-    const intentUrl = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=trobsafe;package=com.trobium.trobsafe;S.browser_fallback_url=${encoded};end`;
+    const targetPath = path.startsWith("http") ? new URL(path).pathname : path;
+    const intentUrl = `intent://${window.location.host}${targetPath}#Intent;scheme=trobsafe;package=com.trobium.trobsafe;S.browser_fallback_url=${encoded};end`;
     try {
       window.location.href = deepLink;
     } catch {

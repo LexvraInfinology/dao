@@ -115,6 +115,10 @@ contract EquoraMagicBox is ReentrancyGuard {
         vault        = _vault;
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     // ─── Called by EquoraVault ─────────────────────────────────────────────────
 
     /**
@@ -289,7 +293,16 @@ contract EquoraMagicBox is ReentrancyGuard {
 
         pendingReward[msg.sender] = 0;
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit RewardClaimed(msg.sender, amount, block.timestamp);

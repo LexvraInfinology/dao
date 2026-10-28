@@ -11,10 +11,11 @@ import "../interfaces/IEquoraNFT.sol";
  * @title EquoraMatrix — V3 (Equora.Fi Aligned)
  * @dev 12-Slot, 14-Node Single-Leg Matrix Engine
  *
- * === SLOT COSTS (formula: 30 x 2^(N-1)) =====================================
- *   Slot 1:  30     Slot 2:  60     Slot 3:  120    Slot 4:  240
- *   Slot 5:  480    Slot 6:  960    Slot 7:  1920   Slot 8:  3840
- *   Slot 9:  7680   Slot 10: 15360  Slot 11: 30720  Slot 12: 61440
+ * === BOARD VALUE & 100% AUTO-PROGRESSION MODEL =============================
+ *   • Slot 1: $30 USD Entry (The ONLY slot a user ever pays from their wallet)
+ *   • Slots 2 to 12: $0 Out-of-Pocket (100% Auto-Unlocked via Node 4 & Node 5)
+ *   • Accounting Value per Node: $30 USD (Every node placement distributes $30)
+ *   • Payout per 14-Node Completed Board: $180 USD (6 nodes × $30) to Slot Owner
  *
  * === 14-NODE PAYOUT ROUTING ==================================================
  *  ALL CYCLES:
@@ -66,6 +67,7 @@ interface IEquoraDAOForMatrix {
     function getLaunchTimestamp() external view returns (uint256);
     function timeRemainingInWindow() external view returns (uint256);
     function daoCompleted() external view returns (bool);
+    function lastTrobPriceUsd6() external view returns (uint256);
 }
 
 contract EquoraMatrix is Ownable, ReentrancyGuard {
@@ -77,11 +79,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     uint256 public constant TOTAL_SLOTS          = 12;
     uint256 public constant TREE_NODES           = 14;
     uint256 public constant ENTRY_FEE_USD        = 30_000_000;   // $30 USD (6 decimals)
-    uint256 public constant MIN_SLOT1_FLOOR      = 30 * 10 ** 18; // 30 TROB floor
+    /// @dev Safety minimum floor: 300 TROB (300 * 10^6 SUN). Prevents underfunded joins (1-5 TROB).
+    uint256 public constant MIN_SLOT1_FLOOR      = 300 * 10 ** 6;  // 300 TROB floor ($30 at $0.10 max price)
     uint256 public constant MAX_UPLINE_DEPTH     = 12;
 
-    uint256 public trobPriceUsd6                 = 1_000_000;    // Default $1.00 USD (6 decimals)
-    uint256 public baseSlotCost                  = 30 * 10 ** 18; // Pegged to $30 USD in TROB
+    uint256 public trobPriceUsd6                 = 56_000;       // Benchmark $0.056 USD (6 decimals, matches EquoraDAOv2)
+    uint256 public baseSlotCost                  = 535_714_285;  // 535.714285 TROB in SUN ($30 USD at $0.056)
     uint256 public lastPriceUpdateTimestamp;
 
     /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
@@ -285,19 +288,23 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address _registry,
         address _nftContract
     ) Ownable(msg.sender) {
-        require(_paymentToken != address(0), "EquoraMatrix: invalid token");
-        require(_registry     != address(0), "EquoraMatrix: invalid registry");
+        require(_registry != address(0), "EquoraMatrix: invalid registry");
 
-        paymentToken = IERC20(_paymentToken);
+        if (_paymentToken != address(0)) {
+            paymentToken = IERC20(_paymentToken);
+        }
         registry     = IEquoraRegistry(_registry);
         nftContract  = IEquoraNFT(_nftContract);
 
-        // Precompute slot costs pegged to $30 USD (default: 30 * 1e18 at $1.00 USD)
-        baseSlotCost = (ENTRY_FEE_USD * 1e18) / trobPriceUsd6;
+        // Precompute slot costs pegged to $30 USD (default: 30 * 1e6 SUN at $1.00 USD)
+        baseSlotCost = (ENTRY_FEE_USD * 1e6) / trobPriceUsd6;
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
-            slotCosts[i] = baseSlotCost * (2 ** (i - 1));
+            slotCosts[i] = baseSlotCost;
         }
     }
+
+    receive() external payable {}
+    fallback() external payable {}
 
     // -------------------------------------------------------------------------
     // Admin (only callable before renounceOwnership)
@@ -305,20 +312,20 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Updates the live TROB market price and dynamically recalculates slot costs for $30 USD.
-     *      Formula: baseSlotCost = ($30 USD / _trobPriceUsd6) * 1e18
-     *      Example: At $0.056/TROB (_trobPriceUsd6 = 56000), baseSlotCost = 535.714285... TROB
+     *      Formula: baseSlotCost = ($30 USD / _trobPriceUsd6) * 1e6 (in SUN)
+     *      Example: At $0.056/TROB (_trobPriceUsd6 = 56000), baseSlotCost = 535.714285 TROB (535,714,285 SUN)
      */
     function setTrobPrice(uint256 _trobPriceUsd6) external onlyOwner {
         require(_trobPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
         trobPriceUsd6 = _trobPriceUsd6;
         lastPriceUpdateTimestamp = block.timestamp;
 
-        uint256 newBase = (ENTRY_FEE_USD * 1e18) / _trobPriceUsd6;
+        uint256 newBase = (ENTRY_FEE_USD * 1e6) / _trobPriceUsd6;
         require(newBase >= MIN_SLOT1_FLOOR, "EquoraMatrix: cost below floor");
         baseSlotCost = newBase;
 
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
-            slotCosts[i] = newBase * (2 ** (i - 1));
+            slotCosts[i] = newBase;
         }
         emit TrobPriceUpdated(_trobPriceUsd6, newBase, block.timestamp);
     }
@@ -334,7 +341,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         lastPriceUpdateTimestamp = block.timestamp;
 
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
-            slotCosts[i] = _newBaseCost * (2 ** (i - 1));
+            slotCosts[i] = _newBaseCost;
         }
         emit BaseSlotCostUpdated(_newBaseCost, _trobPriceUsd6, block.timestamp);
     }
@@ -352,8 +359,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     function getRequiredTrobForSlot(uint256 slot, uint256 currentPriceUsd6) external pure returns (uint256) {
         require(slot >= 1 && slot <= TOTAL_SLOTS, "EquoraMatrix: invalid slot");
         require(currentPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
-        uint256 base = (ENTRY_FEE_USD * 1e18) / currentPriceUsd6;
-        return base * (2 ** (slot - 1));
+        return (ENTRY_FEE_USD * 1e6) / currentPriceUsd6;
     }
 
     function setVaultContract(address _vault) external onlyOwner {
@@ -391,6 +397,29 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             try IEquoraDAOForMatrix(daoContract).daoLaunchTimestamp() returns (uint256 launchTs) {
                 if (launchTs > 0) {
                     matrixLaunchTime = launchTs + 21 days;
+                }
+            } catch {}
+        }
+    }
+
+    /**
+     * @dev Automatically syncs live TROB price and recalculates $30 slot costs from connected EquoraDAO contract.
+     *      Ensures slot cost is always pegged to real live TROB rate and respects the MIN_SLOT1_FLOOR.
+     */
+    function syncPriceFromDAO() public {
+        if (daoContract != address(0)) {
+            try IEquoraDAOForMatrix(daoContract).lastTrobPriceUsd6() returns (uint256 daoPrice) {
+                if (daoPrice > 0 && daoPrice <= 2_000_000) {
+                    trobPriceUsd6 = daoPrice;
+                    lastPriceUpdateTimestamp = block.timestamp;
+                    uint256 newBase = (ENTRY_FEE_USD * 1e6) / daoPrice;
+                    if (newBase >= MIN_SLOT1_FLOOR) {
+                        baseSlotCost = newBase;
+                        for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
+                            slotCosts[i] = newBase;
+                        }
+                        emit TrobPriceUpdated(daoPrice, newBase, block.timestamp);
+                    }
                 }
             } catch {}
         }
@@ -439,7 +468,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      before their matrix tree graph starts.
      */
     function register(address sponsor) external returns (bool) {
-        return registry.registerUser(msg.sender, sponsor);
+        address validSponsor = sponsor;
+        if ((validSponsor == address(0) || validSponsor == owner()) && vaultContract != address(0)) {
+            validSponsor = vaultContract;
+        }
+        return registry.registerUser(msg.sender, validSponsor);
     }
 
     /**
@@ -458,23 +491,35 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      Slot 1: any registered user (personal tree graph starts upon 2 direct referrals).
      *      Slots 2-12: previous slot must be unlocked.
      */
-    function joinSlot(uint256 slot, address sponsor) external nonReentrant {
+    function joinSlot(uint256 slot, address sponsor) external payable nonReentrant {
         require(isMatrixOpen(), "EquoraMatrix: matrix locked during 21-day Genesis DAO phase");
         require(slot >= 1 && slot <= TOTAL_SLOTS,         "EquoraMatrix: invalid slot");
         require(slot == 1,                                "EquoraMatrix: only slot 1 can be joined directly; higher slots are auto-unlocked");
         require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
 
         uint256 cost = slotCosts[slot];
-        require(cost >= baseSlotCost && cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below minimum floor");
-
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), cost);
-        require(ok, "EquoraMatrix: payment failed - approve token first");
+        require(cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: slot cost below safety floor");
+        if (msg.value > 0) {
+            require(msg.value >= cost, "EquoraMatrix: insufficient TROB sent");
+            require(msg.value >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below safety floor (min 300 TROB)");
+            cost = msg.value;
+        } else if (address(paymentToken) != address(0)) {
+            require(cost >= baseSlotCost && cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below minimum floor");
+            bool ok = paymentToken.transferFrom(msg.sender, address(this), cost);
+            require(ok, "EquoraMatrix: payment failed");
+        } else {
+            revert("EquoraMatrix: payment required in native TROB");
+        }
 
         totalVolumeProcessed += cost;
 
         // Register user on first join (slot 1) if not already registered
         if (!registry.isRegistered(msg.sender)) {
-            registry.registerUser(msg.sender, sponsor);
+            address targetSponsor = sponsor;
+            if ((targetSponsor == address(0) || targetSponsor == owner()) && vaultContract != address(0)) {
+                targetSponsor = vaultContract;
+            }
+            registry.registerUser(msg.sender, targetSponsor);
         }
 
         // Welcome pass NFT on slot 1
@@ -519,10 +564,13 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Resolves the genesis root matrix owner.
-     *      If Genesis DAO is connected and has members, the LAST member becomes the Root Matrix Owner!
+     *      Defaults to Protocol Vault smart contract for unreferred and apex volume.
      *      Otherwise falls back to registry.getRoot().
      */
     function _getRootMatrixOwner() internal view returns (address) {
+        if (vaultContract != address(0)) {
+            return vaultContract;
+        }
         if (daoContract != address(0)) {
             try IEquoraDAOForMatrix(daoContract).getLastMember() returns (address lastDaoMember) {
                 if (lastDaoMember != address(0)) {
@@ -545,7 +593,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         address rootOwner = _getRootMatrixOwner();
 
         address sponsor = registry.getSponsor(newUser);
-        if (sponsor == address(0)) sponsor = rootOwner;
+        if (sponsor == address(0) || sponsor == owner()) sponsor = rootOwner;
 
         address matrixOwner = sponsor;
         uint256 depth = 0;
@@ -556,7 +604,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             depth < MAX_UPLINE_DEPTH
         ) {
             address up = registry.getSponsor(matrixOwner);
-            if (up == address(0) || up == matrixOwner) {
+            if (up == address(0) || up == matrixOwner || up == owner()) {
                 matrixOwner = rootOwner;
                 break;
             }
@@ -643,14 +691,29 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
 
         } else if (position == 2) {
-            // P2 → Upline 2
+            // P2 → Upline 2 (strictly distinct from Upline 1 and matrixOwner to prevent double payouts)
             address up1     = registry.getSponsor(matrixOwner);
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
-            if (upline2 != address(0) && isMatrixQualified(upline2)) {
+            uint256 depth = 0;
+            while (
+                (upline2 == up1 || upline2 == matrixOwner || !isMatrixQualified(upline2)) &&
+                upline2 != address(0) &&
+                depth < MAX_UPLINE_DEPTH
+            ) {
+                address nextUp = registry.getSponsor(upline2);
+                if (nextUp == address(0) || nextUp == upline2) {
+                    upline2 = address(0);
+                    break;
+                }
+                upline2 = nextUp;
+                depth++;
+            }
+
+            if (upline2 != address(0) && upline2 != up1 && upline2 != matrixOwner && isMatrixQualified(upline2)) {
                 _pushMatrixPayment(upline2, cost);
                 emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
             } else {
-                // Unqualified or missing upline -> routed directly to the 4 automated protocol pools!
+                // Unqualified, same sponsor, or missing upline -> routed directly to the 4 automated protocol pools!
                 _forwardToVault(matrixOwner, cost);
                 emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
                 emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
@@ -811,32 +874,45 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     /**
-     * @dev Push matrix payment directly to user's wallet via paymentToken.transfer.
+     * @dev Push matrix payment directly to user's wallet via native TROB coin (or paymentToken fallback).
      *      Recipients receive their earnings automatically on-chain with zero gas fees.
      *      Anti-griefing: if direct transfer fails, held in userBalance for manual withdrawal.
      */
     function _pushMatrixPayment(address recipient, uint256 amount) internal {
         if (recipient == address(0) || amount == 0) return;
+        // The deployer/owner key must NEVER act as a payout sink. Forward to Vault instead!
+        if (recipient == owner() && vaultContract != address(0)) {
+            _forwardToVault(recipient, amount);
+            return;
+        }
         totalEarned[recipient] += amount;
 
         bool ok = false;
-        try paymentToken.transfer(recipient, amount) returns (bool res) {
-            ok = res;
-        } catch {}
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(recipient).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(recipient, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
 
         if (!ok) {
             userBalance[recipient] += amount;
         }
     }
 
-
-
     /**
      * @dev Credit matrix owner's balance and track per-slot earnings.
      */
     function _creditOwner(address matrixOwner, uint256 slot, uint256 amount) internal {
         userSlots[matrixOwner][slot].totalEarned += amount;
-        _pushMatrixPayment(matrixOwner, amount);
+        if (matrixOwner == vaultContract || matrixOwner == owner()) {
+            _forwardToVault(matrixOwner, amount);
+        } else {
+            _pushMatrixPayment(matrixOwner, amount);
+        }
     }
 
     /**
@@ -853,8 +929,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             return;
         }
 
-        bool ok = paymentToken.transfer(vaultContract, amount);
-        require(ok, "EquoraMatrix: vault transfer failed");
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(vaultContract).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(vaultContract, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
 
         // Notify vault to route funds into the 4 pools
         try IEquoraVault(vaultContract).routePoolDeposit(amount) {} catch {}
@@ -940,7 +1024,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         userBalance[msg.sender]    -= amount;
         totalWithdrawn[msg.sender] += amount;
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         require(ok, "EquoraMatrix: transfer failed");
 
         emit BalanceWithdrawn(msg.sender, amount, block.timestamp);

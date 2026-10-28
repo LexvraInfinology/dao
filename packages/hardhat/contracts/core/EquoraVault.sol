@@ -32,8 +32,8 @@ contract EquoraVault is ReentrancyGuard {
 
     // ─── Constants ─────────────────────────────────────────────────────────────
 
-    uint256 public constant TIER_STANDARD = 30  * 10 ** 18; // 30 TROB
-    uint256 public constant TIER_DAO      = 300 * 10 ** 18; // 300 TROB (DAO tier per logics.xlsx)
+    uint256 public constant TIER_STANDARD = 30  * 10 ** 6; // 30 TROB in SUN (6 decimals)
+    uint256 public constant TIER_DAO      = 300 * 10 ** 6; // 300 TROB in SUN (6 decimals)
 
     uint256 public constant DAO_BPS      = 3500;  // 35%
     uint256 public constant ROYALTY_BPS  = 4000;  // 40% (Leadership Royalty Pool)
@@ -158,6 +158,9 @@ contract EquoraVault is ReentrancyGuard {
         return salaryPool;
     }
 
+    receive() external payable {}
+    fallback() external payable {}
+
     // ─── Primary Entry Point: User Registration ────────────────────────────────
 
     /**
@@ -166,14 +169,18 @@ contract EquoraVault is ReentrancyGuard {
      * @param sponsorCode  5-digit referral code of the sponsor (0 = none / use root)
      * @param amount       Must be TIER_STANDARD (30 TROB) or TIER_DAO (300 TROB)
      */
-    function register(uint32 sponsorCode, uint256 amount) external nonReentrant {
+    function register(uint32 sponsorCode, uint256 amount) external payable nonReentrant {
         if (!initialized)                                    revert NotInitialized();
         if (amount != TIER_STANDARD && amount != TIER_DAO)  revert InvalidDepositAmount();
         if (registry.isRegistered(msg.sender))              revert AlreadyRegistered();
 
-        // 1. Pull TROB from user
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), amount);
-        require(ok, "EquoraVault: Transfer failed");
+        // 1. Pull TROB from user (native TROB or token fallback)
+        if (msg.value > 0) {
+            require(msg.value >= amount, "EquoraVault: Insufficient native TROB sent");
+        } else {
+            bool ok = paymentToken.transferFrom(msg.sender, address(this), amount);
+            require(ok, "EquoraVault: Transfer failed");
+        }
 
         // 2. Register user in EquoraRegistry (assigns 5-digit code, records sponsor)
         registry.registerUser(msg.sender, sponsorCode);
@@ -191,14 +198,14 @@ contract EquoraVault is ReentrancyGuard {
 
     /**
      * @dev Called by EquoraMatrix when P4, P5, or P14 positions are filled.
-     *      The matrix contract must pre-approve and transfer TROB to this vault,
+     *      The matrix contract can transfer native TROB (or token) to this vault,
      *      then this function routes it to the 4 protocol pools.
      *
      *      Only callable by the authorized matrixContract address.
      *
-     * @param amount  Amount of TROB already transferred to this vault by the matrix
+     * @param amount  Amount of TROB transferred to this vault by the matrix
      */
-    function routePoolDeposit(uint256 amount) external nonReentrant {
+    function routePoolDeposit(uint256 amount) external payable nonReentrant {
         if (!initialized) revert NotInitialized();
         if (msg.sender != matrixContract) revert Unauthorized();
         require(amount > 0, "EquoraVault: Zero amount");
@@ -278,7 +285,16 @@ contract EquoraVault is ReentrancyGuard {
     }
 
     function _sendToPool(address pool, uint256 amount, string memory errMsg) internal {
-        bool ok = paymentToken.transfer(pool, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(pool).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(pool, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         require(ok, errMsg);
     }
 

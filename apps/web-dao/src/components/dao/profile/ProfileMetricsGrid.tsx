@@ -69,7 +69,13 @@ export const ProfileMetricsGrid: React.FC<ProfileMetricsGridProps> = ({ profile,
   // Inflow (What member deposited) vs Outflow (What member received in dividends)
   const depositCount = isMember ? 1 + retopupCount : 0;
   const memberInflowUsd = depositCount * 300;
-  const memberInflowTrob = isMember ? Math.round(depositCount * (300 / CONTRACT_PEG) * 100) / 100 : 0;
+  const memberInflowTrob = isMember
+    ? (profile?.entryAmountTrob && profile.entryAmountTrob > 0
+        ? profile.entryAmountTrob
+        : (profile as any)?.entryAmountBtt && (profile as any).entryAmountBtt > 0
+        ? (profile as any).entryAmountBtt
+        : Math.round(depositCount * (300 / CONTRACT_PEG) * 100) / 100)
+    : 0;
   const memberOutflowUsd = totalEarnedUsd;
   const memberOutflowTrob = totalEarnedBtt;
   const netGainUsd = isMember ? Math.round((memberOutflowUsd - memberInflowUsd) * 100) / 100 : 0;

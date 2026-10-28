@@ -6,6 +6,7 @@ import {
   MatrixTransaction,
 } from "../api";
 import { useUserStore } from "./useUserStore";
+import { getOnChainUserProfile, getOnChainJoinedTransactions } from "../contracts";
 
 export interface FinanceState {
   earnings: MatrixEarningsOverview | null;
@@ -56,8 +57,51 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
     set({ loadingEarnings: true, error: null });
     try {
-      const data = await matrixApi.getEarnings(addr);
-      set({ earnings: data, loadingEarnings: false });
+      const [data, onChainProf] = await Promise.all([
+        matrixApi.getEarnings(addr).catch(() => null),
+        getOnChainUserProfile(addr).catch(() => null),
+      ]);
+
+      if (data && onChainProf) {
+        set({
+          earnings: {
+            ...data,
+            totalEarnings: onChainProf.totalEarnings,
+            totalEarningsUsd: onChainProf.totalEarnings,
+            availableBalance: onChainProf.availableBalance,
+            availableBalanceUsd: onChainProf.availableBalance,
+            withdrawnTotal: onChainProf.withdrawnTotal,
+            withdrawnTotalUsd: onChainProf.withdrawnTotal,
+            totalWithdrawn: onChainProf.withdrawnTotal,
+          },
+          loadingEarnings: false,
+        });
+      } else if (data) {
+        set({ earnings: data, loadingEarnings: false });
+      } else if (onChainProf) {
+        set({
+          earnings: {
+            totalEarnings: onChainProf.totalEarnings,
+            totalEarningsUsd: onChainProf.totalEarnings,
+            availableBalance: onChainProf.availableBalance,
+            availableBalanceUsd: onChainProf.availableBalance,
+            withdrawnTotal: onChainProf.withdrawnTotal,
+            withdrawnTotalUsd: onChainProf.withdrawnTotal,
+            totalWithdrawn: onChainProf.withdrawnTotal,
+            pendingRewards: 0,
+            breakdown: {
+              directBonus: onChainProf.directEarnings,
+              matrixPlacements: onChainProf.matrixEarnings,
+              upgradeReserves: 0,
+              poolShares: 0,
+            },
+            recentPayouts: [],
+          },
+          loadingEarnings: false,
+        });
+      } else {
+        throw new Error("Failed to load earnings overview from chain or database");
+      }
     } catch (err: any) {
       set({
         error: err?.message || "Failed to load earnings overview",
@@ -76,9 +120,23 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({ loadingTransactions: true, error: null });
     try {
       const res = await matrixApi.getTransactions(addr, options);
+      if (res && res.items && res.items.length > 0) {
+        set({
+          transactions: res.items,
+          transactionStats: res.stats || null,
+          loadingTransactions: false,
+        });
+        return;
+      }
+    } catch {
+      // Fallback to verified on-chain transactions
+    }
+
+    try {
+      const onChainRes = getOnChainJoinedTransactions(addr);
       set({
-        transactions: res.items || [],
-        transactionStats: res.stats || null,
+        transactions: onChainRes.items,
+        transactionStats: onChainRes.stats,
         loadingTransactions: false,
       });
     } catch (err: any) {

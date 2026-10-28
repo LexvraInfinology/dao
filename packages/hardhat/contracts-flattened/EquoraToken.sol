@@ -39,6 +39,7 @@ abstract contract Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -139,6 +140,7 @@ abstract contract Ownable is Context {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (interfaces/draft-IERC6093.sol)
+pragma solidity ^0.8.20;
 
 /**
  * @dev Standard ERC20 Errors
@@ -304,6 +306,7 @@ interface IERC1155Errors {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/IERC20.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -386,6 +389,7 @@ interface IERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/IERC20Metadata.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
@@ -413,6 +417,7 @@ interface IERC20Metadata is IERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/ERC20.sol)
 
+pragma solidity ^0.8.20;
 
 
 
@@ -730,6 +735,7 @@ abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC20Errors {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC20Burnable.sol)
 
+pragma solidity ^0.8.20;
 
 
 /**
@@ -770,6 +776,7 @@ abstract contract ERC20Burnable is Context, ERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/Pausable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module which allows children to implement an emergency stop
@@ -890,6 +897,7 @@ abstract contract Pausable is Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC20Pausable.sol)
 
+pragma solidity ^0.8.20;
 
 
 /**
@@ -922,10 +930,7 @@ abstract contract ERC20Pausable is ERC20, Pausable {
 // File contracts/token/EquoraCoin.sol
 
 // Original license: SPDX_License_Identifier: MIT
-
-
-
-
+pragma solidity ^0.8.20;
 /**
  * @title EquoraCoin
  * @dev Equora Platform's native TRC-20 / ERC-20 utility & governance coin.
@@ -1018,7 +1023,7 @@ contract EquoraCoin is ERC20, ERC20Burnable, ERC20Pausable, Ownable {
 // File contracts/token/EquoraToken.sol
 
 // Original license: SPDX_License_Identifier: MIT
-
+pragma solidity ^0.8.20;
 /**
  * @title EquoraToken (Compatibility Alias for EquoraCoin)
  * @dev Preserves backward compatibility while pointing to EquoraCoin with 21 Crore supply.

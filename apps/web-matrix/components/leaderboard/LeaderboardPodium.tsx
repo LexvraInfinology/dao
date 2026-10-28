@@ -4,6 +4,7 @@ import React from "react";
 import { CrownBadge } from "./CrownBadge";
 
 import { MatrixLeaderboardEntry } from "@/lib/api";
+import { formatAddress } from "@/lib/format";
 
 export interface LeaderboardPodiumProps {
   handleCopy: (address: string) => void;
@@ -21,19 +22,18 @@ export function LeaderboardPodium({
   const top3 = entries[2];
 
   const formatVolume = (val?: number) => {
-    if (val === undefined || isNaN(val)) return "0.0";
-    if (val >= 1000) return `${(val / 1000).toFixed(1)}K`;
-    return val.toFixed(1);
+    if (val === undefined || isNaN(val)) return "$0.00";
+    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
+    return `$${val.toFixed(1)}`;
   };
 
   const formatVolumeFull = (val?: number) => {
-    if (val === undefined || isNaN(val)) return "0.00 TROB";
-    return `${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB`;
+    if (val === undefined || isNaN(val)) return "$0.00 USD";
+    return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
   };
 
   const formatAddr = (addr?: string) => {
-    if (!addr) return "0x...0000";
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    return formatAddress(addr);
   };
 
   if (!entries || entries.length === 0) {
@@ -225,7 +225,7 @@ export function LeaderboardPodium({
 
                 <div className="min-w-0">
                   <span className="text-[9.5px] sm:text-[10px] xl:text-[10.5px] text-[#64748b] block font-medium whitespace-nowrap">
-                    <span className="hidden xl:inline">TROB </span>Volume
+                    <span className="hidden xl:inline">USD </span>Volume
                   </span>
                   <span
                     className="text-[13px] sm:text-[13.5px] xl:text-[15px] font-black text-[#0f172a] block mt-0.5 whitespace-nowrap"

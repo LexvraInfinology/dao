@@ -117,7 +117,7 @@ export const LandingHero: React.FC = () => {
                   className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold uppercase text-[10.5px] sm:text-xs tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-all flex items-center gap-1.5 group cursor-pointer whitespace-nowrap active:scale-[0.98]"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Enter Council</span>
+                  <span>Dashboard {seatPos ? `(#${seatPos})` : ''}</span>
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </Link>
               ) : (

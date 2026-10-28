@@ -105,6 +105,10 @@ contract EquoraRewardPool is ReentrancyGuard {
         vault        = _vault;
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /**
      * @dev Set the authorized caller (EquoraSalaryPool) for creditMilestoneReward.
      *      Can only be set once (after deployment wiring).
@@ -188,7 +192,16 @@ contract EquoraRewardPool is ReentrancyGuard {
         pendingReward[msg.sender]  = 0;
         totalRewarded[msg.sender] += amount;
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit RewardClaimed(msg.sender, amount, block.timestamp);

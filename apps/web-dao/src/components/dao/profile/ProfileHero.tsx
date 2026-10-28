@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { ProfileData } from '@/hooks/useApi';
+import { NETWORK_NAME } from '@/config/env';
 
 interface ProfileHeroProps {
   profile?: ProfileData | null;
@@ -9,8 +10,7 @@ interface ProfileHeroProps {
 }
 
 export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, loading }) => {
-  const chainId   = process.env.NEXT_PUBLIC_CHAIN_ID ?? '1000';
-  const chainName = chainId === '1000' ? 'TROBCHAIN MAINNET' : `Chain ${chainId}`;
+  const chainName = NETWORK_NAME.toUpperCase();
 
   return (
     <div className="relative rounded-3xl overflow-hidden bg-white border border-[#E2ECF9] shadow-[0_4px_25px_rgba(15,23,42,0.03)]">

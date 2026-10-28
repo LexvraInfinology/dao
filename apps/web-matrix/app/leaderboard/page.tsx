@@ -8,12 +8,14 @@ import {
   LeaderboardPodium,
   LeaderboardRankingsTable,
 } from "@/components/leaderboard";
+import { MatrixAccessGate } from "@/components/matrix";
 import { MatrixLeaderboardEntry } from "@/lib/api";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useLeaderboardStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
 import { NETWORK_NAME } from "@/lib/contracts";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export default function LeaderboardPage() {
   const { address, changeAddress } = useMatrixUser();
@@ -29,7 +31,7 @@ export default function LeaderboardPage() {
   }, [fetchLeaderboard]);
 
   const handleCopy = (addressToCopy: string) => {
-    toast.copy(addressToCopy, "Ranked Address");
+    toast.copy(toTrobBase58(addressToCopy), "Ranked Address");
   };
 
   const navItems = [
@@ -109,8 +111,9 @@ export default function LeaderboardPage() {
     },
   ];
 
-return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased selection:bg-blue-600 selection:text-white">
+  return (
+    <MatrixAccessGate>
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans flex flex-col lg:flex-row antialiased selection:bg-blue-600 selection:text-white">
       {/* ═══════════ MOBILE SIDEBAR OVERLAY ═══════════ */}
       {sidebarOpen && (
         <div
@@ -196,8 +199,15 @@ return (
           </p>
 
           <div className="relative z-10 pt-1 border-t border-white/15">
-            <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORA_FI</div>
-            <div className="text-[9px] text-white/70 mt-0.5">Genesis DAO • dao.equora.fi</div>
+            <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORAFI DAO</div>
+            <a
+              href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-white/70 hover:text-white underline mt-0.5 transition-colors block"
+            >
+              Genesis DAO • {process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com"}
+            </a>
           </div>
         </div>
       </aside>
@@ -303,7 +313,7 @@ return (
               >
                 <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
                 <span className="font-mono font-semibold text-[#1e40af]">
-                  {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "Connect"}
+                  {formatAddress(address, "short", "Connect")}
                 </span>
               </button>
             </div>
@@ -320,7 +330,7 @@ return (
                 <circle cx="11.5" cy="9.5" r="1" fill="#64748b" />
               </svg>
               <span className="text-[12.5px] font-medium text-[#334155] font-mono whitespace-nowrap">
-                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
+                {formatAddress(address, "short", "Connect Wallet")}
               </span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -373,5 +383,6 @@ return (
         }}
       />
     </div>
+    </MatrixAccessGate>
   );
 }

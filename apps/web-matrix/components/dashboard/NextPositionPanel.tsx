@@ -35,10 +35,8 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const percentFilled = Math.min(Math.round((filledNodes / 14) * 100), 100);
   const remainingNodes = Math.max(14 - filledNodes, 0);
 
-  const totalEarnedTrob = data?.totalEarnedTrob ?? 0;
-  const totalEarnedUsd = data?.totalEarnedUsd ?? totalEarnedTrob * 0.15;
-  const availableTrob = data?.availableWithdrawTrob ?? 0;
-  const availableUsd = data?.availableWithdrawUsd ?? availableTrob * 0.15;
+  const totalEarnedUsd = data?.totalEarnedUsd ?? data?.totalEarnedTrob ?? 0;
+  const availableUsd = data?.availableWithdrawUsd ?? data?.availableWithdrawTrob ?? 0;
 
   const nextPosTitle = data?.nextPosition?.title ?? "Position Progress";
   const nextPosDesc = data?.nextPosition?.description ?? `${remainingNodes} positions remaining to complete the cycle and unlock Slot ${nextSlotStr}.`;
@@ -65,31 +63,15 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         <p className="text-[11px] text-[#94a3b8] mb-4">
           {nextPosDesc}
         </p>
-        {/* Auto-Progression Toggle Switch */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Smart Contract Automated Tier Escalation Status */}
+        <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-[#f1f5f9]">
           <div className="flex items-center gap-2 min-w-0">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-              <path d="M4 8h8M8 4v8" stroke="#64748b" strokeWidth="1.3" strokeLinecap="round" />
-              <circle cx="8" cy="8" r="6" stroke="#64748b" strokeWidth="1.2" />
-            </svg>
-            <span className="text-[12px] font-semibold text-[#0f172a] truncate">Auto-Progression Enabled</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+            <span className="text-[12px] font-bold text-[#0f172a] truncate">Auto-Tier Escalation</span>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={autoProgression}
-            onClick={handleToggle}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out p-0.5 focus:outline-none ${
-              autoProgression ? "bg-[#2563eb]" : "bg-[#cbd5e1]"
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                autoProgression ? "translate-x-5" : "translate-x-0"
-              }`}
-            />
-          </button>
+          <span className="px-2.5 py-0.5 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] text-[#16a34a] text-[10.5px] font-extrabold uppercase tracking-wider shrink-0">
+            Protocol Automated
+          </span>
         </div>
       </div>
 
@@ -111,30 +93,30 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           <div>
             <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Total Earned</span>
             <div className="text-[24px] sm:text-[28px] font-extrabold text-[#0f172a] leading-none mt-1">
-              {totalEarnedTrob.toFixed(2)}
+              ${totalEarnedUsd.toFixed(2)}
             </div>
             <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[12px] font-semibold text-[#94a3b8]">TROB</span>
-              <span className="text-[11px] font-medium text-[#64748b]">≈${totalEarnedUsd.toFixed(2)}</span>
+              <span className="text-[12px] font-semibold text-[#94a3b8]">USD</span>
+              <span className="text-[11px] font-medium text-[#64748b]">Lifetime Total</span>
             </div>
           </div>
           <div>
-            <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Available</span>
-            <div className="text-[24px] sm:text-[28px] font-extrabold text-[#2563eb] leading-none mt-1">
-              {availableTrob.toFixed(2)}
+            <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Settled</span>
+            <div className="text-[24px] sm:text-[28px] font-extrabold text-[#16a34a] leading-none mt-1">
+              ${availableUsd.toFixed(2)}
             </div>
             <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[12px] font-semibold text-[#94a3b8]">TROB</span>
-              <span className="text-[11px] font-medium text-[#64748b]">≈${availableUsd.toFixed(2)}</span>
+              <span className="text-[12px] font-semibold text-[#16a34a]">USD</span>
+              <span className="text-[11px] font-medium text-[#16a34a]">Direct P2P</span>
             </div>
           </div>
         </div>
-        {/* Withdraw Button */}
+        {/* View Earnings Button */}
         <Link
           href="/earnings"
           className="w-full h-[44px] rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-bold flex items-center justify-center gap-2 transition-colors"
         >
-          Withdraw <span>→</span>
+          View On-Chain Earnings <span>→</span>
         </Link>
       </div>
     </div>

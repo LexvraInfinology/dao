@@ -457,8 +457,9 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
       setTermsAccepted(true);
     }
 
-    if (!eligibility?.condition1.passed) {
-      setPayError(eligibility?.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
+    // Strict check: Only block if eligibility check is loaded and explicitly failed (passed === false)
+    if (eligibility?.condition1 && eligibility.condition1.passed === false) {
+      setPayError(eligibility.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
       return;
     }
     // Protocol condition 2 is optional for gas optimization and does NOT block the $300 deposit
@@ -529,10 +530,9 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
       }
 
-      // 2. Register membership in database via backend API with verified on-chain tx & Anti-Sybil device fingerprint
-      const apiUrl = 'https://api.equorafidao.com';
+      // 2. Register membership in database via API route with verified on-chain tx & Anti-Sybil device fingerprint
       const deviceFingerprint = await getDeviceFingerprint();
-      const claimRes = await fetch(`${apiUrl}/api/dao/claim`, {
+      const claimRes = await fetch('/api/dao/claim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

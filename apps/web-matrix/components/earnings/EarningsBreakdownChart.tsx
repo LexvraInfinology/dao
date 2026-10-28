@@ -28,7 +28,7 @@ export function EarningsBreakdownChart() {
       id: "direct",
       name: "Direct Rewards",
       subText: "Instant Matrix spillover",
-      amount: `${directAmount.toFixed(2)} TROB`,
+      amount: `$${directAmount.toFixed(2)} USD`,
       percent: `${directPct.toFixed(1)}%`,
       color: "#0047cc", // Deep Royal Navy Blue
       dotClass: "bg-[#0047cc]",
@@ -37,7 +37,7 @@ export function EarningsBreakdownChart() {
       id: "level",
       name: "Level Rewards",
       subText: "Tier matrix completions",
-      amount: `${levelAmount.toFixed(2)} TROB`,
+      amount: `$${levelAmount.toFixed(2)} USD`,
       percent: `${levelPct.toFixed(1)}%`,
       color: "#0088ff", // Sky / Bright Blue
       dotClass: "bg-[#0088ff]",
@@ -46,7 +46,7 @@ export function EarningsBreakdownChart() {
       id: "referral",
       name: "Referral Bonus",
       subText: "Invited network activation",
-      amount: `${referralAmount.toFixed(2)} TROB`,
+      amount: `$${referralAmount.toFixed(2)} USD`,
       percent: `${referralPct.toFixed(1)}%`,
       color: "#38bdf8", // Light Cyan
       dotClass: "bg-[#38bdf8]",
@@ -128,10 +128,10 @@ export function EarningsBreakdownChart() {
                   {/* Centered Donut Value */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                     <span className="text-[22px] sm:text-[23px] font-black text-[#0f172a] leading-none tracking-tight">
-                      {totalAmount.toFixed(2)}
+                      ${totalAmount.toFixed(2)}
                     </span>
                     <span className="text-[11px] font-black text-[#2563eb] tracking-wider uppercase mt-1">
-                      TROB
+                      USD
                     </span>
                     <span className="text-[10px] text-[#64748b] font-medium mt-0.5">
                       Total Earnings

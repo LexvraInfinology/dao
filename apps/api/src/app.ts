@@ -74,7 +74,23 @@ export function createApp(): Express {
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "x-device-fingerprint",
+        "X-Device-Fingerprint",
+        "x-signature",
+        "X-Signature",
+        "x-address",
+        "X-Address",
+        "x-chain-id",
+        "X-Chain-Id",
+        "x-client-version",
+        "X-Client-Version",
+      ],
     })
   );
   app.use(express.json());
@@ -818,7 +834,11 @@ export function createApp(): Express {
       // Verify mandatory protocol conditions from PDF:
       // Condition 1 (New Wallet), Condition 2 (Resource Stake + SR Vote), WhatsApp verification
       const eligibility = await checkWalletEligibility(canonicalAddress);
-      if (!isDevClaim) {
+      const isTestnet =
+        (process.env.TARGET_NETWORK || "").toLowerCase() === "testnet" ||
+        (process.env.NEXT_PUBLIC_TARGET_NETWORK || "").toLowerCase() === "testnet";
+
+      if (!isDevClaim && !isTestnet) {
         if (!eligibility.condition1.passed) {
           res.status(400).json({
             success: false,

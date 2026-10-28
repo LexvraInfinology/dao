@@ -1,5 +1,5 @@
 import { Interface, formatUnits } from 'ethers';
-import { FULLNODE_RPC_URL, TROB_PRICE_API_URL } from '@/config/env';
+import { FULLNODE_RPC_URL, TROB_PRICE_API_URL, IS_MAINNET } from '@/config/env';
 import { getActiveDaoHex, toTronHex, toTrobBase58 } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import { toUtcIso } from './dateUtils';
@@ -258,6 +258,7 @@ async function executeGetAndSyncMemberState(
 
     // Automatically update DB according to on-chain truth
     try {
+      const dbPriceSource = IS_MAINNET ? 'trobchain-mainnet' : 'trobchain-testnet';
       if (dbMember) {
         await queryNeon(
           `UPDATE "DaoMember"
@@ -306,11 +307,11 @@ async function executeGetAndSyncMemberState(
            )
            VALUES (
              gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-             5357.14, 300, $2, 'trobchain-mainnet', $3, $4, $5, $6, NOW(), NOW()
+             5357.14, 300, $2, $7, $3, $4, $5, $6, NOW(), NOW()
            )
            ON CONFLICT (position) DO UPDATE
            SET address = $1, status = $4, "retopupDeadline" = $5, "retopupCount" = $6, "pushedAmountBtt" = $3, "updatedAt" = NOW()`,
-          [canonicalAddr, pos, earnedTrob, onChainStatus, isCapped ? deadlineIso : null, retopupCount]
+          [canonicalAddr, pos, earnedTrob, onChainStatus, isCapped ? deadlineIso : null, retopupCount, dbPriceSource]
         );
       }
     } catch (dbErr) {
@@ -338,8 +339,10 @@ async function executeGetAndSyncMemberState(
       isCapped: onChainStatus === 'capped',
       retopupDeadline: onChainStatus === 'capped' ? deadlineIso : null,
       retopupTimeRemainingSeconds: onChainStatus === 'capped' ? timeRemainingSec : null,
-      retopupCount,
-      entryAmountTrob: (onChainStatus === 'active' || onChainStatus === 'capped') ? 5357.14 : parseFloat(dbMember?.entryAmountBtt || '5357.14'),
+      retopupCount: retopupCount,
+      entryAmountTrob: (onChainStatus === 'active' || onChainStatus === 'capped')
+        ? (IS_MAINNET ? 5357.14 : (parseFloat(dbMember?.entryAmountBtt || '0') || 8076.24))
+        : (parseFloat(dbMember?.entryAmountBtt || (IS_MAINNET ? '5357.14' : '8076.24'))),
       entryAmountUsd: 300,
       totalEarnedTrob: earnedTrob,
       currentCycleUsd: cycleEarnedUsd,
@@ -354,7 +357,28 @@ async function executeGetAndSyncMemberState(
     };
   }
 
-  // ─── 4. FALLBACK: IF DATA NOT ON-CHAIN, TAKE FROM DATABASE ──────────────────
+  // ─── 4. FALLBACK: IF DATA NOT ON-CHAIN, TAKE FROM DATABASE (MAINNET ONLY) ──
+  if (!IS_MAINNET) {
+    return {
+      isMember: false,
+      position: null,
+      nftTokenId: null,
+      address: resolvedAddr,
+      status: 'unclaimed',
+      isCapped: false,
+      retopupDeadline: null,
+      retopupTimeRemainingSeconds: null,
+      retopupCount: 0,
+      entryAmountTrob: 0,
+      entryAmountUsd: 0,
+      totalEarnedTrob: 0,
+      currentCycleUsd: 0,
+      lifetimeUsd: 0,
+      capProgressPct: 0,
+      source: 'onchain',
+    };
+  }
+
   try {
     let dbMember: any = null;
     if (resolvedAddr) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryNeon } from '../../../_lib/neonDb';
 import { getAndSyncMemberState } from '../../../_lib/onChainMemberSync';
+import { IS_MAINNET } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,21 +28,29 @@ export async function GET(
       const pos = synced.position;
 
       // Count active members for equal cashback calculation
-      let activeCount = 87;
+      let activeCount = 10;
       try {
-        const countRes = await queryNeon<any>(
-          `SELECT COUNT(*) as cnt FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
-        );
-        const dbActive = parseInt(countRes.rows[0]?.cnt || '87', 10);
-        activeCount = Math.max(1, dbActive);
-      } catch {}
+        const { getMergedOnChainDaoStats } = await import('../../../_lib/onChainMergedDao');
+        const stats = await getMergedOnChainDaoStats();
+        activeCount = Math.max(1, stats.activeMemberCount);
+      } catch {
+        if (IS_MAINNET) {
+          try {
+            const countRes = await queryNeon<any>(
+              `SELECT COUNT(*) as cnt FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
+            );
+            const dbActive = parseInt(countRes.rows[0]?.cnt || '87', 10);
+            activeCount = Math.max(1, dbActive);
+          } catch {}
+        }
+      }
 
       const retopupCashbackUsd = parseFloat((300 / activeCount).toFixed(2));
       const retopupCashbackTrob = Math.round((retopupCashbackUsd / bttPriceUsd) * 100) / 100;
 
       let bypassedToCouncilUsd = 0;
       let newActivationsSinceCap = 0;
-      if (isCapped) {
+      if (isCapped && IS_MAINNET) {
         try {
           const capTimeRes = await queryNeon<any>(
             `SELECT "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,

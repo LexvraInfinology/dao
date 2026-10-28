@@ -144,6 +144,10 @@ contract EquoraSalaryPool is ReentrancyGuard {
         vault        = _vault;
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /**
      * @dev Set EquoraRewardPool address (called once after deployment wiring).
      *      Can only be set once.
@@ -409,7 +413,16 @@ contract EquoraSalaryPool is ReentrancyGuard {
         pendingBalance[msg.sender]       = 0;
         totalSalaryClaimed[msg.sender]  += amount;
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit RoyaltyClaimed(msg.sender, amount, block.timestamp);

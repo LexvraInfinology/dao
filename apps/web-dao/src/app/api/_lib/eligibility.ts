@@ -4,6 +4,7 @@ import {
   EXPLORER_API_URL,
   OFFICIAL_SR_TESTNET,
   OFFICIAL_SR_MAINNET,
+  IS_MAINNET,
 } from '@/config/env';
 
 const B58_CHARS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -268,17 +269,28 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
     }
   } catch {}
 
-  // If already in DaoMember table in Neon DB, bypass verification
-  try {
-    const memberRes = await queryNeon(
-      `SELECT "address", "status" FROM "DaoMember" WHERE LOWER("address") = LOWER($1)`,
-      [canonical]
-    );
-    if (memberRes.rows.length > 0) {
-      waVerified = true;
-      if (!waVerifiedAt) waVerifiedAt = new Date().toISOString();
-    }
-  } catch {}
+  // Member verification check
+  if (IS_MAINNET) {
+    try {
+      const memberRes = await queryNeon(
+        `SELECT "address", "status" FROM "DaoMember" WHERE LOWER("address") = LOWER($1)`,
+        [canonical]
+      );
+      if (memberRes.rows.length > 0) {
+        waVerified = true;
+        if (!waVerifiedAt) waVerifiedAt = new Date().toISOString();
+      }
+    } catch {}
+  } else {
+    try {
+      const { getAndSyncMemberState } = await import('./onChainMemberSync');
+      const synced = await getAndSyncMemberState(canonical);
+      if (synced.isMember) {
+        waVerified = true;
+        if (!waVerifiedAt) waVerifiedAt = new Date().toISOString();
+      }
+    } catch {}
+  }
 
   // Anti-Sybil: Strictly 1 DAO Seat per Physical Device & 1 DAO Seat per Wallet
   const deviceRestriction: {
@@ -288,8 +300,8 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
     reason?: string;
   } = { hasClaimed: false };
 
-  // 1. Device Hardware Fingerprint validation
-  if (deviceFingerprint && deviceFingerprint.trim().length > 3) {
+  // 1. Device Hardware Fingerprint validation (Mainnet only)
+  if (IS_MAINNET && deviceFingerprint && deviceFingerprint.trim().length > 3) {
     try {
       const devRes = await queryNeon<any>(
         `SELECT position, address FROM "DaoMember"
@@ -312,19 +324,31 @@ export async function checkServerlessEligibility(address: string, deviceFingerpr
   // 2. Wallet Address validation: Check if wallet already has an active or capped seat
   let walletAlreadyHasSeat = false;
   let ownedSeatNumber: number | null = null;
-  try {
-    const walletRes = await queryNeon<any>(
-      `SELECT position, address FROM "DaoMember"
-       WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped')
-       LIMIT 1`,
-      [canonical]
-    );
-    if (walletRes.rows.length > 0) {
-      walletAlreadyHasSeat = true;
-      ownedSeatNumber = walletRes.rows[0].position;
+  if (IS_MAINNET) {
+    try {
+      const walletRes = await queryNeon<any>(
+        `SELECT position, address FROM "DaoMember"
+         WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped')
+         LIMIT 1`,
+        [canonical]
+      );
+      if (walletRes.rows.length > 0) {
+        walletAlreadyHasSeat = true;
+        ownedSeatNumber = walletRes.rows[0].position;
+      }
+    } catch (err) {
+      console.warn('[Eligibility] Wallet seat check error:', err);
     }
-  } catch (err) {
-    console.warn('[Eligibility] Wallet seat check error:', err);
+  } else {
+    try {
+      const { getOnChainMemberPosition } = await import('./txVerifier');
+      const { getActiveDaoAddress } = await import('@/utils/trobAddress');
+      const onChainPos = await getOnChainMemberPosition(canonical, getActiveDaoAddress());
+      if (onChainPos > 0) {
+        walletAlreadyHasSeat = true;
+        ownedSeatNumber = onChainPos;
+      }
+    } catch {}
   }
 
   // Protocol condition gating bypassed as requested: allow any wallet without an active seat to deposit

@@ -10,8 +10,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "EQUORA.FI | The Matrix Built to Move",
-  description: "Next-gen decentralized multi-layered matrix system engineered for sustainable yield, automated spillover, and verified on-chain transparency.",
+  title: "EquoraFiMatrix | The Matrix Built to Move",
+  description: "EquoraFiMatrix — Next-gen decentralized recursive matrix system engineered for sustainable yield, automated spillover, and verified on-chain transparency.",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 import { ReferralTracker } from "@/components/common/ReferralTracker";
+import { MagicBlindBoxWidget } from "@/components/blindbox/MagicBlindBoxWidget";
 
 export default function RootLayout({
   children,
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#f1f5f9] text-[#0f172a] font-sans overflow-x-hidden selection:bg-blue-600 selection:text-white" suppressHydrationWarning>
         <ReferralTracker />
         {children}
+        <MagicBlindBoxWidget />
         <Toaster />
       </body>
     </html>

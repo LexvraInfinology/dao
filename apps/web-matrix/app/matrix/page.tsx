@@ -12,20 +12,19 @@ import {
   MatrixPositionDetails,
   MatrixDirectMembers,
   MatrixAccessGate,
+  MatrixQualificationAlert,
 } from "@/components/matrix";
-import { SlotPurchaseModal } from "@/components/matrix/SlotPurchaseModal";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export default function MatrixPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"matrix" | "list" | "level">("level");
-  const [buyingSlot, setBuyingSlot] = useState(false);
   const [directMembers, setDirectMembers] = useState<any[]>([]);
-  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
-  const [pendingSlotNumber, setPendingSlotNumber] = useState<number>(5);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -52,21 +51,15 @@ export default function MatrixPage() {
   }, [address]);
 
   const handleOpenBuyModal = (slotNum: number) => {
-    setPendingSlotNumber(slotNum);
-    setPurchaseModalOpen(true);
-  };
-
-  const handleConfirmBuySlot = async (slotNum: number, txHash?: string) => {
-    setBuyingSlot(true);
-    try {
-      await buySlot(slotNum, txHash);
-    } finally {
-      setBuyingSlot(false);
-    }
+    loadSlot(slotNum);
+    toast.info(
+      "Automated Progression ($0 Out-of-Pocket)",
+      `Slot #${slotNum} auto-unlocks when Nodes 4 & 5 fill in Slot #${Math.max(1, slotNum - 1)}.`
+    );
   };
 
   const handleCopy = (text: string) => {
-    toast.copy(text, "Wallet Address");
+    toast.copy(toTrobBase58(text), "Wallet Address");
   };
 
   const navItems = [
@@ -232,8 +225,15 @@ export default function MatrixPage() {
               A Stronger Tomorrow,<br />Built Together.
             </p>
             <div className="mt-4 pt-1">
-              <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORA_FI</div>
-              <div className="text-[9px] text-white/65 mt-0.5">Genesis DAO • dao.equora.fi</div>
+              <div className="text-[10px] font-extrabold text-white/95 tracking-wider uppercase">EQUORAFI DAO</div>
+              <a
+                href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] text-white/70 hover:text-white underline mt-0.5 transition-colors block"
+              >
+                Genesis DAO • {process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com"}
+              </a>
             </div>
           </div>
         </div>
@@ -310,33 +310,8 @@ export default function MatrixPage() {
               <span className="absolute top-2 right-2 w-[7px] h-[7px] bg-[#ef4444] rounded-full border-2 border-white" />
             </button>
 
-            {/* Wallet Pill Button */}
-            <button
-              type="button"
-              onClick={() => setWalletModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-semibold text-[#334155] hover:bg-[#f1f5f9] transition-colors cursor-pointer"
-              title="Click to connect or switch wallet"
-            >
-              {mounted && address ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="font-mono text-xs">
-                    {`${address.slice(0, 6)}...${address.slice(-4)}`}
-                  </span>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M3 4.5L6 7.5L9 4.5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="5" width="20" height="14" rx="2" />
-                    <line x1="2" y1="10" x2="22" y2="10" />
-                  </svg>
-                  <span className="font-semibold text-[#2563eb]">Connect Wallet</span>
-                </>
-              )}
-            </button>
+            {/* Wallet Dropdown & Account Switcher */}
+            <WalletDropdown />
 
             {/* User 3D Avatar Sphere */}
             <Link href="/profile" title="View Profile" className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all rounded-full flex-shrink-0">
@@ -384,27 +359,7 @@ export default function MatrixPage() {
 
             {/* Right Controls: Wallet & Account Switcher */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setWalletModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] border border-[#e2e8f0] text-[10.5px] sm:text-[11px] font-semibold text-[#1e293b] cursor-pointer transition-colors"
-                title="Click to connect or switch wallet"
-              >
-                {mounted && address ? (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="font-mono">
-                      {`${address.slice(0, 6)}...${address.slice(-4)}`}
-                    </span>
-                    <span className="text-[9px] text-[#64748b]">▼</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-[#2563eb] flex-shrink-0" />
-                    <span className="font-semibold text-[#2563eb]">Connect</span>
-                  </>
-                )}
-              </button>
+              <WalletDropdown />
             </div>
           </div>
         </div>
@@ -419,8 +374,16 @@ export default function MatrixPage() {
             onSelectSlot={loadSlot}
             onBuySlot={handleOpenBuyModal}
             profile={profile}
-            buyingSlot={buyingSlot}
           />
+
+          {/* Qualification Status & Direct Referrals Progress Alert */}
+          <div className="mb-5">
+            <MatrixQualificationAlert
+              isQualified={profile?.isQualified ?? false}
+              activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
+              referralUrl={address ? `${typeof window !== "undefined" ? window.location.origin : "https://equorafi.com"}/?ref=${toTrobBase58(address)}` : undefined}
+            />
+          </div>
 
           {/* ═══════════ VIEW SWITCHER TABS ═══════════ */}
           <MatrixViewSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -449,17 +412,6 @@ export default function MatrixPage() {
           <MatrixDirectMembers handleCopy={handleCopy} members={directMembers} />
         </main>
 
-        {/* Slot Purchase Confirmation Modal */}
-        <SlotPurchaseModal
-          isOpen={purchaseModalOpen}
-          onClose={() => setPurchaseModalOpen(false)}
-          slotNumber={pendingSlotNumber}
-          cost={
-            slots.find((s) => s.slotNumber === pendingSlotNumber)?.cost ||
-            10 * Math.pow(2, pendingSlotNumber - 1)
-          }
-          onConfirm={handleConfirmBuySlot}
-        />
 
         {/* Wallet Connection & Switcher Modal */}
         <WalletConnectModal

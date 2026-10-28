@@ -5,11 +5,11 @@ import { MatrixEarningsOverview } from "@/lib/api";
 import { useFinanceStore } from "@/lib/stores";
 
 export interface EarningsStatsGridProps {
-  onWithdrawClick: () => void;
+  onWithdrawClick?: () => void;
   earnings?: MatrixEarningsOverview | null;
 }
 
-export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: EarningsStatsGridProps) {
+export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: EarningsStatsGridProps) {
   const storeEarnings = useFinanceStore((s) => s.earnings);
   const earnings = propEarnings !== undefined ? propEarnings : storeEarnings;
   const total = earnings?.totalEarnings ?? 0;
@@ -35,10 +35,10 @@ export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: E
         </div>
 
         <div className="mt-3">
-          <div className="text-[12px] text-[#64748b] font-medium">Total Earnings</div>
+          <div className="text-[12px] text-[#64748b] font-medium">Total Lifetime Earnings</div>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">{total.toFixed(2)}</span>
-            <span className="text-[13px] font-bold text-[#2563eb]">TROB</span>
+            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">${total.toFixed(2)}</span>
+            <span className="text-[13px] font-bold text-[#2563eb]">USD</span>
           </div>
         </div>
 
@@ -50,34 +50,39 @@ export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: E
         </div>
       </div>
 
-      {/* CARD 2: Available Balance */}
+      {/* CARD 2: Direct On-Chain P2P Settlement & Instant Withdraw */}
       <div className="bg-white rounded-2xl border border-[#eef2f6] p-4 lg:p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
-          <div className="w-9 h-9 rounded-xl bg-[#eff6ff] text-[#2563eb] flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-[#ecfdf5] text-[#16a34a] flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <rect x="2.5" y="4.5" width="15" height="11" rx="2.5" stroke="#2563eb" strokeWidth="1.6" />
-              <path d="M2.5 8.5h15" stroke="#2563eb" strokeWidth="1.6" />
-              <rect x="5.5" y="11.5" width="3" height="2" rx="0.5" fill="#2563eb" />
+              <path d="M16.5 6.5L8 15L3.5 10.5" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#eff6ff] border border-[#bfdbfe] text-[#2563eb] font-bold text-[10.5px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
+            <span>Direct P2P</span>
           </div>
         </div>
 
         <div className="mt-3">
-          <div className="text-[12px] text-[#64748b] font-medium">Available Balance</div>
+          <div className="text-[12px] text-[#64748b] font-medium">Available Balance ($ USD)</div>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">{available.toFixed(2)}</span>
-            <span className="text-[13px] font-bold text-[#2563eb]">TROB</span>
+            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">${available.toFixed(2)}</span>
+            <span className="text-[13px] font-bold text-[#16a34a]">USD</span>
           </div>
         </div>
 
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={onWithdrawClick}
-            className="w-full py-1.5 lg:py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white text-[12.5px] lg:text-[13px] font-bold transition-all shadow-sm shadow-blue-500/25 flex items-center justify-center cursor-pointer"
-          >
-            Withdraw
-          </button>
+        <div className="mt-2 pt-1 flex items-center justify-between gap-1 text-[11px] lg:text-[11.5px] font-semibold text-[#16a34a]">
+          <span>✓ Instant On-Chain</span>
+          {onWithdrawClick && available > 0 && (
+            <button
+              type="button"
+              onClick={onWithdrawClick}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer shadow-xs"
+            >
+              Withdraw
+            </button>
+          )}
         </div>
       </div>
 
@@ -94,10 +99,10 @@ export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: E
         </div>
 
         <div className="mt-3">
-          <div className="text-[12px] text-[#64748b] font-medium">Pending Rewards</div>
+          <div className="text-[12px] text-[#64748b] font-medium">Standby Reserve</div>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">{pending.toFixed(2)}</span>
-            <span className="text-[13px] font-bold text-[#2563eb]">TROB</span>
+            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">${pending.toFixed(2)}</span>
+            <span className="text-[13px] font-bold text-[#2563eb]">USD</span>
           </div>
         </div>
 
@@ -106,7 +111,7 @@ export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: E
         </div>
       </div>
 
-      {/* CARD 4: Total Withdrawn */}
+      {/* CARD 4: Total Settled to Wallet */}
       <div className="bg-white rounded-2xl border border-[#eef2f6] p-4 lg:p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
           <div className="w-9 h-9 rounded-xl bg-[#eff6ff] text-[#2563eb] flex items-center justify-center">
@@ -118,15 +123,15 @@ export function EarningsStatsGrid({ onWithdrawClick, earnings: propEarnings }: E
         </div>
 
         <div className="mt-3">
-          <div className="text-[12px] text-[#64748b] font-medium">Total Withdrawn</div>
+          <div className="text-[12px] text-[#64748b] font-medium">Total Settled</div>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">{withdrawn.toFixed(2)}</span>
-            <span className="text-[13px] font-bold text-[#0f172a]">TROB</span>
+            <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">${withdrawn.toFixed(2)}</span>
+            <span className="text-[13px] font-bold text-[#0f172a]">USD</span>
           </div>
         </div>
 
         <div className="mt-2 pt-1 text-[11px] lg:text-[11.5px] font-medium text-[#64748b]">
-          <span>Settled to wallet</span>
+          <span>Settled directly on-chain</span>
         </div>
       </div>
     </div>

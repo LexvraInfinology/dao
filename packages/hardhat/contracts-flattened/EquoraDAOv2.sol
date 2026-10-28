@@ -768,7 +768,16 @@ contract EquoraDAOv2 is ReentrancyGuard {
         pendingPoolShare[msg.sender] = 0;
         totalPoolDistributed += claimable;
 
-        bool ok = paymentToken.transfer(msg.sender, claimable);
+        bool ok = false;
+        if (address(this).balance >= claimable) {
+            (bool sent, ) = payable(msg.sender).call{value: claimable}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, claimable) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit PoolShareClaimed(msg.sender, claimable, block.timestamp);

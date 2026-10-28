@@ -27,23 +27,43 @@ function cleanFlattenedCode(raw) {
 const contractsToVerify = [
   {
     name: "EquoraMatrix",
-    address: "TWZZ1ZvU2WmiEYzoXkeKjeKY66nyww2GbY",
+    address: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
     relPath: "contracts/core/EquoraMatrix.sol",
   },
   {
-    name: "EquoraDAOv2",
-    address: "TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr",
-    relPath: "contracts/core/EquoraDAOv2.sol",
+    name: "EquoraRegistry",
+    address: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
+    relPath: "contracts/core/EquoraRegistry.sol",
   },
   {
     name: "EquoraVault",
-    address: "THQBFEJsH2dBAuXQQT8LErqsjsD7hCPLfa",
+    address: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
     relPath: "contracts/core/EquoraVault.sol",
   },
   {
-    name: "EquoraRegistry",
-    address: "TCcHDFibnBsSwZhCRyvevXQfoAQ6NMyYWN",
-    relPath: "contracts/core/EquoraRegistry.sol",
+    name: "EquoraDAOv2",
+    address: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
+    relPath: "contracts/core/EquoraDAOv2.sol",
+  },
+  {
+    name: "EquoraNFT",
+    address: "TQdoa6Lud3cjnH44b7JFT4kJBGFazEbPro",
+    relPath: "contracts/rewards/EquoraNFT.sol",
+  },
+  {
+    name: "EquoraSalaryPool",
+    address: "TTgVZdoBVDkQSw1j62vMsUfZMEpx3Vqcmj",
+    relPath: "contracts/pools/EquoraSalaryPool.sol",
+  },
+  {
+    name: "EquoraRewardPool",
+    address: "TBbVrdYQjeJqQGGg19J6SPBCqiqq2btmAH",
+    relPath: "contracts/pools/EquoraRewardPool.sol",
+  },
+  {
+    name: "EquoraMagicBox",
+    address: "TLGFnvCQeCwJ83KPerHY3fGLFSx5k8WZaA",
+    relPath: "contracts/pools/EquoraMagicBox.sol",
   },
 ];
 

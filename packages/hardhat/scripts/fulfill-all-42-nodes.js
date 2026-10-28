@@ -333,6 +333,73 @@ async function main() {
   console.log(`      Filled Nodes: ${s1Slot1.filledNodes}/14 | Cycle: ${s1Slot1.currentCycle}`);
   console.log(`      Total Earned: ${(Number(s1Slot1.totalEarned) / 1e6).toFixed(2)} TROB`);
 
+  // ── HELPER: Upgrade an Existing Member to Next Slot ────────────────
+  async function upgradeMemberToSlot(memberObj, targetSlot, sponsorEvm) {
+    const signer = privateKeyToAddress(memberObj.privateKey);
+
+    // 1. Check if member already unlocked targetSlot
+    const slotData = await getSlotData(matrixHex, signer.evmAddress, targetSlot);
+    if (slotData && slotData.isUnlocked) {
+      console.log(`   ⏩ [${memberObj.label || "Member " + memberObj.memberNumber}] Already unlocked Slot ${targetSlot}. Skipping.`);
+      return;
+    }
+
+    console.log(`   -------------------------------------------------------------`);
+    console.log(`   👉 Upgrading [${memberObj.label || "Member " + memberObj.memberNumber}] to Slot ${targetSlot}`);
+    console.log(`      Address: ${signer.tronBase58} (${signer.evmAddress})`);
+    console.log(`      Sponsor: ${sponsorEvm}`);
+
+    // 2. Check balance and fund if needed
+    const currentBal = await getAccountBalance(signer.tronHex);
+    if (currentBal < baseSlotCostSun) {
+      const fundNeeded = Math.round(baseSlotCostSun * 1.05) - currentBal;
+      const transferAmount = fundNeeded > 0 ? fundNeeded : Math.round(baseSlotCostSun * 1.05);
+      console.log(`      💸 Funding ${(transferAmount / 1e6).toFixed(2)} TROB from Seat 1...`);
+      await transferTrob(seat1, signer.tronHex, transferAmount);
+    }
+
+    // 3. Call joinSlot
+    console.log(`      🚀 Calling joinSlot(${targetSlot}, ${sponsorEvm})...`);
+    const txId = await triggerJoinSlot(signer, matrixHex, targetSlot, sponsorEvm, baseSlotCostSun);
+    console.log(`      ✅ Broadcasted Tx: 0x${txId}`);
+
+    // 4. Verify on-chain receipt
+    let result = "SUCCESS";
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      await sleep(3000);
+      try {
+        const infoRes = await fetchWithRetry(`${FULLNODE_URL}/wallet/gettransactioninfobyid`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: txId }),
+        });
+        const info = await infoRes.json();
+        if (info.receipt || info.contractResult || info.contractRet) {
+          result = info.receipt?.result || info.contractResult || info.contractRet || "SUCCESS";
+          break;
+        }
+      } catch {}
+    }
+    console.log(`      On-Chain Receipt Result: ${result}`);
+
+    const record = {
+      memberNumber: memberObj.memberNumber,
+      label: `${memberObj.label || "Member " + memberObj.memberNumber} (Slot ${targetSlot})`,
+      slot: targetSlot,
+      base58: signer.tronBase58,
+      evm: signer.evmAddress,
+      privateKey: memberObj.privateKey,
+      sponsor: sponsorEvm,
+      txHash: "0x" + txId,
+      receiptResult: result,
+      timestamp: new Date().toISOString(),
+    };
+    joinedMembers.push(record);
+    fs.writeFileSync(memberHistoryPath, JSON.stringify(joinedMembers, null, 2));
+    await sleep(2000);
+    return record;
+  }
+
   // ── STEP 3: Check Slot 2 Activation & Fulfill Slot 2 (14 Nodes) ─────
   console.log(`\n================================================================`);
   console.log(`▶ STEP 3: FULFILLING SLOT 2 (14 NODES UNDER SEAT 1)`);
@@ -349,10 +416,11 @@ async function main() {
     await sleep(3000);
   }
 
-  // Fill 14 nodes on Slot 2 (Members 16 to 29)
-  for (let nodeIdx = 1; nodeIdx <= 14; nodeIdx++) {
-    const memberNum = 15 + nodeIdx; // 16 to 29
-    await registerAndJoinMember(memberNum, `Member ${memberNum} (Slot 2 Node ${nodeIdx})`, 2, seat1.evmAddress);
+  // Members 2 through 15 upgrade into Slot 2 under Seat 1
+  const slot1Members = joinedMembers.filter((m) => m.slot === 1 && m.memberNumber >= 2 && m.memberNumber <= 15);
+  console.log(`   Advancing all ${slot1Members.length} Slot 1 members into Slot 2...`);
+  for (const m of slot1Members) {
+    await upgradeMemberToSlot(m, 2, seat1.evmAddress);
   }
 
   s1Slot2 = await getSlotData(matrixHex, seat1.evmAddress, 2);
@@ -375,10 +443,10 @@ async function main() {
     await sleep(3000);
   }
 
-  // Fill 14 nodes on Slot 3 (Members 30 to 43)
-  for (let nodeIdx = 1; nodeIdx <= 14; nodeIdx++) {
-    const memberNum = 29 + nodeIdx; // 30 to 43
-    await registerAndJoinMember(memberNum, `Member ${memberNum} (Slot 3 Node ${nodeIdx})`, 3, seat1.evmAddress);
+  // Members 2 through 15 upgrade into Slot 3 under Seat 1
+  console.log(`   Advancing all ${slot1Members.length} members into Slot 3...`);
+  for (const m of slot1Members) {
+    await upgradeMemberToSlot(m, 3, seat1.evmAddress);
   }
 
   s1Slot3 = await getSlotData(matrixHex, seat1.evmAddress, 3);

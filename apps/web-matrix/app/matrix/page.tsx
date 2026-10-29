@@ -12,8 +12,8 @@ import {
   MatrixPositionDetails,
   MatrixDirectMembers,
   MatrixAccessGate,
-  MatrixQualificationAlert,
 } from "@/components/matrix";
+import { ReferralLinkCard } from "@/components/dashboard";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
@@ -390,7 +390,7 @@ export default function MatrixPage() {
 
         {/* ───────────────────────────────────────────────────────────── */}
         {/* PAGE CONTENT CONTAINER */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1400px] w-full mx-auto min-w-0">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 max-w-[1400px] w-full mx-auto min-w-0 space-y-4">
           {/* ═══════════ PAGE TITLE & TOP STATS ROW ═══════════ */}
           <MatrixStats
             slots={slots}
@@ -400,12 +400,14 @@ export default function MatrixPage() {
             profile={profile}
           />
 
-          {/* Qualification Status & Direct Referrals Progress Alert */}
-          <div className="mb-5">
-            <MatrixQualificationAlert
-              isQualified={profile?.isQualified ?? false}
-              activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
-              referralUrl={address ? `${typeof window !== "undefined" ? window.location.origin : "https://equorafi.com"}/?ref=${toTrobBase58(address)}` : undefined}
+          {/* Unified On-Chain Referral & Affiliate Link */}
+          <div>
+            <ReferralLinkCard
+              address={address}
+              directsCount={profile?.directReferralsCount ?? 0}
+              sponsorAddress={profile?.sponsorAddress}
+              upline2Address={profile?.upline2Address}
+              isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
             />
           </div>
 

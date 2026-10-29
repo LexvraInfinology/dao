@@ -93,12 +93,36 @@ export function useMatrixUser() {
     ]
   );
 
-  // Refresh when address changes
+  // Refresh when address changes & maintain 3-second live on-chain sync
   useEffect(() => {
-    if (address) {
-      refreshAll(true, true);
-    }
-  }, [address, refreshAll]);
+    if (!address) return;
+
+    // Immediate initial sync
+    refreshAll(true, true);
+
+    // 3-second live polling interval directly verifying against blockchain state
+    const interval = setInterval(() => {
+      Promise.all([
+        fetchProfile(true),
+        fetchDashboard(undefined, true),
+        fetchSlots(undefined, true),
+        fetchEarnings(undefined, true),
+        fetchSlotDetails(undefined, undefined, undefined, true),
+      ]).catch((err) => {
+        console.warn("[3s-ChainSync] Live blockchain polling notice:", err?.message);
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [
+    address,
+    refreshAll,
+    fetchProfile,
+    fetchDashboard,
+    fetchSlots,
+    fetchEarnings,
+    fetchSlotDetails,
+  ]);
 
   const changeAddress = useCallback(
     (newAddress: string) => {

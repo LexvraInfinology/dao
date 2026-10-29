@@ -375,57 +375,60 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     }
   };
 
-  // Node Component Render (Uncluttered, responsive, focused on seat number and clean status)
-  const renderNodeCard = (pos: number) => {
+  // Node Component Render (Exact Image 5 Binary Tree Style)
+  const renderTreeNode = (pos: number) => {
     const cfg = SEAT_METAS[pos];
     const node = getNodeInfo(pos);
     const filled = node.filled;
-    const styles = getCategoryStyles(cfg.type, filled);
+
+    // Node widths matching Image 5:
+    // Level 1: w-16
+    // Level 2: w-[58px]
+    // Level 3: w-[56px]
+    const widthClass = pos <= 2 ? "w-16" : pos <= 6 ? "w-[58px]" : "w-[56px]";
 
     return (
       <button
         key={pos}
         type="button"
         onClick={() => setSelectedNodeModal(cfg)}
-        className={`relative flex-1 min-w-0 rounded-xl sm:rounded-2xl border p-2 text-center flex flex-col items-center justify-between gap-1 transition-all hover:shadow-sm active:scale-95 cursor-pointer select-none ${styles.container}`}
-        title={`Position #${pos} (${cfg.fullRole}) — Click to inspect`}
+        className={`${widthClass} rounded-2xl py-2 flex flex-col items-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-2xs ${
+          filled
+            ? "bg-[#eff6ff] border border-blue-200/90 text-[#0b132b]"
+            : "bg-white border border-slate-200/90 text-slate-400 hover:border-slate-300"
+        }`}
+        title={`Position #${pos} (${cfg.fullRole}): ${filled ? `Filled by ${node.label || "Operative"}` : "Open"}`}
       >
-        {/* Top bar: Seat number and role type dot */}
-        <div className="w-full flex items-center justify-between px-0.5 leading-none">
-          <span className="text-[10px] sm:text-[11px] font-black text-slate-800">{cfg.label}</span>
-          <span className={`w-2 h-2 rounded-full ${styles.dot}`} />
-        </div>
-
-        {/* Center icon / checkmark */}
-        <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl flex items-center justify-center my-0.5 shrink-0 shadow-2xs ${styles.iconBg}`}>
+        <span className="font-bold text-[#0b132b] text-xs sm:text-sm leading-none">
+          {pos}
+        </span>
+        <span
+          className={`flex items-center gap-1 mt-1 text-[10px] ${
+            filled ? "text-[#2563eb] font-semibold" : "text-slate-400 font-medium"
+          }`}
+        >
           {filled ? (
-            <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
           ) : (
-            <Plus className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
+            <span className="w-1.5 h-1.5 rounded-full border border-blue-400" />
           )}
-        </div>
-
-        {/* Concise Status Tag (Zero clutter, perfectly legible) */}
-        <div className="w-full min-w-0">
-          <div className={`text-[10px] sm:text-[11px] font-bold truncate px-1 py-0.5 rounded-md border ${styles.badge}`}>
-            {filled ? (cfg.type === "income" ? "+$30 YOU" : node.label || cfg.role) : cfg.role}
-          </div>
-        </div>
+          {filled ? "Filled" : "Open"}
+        </span>
       </button>
     );
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#e0eaf7] p-3 sm:p-5 lg:p-6 shadow-xs w-full min-w-0 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-[#e0eaf7] p-3 sm:p-4 lg:p-5 shadow-xs w-full min-w-0 overflow-hidden">
       {/* ───────────────── HEADER & SLOT NAVIGATION ───────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-slate-100 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2.5">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-[16px] sm:text-[18px] lg:text-[20px] font-black text-[#102341] tracking-tight">
+            <h2 className="text-[16px] sm:text-[18px] font-black text-[#102341] tracking-tight">
               MATRIX VISUALIZER
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#e7f1ff] text-[#1758cc] border border-[#cde0ff]">
-              14-Seat Engine
+              14 Seats / Slot
             </span>
 
             {/* INTERACTIVE CYCLE TOGGLE PILLS */}
@@ -464,7 +467,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               </span>
             )}
           </div>
-          <p className="text-[11px] sm:text-[12px] text-slate-500 mt-1">
+          <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled •{" "}
             {isViewingSnapshot ? (
               <strong className="text-emerald-600">Cycle 1 Completed Board (14/14)</strong>
@@ -500,11 +503,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       </div>
 
       {/* ───────────────── HORIZONTAL SLOT PICKER BAR ───────────────── */}
-      <div className="py-2.5 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+      <div className="py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
           const isUnlocked = sNum <= currentActiveSlot;
-          const isCompleted = sNum <= 3; // Slots 1, 2, 3 have 14 completed nodes!
+          const isCompleted = sNum <= 3;
           return (
             <button
               key={sNum}
@@ -527,129 +530,144 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         })}
       </div>
 
-      {/* ───────────────── COLOR CODED LEGEND BAR ───────────────── */}
-      <div className="py-2 px-1 flex items-center gap-2 overflow-x-auto scrollbar-none text-[10px] font-bold border-b border-slate-100">
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200">
-          <span className="w-2 h-2 rounded-full bg-cyan-500" />
-          <span>Upline Stream (P1, P2)</span>
+      {/* ───────────────── CLEAN LEGEND (Exact Image 5 Styling) ───────────────── */}
+      <div className="py-2.5 px-1 flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-slate-600 border-b border-slate-100">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
+            Filled Position
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full border border-[#2563eb]" />
+            Open Position
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full border border-slate-300" />
+            Upcoming Position
+          </span>
         </div>
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>YOU Cashflow (+$30 Direct)</span>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-          <span className="w-2 h-2 rounded-full bg-amber-500" />
-          <span>4 Pools & Reserve (P4, P5)</span>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200">
-          <span className="w-2 h-2 rounded-full bg-purple-500" />
-          <span>Downline Spill (P7, P10)</span>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-fuchsia-50 text-fuchsia-800 border border-fuchsia-200">
-          <span className="w-2 h-2 rounded-full bg-fuchsia-500" />
-          <span>Waterfall Spill (P13)</span>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
-          <span className="w-2 h-2 rounded-full bg-rose-500" />
-          <span>Board Recycle (P14)</span>
-        </div>
+
+        {sponsor && sponsor !== "0x0000000000000000000000000000000000000000" && (
+          <div className="text-[11px] font-semibold text-slate-500">
+            Sponsor: <span className="font-mono font-bold text-[#2563eb]">{formatAddress(toTrobBase58(sponsor))}</span>
+          </div>
+        )}
       </div>
 
-      {/* ───────────────── TREE VISUALIZER CONTAINER WITH SLIDER ───────────────── */}
+      {/* ───────────────── TREE VISUALIZER CONTAINER (Exact Image 5 Binary Tree Layout) ───────────────── */}
       {viewMode === "tree" ? (
-        <div className="mt-3.5 bg-gradient-to-br from-[#f8fbff] via-[#edf5ff] to-[#f4f9ff] border border-[#d8e6f8] rounded-2xl p-2.5 sm:p-5 lg:p-6 w-full min-w-0">
-          {/* Mobile slider helper prompt */}
-          <div className="sm:hidden flex items-center justify-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50/80 border border-blue-200/60 rounded-full py-1 px-3 mb-3 mx-auto w-fit">
-            <span>← Swipe horizontally to explore tree board →</span>
+        <div className="mt-3 bg-gradient-to-b from-[#f8fbff] to-white border border-[#d8e6f8] rounded-2xl p-3 sm:p-5 w-full min-w-0">
+          <div className="py-2 sm:py-4 w-full flex justify-center overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200">
+            <div className="w-[560px] shrink-0 scale-[0.55] xs:scale-[0.68] sm:scale-[0.84] md:scale-100 origin-top flex flex-col items-center -mb-28 xs:-mb-20 sm:-mb-10 md:mb-0">
+              {/* Root Node: YOU */}
+              <div className="w-14 h-14 rounded-2xl bg-[#2563eb] text-white font-bold flex items-center justify-center shadow-md shadow-blue-500/20 text-xs sm:text-sm">
+                YOU
+              </div>
+
+              {/* Connector: Root to Level 1 */}
+              <svg
+                className="w-[560px] h-8 overflow-visible"
+                viewBox="0 0 560 32"
+                fill="none"
+              >
+                <path
+                  d="M 280 0 V 16 H 140 V 32 M 280 16 H 420 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+              </svg>
+
+              {/* Level 1: 2 Nodes (1, 2) */}
+              <div className="w-[560px] flex justify-between px-[108px]">
+                {renderTreeNode(1)}
+                {renderTreeNode(2)}
+              </div>
+
+              {/* Connector: Level 1 to Level 2 */}
+              <svg
+                className="w-[560px] h-8 overflow-visible"
+                viewBox="0 0 560 32"
+                fill="none"
+              >
+                <path
+                  d="M 140 0 V 16 H 70 V 32 M 140 16 H 210 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M 420 0 V 16 H 350 V 32 M 420 16 H 490 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+              </svg>
+
+              {/* Level 2: 4 Nodes (3, 4, 5, 6) */}
+              <div className="w-[560px] flex justify-between px-[41px]">
+                {renderTreeNode(3)}
+                {renderTreeNode(4)}
+                {renderTreeNode(5)}
+                {renderTreeNode(6)}
+              </div>
+
+              {/* Connector: Level 2 to Level 3 */}
+              <svg
+                className="w-[560px] h-8 overflow-visible"
+                viewBox="0 0 560 32"
+                fill="none"
+              >
+                <path
+                  d="M 70 0 V 16 H 35 V 32 M 70 16 H 105 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M 210 0 V 16 H 175 V 32 M 210 16 H 245 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M 350 0 V 16 H 315 V 32 M 350 16 H 385 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M 490 0 V 16 H 455 V 32 M 490 16 H 525 V 32"
+                  stroke="#bfdbfe"
+                  strokeWidth="1.5"
+                />
+              </svg>
+
+              {/* Level 3: 8 Nodes (7 through 14) */}
+              <div className="w-[560px] flex justify-between px-[7px]">
+                {[7, 8, 9, 10, 11, 12, 13, 14].map((pos) => renderTreeNode(pos))}
+              </div>
+            </div>
           </div>
 
-          <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 pb-2">
-            <div className="min-w-[620px] sm:min-w-0">
-              {/* 1. UPLINE SPONSOR CARD */}
-              <div className="flex justify-center mb-1">
-                {isVaultSponsor ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
-                    <span className="w-2 h-2 rounded-full bg-[#2868e8] animate-pulse shrink-0" />
-                    <span className="text-slate-500 font-semibold truncate">Upline Sponsor:</span>
-                    <span className="font-bold text-slate-900 truncate">Protocol Vault (4 Streams)</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="text-slate-500 font-semibold truncate">Sponsor:</span>
-                    <span className="font-mono font-bold text-slate-900 truncate">
-                      {profile?.sponsorCode ? `#${profile.sponsorCode} • ` : ""}
-                      {formatAddress(toTrobBase58(sponsor))}
-                    </span>
-                  </div>
-                )}
+          {/* Bottom Metrics: 3 Columns matching Figma */}
+          <div className="pt-4 border-t border-slate-100 grid grid-cols-3 text-left divide-x divide-slate-100 mt-3">
+            <div className="px-2 sm:px-4">
+              <div className="text-lg sm:text-xl font-black text-[#0b132b] tracking-tight">
+                {filledCount}/14
               </div>
-
-              {/* SVG Vertical Stem to Root */}
-              <div className="flex justify-center">
-                <div className="w-px h-3 sm:h-4 bg-[#93c5fd]" />
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
+                Nodes Filled
               </div>
-
-              {/* 2. ROOT NODE (YOU) */}
-              <div className="flex justify-center mb-1">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white border border-[#bfdbfe] shadow-sm text-[11px] sm:text-[12px] font-black text-[#102341] max-w-full">
-                  <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#2868e8] shadow-[0_0_0_3px_#e6f0ff] shrink-0" />
-                  <span className="truncate">YOU: ROOT OPERATIVE (SEAT 1)</span>
-                  <span className="px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 text-[10px] font-mono hidden xs:inline">
-                    #{String(selectedSlot).padStart(2, "0")}
-                  </span>
-                </div>
+            </div>
+            <div className="px-2 sm:px-4">
+              <div className="text-lg sm:text-xl font-black text-[#0b132b] tracking-tight">
+                Cycle #{currentCycle}
               </div>
-
-              {/* SVG Branching Lines: Root -> Level 1 (P1, P2) */}
-              <div className="w-full flex justify-center">
-                <svg className="w-[50%] max-w-[280px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-                  <path d="M 50 0 L 50 8 L 25 8 L 25 20 M 50 8 L 75 8 L 75 20" fill="none" stroke="#93c5fd" strokeWidth="2" />
-                </svg>
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
+                Board Cycle
               </div>
-
-              {/* 3. LEVEL 1: SEATS P1 and P2 (Upline Stream) */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto mb-1">
-                {renderNodeCard(1)}
-                {renderNodeCard(2)}
+            </div>
+            <div className="px-2 sm:px-4">
+              <div className="text-lg sm:text-xl font-black text-emerald-600 tracking-tight">
+                Live On-Chain
               </div>
-
-              {/* SVG Branching Lines: Level 1 -> Level 2 */}
-              <div className="w-full flex justify-center">
-                <svg className="w-[90%] max-w-[500px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-                  <path d="M 25 0 L 25 8 L 12.5 8 L 12.5 20 M 25 8 L 37.5 8 L 37.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
-                  <path d="M 75 0 L 75 8 L 62.5 8 L 62.5 20 M 75 8 L 87.5 8 L 87.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
-                </svg>
-              </div>
-
-              {/* 4. LEVEL 2: SEATS P3, P4, P5, P6 */}
-              <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xl mx-auto mb-1">
-                {renderNodeCard(3)}
-                {renderNodeCard(4)}
-                {renderNodeCard(5)}
-                {renderNodeCard(6)}
-              </div>
-
-              {/* SVG Branching Lines: Level 2 -> Level 3 */}
-              <div className="w-full flex justify-center">
-                <svg className="w-full max-w-[700px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-                  <path d="M 12.5 0 L 12.5 8 L 6.25 8 L 6.25 20 M 12.5 8 L 18.75 8 L 18.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-                  <path d="M 37.5 0 L 37.5 8 L 31.25 8 L 31.25 20 M 37.5 8 L 43.75 8 L 43.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-                  <path d="M 62.5 0 L 62.5 8 L 56.25 8 L 56.25 20 M 62.5 8 L 68.75 8 L 68.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-                  <path d="M 87.5 0 L 87.5 8 L 81.25 8 L 81.25 20 M 87.5 8 L 93.75 8 L 93.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-                </svg>
-              </div>
-
-              {/* 5. LEVEL 3: SEATS P7 to P14 (True binary 8-node symmetrical layout) */}
-              <div className="grid grid-cols-8 gap-1.5 sm:gap-2 max-w-4xl mx-auto">
-                {renderNodeCard(7)}
-                {renderNodeCard(8)}
-                {renderNodeCard(9)}
-                {renderNodeCard(10)}
-                {renderNodeCard(11)}
-                {renderNodeCard(12)}
-                {renderNodeCard(13)}
-                {renderNodeCard(14)}
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
+                Verified
               </div>
             </div>
           </div>

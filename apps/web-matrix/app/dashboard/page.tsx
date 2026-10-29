@@ -7,11 +7,11 @@ import {
   WelcomeBanner,
   MatrixTreePanel,
   NextPositionPanel,
-  DashboardMobileCard,
+  ReferralLinkCard,
   ProtocolPoolsPanel,
   OverviewTab,
 } from "@/components/dashboard";
-import { MatrixAccessGate, MatrixQualificationAlert } from "@/components/matrix";
+import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
@@ -371,16 +371,18 @@ export default function DashboardPage() {
         </div>
 
         {/* ═══════════ DASHBOARD MAIN CONTENT ═══════════ */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto space-y-5 bg-gradient-to-b from-[#f7fbff] via-[#f3f8ff] to-[#f7faff]">
-          {/* TAB 1: OVERVIEW (Mirrors Image 4 & Simulator) */}
+        <main className="flex-1 p-3 sm:p-4 lg:p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-[#f7fbff] via-[#f3f8ff] to-[#f7faff]">
+          {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
-            <div className="space-y-5 animate-fade-in">
+            <div className="space-y-4 animate-fade-in">
               <WelcomeBanner />
 
-              <MatrixQualificationAlert
+              <ReferralLinkCard
+                address={address}
+                directsCount={profile?.directReferralsCount ?? 0}
+                sponsorAddress={profile?.sponsorAddress}
+                upline2Address={profile?.upline2Address}
                 isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
-                activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
-                referralUrl={address ? `${typeof window !== "undefined" ? window.location.origin : "https://equorafi.com"}/?ref=${toTrobBase58(address)}` : undefined}
               />
 
               <OverviewTab
@@ -394,10 +396,10 @@ export default function DashboardPage() {
 
           {/* TAB 2: MATRIX TREE */}
           {activeTab === "matrix" && (
-            <div className="space-y-5 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#e0eaf7] gap-2">
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-[#e0eaf7] gap-2">
                 <div>
-                  <h2 className="text-[20px] font-black text-[#102341]">Matrix Position &amp; Level Flow</h2>
+                  <h2 className="text-[18px] sm:text-[20px] font-black text-[#102341]">Matrix Position &amp; Level Flow</h2>
                   <p className="text-[12px] text-[#657895]">Interactive 14-node personal tree with automated P4+P5 escalation.</p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-[#e8f1ff] text-[#2868e8] font-bold text-[11px] border border-[#cde0ff] self-start sm:self-auto">
@@ -418,16 +420,13 @@ export default function DashboardPage() {
 
           {/* TAB 3: POOLS & APEX CARDS */}
           {activeTab === "pools" && (
-            <div className="space-y-5 animate-fade-in">
+            <div className="space-y-4 animate-fade-in">
               <ProtocolPoolsPanel
                 currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
                 isQualified={profile?.isQualified ?? false}
               />
             </div>
           )}
-
-          {/* MOBILE BOTTOM CARD */}
-          <DashboardMobileCard />
         </main>
 
         {/* Safe Read-Only Wallet Connection & Test Account Modal */}

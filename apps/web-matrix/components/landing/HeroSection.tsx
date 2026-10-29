@@ -554,7 +554,7 @@ export function HeroSection() {
       </div>
 
       {/* ────────────── HERO SECTION ────────────── */}
-      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-18 sm:pt-22 lg:pt-24">
+      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-14 sm:pt-16 lg:pt-18">
         {/* Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <Image
@@ -565,27 +565,27 @@ export function HeroSection() {
             className="object-cover object-center"
           />
           {/* Subtle bottom fade to seamlessly blend into section 2 */}
-          <div className="absolute inset-x-0 bottom-0 h-16 sm:h-20 bg-gradient-to-b from-transparent to-[#f1f5f9]/90" />
+          <div className="absolute inset-x-0 bottom-0 h-14 sm:h-16 bg-gradient-to-b from-transparent to-[#f1f5f9]/90" />
         </div>
 
         {/* ────────────── HERO MAIN CONTENT ────────────── */}
-        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 lg:py-6">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-10 lg:gap-12 xl:gap-16">
+        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-4 lg:py-5">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-10 xl:gap-12">
             {/* Left Content Column */}
             <div className="w-full md:w-auto md:max-w-[430px] lg:max-w-[480px] xl:max-w-[510px] flex flex-col items-start text-left shrink-0 z-10">
               {/* Eyebrow - Plain text, wide tracking, no pill */}
-              <div className="text-xs sm:text-[13px] font-bold tracking-[0.2em] text-[#0f172a] uppercase mb-2 sm:mb-2.5">
+              <div className="text-xs sm:text-[12px] font-bold tracking-[0.2em] text-[#0f172a] uppercase mb-1.5 sm:mb-2">
                 MATRIX PLATFORM
               </div>
 
               {/* Title - Exact typography and period */}
-              <h1 className="text-3xl sm:text-4xl md:text-[36px] lg:text-[44px] xl:text-[50px] font-black text-[#0b132b] leading-[1.08] tracking-tight mb-3 sm:mb-3.5">
+              <h1 className="text-2xl sm:text-3xl md:text-[32px] lg:text-[38px] xl:text-[42px] font-black text-[#0b132b] leading-[1.12] tracking-tight mb-2.5 sm:mb-3">
                 The Matrix <br />
                 <span className="text-[#2563eb]">Built to Move.</span>
               </h1>
 
               {/* Subtitle - Exact copy from Figma */}
-              <p className="text-sm sm:text-base text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-5 sm:mb-6">
+              <p className="text-xs sm:text-[14px] text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-4 sm:mb-5">
                 Start with just $30 USD and step into a 12-slot progression
                 system. Grow your network, unlock higher tiers automatically, and
                 earn real rewards on-chain.

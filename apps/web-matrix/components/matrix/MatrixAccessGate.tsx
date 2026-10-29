@@ -57,6 +57,7 @@ import {
 } from "@/lib/web3Wallet";
 import { wakeUpExtension } from "@/lib/walletConnect";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
 import { toast } from "@/lib/toast";
 
 export interface EligibilityData {
@@ -934,17 +935,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // If currently verifying initial state, show sleek light loader
   if (checkingStatus) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-md flex items-center justify-center mb-3">
-          <Loader2 className="w-6 h-6 text-[#2563EB] animate-spin" />
-        </div>
-        <div className="text-[14px] font-bold text-[#0F172A]">
-          Verifying Matrix Identity
-        </div>
-        <div className="text-[12px] text-slate-500 mt-1">
-          Checking on-chain Slot 1 status on {NETWORK_NAME}...
-        </div>
-      </div>
+      <EquoraLogoLoader
+        message="Verifying Matrix Identity"
+        submessage={`Checking on-chain Slot 1 status on ${NETWORK_NAME}...`}
+      />
     );
   }
 

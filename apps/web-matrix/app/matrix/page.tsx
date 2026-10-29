@@ -16,8 +16,10 @@ import {
 } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
+import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
+import { getOnChainDirectMembers } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 
@@ -42,13 +44,35 @@ export default function MatrixPage() {
     profile,
     loadSlot,
     buySlot,
+    loading,
   } = useMatrixUser();
 
   React.useEffect(() => {
     if (address) {
-      matrixApi.getDirectMembers(address).then(setDirectMembers).catch(() => {});
+      getOnChainDirectMembers(address)
+        .then((members) => {
+          if (members && members.length > 0) {
+            setDirectMembers(members);
+          } else {
+            matrixApi.getDirectMembers(address).then(setDirectMembers).catch(() => {});
+          }
+        })
+        .catch(() => {
+          matrixApi.getDirectMembers(address).then(setDirectMembers).catch(() => {});
+        });
     }
   }, [address]);
+
+  if (!mounted || (loading && (!slots || slots.length === 0))) {
+    return (
+      <MatrixAccessGate>
+        <EquoraLogoLoader
+          message="Loading Matrix Grid..."
+          submessage="Querying 14-node slots and cycle tree from smart contract..."
+        />
+      </MatrixAccessGate>
+    );
+  }
 
   const handleOpenBuyModal = (slotNum: number) => {
     loadSlot(slotNum);

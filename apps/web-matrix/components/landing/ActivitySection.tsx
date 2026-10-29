@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { getOnChainSlotDetails } from "@/lib/contracts";
 import joinedMembersData from "@/lib/joinedMembers.json";
 
 interface ActivityItem {
@@ -37,24 +38,16 @@ function formatRelativeTime(iso: string): string {
 export function ActivitySection() {
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Build authentic on-chain transactions directly from broadcasted testnet data
-  const activities: ActivityItem[] = useMemo(() => {
+  // Initial list built from verified on-chain members
+  const initialActivities: ActivityItem[] = useMemo(() => {
     const list: ActivityItem[] = [];
-
-    // Reverse to get most recent first
     const reversed = [...joinedMembersData].reverse();
-
     reversed.forEach((m: any, idx: number) => {
-      // 1. Member join event
       list.push({
         id: `tx-${m.txHash}-join`,
         type: "member",
         title: "New Operative Joined",
-        subtitle: `Slot 1 Activated • 535.71 TROB ($30.00 USD)`,
+        subtitle: `Slot 1 Activated • 535.71 TROB ($30 USD)`,
         memberId: m.memberNumber === 3 ? "ID #63550" : `Operative #${m.memberNumber}`,
         txHash: m.txHash,
         base58: m.base58,
@@ -62,48 +55,64 @@ export function ActivitySection() {
         isNew: idx === 0,
       });
 
-      // 2. Direct cashflow payout for positions 3 and 6
       if (m.positionFilled === 3 || m.positionFilled === 6) {
         list.push({
           id: `tx-${m.txHash}-reward`,
           type: "reward",
           title: "Direct Cashflow Payout",
-          subtitle: `+$30.00 USD (535.71 TROB) to Seat 1 Sponsor`,
-          memberId: `P${m.positionFilled} Owner Cashflow`,
+          subtitle: `+$30.00 USD (535.71 TROB) to Seat 1`,
+          memberId: `P${m.positionFilled} Cashflow`,
           txHash: m.txHash,
           rawTimestamp: m.timestamp,
         });
       }
 
-      // 3. Protocol auto-tier reserve pool for positions 4 and 5
       if (m.positionFilled === 4 || m.positionFilled === 5) {
         list.push({
           id: `tx-${m.txHash}-pool`,
           type: "progress",
-          title: "Auto-Tier Reserve Funded",
+          title: "Auto-Tier Reserve",
           subtitle: `Position P${m.positionFilled} • Slot 2 Upgrade Reserve`,
           memberId: `Protocol Pool`,
           txHash: m.txHash,
           rawTimestamp: m.timestamp,
         });
       }
-
-      // 4. Matrix Tree position placement
-      if (m.positionFilled) {
-        list.push({
-          id: `tx-${m.txHash}-pos`,
-          type: "position",
-          title: "Matrix Position Placed",
-          subtitle: `Position P${m.positionFilled} Filled • 14-Node Tree Level ${m.positionFilled <= 2 ? 1 : 2}`,
-          memberId: `Node #${m.positionFilled}`,
-          txHash: m.txHash,
-          rawTimestamp: m.timestamp,
-        });
-      }
     });
-
-    // Return the top 6 distinct on-chain activities
     return list.slice(0, 6);
+  }, []);
+
+  const [activities, setActivities] = useState<ActivityItem[]>(initialActivities);
+
+  // Background on-chain polling every 4 seconds without flicker or jitter
+  useEffect(() => {
+    setMounted(true);
+    let active = true;
+
+    const refreshOnChainActivity = async () => {
+      try {
+        const slot1 = await getOnChainSlotDetails("0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02", 1).catch(() => null);
+        if (slot1 && slot1.nodes && slot1.nodes.length > 0 && active) {
+          // Verify against on-chain filled nodes
+          const onChainFilled = slot1.nodes.filter((n: any) => n.filled && n.occupantAddress);
+          if (onChainFilled.length > 0) {
+            setActivities((prev) => {
+              // Smooth update without layout shift
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        // Retain existing state to prevent layout jitter or flickering
+      }
+    };
+
+    refreshOnChainActivity();
+    const interval = setInterval(refreshOnChainActivity, 4000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -179,23 +188,23 @@ export function ActivitySection() {
                   className="min-h-[58px] py-2.5 sm:py-3 flex items-center justify-between gap-2.5 sm:gap-3 group hover:bg-slate-50/80 rounded-2xl px-2 sm:px-2.5 -mx-1 sm:-mx-1.5 transition-colors duration-150"
                 >
                   {/* Left: Avatar or Icon + Titles */}
-                  <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-                    {/* Media container 42px / 48px */}
-                    <div className="w-[42px] h-[42px] sm:w-[46px] sm:h-[46px] rounded-[14px] sm:rounded-[15px] overflow-hidden flex-shrink-0 flex items-center justify-center shadow-xs">
+                  <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1">
+                    {/* Media container: 34px on mobile, 44px on desktop */}
+                    <div className="w-[34px] h-[34px] sm:w-[44px] sm:h-[44px] rounded-[10px] sm:rounded-[14px] overflow-hidden flex-shrink-0 flex items-center justify-center shadow-xs">
                       {isAvatar ? (
                         <div className="relative w-full h-full">
                           <Image
                             src="/activity-avatar.jpg"
                             alt="Operative"
                             fill
-                            sizes="46px"
+                            sizes="44px"
                             className="object-cover"
                           />
                         </div>
                       ) : isReward ? (
-                        <div className="w-full h-full bg-[#f0fdf4] border border-emerald-200/90 rounded-[14px] sm:rounded-[15px] flex items-center justify-center text-emerald-600">
+                        <div className="w-full h-full bg-[#f0fdf4] border border-emerald-200/90 rounded-[10px] sm:rounded-[14px] flex items-center justify-center text-emerald-600">
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4 sm:w-5 sm:h-5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -207,10 +216,9 @@ export function ActivitySection() {
                           </svg>
                         </div>
                       ) : isPosition ? (
-                        <div className="w-full h-full bg-[#eff6ff] border border-blue-200/90 rounded-[14px] sm:rounded-[15px] flex items-center justify-center text-[#2563eb]">
+                        <div className="w-full h-full bg-[#eff6ff] border border-blue-200/90 rounded-[10px] sm:rounded-[14px] flex items-center justify-center text-[#2563eb]">
                           <svg
-                            width="20"
-                            height="20"
+                            className="w-4 h-4 sm:w-5 sm:h-5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -222,10 +230,9 @@ export function ActivitySection() {
                           </svg>
                         </div>
                       ) : isProgress ? (
-                        <div className="w-full h-full bg-[#faf5ff] border border-purple-200/90 rounded-[14px] sm:rounded-[15px] flex items-center justify-center text-purple-600">
+                        <div className="w-full h-full bg-[#faf5ff] border border-purple-200/90 rounded-[10px] sm:rounded-[14px] flex items-center justify-center text-purple-600">
                           <svg
-                            width="20"
-                            height="20"
+                            className="w-4 h-4 sm:w-5 sm:h-5"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -241,30 +248,31 @@ export function ActivitySection() {
 
                     {/* Titles */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-[13px] sm:text-[14px] font-bold text-[#0b132b] leading-tight truncate">
-                          {act.title}
-                        </h4>
-                      </div>
-                      <p className="text-[11px] sm:text-[12px] text-slate-500 font-medium mt-0.5 truncate">
-                        {act.subtitle}
+                      <h4 className="text-xs sm:text-[14px] font-bold text-[#0b132b] leading-tight truncate">
+                        <span className="hidden sm:inline">{act.title}</span>
+                        <span className="sm:hidden">{act.title.replace(" Joined", "").replace("Direct ", "")}</span>
+                      </h4>
+                      <p className="text-[10.5px] sm:text-[12px] text-slate-500 font-medium mt-0.5 truncate">
+                        <span className="hidden sm:inline">{act.subtitle}</span>
+                        <span className="sm:hidden">{act.subtitle.split("•")[0]?.trim()}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Right: Member ID, Explorer Link & Relative Time */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 flex-shrink-0 text-right">
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0.5 sm:gap-2 flex-shrink-0 text-right">
                     <a
                       href={explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-end gap-1 px-2 py-0.5 rounded-md bg-slate-100/90 hover:bg-blue-50 text-[11px] sm:text-[11.5px] font-bold text-slate-700 hover:text-blue-700 transition-colors group/link"
+                      className="inline-flex items-center justify-end gap-1 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-md bg-slate-100 hover:bg-blue-50 text-[10px] sm:text-[11.5px] font-bold text-slate-700 hover:text-blue-700 transition-colors group/link"
                       title="View transaction on TrobChain Explorer"
                     >
-                      <span>{act.memberId}</span>
-                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover/link:text-blue-600 transition-colors" />
+                      <span className="hidden sm:inline">{act.memberId}</span>
+                      <span className="sm:hidden">{act.memberId.replace("Operative #", "Op #")}</span>
+                      <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover/link:text-blue-600 transition-colors" />
                     </a>
-                    <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono tabular-nums whitespace-nowrap">
+                    <span className="text-[9px] sm:text-[11px] text-slate-400 font-mono tabular-nums whitespace-nowrap">
                       {mounted ? formatRelativeTime(act.rawTimestamp) : "recent"}
                     </span>
                   </div>

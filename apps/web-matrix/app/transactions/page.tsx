@@ -12,6 +12,7 @@ import {
 import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
+import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -21,14 +22,32 @@ export default function TransactionsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [timeframe, setTimeframe] = useState<TimeframeTab>("All Time");
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { address, changeAddress } = useMatrixUser();
   const txItems = useFinanceStore((s) => s.transactions);
+  const loadingTransactions = useFinanceStore((s) => s.loadingTransactions);
   const txStats = useFinanceStore((s) => s.transactionStats);
   const fetchTransactions = useFinanceStore((s) => s.fetchTransactions);
 
   React.useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions, address]);
+
+  if (!mounted || (loadingTransactions && (!txItems || txItems.length === 0))) {
+    return (
+      <MatrixAccessGate>
+        <EquoraLogoLoader
+          message="Loading Transaction Ledger..."
+          submessage="Fetching verified on-chain transfers and executions..."
+        />
+      </MatrixAccessGate>
+    );
+  }
 
   const copy = (t: string) => {
     toast.copy(toTrobBase58(t), "Transaction / Wallet");

@@ -145,15 +145,21 @@ export function PoolsSection() {
   useEffect(() => {
     setMounted(true);
     let active = true;
-    getOnChainProtocolPoolsStats()
-      .then((data) => {
-        if (active) setStats(data);
-      })
-      .catch((err) => {
+
+    const fetchPoolStats = async () => {
+      try {
+        const data = await getOnChainProtocolPoolsStats();
+        if (active && data) setStats(data);
+      } catch (err) {
         console.warn("[PoolsSection] Pool stats notice:", err);
-      });
+      }
+    };
+
+    fetchPoolStats();
+    const interval = setInterval(fetchPoolStats, 4000);
     return () => {
       active = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -264,47 +270,48 @@ export function PoolsSection() {
                       prev === tier.id ? null : tier.id
                     )
                   }
-                  className={`group bg-white/95 backdrop-blur-md rounded-[20px] p-4 sm:p-5 border transition-all duration-300 flex items-center justify-between gap-3 sm:gap-4 cursor-pointer ${
+                  className={`group bg-white/95 backdrop-blur-md rounded-[20px] p-3.5 sm:p-5 border transition-all duration-300 flex items-center justify-between gap-2.5 sm:gap-4 cursor-pointer ${
                     isActive
                       ? `shadow-[0_16px_36px_rgba(37,99,235,0.16)] ${tier.activeBorder} -translate-y-1 ring-2 ${tier.activeRing}`
                       : "shadow-[0_8px_30px_rgba(0,0,0,0.06)] border-white/80 hover:shadow-[0_12px_32px_rgba(37,99,235,0.12)] hover:border-blue-200/80 hover:-translate-y-0.5"
                   }`}
                 >
                   {/* Left: Icon Badge + Step & Name */}
-                  <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                  <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
                     {/* Badge */}
                     <div
-                      className={`w-12 h-12 sm:w-[52px] sm:h-[52px] rounded-2xl border ${tier.badgeBorder} ${tier.badgeBg} flex items-center justify-center shrink-0 transition-transform duration-300 ${
-                        isActive ? "scale-110" : "group-hover:scale-105"
-                      } shadow-xs p-2.5 sm:p-3`}
+                      className={`w-10 h-10 sm:w-[50px] sm:h-[50px] rounded-xl sm:rounded-2xl border ${tier.badgeBorder} ${tier.badgeBg} flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                        isActive ? "scale-105" : "group-hover:scale-105"
+                      } shadow-xs p-2 sm:p-2.5`}
                     >
                       <Image
                         src={tier.iconSrc}
                         alt={`${tier.name} icon`}
-                        width={32}
-                        height={32}
+                        width={28}
+                        height={28}
                         className="w-full h-full object-contain"
                       />
                     </div>
 
                     {/* Text Details */}
-                    <div className="min-w-0">
-                      <span className="block text-[11px] font-semibold text-slate-400 tracking-wider leading-none mb-1">
+                    <div className="min-w-0 flex-1">
+                      <span className="block text-[10px] sm:text-[11px] font-semibold text-slate-400 tracking-wider leading-none mb-1">
                         {tier.stepNumber}
                       </span>
                       <h3
-                        className={`text-[16px] sm:text-[17px] font-extrabold tracking-tight leading-tight ${tier.titleColor}`}
+                        className={`text-[15px] sm:text-[17px] font-extrabold tracking-tight leading-tight ${tier.titleColor} truncate`}
                       >
                         {tier.name}
                       </h3>
-                      <p className="text-[11px] sm:text-[12px] text-slate-500 font-normal leading-snug mt-1">
+                      <p className="text-[10.5px] sm:text-[12px] text-slate-500 font-normal leading-snug mt-0.5 line-clamp-1 sm:line-clamp-none">
                         {tier.tagline}
                       </p>
                       {mounted && (
-                        <div className="flex items-center gap-1 mt-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] font-mono text-slate-400 font-semibold">
-                            {counts[tier.id] ?? 0} Qualified Leaders On-Chain
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="text-[9.5px] sm:text-[10px] font-mono text-slate-400 font-semibold truncate">
+                            <span className="hidden sm:inline">{counts[tier.id] ?? 0} Qualified Leaders On-Chain</span>
+                            <span className="sm:hidden">{counts[tier.id] ?? 0} Qualified Leaders</span>
                           </span>
                         </div>
                       )}
@@ -312,20 +319,20 @@ export function PoolsSection() {
                   </div>
 
                   {/* Right: Slot Target & Monthly Reward */}
-                  <div className="text-right shrink-0 flex flex-col items-end justify-center pl-3">
-                    <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide block leading-none">
+                  <div className="text-right shrink-0 flex flex-col items-end justify-center pl-2 sm:pl-3">
+                    <span className="text-[9.5px] sm:text-[11px] text-slate-400 font-medium tracking-wide block leading-none">
                       Target Slot
                     </span>
                     <span
-                      className={`text-[13px] sm:text-[14px] font-extrabold leading-none mt-1 block ${tier.slotColor}`}
+                      className={`text-[12px] sm:text-[14px] font-extrabold leading-none mt-1 block ${tier.slotColor}`}
                     >
                       {tier.targetSlot}
                     </span>
 
-                    <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide block leading-none mt-2 sm:mt-2.5">
+                    <span className="text-[9.5px] sm:text-[11px] text-slate-400 font-medium tracking-wide block leading-none mt-1.5 sm:mt-2.5">
                       Monthly Reward
                     </span>
-                    <span className="text-[19px] sm:text-[22px] font-black text-[#2563eb] leading-none mt-1 block">
+                    <span className="text-[17px] sm:text-[22px] font-black text-[#2563eb] leading-none mt-0.5 sm:mt-1 block">
                       {tier.monthlyReward}
                     </span>
                   </div>

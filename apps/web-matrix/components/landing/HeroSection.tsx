@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Check, LogOut, ShieldCheck, Wallet } from "lucide-react";
+import { Copy, Check, LogOut, ShieldCheck, Wallet, LayoutDashboard } from "lucide-react";
 import { HeroVideo } from "./HeroVideo";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useUserStore } from "@/lib/stores";
@@ -17,6 +17,7 @@ import { wakeUpExtension } from "@/lib/walletConnect";
 import { getStoredUserAddress } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { isUserRegisteredInMatrix } from "@/lib/contracts";
 
 export function HeroSection() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export function HeroSection() {
   const setAddress = useUserStore((s) => s.setAddress);
   const disconnect = useUserStore((s) => s.disconnect);
   const [mounted, setMounted] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -59,12 +61,40 @@ export function HeroSection() {
     }
   }, [setAddress]);
 
-  // Navigate directly to Matrix Access Gate
-  const handleEnterMatrix = () => {
+  // Check on-chain if current address is already a registered member
+  useEffect(() => {
+    let isCurrent = true;
+    if (!address) {
+      setIsRegistered(false);
+      return;
+    }
+    isUserRegisteredInMatrix(address)
+      .then((reg) => {
+        if (isCurrent) setIsRegistered(reg);
+      })
+      .catch(() => {
+        if (isCurrent) setIsRegistered(false);
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [address]);
+
+  // Navigate to Dashboard if active, else Matrix Access Gate
+  const handleEnterMatrix = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("equora_wallet_explicit_disconnect");
     }
-    router.push("/gate");
+    if (address) {
+      const isReg = await isUserRegisteredInMatrix(address);
+      if (isReg) {
+        router.push("/dashboard");
+      } else {
+        router.push("/gate");
+      }
+      return;
+    }
+    handleConnectClick();
   };
 
   const handleConnectClick = async () => {
@@ -78,7 +108,12 @@ export function HeroSection() {
         if (connected && connected.startsWith("0x")) {
           setAddress(connected);
           toast.success("Wallet Connected", `Active: ${formatAddress(connected)}`);
-          router.push("/gate");
+          const isReg = await isUserRegisteredInMatrix(connected);
+          if (isReg) {
+            router.push("/dashboard");
+          } else {
+            router.push("/gate");
+          }
           return;
         }
       } catch (err: any) {
@@ -110,6 +145,7 @@ export function HeroSection() {
       }
     }
     setAddress("");
+    setIsRegistered(false);
     disconnect();
     setWalletDropdownOpen(false);
     setMobileMenuOpen(false);
@@ -208,18 +244,29 @@ export function HeroSection() {
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Connect / Active Wallet Dropdown Button - Visible on ALL screens including mobile */}
               <div className="relative" ref={walletDropdownRef}>
-                {mounted && address ? (
+                {mounted && address && isRegistered ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-[#1d69f0] to-[#0279e3] hover:from-blue-700 hover:to-blue-600 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+                    id="header-dashboard-link"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    <span>Dashboard</span>
+                    <span className="text-[11px] font-bold">→</span>
+                  </Link>
+                ) : mounted && address ? (
                   <>
                     <button
                       type="button"
                       onClick={() => setWalletDropdownOpen((prev) => !prev)}
-                      className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer border border-slate-700/60"
+                      className="inline-flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3.5 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer border border-slate-700/60 max-w-[130px] sm:max-w-none"
                       title="Manage Wallet"
                     >
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                      <span className="font-mono text-xs">{formatAddress(address)}</span>
+                      <span className="font-mono text-xs hidden sm:inline">{formatAddress(address)}</span>
+                      <span className="font-mono text-[11px] font-bold sm:hidden truncate">{toTrobBase58(address).slice(0, 4)}…{toTrobBase58(address).slice(-3)}</span>
                       <svg
-                        className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${walletDropdownOpen ? "rotate-180" : ""}`}
+                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${walletDropdownOpen ? "rotate-180" : ""}`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -267,19 +314,29 @@ export function HeroSection() {
                           </div>
                         </div>
 
-                        {/* Action Links */}
+                        {/* Action Link: Direct to Dashboard */}
                         <div className="space-y-1.5 mb-2">
-                          <Link
-                            href="/gate"
-                            onClick={() => setWalletDropdownOpen(false)}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setWalletDropdownOpen(false);
+                              if (address) {
+                                const isReg = await isUserRegisteredInMatrix(address);
+                                if (isReg) {
+                                  router.push("/dashboard");
+                                } else {
+                                  router.push("/gate");
+                                }
+                              }
+                            }}
                             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-700 text-xs font-semibold transition-colors group cursor-pointer"
                           >
                             <span className="flex items-center gap-2">
                               <ShieldCheck className="w-4 h-4 text-blue-600" />
-                              Matrix Access Gate
+                              Go to Matrix Dashboard
                             </span>
                             <span className="text-[11px] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                          </Link>
+                          </button>
                         </div>
 
                         {/* Disconnect Button */}
@@ -301,7 +358,8 @@ export function HeroSection() {
                     className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#38bdf8]" />
-                    <span>Connect Wallet</span>
+                    <span className="hidden sm:inline">Connect Wallet</span>
+                    <span className="sm:hidden text-xs">Connect</span>
                   </button>
                 )}
               </div>
@@ -453,12 +511,21 @@ export function HeroSection() {
               </div>
 
               <Link
-                href="/gate"
+                href={isRegistered ? "/dashboard" : "/gate"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3 px-4 rounded-xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all cursor-pointer text-center"
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Matrix Access Gate</span>
+                {isRegistered ? (
+                  <>
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Go to Dashboard</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Matrix Access Gate</span>
+                  </>
+                )}
               </Link>
 
               <button
@@ -525,16 +592,16 @@ export function HeroSection() {
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3.5 sm:gap-4.5 mb-5 sm:mb-6">
+              <div className="flex items-center gap-2.5 sm:gap-4.5 mb-5 sm:mb-6 w-full flex-nowrap">
                 {/* Primary: Start Now → Direct Matrix Buy Gate */}
                 <button
                   type="button"
                   onClick={handleEnterMatrix}
-                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-sm sm:text-base inline-flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95 cursor-pointer"
+                  className="px-4 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-xs sm:text-base inline-flex items-center gap-1.5 sm:gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
                 >
-                  <span>Start Now</span>
+                  <span>{isRegistered ? "Enter Dashboard" : "Start Now"}</span>
                   <svg
-                    className="w-4 h-4"
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"
@@ -548,23 +615,24 @@ export function HeroSection() {
                   </svg>
                 </button>
 
-                {/* Secondary: Watch Our Story */}
+                {/* Secondary: Watch Our Story (displays 'Watch' on mobile to stay on one single row) */}
                 <button
                   type="button"
                   onClick={() => {
                     const el = document.getElementById("about");
                     if (el) el.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="inline-flex items-center group cursor-pointer"
+                  className="inline-flex items-center group cursor-pointer shrink-0 whitespace-nowrap"
                   suppressHydrationWarning
                 >
-                  <span className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-full bg-white shadow-md flex items-center justify-center text-[#0b132b] group-hover:scale-105 transition-transform">
-                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+                  <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white shadow-md flex items-center justify-center text-[#0b132b] group-hover:scale-105 transition-transform shrink-0">
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </span>
-                  <span className="ml-2.5 sm:ml-3 text-sm sm:text-base font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
-                    Watch Our Story
+                  <span className="ml-2 sm:ml-3 text-xs sm:text-base font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    <span className="sm:hidden">Watch</span>
+                    <span className="hidden sm:inline">Watch Our Story</span>
                   </span>
                 </button>
               </div>
@@ -604,8 +672,8 @@ export function HeroSection() {
               </div>
             </div>
 
-            {/* Right Visual Column - Hero Video */}
-            <div className="w-full md:w-auto flex items-center justify-center shrink-0">
+            {/* Right Visual Column - Hero Video (edge-to-edge on mobile with 0 gap) */}
+            <div className="w-[calc(100%+2rem)] -mx-4 sm:w-[calc(100%+3rem)] sm:-mx-6 md:w-auto md:mx-0 flex items-center justify-center shrink-0 mt-3 md:mt-0">
               <HeroVideo />
             </div>
           </div>
@@ -617,13 +685,18 @@ export function HeroSection() {
         isOpen={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
         currentAddress={address || undefined}
-        onSelectAddress={(newAddr) => {
+        onSelectAddress={async (newAddr) => {
           if (typeof window !== "undefined") {
             localStorage.removeItem("equora_wallet_explicit_disconnect");
           }
           setAddress(newAddr);
           setWalletModalOpen(false);
-          router.push("/gate");
+          const isReg = await isUserRegisteredInMatrix(newAddr);
+          if (isReg) {
+            router.push("/dashboard");
+          } else {
+            router.push("/gate");
+          }
         }}
         onDisconnect={handleDisconnectWallet}
       />

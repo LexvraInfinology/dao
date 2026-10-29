@@ -31,7 +31,8 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const percent = Math.min(Math.round((filledNodes / 14) * 100), 100);
   const remaining = Math.max(14 - filledNodes, 0);
   const nextSlotNum = Math.min(slotNum + 1, 12);
-  const yieldTrob = slotDetails?.totalEarned !== undefined ? slotDetails.totalEarned : (slotDetails?.isUnlocked ? 0 : 0);
+  const yieldUsd = slotDetails?.totalEarnedUsd !== undefined ? slotDetails.totalEarnedUsd : (slotDetails?.totalEarned || 0);
+  const yieldTrob = slotDetails?.totalEarnedTrob !== undefined ? slotDetails.totalEarnedTrob : (yieldUsd / 0.03174);
 
   return (
     <div className="bg-white border border-[#e8ecf1] rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xs flex flex-col justify-between min-w-0">
@@ -109,7 +110,10 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
 
           <div className="pt-2 border-t border-[#e2e8f0]/60 flex items-center justify-between text-[12.5px] sm:text-[13px]">
             <span className="font-semibold text-[#64748b]">Total Position Yield</span>
-            <span className="font-black text-[#2563eb] text-[15px] sm:text-[16px]">${yieldTrob.toFixed(2)} USD</span>
+            <div className="text-right">
+              <span className="font-black text-[#2563eb] text-[15px] sm:text-[16px]">${yieldUsd.toFixed(2)} USD</span>
+              <span className="block text-[10.5px] font-bold text-[#64748b]">{yieldTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB</span>
+            </div>
           </div>
         </div>
       </div>

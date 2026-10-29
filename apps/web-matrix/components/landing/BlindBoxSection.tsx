@@ -13,15 +13,21 @@ export function BlindBoxSection() {
   useEffect(() => {
     setMounted(true);
     let active = true;
-    getOnChainProtocolPoolsStats()
-      .then((data) => {
-        if (active) setStats(data);
-      })
-      .catch((err) => {
+
+    const fetchPoolStats = async () => {
+      try {
+        const data = await getOnChainProtocolPoolsStats();
+        if (active && data) setStats(data);
+      } catch (err) {
         console.warn("[BlindBoxSection] Pool stats notice:", err);
-      });
+      }
+    };
+
+    fetchPoolStats();
+    const interval = setInterval(fetchPoolStats, 4000);
     return () => {
       active = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -121,8 +127,13 @@ export function BlindBoxSection() {
             </div>
 
             {/* Subtext */}
-            <p className="text-[12px] sm:text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug font-mono truncate">
-              {mounted ? `${effectivePoolTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : "0.00 TROB"} • 10% Protocol Allocation
+            <p className="text-[11.5px] sm:text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug font-mono truncate">
+              <span className="hidden sm:inline">
+                {mounted ? `${effectivePoolTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : "0.00 TROB"} • 10% Protocol Allocation
+              </span>
+              <span className="sm:hidden">
+                {mounted ? `${effectivePoolTrob.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} TROB` : "0.0 TROB"} • 10% Protocol
+              </span>
             </p>
 
             {/* Progress Bar */}

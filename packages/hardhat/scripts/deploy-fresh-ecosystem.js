@@ -39,6 +39,30 @@ function hexToBase58(hexStr) {
   return encode58(Buffer.concat([buf, checksum]));
 }
 
+function base58ToHex(b58) {
+  const bytes = [0];
+  for (let i = 0; i < b58.length; i++) {
+    const c = b58[i];
+    const val = ALPHABET.indexOf(c);
+    if (val === -1) throw new Error("Invalid base58 character: " + c);
+    for (let j = 0; j < bytes.length; j++) bytes[j] *= 58;
+    bytes[0] += val;
+    let carry = 0;
+    for (let j = 0; j < bytes.length; j++) {
+      bytes[j] += carry;
+      carry = bytes[j] >> 8;
+      bytes[j] &= 0xff;
+    }
+    while (carry) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+  for (let i = 0; i < b58.length && b58[i] === "1"; i++) bytes.push(0);
+  const buf = Buffer.from(bytes.reverse());
+  return buf.subarray(0, buf.length - 4).toString("hex");
+}
+
 function privateKeyToAddress(privKeyHex) {
   const clean = privKeyHex.startsWith("0x") ? privKeyHex : "0x" + privKeyHex;
   const wallet = new ethers.Wallet(clean);
@@ -115,62 +139,78 @@ async function deployContractToTrob(name, artifactRelativePath, constructorParam
     name: name,
   };
 
-  const createRes = await fetchWithRetry(`${FULLNODE_URL}/wallet/deploycontract`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const createRes = await fetchWithRetry(`${FULLNODE_URL}/wallet/deploycontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-  const createData = await createRes.json();
-  if (createData.Error) {
-    throw new Error(`deploycontract failed: ${createData.Error}`);
+      const createData = await createRes.json();
+      if (createData.Error) {
+        throw new Error(`deploycontract failed: ${createData.Error}`);
+      }
+
+      const txID = createData.txID;
+      const contractAddressHex = createData.contract_address;
+      const contractAddressBase58 = hexToBase58(contractAddressHex);
+
+      console.log(`   txID: ${txID}`);
+      console.log(`   Contract Base58: ${contractAddressBase58}`);
+      console.log(`   Contract Hex:    ${contractAddressHex}`);
+
+      await broadcastTransaction(deployer, createData);
+      console.log(`   Waiting 12s for on-chain block confirmation...`);
+      await sleep(12000);
+
+      return {
+        name,
+        addressBase58: contractAddressBase58,
+        addressHex: contractAddressHex,
+        txHash: "0x" + txID,
+      };
+    } catch (err) {
+      console.warn(`   ⚠️ Deploy attempt ${attempt} for ${name} failed: ${err.message}`);
+      if (attempt === 4) throw err;
+      await sleep(3500);
+    }
   }
-
-  const txID = createData.txID;
-  const contractAddressHex = createData.contract_address;
-  const contractAddressBase58 = hexToBase58(contractAddressHex);
-
-  console.log(`   txID: ${txID}`);
-  console.log(`   Contract Base58: ${contractAddressBase58}`);
-  console.log(`   Contract Hex:    ${contractAddressHex}`);
-
-  await broadcastTransaction(deployer, createData);
-  console.log(`   Waiting 12s for on-chain block confirmation...`);
-  await sleep(12000);
-
-  return {
-    name,
-    addressBase58: contractAddressBase58,
-    addressHex: contractAddressHex,
-    txHash: "0x" + txID,
-  };
 }
 
 async function triggerContractMethod(deployer, contractHex, functionSelector, parameterHex, description) {
   console.log(`\n⚡ Calling: ${description}...`);
-  const triggerRes = await fetchWithRetry(`${FULLNODE_URL}/wallet/triggersmartcontract`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner_address: deployer.tronHex,
-      contract_address: contractHex,
-      function_selector: functionSelector,
-      parameter: parameterHex ? parameterHex.replace(/^0x/, "") : "",
-      fee_limit: 100000000,
-      call_value: 0,
-    }),
-  });
-  const triggerData = await triggerRes.json();
-  if (!triggerData.result || !triggerData.transaction) {
-    const msg = triggerData.Error || JSON.stringify(triggerData);
-    throw new Error(`triggersmartcontract failed: ${msg}`);
-  }
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const triggerRes = await fetchWithRetry(`${FULLNODE_URL}/wallet/triggersmartcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: deployer.tronHex,
+          contract_address: contractHex,
+          function_selector: functionSelector,
+          parameter: parameterHex ? parameterHex.replace(/^0x/, "") : "",
+          fee_limit: 100000000,
+          call_value: 0,
+        }),
+      });
+      const triggerData = await triggerRes.json();
+      if (!triggerData.result || !triggerData.transaction) {
+        const msg = triggerData.Error || JSON.stringify(triggerData);
+        throw new Error(`triggersmartcontract failed: ${msg}`);
+      }
 
-  await broadcastTransaction(deployer, triggerData.transaction);
-  console.log(`   Tx broadcast: 0x${triggerData.transaction.txID}. Waiting 8s...`);
-  await sleep(8000);
-  console.log(`   ✅ Confirmed!`);
-  return triggerData.transaction.txID;
+      await broadcastTransaction(deployer, triggerData.transaction);
+      console.log(`   Tx broadcast: 0x${triggerData.transaction.txID}. Waiting 8s...`);
+      await sleep(8000);
+      console.log(`   ✅ Confirmed!`);
+      return triggerData.transaction.txID;
+    } catch (err) {
+      console.warn(`   ⚠️ Method attempt ${attempt} for ${description} failed: ${err.message}`);
+      if (attempt === 4) throw err;
+      await sleep(3500);
+    }
+  }
 }
 
 async function callConstant(contractHex, functionSelector, parameterHex = "") {
@@ -418,6 +458,26 @@ async function main() {
     "EquoraMatrix.setTrobPrice(31740 -> $0.03174 USD)"
   );
 
+  // K. Register 2 DAO IDs on EquoraDAOv2 (Seat 1 Founder + Seat 2 Member)
+  console.log("\n======================================================");
+  console.log("🏛️ REGISTERING 2 DAO MEMBERS ON-CHAIN");
+  console.log("======================================================");
+  const dao1Evm = seat1.evmAddress;
+  const dao2Hex = base58ToHex("THB9S4bRBzR6Zwt4fz3hAfi3TC3AC6pLhx");
+  const dao2Evm = "0x" + dao2Hex.slice(2);
+
+  const migrateParams = coder.encode(
+    ["address[]", "uint256[]", "uint256[]"],
+    [[dao1Evm, dao2Evm], [1, 2], [0, 0]]
+  );
+  await triggerContractMethod(
+    deployer,
+    dao.addressHex,
+    "migrateGenuineMembers(address[],uint256[],uint256[])",
+    migrateParams,
+    "EquoraDAOv2.migrateGenuineMembers(Seat 1 & Seat 2)"
+  );
+
   // ══════════════════════════════════════════════════════════════════
   // ON-CHAIN VERIFICATION
   // ══════════════════════════════════════════════════════════════════
@@ -498,8 +558,12 @@ async function main() {
 
   // Reset joined-members.json for fresh start
   const membersPath = path.resolve(__dirname, "../joined-members.json");
+  const webMembersPath = path.resolve(__dirname, "../../../apps/web-matrix/lib/joinedMembers.json");
   fs.writeFileSync(membersPath, JSON.stringify([], null, 2), "utf8");
-  console.log(`💾 Reset joined-members.json for clean 42-node run.`);
+  if (fs.existsSync(path.dirname(webMembersPath))) {
+    fs.writeFileSync(webMembersPath, JSON.stringify([], null, 2), "utf8");
+  }
+  console.log(`💾 Reset joined-members.json and web-matrix/lib/joinedMembers.json for clean run.`);
 
   console.log("\n🎉 ENTIRE FRESH ECOSYSTEM DEPLOYED & WIRED ON TESTNET!");
   console.log(`   Registry:   ${registry.addressBase58}`);

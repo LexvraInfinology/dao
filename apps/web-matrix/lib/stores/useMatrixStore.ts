@@ -126,7 +126,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     set({ loadingDetails: true, error: null });
     try {
       // 1. Prioritize live on-chain 14-node board data
-      const onChainDetails = await getOnChainSlotDetails(addr, targetSlot);
+      const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, targetCycle);
       if (onChainDetails) {
         set({
           slotDetails: onChainDetails,
@@ -259,20 +259,31 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           },
           recentActivity: (onChainDetails?.nodes || [])
             .filter((n: any) => n.filled)
-            .map((n: any) => ({
-              id: `onchain-pos-${n.position}`,
-              slot: 1,
-              position: n.position,
-              amount: n.amount || 535.714285,
-              amountUsd: 30.0,
-              token: "TROB",
-              fromAddress: n.placedUser,
-              toAddress: addr,
-              txHash: null,
-              status: "CONFIRMED",
-              description: `Position #${n.position} filled by ${n.code ? `Operative #${n.code}` : (n.placedUser ? n.placedUser.slice(0, 6) : "Member")} (${n.payoutType})`,
-              timestamp: n.timestamp || new Date().toISOString(),
-            })),
+            .map((n: any) => {
+              const pos = n.position;
+              const isP2P = pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12;
+              const action = isP2P ? "COMMISSION_RECEIVED" : "MEMBER_JOINED";
+              const title = isP2P
+                ? `P2P Direct Yield Received (+$30.00)`
+                : `Seat P${pos} Activated (${n.label || `Member #${pos + 1}`})`;
+
+              return {
+                id: `onchain-pos-${pos}`,
+                action,
+                title,
+                slot: 1,
+                position: pos,
+                amount: n.amount || 945.18,
+                amountUsd: 30.0,
+                token: "TROB",
+                fromAddress: n.placedUser || n.base58,
+                toAddress: addr,
+                txHash: n.txHash || null,
+                status: "CONFIRMED",
+                description: `Position #${pos} placed • ${n.label || (n.code ? `Operative #${n.code}` : "Downline")} (${n.payoutType || "+$30 Yield"})`,
+                timestamp: n.timestamp || new Date().toISOString(),
+              };
+            }),
           isQualified: onChainQual?.isQualified ?? onChainProf?.isQualified ?? false,
           activeDirectsCount: onChainQual?.activeDirectsCount ?? onChainProf?.activeDirectsCount ?? 0,
           sponsorAddress: onChainProf?.sponsorAddress || null,

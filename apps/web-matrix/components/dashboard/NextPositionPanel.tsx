@@ -89,25 +89,18 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             </svg>
           </Link>
         </div>
-        <div className="flex gap-4 sm:gap-6 mb-5">
+        <div className="mb-5">
           <div>
             <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Total Earned</span>
-            <div className="text-[24px] sm:text-[28px] font-extrabold text-[#0f172a] leading-none mt-1">
+            <div className="text-[28px] sm:text-[32px] font-extrabold text-[#0f172a] leading-none mt-1">
               ${totalEarnedUsd.toFixed(2)}
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[12px] font-semibold text-[#94a3b8]">USD</span>
-              <span className="text-[11px] font-medium text-[#64748b]">Lifetime Total</span>
-            </div>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Settled</span>
-            <div className="text-[24px] sm:text-[28px] font-extrabold text-[#16a34a] leading-none mt-1">
-              ${availableUsd.toFixed(2)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[12px] font-semibold text-[#16a34a]">USD</span>
-              <span className="text-[11px] font-medium text-[#16a34a]">Direct P2P</span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className="text-[12px] font-bold text-[#2563eb]">
+                {data?.totalEarnedTrob ? `${data.totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB` : "Live P2P Yield"}
+              </span>
+              <span className="text-[#cbd5e1]">•</span>
+              <span className="text-[11px] font-semibold text-[#64748b]">On-Chain Lifetime Total</span>
             </div>
           </div>
         </div>

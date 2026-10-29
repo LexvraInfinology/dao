@@ -218,11 +218,130 @@ function getFallbackEarningsOverview(): MatrixEarningsOverviewDTO {
   };
 }
 
+const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function decode58(string: string): Uint8Array | null {
+  if (string.length === 0) return new Uint8Array(0);
+  const bytes = [0];
+  for (let i = 0; i < string.length; i++) {
+    const c = string[i];
+    const value = B58_ALPHABET.indexOf(c);
+    if (value === -1) return null;
+    for (let j = 0; j < bytes.length; j++) bytes[j] *= 58;
+    bytes[0] += value;
+    let carry = 0;
+    for (let j = 0; j < bytes.length; j++) {
+      bytes[j] += carry;
+      carry = bytes[j] >> 8;
+      bytes[j] &= 0xff;
+    }
+    while (carry) {
+      bytes.push(carry & 0xff);
+      carry >>= 8;
+    }
+  }
+  for (let i = 0; i < string.length && string[i] === "1"; i++) bytes.push(0);
+  return new Uint8Array(bytes.reverse());
+}
+
+export function toCanonicalAddress(input?: string | null): string {
+  if (!input) return "0x0000000000000000000000000000000000000000";
+  const str = input.trim();
+  if (str.startsWith("0x") || str.startsWith("0X")) return str.toLowerCase();
+  if (str.startsWith("41") && str.length === 42) return `0x${str.slice(2)}`.toLowerCase();
+
+  if (str.startsWith("T") && str.length === 34) {
+    const decoded = decode58(str);
+    if (decoded && decoded.length >= 21) {
+      return (
+        "0x" +
+        Array.from(decoded.slice(1, 21))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+          .toLowerCase()
+      );
+    }
+  }
+  return str.toLowerCase();
+}
+
+const MATRIX_CONTRACT_HEX = "413171872223e0e482bb6bbc2cd837d5b1c9f95f78";
+const TROB_TESTNET_RPC = process.env.TROB_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one-testnet.trobchain.com";
+const userLastSyncTime = new Map<string, number>();
+
+export async function syncUserFromChain(userAddress: string, force = false): Promise<void> {
+  const canonical = toCanonicalAddress(userAddress);
+  if (!canonical || canonical === "0x0000000000000000000000000000000000000000") return;
+
+  const now = Date.now();
+  const lastSync = userLastSyncTime.get(canonical) || 0;
+  if (!force && now - lastSync < 10000) return;
+  userLastSyncTime.set(canonical, now);
+
+  try {
+    const userHexParam = canonical.slice(2).padStart(64, "0");
+    const syncPromises = Array.from({ length: 12 }, async (_, i) => {
+      const slot = i + 1;
+      const param = userHexParam + slot.toString(16).padStart(64, "0");
+      try {
+        const res = await fetch(`${TROB_TESTNET_RPC}/wallet/triggersmartcontract`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner_address: MATRIX_CONTRACT_HEX,
+            contract_address: MATRIX_CONTRACT_HEX,
+            function_selector: "getSlotData(address,uint256)",
+            parameter: param,
+            visible: false,
+          }),
+        });
+        const data: any = await res.json();
+        if (data && data.constant_result && data.constant_result.length > 0) {
+          const hex = data.constant_result[0];
+          const isUnlocked = parseInt(hex.slice(0, 64), 16) === 1;
+          if (isUnlocked) {
+            const cycle = parseInt(hex.slice(64, 128), 16) || 1;
+            const filled = parseInt(hex.slice(128, 192), 16) || 0;
+            const earned = parseInt(hex.slice(256, 320), 16) / 1e6 || 0;
+
+            await prisma.matrixSlot.upsert({
+              where: {
+                userAddress_slotNumber: {
+                  userAddress: canonical,
+                  slotNumber: slot,
+                },
+              },
+              update: {
+                isUnlocked: true,
+                currentCycle: cycle,
+                filledNodes: filled,
+                totalEarned: earned,
+              },
+              create: {
+                userAddress: canonical,
+                slotNumber: slot,
+                isUnlocked: true,
+                currentCycle: cycle,
+                filledNodes: filled,
+                totalEarned: earned,
+              },
+            });
+          }
+        }
+      } catch {}
+    });
+
+    await Promise.all(syncPromises);
+  } catch (err: any) {
+    console.warn(`[syncUserFromChain] Notice for ${canonical}:`, err?.message || err);
+  }
+}
+
 const inMemorySettingsCache = new Map<string, MatrixSettingsDTO>();
 
 export async function isUserMatrixQualified(address: string): Promise<boolean> {
   if (!address || address === "0x0000000000000000000000000000000000000000") return false;
-  const canonical = address.toLowerCase();
+  const canonical = toCanonicalAddress(address);
   const user = await prisma.user.findUnique({
     where: { address: canonical },
     select: { isQualified: true, userId: true, sponsorAddress: true },
@@ -246,7 +365,7 @@ export class MatrixService {
   // ── USER LIFECYCLE & PROFILE ──────────────────────────────────────────────
 
   async getOrCreateUser(address: string, sponsorAddress?: string): Promise<MatrixUserProfileDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     try {
       let user = await prisma.user.findUnique({
@@ -372,7 +491,7 @@ export class MatrixService {
   }
 
   async getUserProfile(address: string, sponsorAddress?: string): Promise<MatrixUserProfileDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     try {
       let user = await prisma.user.findUnique({
@@ -449,7 +568,7 @@ export class MatrixService {
       twitter?: string;
     }
   ): Promise<MatrixUserProfileDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     await prisma.matrixProfile.upsert({
       where: { userAddress: canonicalAddress },
@@ -476,7 +595,8 @@ export class MatrixService {
   // ── SLOTS & MATRIX NAVIGATION ─────────────────────────────────────────────
 
   async getUserSlots(address: string): Promise<MatrixSlotSummaryDTO[]> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
+    await syncUserFromChain(canonicalAddress).catch(() => {});
     try {
       const slots = await prisma.matrixSlot.findMany({
         where: { userAddress: canonicalAddress },
@@ -511,7 +631,7 @@ export class MatrixService {
     slotNumber: number,
     cycle?: number
   ): Promise<MatrixSlotDetailsDTO | null> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     try {
       const slot = await prisma.matrixSlot.findUnique({
@@ -624,7 +744,7 @@ export class MatrixService {
     txHash?: string,
     sponsorAddress?: string
   ): Promise<{ success: boolean; slot: MatrixSlotSummaryDTO; message: string }> {
-    const canonicalAddress = userAddress.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(userAddress);
 
     if (slotNumber < 1 || slotNumber > 12) {
       throw new Error("Invalid slot number (must be 1-12)");
@@ -1172,7 +1292,8 @@ export class MatrixService {
   // ── DASHBOARD AGGREGATE ───────────────────────────────────────────────────
 
   async getDashboardOverview(address: string): Promise<MatrixDashboardDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
+    await syncUserFromChain(canonicalAddress).catch(() => {});
     try {
       const user = await this.getOrCreateUser(canonicalAddress);
 
@@ -1339,7 +1460,7 @@ export class MatrixService {
   }
 
   async getUserRank(address: string): Promise<{ rank: number; totalUsers: number }> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
     const userProfile = await prisma.matrixProfile.findUnique({
       where: { userAddress: canonicalAddress },
     });
@@ -1372,7 +1493,7 @@ export class MatrixService {
       netProfit: number;
     };
   }> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
     const page = options.page || 1;
     const limit = options.limit || 15;
     const skip = (page - 1) * limit;
@@ -1462,7 +1583,7 @@ export class MatrixService {
   // ── EARNINGS & WITHDRAWALS ─────────────────────────────────────────────────
 
   async getEarningsOverview(address: string): Promise<MatrixEarningsOverviewDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
     try {
       const user = await this.getUserProfile(canonicalAddress);
 
@@ -1530,7 +1651,7 @@ export class MatrixService {
     amount: number,
     customTxHash?: string
   ): Promise<{ success: boolean; amountWithdrawn: number; txHash: string; remainingBalance: number }> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     if (amount <= 0) throw new Error("Withdrawal amount must be greater than zero");
 
@@ -1604,7 +1725,7 @@ export class MatrixService {
   // ── SETTINGS ──────────────────────────────────────────────────────────────
 
   async getUserSettings(address: string): Promise<MatrixSettingsDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     try {
       const user = await prisma.user.findUnique({
@@ -1722,7 +1843,7 @@ export class MatrixService {
     address: string,
     data: Partial<MatrixSettingsDTO>
   ): Promise<MatrixSettingsDTO> {
-    const canonicalAddress = address.toLowerCase();
+    const canonicalAddress = toCanonicalAddress(address);
 
     const notifs = data.notifications || {};
     const effectiveTelegram =

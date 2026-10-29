@@ -70,7 +70,19 @@ export function RecentActivityPanel({ activities: propActivities }: RecentActivi
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[13px] font-bold text-[#0f172a] block">{act.title}</span>
-                <span className="text-[11px] text-[#94a3b8] truncate block">{act.description}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[11px] text-[#94a3b8] truncate block">{act.description}</span>
+                  {act.txHash && (
+                    <a
+                      href={`https://trobscan.com/tx/${act.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 shrink-0"
+                    >
+                      Tx Scan ↗
+                    </a>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span className="text-[11px] text-[#94a3b8]">{timeAgo(act.timestamp)}</span>

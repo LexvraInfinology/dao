@@ -150,6 +150,8 @@ export interface MatrixSlotSummary {
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;
+  totalEarnedUsd?: number;
+  totalEarnedTrob?: number;
   unlockedAt: string | null;
 }
 
@@ -179,6 +181,8 @@ export interface MatrixSlotDetails {
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;
+  totalEarnedUsd?: number;
+  totalEarnedTrob?: number;
   nodes: MatrixNodePlacement[];
 }
 

@@ -1,8 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { getOnChainSlotDetails } from "@/lib/contracts";
 
 export function MatrixMechanismSection() {
+  const [filledNodes, setFilledNodes] = useState<number>(3);
+  const [nodesData, setNodesData] = useState<boolean[]>([
+    true, true, true, false, false, false, false, false, false, false, false, false, false, false
+  ]);
+
+  // Real-time on-chain polling every 4 seconds without flicker
+  useEffect(() => {
+    let active = true;
+    const fetchTreeData = async () => {
+      try {
+        const slot1 = await getOnChainSlotDetails("0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02", 1).catch(() => null);
+        if (slot1 && slot1.nodes && active) {
+          const filled = slot1.nodes.map((n: any) => Boolean(n.filled));
+          setNodesData(filled);
+          setFilledNodes(slot1.filledNodes || filled.filter(Boolean).length);
+        }
+      } catch {}
+    };
+    fetchTreeData();
+    const interval = setInterval(fetchTreeData, 4000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
   return (
     <section
       id="levels"
@@ -117,9 +143,9 @@ export function MatrixMechanismSection() {
                 </div>
               </div>
 
-              {/* Matrix Binary Tree Visual Container */}
-              <div className="py-6 sm:py-8 w-full overflow-x-auto overflow-y-hidden">
-                <div className="w-[560px] mx-auto flex flex-col items-center">
+              {/* Matrix Binary Tree Visual Container - Fluid Responsive Scale */}
+              <div className="py-4 sm:py-8 w-full flex justify-center overflow-hidden">
+                <div className="w-[560px] shrink-0 scale-[0.52] xs:scale-[0.65] sm:scale-[0.82] md:scale-100 origin-top flex flex-col items-center -mb-32 xs:-mb-24 sm:-mb-12 md:mb-0">
                   {/* Root Node: YOU */}
                   <div className="w-14 h-14 rounded-2xl bg-[#2563eb] text-white font-bold flex items-center justify-center shadow-md shadow-blue-500/20 text-xs sm:text-sm">
                     YOU
@@ -286,7 +312,7 @@ export function MatrixMechanismSection() {
               <div className="pt-6 border-t border-slate-100 grid grid-cols-3 text-left divide-x divide-slate-100">
                 <div className="px-2 sm:px-4 md:px-6">
                   <div className="text-xl sm:text-2xl lg:text-3xl font-black text-[#0b132b] tracking-tight">
-                    1/14
+                    {filledNodes}/14
                   </div>
                   <div className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5 whitespace-normal sm:whitespace-nowrap">
                     Nodes Filled

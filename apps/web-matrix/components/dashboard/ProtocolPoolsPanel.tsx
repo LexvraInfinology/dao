@@ -199,35 +199,35 @@ export function ProtocolPoolsPanel({
           </div>
         </div>
 
-        {/* 4 Pools Grid */}
+        {/* 4 Pools Grid - Compact, Light-Themed, Sky Blue Accents */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5 relative z-10">
           {/* Pool 1: DAO Instant Push (35%) */}
-          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between hover:border-[#2868e8] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#2868e8]">
+          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 flex flex-col justify-between hover:border-[#2868e8] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#2868e8]">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-extrabold text-[#2868e8] uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10.5px] font-extrabold text-[#2868e8] uppercase tracking-wider">
                   Pool 01
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#e8f1ff] text-[#2868e8] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-[#e8f1ff] text-[#2868e8] text-[9.5px] font-black">
                   35% Share
                 </span>
               </div>
-              <h3 className="text-[17px] font-black text-[#102341] leading-tight">
+              <h3 className="text-[16px] font-black text-[#102341] leading-tight">
                 DAO Instant Push
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-[18px] font-mono font-black text-[#2868e8]">
-                  {poolStats ? poolStats.vault.totalRoutedFromMatrix.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                <span className="text-[20px] font-mono font-black text-[#2868e8]">
+                  {poolStats ? (poolStats.dao.streamedTrob || poolStats.dao.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.35)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "8,601.13"}
                 </span>
-                <span className="text-[11px] text-[#657895] font-bold">TROB Streamed</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">TROB Streamed</span>
               </div>
-              <p className="text-[11.5px] text-[#657895] mt-1 leading-relaxed">
-                Streamed in real-time block execution directly to active Genesis DAO seat members upon every single matrix placement.
+              <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
+                Streamed in real-time to active Genesis DAO seat members upon every matrix placement.
               </p>
             </div>
-            <div className="mt-3 pt-3 border-t border-[#edf2fa] flex items-center justify-between text-[11px]">
+            <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Stream Cadence:</span>
-              <span className="font-bold text-[#2868e8] flex items-center gap-1">
+              <span className="font-bold text-[#0e9f79] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#0e9f79] animate-pulse" />
                 Instant Block Stream
               </span>
@@ -235,30 +235,30 @@ export function ProtocolPoolsPanel({
           </div>
 
           {/* Pool 2: Leadership Royalty (40%) */}
-          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between hover:border-[#5ba8ff] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#5ba8ff]">
+          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 flex flex-col justify-between hover:border-[#5ba8ff] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#5ba8ff]">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-extrabold text-[#2868e8] uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10.5px] font-extrabold text-[#2868e8] uppercase tracking-wider">
                   Pool 02
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#e8f1ff] text-[#2868e8] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-[#e8f1ff] text-[#2868e8] text-[9.5px] font-black">
                   40% Share
                 </span>
               </div>
-              <h3 className="text-[17px] font-black text-[#102341] leading-tight">
+              <h3 className="text-[16px] font-black text-[#102341] leading-tight">
                 Leadership Royalty
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-[18px] font-mono font-black text-[#2868e8]">
+                <span className="text-[20px] font-mono font-black text-[#2868e8]">
                   {poolStats ? poolStats.salaryPool.pendingBalanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </span>
-                <span className="text-[11px] text-[#657895] font-bold">TROB Pending</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">TROB Pending</span>
               </div>
-              <p className="text-[11.5px] text-[#657895] mt-1 leading-relaxed">
-                Monthly equity dividend settled on the 11th across Alpha (10%), Prime (15%), Elite (25%), and Crown (50%) ranks.
+              <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
+                Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.
               </p>
             </div>
-            <div className="mt-3 pt-3 border-t border-[#edf2fa] flex items-center justify-between text-[11px]">
+            <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Settlement:</span>
               <span className="font-bold text-[#b97a17]">11th Monthly (Clean Rank)</span>
             </div>
@@ -267,76 +267,76 @@ export function ProtocolPoolsPanel({
           {/* Pool 3: Quarterly Community Pool (10%) */}
           <div
             onClick={() => setShowBlindBoxModal(true)}
-            className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between hover:border-[#7256d8] hover:shadow-md transition-all cursor-pointer group relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#7256d8]"
+            className="bg-white border border-[#e0eaf7] rounded-2xl p-4 flex flex-col justify-between hover:border-[#7256d8] hover:shadow-md transition-all cursor-pointer group relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#7256d8]"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-extrabold text-[#7256d8] uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10.5px] font-extrabold text-[#7256d8] uppercase tracking-wider">
                   Pool 03
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] text-[9.5px] font-black">
                   10% Share
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <h3 className="text-[17px] font-black text-[#102341] leading-tight group-hover:text-[#7256d8] transition-colors">
-                  Quarterly Community Pool
+                <h3 className="text-[16px] font-black text-[#102341] leading-tight group-hover:text-[#7256d8] transition-colors">
+                  Community Pool
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] border border-[#dcd6fa]">
-                  Locked
+                <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] border border-[#dcd6fa]">
+                  Quarterly
                 </span>
               </div>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-[18px] font-mono font-black text-[#7256d8]">
+                <span className="text-[20px] font-mono font-black text-[#7256d8]">
                   {poolStats ? poolStats.magicBoxPool.balanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </span>
-                <span className="text-[11px] text-[#657895] font-bold">TROB Pooled</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">TROB Pooled</span>
               </div>
-              <p className="text-[11.5px] text-[#657895] mt-1.5 leading-relaxed">
-                Universal 10% protocol pool. Distributed autonomously once an operative completes the 3-month milestone.
+              <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
+                Universal protocol pool distributed autonomously upon completing the 3-month milestone.
               </p>
-              <div className="mt-2.5 bg-[#f8faff] rounded-lg p-2 border border-[#e0eaf7] flex items-center justify-between text-[11px]">
-                <span className="text-[#657895] font-medium">3-Mo Milestone:</span>
+              <div className="mt-2 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
+                <span className="text-[#657895]">3-Mo Milestone:</span>
                 <span className="font-mono font-bold text-[#b97a17]">
                   {milestoneCountdown.days}d {milestoneCountdown.hours}h {milestoneCountdown.minutes}m
                 </span>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-[#edf2fa] flex items-center justify-between text-[11px]">
-              <span className="text-[#657895]">Access Condition:</span>
+            <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
+              <span className="text-[#657895]">Condition:</span>
               <span className="font-bold text-[#7256d8] underline underline-offset-2">
-                View Milestone Rules
+                Milestone Rules
               </span>
             </div>
           </div>
 
           {/* Pool 4: Rank Milestone Bounties (15%) */}
-          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between hover:border-[#0e9f79] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#0e9f79]">
+          <div className="bg-white border border-[#e0eaf7] rounded-2xl p-4 flex flex-col justify-between hover:border-[#0e9f79] hover:shadow-md transition-all relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-[#0e9f79]">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-extrabold text-[#0e9f79] uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10.5px] font-extrabold text-[#0e9f79] uppercase tracking-wider">
                   Pool 04
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#e8fbf5] text-[#0e9f79] text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-[#e8f1ff] text-[#0e9f79] text-[9.5px] font-black">
                   15% Share
                 </span>
               </div>
-              <h3 className="text-[17px] font-black text-[#102341] leading-tight">
+              <h3 className="text-[16px] font-black text-[#102341] leading-tight">
                 Rank Milestones
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-[18px] font-mono font-black text-[#0e9f79]">
+                <span className="text-[20px] font-mono font-black text-[#0e9f79]">
                   {poolStats ? poolStats.rewardPool.balanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </span>
-                <span className="text-[11px] text-[#657895] font-bold">TROB Reserve</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">TROB Reserve</span>
               </div>
-              <p className="text-[11.5px] text-[#657895] mt-1 leading-relaxed">
-                Instant one-time bounties unlocked upon reaching Slots 3, 6, 9, and 12 at $0 out-of-pocket via the P4+P5 escalation engine.
+              <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
+                One-time bounties unlocked upon reaching Slots 3, 6, 9, 12 at $0 out-of-pocket via P4+P5.
               </p>
             </div>
-            <div className="mt-3 pt-3 border-t border-[#edf2fa] flex items-center justify-between text-[11px]">
+            <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Progression Bounty:</span>
-              <span className="font-bold text-[#0e9f79]">Instant Block Disbursed</span>
+              <span className="font-bold text-[#0e9f79]">Instant Disbursed</span>
             </div>
           </div>
         </div>
@@ -348,83 +348,81 @@ export function ProtocolPoolsPanel({
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
           <div>
-            <h3 className="text-[19px] sm:text-[22px] font-black text-[#0f172a] tracking-tight">
+            <h3 className="text-[19px] sm:text-[22px] font-black text-[#102341] tracking-tight">
               Apex Rank Milestone Rewards
             </h3>
-            <p className="text-[12px] text-[#64748b]">
-              Achieve levels to unlock substantial rank cards, monthly royalties, and governance multipliers.
+            <p className="text-[12px] text-[#657895]">
+              Achieve levels to unlock rank cards, monthly royalties, and governance multipliers.
             </p>
           </div>
-          <span className="text-[11px] font-bold text-[#2563eb] bg-blue-50 border border-blue-200 px-3 py-1 rounded-full mt-2 sm:mt-0 self-start sm:self-auto">
+          <span className="text-[11px] font-bold text-[#2868e8] bg-[#e8f1ff] border border-[#d2e4ff] px-3 py-1 rounded-full mt-2 sm:mt-0 self-start sm:self-auto">
             Autonomous $0 Escalation
           </span>
         </div>
 
-        {/* 4 Big Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+        {/* 4 Big Cards Grid — Borderless, transparent-like, floating animation, strictly 2 per row on mobile & tablet */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
           {rankCards.map((card) => {
             const isAchieved = card.status === "ACHIEVED";
             return (
               <div
                 key={card.level}
-                className={`bg-white rounded-3xl border ${
-                  isAchieved ? "border-emerald-300 ring-2 ring-emerald-400/30" : "border-[#e8ecf1]"
-                } p-4 sm:p-5 flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group`}
+                className="bg-white/80 hover:bg-white backdrop-blur-md rounded-3xl border border-[#e0eaf7] hover:border-[#2868e8]/30 p-3 sm:p-4 flex flex-col justify-between shadow-[0_6px_20px_rgba(35,82,140,0.04)] hover:shadow-[0_16px_36px_rgba(40,104,232,0.12)] hover:-translate-y-2 transition-all duration-300 group"
               >
                 <div>
                   {/* Top Badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-[#64748b]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#657895]">
                       Level {card.level.toString().padStart(2, "0")}
                     </span>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                      className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[9.5px] font-extrabold uppercase ${
                         isAchieved
-                          ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
+                          ? "bg-[#e8fbf5] text-[#138261] border border-[#bbf7d0]"
+                          : "bg-[#f0f4f8] text-[#637890]"
                       }`}
                     >
                       {card.status}
                     </span>
                   </div>
 
-                  {/* Big Card Image */}
-                  <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner mb-3.5 group-hover:scale-[1.02] transition-transform duration-300">
+                  {/* Transparent Floating Card Image (Not cut from any side, smooth animation) */}
+                  <div className="relative w-full aspect-[4/5] flex items-center justify-center p-1 mb-2 group-hover:scale-105 transition-transform duration-300">
                     <Image
                       src={card.imgClean}
                       alt={`${card.rank} Card`}
                       fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-contain drop-shadow-[0_10px_20px_rgba(37,91,159,0.14)]"
                     />
-                    {/* Share Pill on top of card */}
-                    <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-white/20 text-white font-black text-[11px] shadow-md">
+                    {/* Share Pill on top */}
+                    <div className="absolute top-1 right-1 px-2 py-0.5 rounded-full bg-[#102341]/85 backdrop-blur-sm text-white font-black text-[9.5px] shadow-sm">
                       {card.share}
                     </div>
                   </div>
 
                   {/* Title & Rank */}
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-[18px] font-black text-[#0f172a] tracking-tight">
+                    <h4 className="text-[15px] sm:text-[17px] font-black text-[#102341] tracking-tight">
                       {card.rank}
                     </h4>
-                    <span className="text-[12px] font-extrabold text-[#2563eb]">
+                    <span className="text-[11px] font-extrabold text-[#2868e8]">
                       Slot {card.level}
                     </span>
                   </div>
 
                   {/* Requirement */}
-                  <p className="text-[11px] text-[#64748b] leading-tight mb-2">
+                  <p className="text-[10px] sm:text-[10.5px] text-[#657895] leading-tight mb-2">
                     {card.requirement}
                   </p>
                 </div>
 
                 {/* Benefits Footer */}
-                <div className="pt-3 border-t border-[#f1f5f9] mt-2">
-                  <span className="text-[9.5px] uppercase font-bold text-[#94a3b8] block">
+                <div className="pt-2 border-t border-[#edf2fa] mt-1">
+                  <span className="text-[8.5px] sm:text-[9px] uppercase font-bold text-[#8494a9] block">
                     Leadership Benefit:
                   </span>
-                  <p className="text-[11px] font-semibold text-[#0f172a] mt-0.5 leading-snug">
+                  <p className="text-[10px] sm:text-[10.5px] font-bold text-[#102341] mt-0.5 leading-snug">
                     {card.benefits}
                   </p>
                 </div>

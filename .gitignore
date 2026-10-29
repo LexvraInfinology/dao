@@ -102,3 +102,4 @@ scratch_*.png
 *.mp4
 *.pdf
 packages/database/src/generated/
+apps/web-dao/figma_reference/

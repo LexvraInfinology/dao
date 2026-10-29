@@ -555,8 +555,8 @@ export function HeroSection() {
 
       {/* ────────────── HERO SECTION ────────────── */}
       <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-14 sm:pt-16 lg:pt-18 min-h-[580px] sm:min-h-0">
-        {/* Mobile Background Video: Boy with dog video in background on mobile (< md) */}
-        <div className="absolute inset-0 pointer-events-none z-0 md:hidden overflow-hidden">
+        {/* Mobile Background Video: Boy with puppy animated in background on mobile (< md) */}
+        <div className="absolute top-14 sm:top-16 inset-x-0 bottom-0 pointer-events-none z-0 md:hidden overflow-hidden flex items-start justify-center">
           <video
             src="/hero_section.mp4"
             poster="/hero-character-cropped.png"
@@ -564,10 +564,10 @@ export function HeroSection() {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover object-[center_18%] opacity-35"
+            className="w-full h-full object-cover object-top opacity-85"
           />
-          {/* Translucent overlay so text is crisp and 100% readable */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4fb]/85 via-[#eef4fb]/70 to-[#f1f5f9]/95" />
+          {/* Gentle, balanced overlay: vivid character visibility with crisp text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-transparent to-[#eef4fb]/90" />
         </div>
 
         {/* Desktop Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
@@ -589,18 +589,18 @@ export function HeroSection() {
             {/* Left Content Column */}
             <div className="w-full md:w-auto md:max-w-[430px] lg:max-w-[480px] xl:max-w-[510px] flex flex-col items-start text-left shrink-0 z-10">
               {/* Eyebrow - Plain text, wide tracking, no pill */}
-              <div className="text-xs sm:text-[12px] font-bold tracking-[0.2em] text-[#0f172a] uppercase mb-1.5 sm:mb-2">
+              <div className="text-xs sm:text-[12px] font-black tracking-[0.2em] text-[#0f172a] uppercase mb-1.5 sm:mb-2 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
                 MATRIX PLATFORM
               </div>
 
               {/* Title - Exact typography and period */}
-              <h1 className="text-2xl sm:text-3xl md:text-[32px] lg:text-[38px] xl:text-[42px] font-black text-[#0b132b] leading-[1.12] tracking-tight mb-2.5 sm:mb-3">
+              <h1 className="text-2xl sm:text-3xl md:text-[32px] lg:text-[38px] xl:text-[42px] font-black text-[#0b132b] leading-[1.12] tracking-tight mb-2.5 sm:mb-3 drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]">
                 The Matrix <br />
                 <span className="text-[#2563eb]">Built to Move.</span>
               </h1>
 
               {/* Subtitle - Exact copy from Figma */}
-              <p className="text-xs sm:text-[14px] text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-4 sm:mb-5">
+              <p className="text-xs sm:text-[14px] text-slate-800 font-medium max-w-[420px] lg:max-w-[450px] leading-relaxed mb-4 sm:mb-5 drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)]">
                 Start with just $30 USD and step into a 12-slot progression
                 system. Grow your network, unlock higher tiers automatically, and
                 earn real rewards on-chain.
@@ -653,34 +653,34 @@ export function HeroSection() {
               </div>
 
               {/* Hero Stats Row - Exact Figma copy and numbers */}
-              <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 lg:gap-7 pt-4 sm:pt-5 border-t border-slate-200/70 w-full max-w-md">
+              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-6 lg:gap-7 p-3 sm:p-0 sm:pt-5 rounded-2xl bg-white/75 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border border-white/60 sm:border-0 sm:border-t sm:border-slate-200/70 w-full max-w-md shadow-sm sm:shadow-none">
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     600%
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Return on Slot 1
                   </div>
                 </div>
 
-                <div className="w-px h-9 bg-slate-300/80" />
+                <div className="w-px h-8 sm:h-9 bg-slate-300/80" />
 
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     12
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Progressive Slots
                   </div>
                 </div>
 
-                <div className="w-px h-9 bg-slate-300/80" />
+                <div className="w-px h-8 sm:h-9 bg-slate-300/80" />
 
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     14
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Node Matrix
                   </div>
                 </div>

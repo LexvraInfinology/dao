@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:dao": "next build",
+    "build:matrix": "next build",
     "start": "next start",
     "lint": "next lint"
   },

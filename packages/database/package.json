@@ -9,6 +9,7 @@
     "db:push": "node node_modules/prisma/build/index.js db push",
     "db:migrate": "node node_modules/prisma/build/index.js migrate dev",
     "db:studio": "node node_modules/prisma/build/index.js studio",
+    "prebuild": "node node_modules/prisma/build/index.js generate",
     "build": "tsc",
     "clean": "rimraf dist"
   },

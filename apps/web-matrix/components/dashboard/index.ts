@@ -6,4 +6,4 @@ export { RecentActivityPanel } from "./RecentActivityPanel";
 export { DashboardMobileCard } from "./DashboardMobileCard";
 export { ProtocolPoolsPanel } from "./ProtocolPoolsPanel";
 export { OverviewTab } from "./OverviewTab";
-
+export { ReferralLinkCard } from "./ReferralLinkCard";

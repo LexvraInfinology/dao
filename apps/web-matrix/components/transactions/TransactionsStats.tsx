@@ -68,7 +68,7 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
       {/* Pending Volume */}
       <div className="bg-white rounded-2xl border border-[#e2e8f0] p-3.5 lg:p-4 shadow-xs">
         <div className="flex items-start justify-between mb-1.5">
-          <span className="text-[10.5px] lg:text-[11.5px] font-semibold text-[#64748b]">Pending Ops</span>
+          <span className="text-[10.5px] lg:text-[11.5px] font-semibold text-[#64748b]">Pending Txs</span>
           <div className="w-7 h-7 rounded-lg bg-[#eff6ff] flex items-center justify-center flex-shrink-0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2" />

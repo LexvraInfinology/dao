@@ -87,7 +87,7 @@ export function OverviewTab({
             ${totalEarnedUsd.toFixed(2)}
           </div>
           <div className="text-[10.5px] text-[#8494a9] mt-1.5 truncate">
-            {totalEarnedTrob.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} TROB matrix yield
+            All slots combined • On-chain
           </div>
         </div>
 
@@ -161,7 +161,7 @@ export function OverviewTab({
             ${availableBalanceUsd.toFixed(2)}
           </div>
           <div className="text-[10.5px] text-[#8494a9] mt-1.5 truncate">
-            {availableBalanceTrob.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} TROB claimable
+            Ready to claim or auto-upgrade
           </div>
         </div>
       </div>
@@ -334,7 +334,7 @@ export function OverviewTab({
                       </div>
                       <div className="text-right shrink-0">
                         <span className="font-black text-[#0b956d] block text-[11.5px]">
-                          +{((act as any).amountTrob || (act as any).amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB
+                          +$30.00 USD
                         </span>
                         <span className="text-[9.5px] text-[#9aa8ba]">
                           Just now

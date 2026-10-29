@@ -97,7 +97,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             </div>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-[12px] font-bold text-[#2563eb]">
-                {data?.totalEarnedTrob ? `${data.totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB` : "Live P2P Yield"}
+                {totalEarnedUsd > 0 ? `$${totalEarnedUsd.toFixed(2)} USD` : "Live P2P Yield"}
               </span>
               <span className="text-[#cbd5e1]">•</span>
               <span className="text-[11px] font-semibold text-[#64748b]">On-Chain Lifetime Total</span>

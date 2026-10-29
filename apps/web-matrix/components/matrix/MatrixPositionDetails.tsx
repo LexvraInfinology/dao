@@ -112,7 +112,7 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
             <span className="font-semibold text-[#64748b]">Total Position Yield</span>
             <div className="text-right">
               <span className="font-black text-[#2563eb] text-[15px] sm:text-[16px]">${yieldUsd.toFixed(2)} USD</span>
-              <span className="block text-[10.5px] font-bold text-[#64748b]">{yieldTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB</span>
+              <span className="block text-[10.5px] font-bold text-[#64748b]">P2P Settled On-Chain</span>
             </div>
           </div>
         </div>

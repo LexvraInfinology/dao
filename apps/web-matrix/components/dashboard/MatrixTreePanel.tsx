@@ -67,7 +67,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 1,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   4: {
     pos: 4,
@@ -94,7 +94,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 2,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   7: {
     pos: 7,
@@ -112,7 +112,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 3,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   9: {
     pos: 9,
@@ -121,7 +121,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 4,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   10: {
     pos: 10,
@@ -139,7 +139,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 5,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   12: {
     pos: 12,
@@ -148,7 +148,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "YOU: 100% Direct",
     type: "income",
     parentPos: 5,
-    desc: "100% P2P instant settlement ($30 USD / 945.18 TROB) directly into your wallet.",
+    desc: "100% P2P instant settlement ($30.00 USD) directly into your wallet.",
   },
   13: {
     pos: 13,

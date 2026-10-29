@@ -554,9 +554,24 @@ export function HeroSection() {
       </div>
 
       {/* ────────────── HERO SECTION ────────────── */}
-      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-14 sm:pt-16 lg:pt-18">
-        {/* Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
-        <div className="absolute inset-0 pointer-events-none z-0">
+      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-14 sm:pt-16 lg:pt-18 min-h-[580px] sm:min-h-0">
+        {/* Mobile Background Video: Boy with dog video in background on mobile (< md) */}
+        <div className="absolute inset-0 pointer-events-none z-0 md:hidden overflow-hidden">
+          <video
+            src="/hero_section.mp4"
+            poster="/hero-character-cropped.png"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover object-[center_18%] opacity-35"
+          />
+          {/* Translucent overlay so text is crisp and 100% readable */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#eef4fb]/85 via-[#eef4fb]/70 to-[#f1f5f9]/95" />
+        </div>
+
+        {/* Desktop Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
+        <div className="absolute inset-0 pointer-events-none z-0 hidden md:block">
           <Image
             src="/e6a310ebbc2aa55ae6bf2a597fa3630383efedbb.png"
             alt="Equora Hero Background"
@@ -672,8 +687,8 @@ export function HeroSection() {
               </div>
             </div>
 
-            {/* Right Visual Column - Hero Video (edge-to-edge on mobile with 0 gap) */}
-            <div className="w-[calc(100%+2rem)] -mx-4 sm:w-[calc(100%+3rem)] sm:-mx-6 md:w-auto md:mx-0 flex items-center justify-center shrink-0 mt-3 md:mt-0">
+            {/* Right Visual Column - Hero Video on Desktop (hidden on mobile since video is the background) */}
+            <div className="hidden md:flex md:w-auto md:mx-0 items-center justify-center shrink-0 mt-3 md:mt-0">
               <HeroVideo />
             </div>
           </div>

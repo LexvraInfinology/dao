@@ -217,9 +217,9 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  {poolStats ? (poolStats.dao.streamedTrob || poolStats.dao.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.35)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "8,601.13"}
+                  ${((poolStats ? (poolStats.dao.streamedTrob || poolStats.dao.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.35)) : 8601.13) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10.5px] text-[#657895] font-bold">TROB Streamed</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">USD Streamed</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Streamed in real-time to active Genesis DAO seat members upon every matrix placement.
@@ -250,9 +250,9 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  {poolStats ? poolStats.salaryPool.pendingBalanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  ${((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10.5px] text-[#657895] font-bold">TROB Pending</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">USD Pending</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.
@@ -288,9 +288,9 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#7256d8]">
-                  {poolStats ? poolStats.magicBoxPool.balanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  ${((poolStats ? (poolStats.magicBoxPool.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.1)) : 2457.5) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10.5px] text-[#657895] font-bold">TROB Pooled</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">USD Pooled</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Universal protocol pool distributed autonomously upon completing the 3-month milestone.
@@ -326,9 +326,9 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#0e9f79]">
-                  {poolStats ? poolStats.rewardPool.balanceTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  ${((poolStats ? poolStats.rewardPool.balanceTrob : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10.5px] text-[#657895] font-bold">TROB Reserve</span>
+                <span className="text-[10.5px] text-[#657895] font-bold">USD Reserve</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 One-time bounties unlocked upon reaching Slots 3, 6, 9, 12 at $0 out-of-pocket via P4+P5.

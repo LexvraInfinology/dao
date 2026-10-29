@@ -10,13 +10,16 @@ import {
   NextPositionPanel,
   RecentActivityPanel,
   DashboardMobileCard,
+  ProtocolPoolsPanel,
 } from "@/components/dashboard";
 import { ReferralLinkCard } from "@/components/dashboard/ReferralLinkCard";
-import { MatrixAccessGate } from "@/components/matrix";
+import { MatrixAccessGate, MatrixQualificationAlert } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,37 +32,23 @@ export default function DashboardPage() {
   }, []);
 
   const { address, changeAddress, disconnect, dashboard, profile, refreshAll, loading } = useMatrixUser();
-  const [seeding, setSeeding] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q) return;
 
-    if (q.startsWith("0x") && q.length === 42) {
+    if ((q.startsWith("0x") && q.length === 42) || (q.startsWith("T") && q.length === 34)) {
       changeAddress(q);
-      toast.success("Operative Loaded", `Inspecting wallet ${q.slice(0, 6)}...${q.slice(-4)}`);
+      toast.success("Operative Loaded", `Inspecting wallet ${formatAddress(q)}`);
       setSearchQuery("");
     } else if (/^\d+$/.test(q)) {
       toast.info("Operative Search", `Looking up Operative #${q}...`);
     } else {
-      toast.error("Invalid Input", "Please enter a valid 0x wallet address or numeric operative ID.");
+      toast.error("Invalid Input", "Please enter a valid TrobSafe wallet address or numeric operative ID.");
     }
   };
 
-  const handleSeed = async () => {
-    if (!address) return;
-    setSeeding(true);
-    try {
-      await matrixApi.seedDemo(address);
-      await refreshAll();
-      toast.success("Demo Ledger Synced", "All matrix positions, cycles, and rewards have been populated.");
-    } catch (e) {
-      toast.error("Ledger Sync Failed", e);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   const navItems = [
     {
@@ -229,8 +218,15 @@ export default function DashboardPage() {
             A Stronger Tomorrow,<br />Built Together.
           </p>
           <div className="border-t border-white/20 pt-2 text-[10.5px] text-blue-100 flex flex-col leading-tight">
-            <div className="text-[10px] font-bold text-white/90 tracking-wide uppercase">EQUORA_FI</div>
-            <div className="text-[9px] text-white/50 mt-0.5">Genesis DAO • dao.equora.fi</div>
+            <div className="text-[10px] font-bold text-white/90 tracking-wide uppercase">EQUORAFI DAO</div>
+            <a
+              href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-white/70 hover:text-white underline mt-0.5 transition-colors"
+            >
+              Genesis DAO • {process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com"}
+            </a>
           </div>
         </div>
       </aside>
@@ -314,45 +310,8 @@ export default function DashboardPage() {
               <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] bg-[#ef4444] rounded-full border border-white" />
             </button>
 
-            {/* Quick Demo Sync Button */}
-            <button
-              onClick={handleSeed}
-              disabled={seeding}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[11px] font-semibold text-[#475569] transition-colors"
-            >
-              <span>⚡</span>
-              <span>{seeding ? "Syncing..." : "Sync Demo Ledger"}</span>
-            </button>
-
-            {/* Wallet Address & Account Switcher */}
-            <button
-              type="button"
-              onClick={() => setWalletModalOpen(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#f1f5f9] flex-shrink-0 cursor-pointer"
-              title="Click to connect or switch wallet"
-            >
-              {mounted && address ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="text-[11px] sm:text-[12px] font-mono font-medium text-[#475569] whitespace-nowrap">
-                    {`${address.slice(0, 6)}...${address.slice(-4)}`}
-                  </span>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
-                    <path d="M2.5 4L5 6.5 7.5 4" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
-                    <rect x="1" y="3" width="12" height="9" rx="2" stroke="#2563eb" strokeWidth="1.2" />
-                    <path d="M10 8.5a.5.5 0 100-1 .5.5 0 000 1z" fill="#2563eb" />
-                  </svg>
-                  <span className="text-[11px] sm:text-[12px] font-semibold text-[#2563eb] whitespace-nowrap">
-                    Connect Wallet
-                  </span>
-                </>
-              )}
-            </button>
+            {/* Professional Wallet Dropdown & Account Switcher */}
+            <WalletDropdown />
 
             {/* Avatar */}
             <Link href="/profile" title="View Profile" className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all rounded-full flex-shrink-0">
@@ -368,11 +327,19 @@ export default function DashboardPage() {
           {/* Welcome Banner */}
           <WelcomeBanner />
 
+          {/* Qualification Status & Direct Referrals Progress Alert */}
+          <MatrixQualificationAlert
+            isQualified={profile?.isQualified ?? false}
+            activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
+            referralUrl={address ? `${typeof window !== "undefined" ? window.location.origin : "https://equorafi.com"}/?ref=${toTrobBase58(address)}` : undefined}
+          />
+
           {/* Referral & Affiliate Link Card */}
           <ReferralLinkCard
             address={address}
             directsCount={profile?.directReferralsCount ?? 0}
             sponsorAddress={profile?.sponsorAddress}
+            upline2Address={profile?.upline2Address}
           />
 
           {/* Stat Cards Row (Desktop + Mobile) */}
@@ -387,6 +354,12 @@ export default function DashboardPage() {
               <NextPositionPanel data={dashboard} />
             </div>
           </div>
+
+          {/* 4 CLOSED-LOOP PROTOCOL POOLS & GAMIFIED APEX LEVEL REWARDS */}
+          <ProtocolPoolsPanel
+            currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
+            isQualified={profile?.isQualified ?? false}
+          />
 
           {/* RECENT ACTIVITY */}
           <RecentActivityPanel activities={dashboard?.recentActivity} />

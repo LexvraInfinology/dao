@@ -5,6 +5,7 @@ import { MatrixEarningsOverview } from "@/lib/api";
 import { useFinanceStore, useUserStore } from "@/lib/stores";
 import { toast, formatUserErrorMessage } from "@/lib/toast";
 import { withdrawOnChain } from "@/lib/contracts";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export interface WithdrawModalProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
 
   if (!isOpen) return null;
 
-  const displayAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+  const displayAddr = address ? formatAddress(address) : "Connect Wallet";
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,24 +54,18 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
     setLoading(true);
     try {
       let txHash: string | undefined;
-      // 1. Try on-chain withdrawal via connected wallet first
+      // Matrix payouts are 100% direct instant P2P settled on-chain
       try {
-        txHash = await withdrawOnChain(val);
+        txHash = await withdrawOnChain(val, address);
       } catch (onChainErr: any) {
-        if (
-          onChainErr?.message?.includes("rejected") ||
-          onChainErr?.message?.includes("denied") ||
-          onChainErr?.message?.includes("User rejected")
-        ) {
-          throw onChainErr;
-        }
-        console.warn("[Withdraw] On-chain wallet call fallback:", onChainErr?.message);
+        console.warn("[Withdraw] On-chain withdrawal notice:", onChainErr?.message);
+        throw onChainErr;
       }
 
       // 2. Synchronize withdrawal record in database
       await storeWithdraw(val, address, txHash);
       setWithdrawSuccess(true);
-      toast.success("Withdrawal Initiated", `${val.toFixed(2)} TROB transferred to ${displayAddr}.`);
+      toast.success("Withdrawal Initiated", `$${val.toFixed(2)} USD transferred to ${displayAddr}.`);
       setTimeout(() => {
         setWithdrawSuccess(false);
         onSuccess?.();
@@ -104,7 +99,7 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
           </svg>
         </div>
 
-        <h3 className="text-[19px] font-black text-[#0f172a]">Withdraw TROB</h3>
+        <h3 className="text-[19px] font-black text-[#0f172a]">Instant Settlement ($ USD)</h3>
         <p className="text-[13px] text-[#64748b] mt-1">
           Redeem available balance directly to your connected wallet.
         </p>
@@ -118,7 +113,7 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
             </div>
             <div className="text-[14px] font-bold text-[#16a34a]">Withdrawal Initiated!</div>
             <div className="text-[12px] text-[#15803d] mt-0.5">
-              {withdrawAmount} TROB is being transferred to {displayAddr}.
+              ${withdrawAmount} USD is being transferred to {displayAddr}.
             </div>
           </div>
         ) : (
@@ -130,7 +125,7 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
             )}
             <div>
               <label className="block text-[12px] font-bold text-[#475569] mb-1.5">
-                Amount to Withdraw
+                Amount to Withdraw ($ USD)
               </label>
               <div className="relative">
                 <input
@@ -149,8 +144,8 @@ export function WithdrawModal({ isOpen, onClose, earnings: propEarnings, address
                 </button>
               </div>
               <div className="flex justify-between items-center text-[11.5px] text-[#64748b] mt-1.5">
-                <span>Available: {available.toFixed(2)} TROB</span>
-                <span>Network: TrobChain (TROB)</span>
+                <span>Available: ${available.toFixed(2)} USD</span>
+                <span>Network: TrobChain L1</span>
               </div>
             </div>
 

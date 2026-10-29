@@ -32,46 +32,67 @@ async function fetchLiveTrobPrice(): Promise<any> {
   }
 
   inFlightPromise = (async () => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+    // 1. Try configured TROB_PRICE_API_URL
+    const endpointsToTry = [
+      TROB_PRICE_API_URL,
+      'https://backend.trobchain.com/v1/market/price',
+    ];
 
-      const res = await fetch(TROB_PRICE_API_URL, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      });
-      clearTimeout(timeout);
+    for (const url of endpointsToTry) {
+      if (!url) continue;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
 
-      if (res.ok) {
-        const json = await res.json();
-        const rawPrice = json?.data?.priceUsd ?? json?.priceUsd ?? json?.price;
-        const priceUsd = Number(rawPrice);
-        if (Number.isFinite(priceUsd) && priceUsd > 0) {
-          const pegs = calculateTrobPegs(priceUsd);
-          const payload = {
-            priceUsd,
-            priceSource: 'live-market-api',
-            updatedAt: json?.data?.updatedAt || new Date().toISOString(),
-            isStale: false,
-            ...pegs,
-          };
-          cachedTrobPayload = payload;
-          lastTrobFetchTime = Date.now();
-          return payload;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+          const json = await res.json();
+          const rawPrice = json?.data?.priceUsd ?? json?.priceUsd ?? json?.price;
+          const priceUsd = Number(rawPrice);
+          if (Number.isFinite(priceUsd) && priceUsd > 0) {
+            const pegs = calculateTrobPegs(priceUsd);
+            const payload = {
+              priceUsd,
+              priceSource: url.includes('testnet') ? 'testnet-market-api' : 'live-market-api',
+              updatedAt: json?.data?.updatedAt || new Date().toISOString(),
+              isStale: false,
+              ...pegs,
+            };
+            cachedTrobPayload = payload;
+            lastTrobFetchTime = Date.now();
+            return payload;
+          }
         }
+      } catch (err: any) {
+        console.warn(`[price/trob] Failed to fetch from ${url}:`, err.message);
       }
-    } catch (err) {
-      console.warn('[price/trob] Failed to fetch live market price, using fallback:', err);
-    } finally {
-      inFlightPromise = null;
     }
+
+    inFlightPromise = null;
 
     if (cachedTrobPayload) {
       return { ...cachedTrobPayload, isStale: true };
     }
 
-    return null;
+    // 2. Safe benchmark fallback if both market oracles are unreachable
+    const fallbackPrice = 0.037146; // Official TROB live price benchmark
+    const fallbackPegs = calculateTrobPegs(fallbackPrice);
+    const fallbackPayload = {
+      priceUsd: fallbackPrice,
+      priceSource: 'pegged-benchmark-fallback',
+      updatedAt: new Date().toISOString(),
+      isStale: true,
+      ...fallbackPegs,
+    };
+    cachedTrobPayload = fallbackPayload;
+    lastTrobFetchTime = Date.now();
+    return fallbackPayload;
   })();
 
   return inFlightPromise;

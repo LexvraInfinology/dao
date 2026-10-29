@@ -4,13 +4,16 @@
  */
 
 import { sha256, getBytes } from 'ethers';
+import { ACTIVE_DAO_CONTRACT_ADDRESS, ACTIVE_DAO_CONTRACT_HEX } from '@/config/env';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-export const ACTIVE_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
-export const ACTIVE_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
+export const ACTIVE_DAO_BASE58 = ACTIVE_DAO_CONTRACT_ADDRESS;
+export const ACTIVE_DAO_HEX = toTronHex(ACTIVE_DAO_CONTRACT_ADDRESS);
 
 export const DEPRECATED_DAO_ADDRESSES = new Set([
+  'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT',
+  '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4',
   'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf',
   '4195c81b704bcdb7a7196e3707a025265a196d25eb',
   '0x95c81b704bcdb7a7196e3707a025265a196d25eb',
@@ -44,20 +47,11 @@ export function isDaoAddressDeprecated(addr?: string | null): boolean {
 }
 
 export function getActiveDaoAddress(): string {
-  const env = (process.env.NEXT_PUBLIC_DAO_ADDRESS || process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || '').trim();
-  if (!env || DEPRECATED_DAO_ADDRESSES.has(env)) {
-    return ACTIVE_DAO_BASE58;
-  }
-  return env;
+  return ACTIVE_DAO_CONTRACT_ADDRESS;
 }
 
 export function getActiveDaoHex(): string {
-  const env = (process.env.NEXT_PUBLIC_DAO_HEX || '').trim();
-  const clean = env.replace(/^0x/, '41').toLowerCase();
-  if (!env || DEPRECATED_DAO_ADDRESSES.has(env) || DEPRECATED_DAO_ADDRESSES.has(clean)) {
-    return ACTIVE_DAO_HEX;
-  }
-  return clean;
+  return toTronHex(ACTIVE_DAO_CONTRACT_ADDRESS);
 }
 
 export const DEPLOYED_CONTRACTS = {
@@ -66,20 +60,20 @@ export const DEPLOYED_CONTRACTS = {
     hex: getActiveDaoHex(),
   },
   EquoraToken: {
-    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt',
+    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit',
     hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '41b0e42d3a38e37f2be412b06af572fea20d9c5216',
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy',
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '41e182ad0c2aaec48202cd7b897820e5b058c502dd',
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TCcHDFibnBsSwZhCRyvevXQfoAQ6NMyYWN',
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '411cf3281e10bf86c32d5d257066b95e82e43725e5',
   },
   EquoraVault: {
-    base58: 'TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB',
-    hex: '41d1c52987ccd9528457cb81a8b9685d2f15889dbb',
+    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THQBFEJsH2dBAuXQQT8LErqsjsD7hCPLfa',
+    hex: process.env.NEXT_PUBLIC_VAULT_HEX || '415181d06090f16c9bffef71e2ccd7ed17f676aad9',
   },
   EquoraMatrix: {
-    base58: 'TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE',
-    hex: '41e50ec6ce93b6a7f91099ebc7d08c510c7dd3e0b7',
+    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TEbnspqeni1LSvBcnk1XGj3p3DE8J65JV1',
+    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '4132cbc163842f5691960b7bee60682ce5bf18ed83',
   },
 } as const;
 
@@ -146,7 +140,9 @@ export function toTronHex(addr?: string | null): string {
   }
 
   let clean = trimmed;
-  if (clean.startsWith('0x') || clean.startsWith('0X')) {
+  if (clean.startsWith('0x41') || clean.startsWith('0X41')) {
+    clean = clean.slice(2);
+  } else if (clean.startsWith('0x') || clean.startsWith('0X')) {
     clean = '41' + clean.slice(2);
   } else if (!clean.startsWith('41') && clean.length === 40) {
     clean = '41' + clean;

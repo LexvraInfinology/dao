@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore, useMatrixStore } from "@/lib/stores";
+import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
 
 export interface AccountSectionProps {
   copy: (text: string) => void;
@@ -24,16 +25,10 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
   const count = mounted ? (propSlotsCount !== undefined ? propSlotsCount : storeSlots.length) : 0;
   const storeAddress = useUserStore((s) => s.address);
   const address = mounted ? (profile?.address ?? storeAddress ?? "") : "";
-  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
+  const displayAddress = address ? formatAddress(address) : "Not Connected";
   const userIdDisplay = profile?.userId ? `#${profile.userId}` : (address ? "#Pending" : "Unregistered");
   const levelDisplay = count > 0 ? `Slot ${count}` : "Not Activated";
-  let joinedDate = address ? "Connected" : "—";
-  if (profile?.joinedAt) {
-    const d = new Date(profile.joinedAt);
-    if (!isNaN(d.getTime())) {
-      joinedDate = d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
-    }
-  }
+  const joinedDate = formatDateSafe(profile?.joinedAt, address ? "Connected" : "—");
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
@@ -112,7 +107,7 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
             </div>
             <button
               type="button"
-              onClick={() => copy(address)}
+              onClick={() => copy(toTrobBase58(address))}
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl bg-white border border-[#e2e8f0] text-[11.5px] sm:text-[13px] font-mono font-bold text-[#0f172a] hover:border-[#bfdbfe] hover:bg-[#eff6ff]/60 active:scale-98 transition-all cursor-pointer shadow-2xs group flex-shrink-0"
               aria-label="Copy wallet address"
               title="Click to copy wallet address"
@@ -153,7 +148,14 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
             </div>
             <div className="flex-shrink-0">
               <div suppressHydrationWarning className="px-2 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-bold text-[12px] sm:text-[13px] flex items-center gap-1">
-                <span>↑</span> {profile?.sponsorUserId ? `#${profile.sponsorUserId}` : (address ? "Genesis (Root)" : "None")}
+                <span>↑</span>{" "}
+                {profile?.sponsorUserId
+                  ? `ID #${profile.sponsorUserId}`
+                  : profile?.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000"
+                  ? formatAddress(profile.sponsorAddress)
+                  : address
+                  ? "Genesis (Root)"
+                  : "None"}
               </div>
             </div>
           </div>

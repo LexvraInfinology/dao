@@ -8,13 +8,13 @@ export function EarningsOverviewChart() {
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
   const chartData = [
-    { day: "12 Sep", value: 46, heightPct: 76.6, label: "46.00 TROB" },
-    { day: "13 Sep", value: 20, heightPct: 33.3, label: "20.00 TROB" },
-    { day: "14 Sep", value: 31, heightPct: 51.6, label: "31.00 TROB" },
-    { day: "15 Sep", value: 16, heightPct: 26.6, label: "16.00 TROB" },
-    { day: "16 Sep", value: 38, heightPct: 63.3, label: "38.00 TROB" },
-    { day: "17 Sep", value: 28, heightPct: 46.6, label: "28.00 TROB" },
-    { day: "18 Sep", value: 14, heightPct: 23.3, label: "14.00 TROB" },
+    { day: "12 Sep", value: 46, heightPct: 76.6, label: "$46.00 USD" },
+    { day: "13 Sep", value: 20, heightPct: 33.3, label: "$20.00 USD" },
+    { day: "14 Sep", value: 31, heightPct: 51.6, label: "$31.00 USD" },
+    { day: "15 Sep", value: 16, heightPct: 26.6, label: "$16.00 USD" },
+    { day: "16 Sep", value: 38, heightPct: 63.3, label: "$38.00 USD" },
+    { day: "17 Sep", value: 28, heightPct: 46.6, label: "$28.00 USD" },
+    { day: "18 Sep", value: 14, heightPct: 23.3, label: "$14.00 USD" },
   ];
 
   return (

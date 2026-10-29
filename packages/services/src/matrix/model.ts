@@ -2,6 +2,7 @@ export interface MatrixSlotSummaryDTO {
   slotNumber: number;
   cost: number;
   isUnlocked: boolean;
+  isLive?: boolean;
   currentCycle: number;
   recyclesCount: number;
   filledNodes: number;
@@ -22,6 +23,7 @@ export interface MatrixNodePlacementDTO {
   amount: number;
   timestamp: Date | null;
   isDirect?: boolean;
+  isDirectDeposited?: boolean;
   isSpillover?: boolean;
 }
 
@@ -29,6 +31,7 @@ export interface MatrixSlotDetailsDTO {
   slotNumber: number;
   cost: number;
   isUnlocked: boolean;
+  isLive?: boolean;
   currentCycle: number;
   recyclesCount: number;
   filledNodes: number;
@@ -98,6 +101,8 @@ export interface MatrixUserProfileDTO {
   sponsorAddress: string | null;
   sponsorUserId: number | null;
   directReferralsCount: number;
+  activeDirectsCount?: number;
+  isQualified?: boolean;
   teamCount: number;
   rankTier: number;
   rankName: string;
@@ -120,6 +125,8 @@ export interface MatrixDashboardDTO {
   availableWithdrawUsd: number;
   recyclesCount: number;
   trobPriceUsd: number;
+  isQualified?: boolean;
+  activeDirectsCount?: number;
   activeSlotProgress: {
     slotNumber: number;
     filledNodes: number;

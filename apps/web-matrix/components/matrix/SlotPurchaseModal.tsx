@@ -8,8 +8,7 @@ import {
   EXPLORER_URL,
   NETWORK_NAME,
   getOnChainTokenBalance,
-  getOnChainTokenAllowance,
-  approveTokenOnChain,
+  getOnChainSlotCostSun,
   joinSlotOnChain,
 } from "@/lib/contracts";
 
@@ -34,33 +33,24 @@ export function SlotPurchaseModal({
   const userAddress = propAddress || storeAddress || "";
   const [mode, setMode] = useState<"onchain" | "sandbox">("onchain");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"check" | "approving" | "ready_to_join" | "joining" | "success">("check");
+  const [step, setStep] = useState<"ready_to_join" | "joining" | "success">("ready_to_join");
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
-  const [allowance, setAllowance] = useState<number | null>(null);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
-  const costUsd = (cost * 0.15).toFixed(2);
+  const costUsd = "30.00";
   const slotStr = String(slotNumber).padStart(2, "0");
 
-  // Fetch live on-chain token balance & allowance
+  // Fetch live on-chain TROB balance
   useEffect(() => {
     if (!isOpen || !userAddress) return;
     let cancelled = false;
 
     async function loadOnChainState() {
       try {
-        const [bal, allow] = await Promise.all([
-          getOnChainTokenBalance(userAddress),
-          getOnChainTokenAllowance(userAddress),
-        ]);
+        const bal = await getOnChainTokenBalance(userAddress);
         if (!cancelled) {
           setTokenBalance(bal);
-          setAllowance(allow);
-          if (allow >= cost) {
-            setStep("ready_to_join");
-          } else {
-            setStep("check");
-          }
+          setStep("ready_to_join");
         }
       } catch (err) {
         console.warn("[Modal] Failed to load on-chain state:", err);
@@ -71,36 +61,19 @@ export function SlotPurchaseModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, userAddress, cost]);
+  }, [isOpen, userAddress]);
 
   if (!isOpen) return null;
 
-  // Handle On-Chain Approval
-  const handleApprove = async () => {
-    setLoading(true);
-    setStep("approving");
-    try {
-      toast.info("Wallet Prompt", "Please confirm token approval in your Web3 wallet...");
-      const txHash = await approveTokenOnChain(cost);
-      setLastTxHash(txHash);
-      toast.success("Approval Confirmed!", `Tx: ${txHash.slice(0, 10)}...`);
-      setAllowance(cost);
-      setStep("ready_to_join");
-    } catch (err: any) {
-      toast.error("Approval Failed", err?.message || "Failed to approve tokens.");
-      setStep("check");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle On-Chain Join
+  // Handle On-Chain Join (Native TROB)
   const handleOnChainJoin = async () => {
     setLoading(true);
     setStep("joining");
     try {
-      toast.info("Broadcasting Transaction", `Submitting joinSlot on ${NETWORK_NAME}...`);
-      const txHash = await joinSlotOnChain(slotNumber);
+      const callValueSun = await getOnChainSlotCostSun(slotNumber);
+      const trobCoins = (callValueSun / 1_000_000).toFixed(2);
+      toast.info("Broadcasting Transaction", `Confirm $30.00 USD (${trobCoins} TROB) in wallet...`);
+      const txHash = await joinSlotOnChain(slotNumber, undefined, userAddress, callValueSun);
       setLastTxHash(txHash);
       toast.success("Slot Joined On-Chain!", `Tx: ${txHash.slice(0, 10)}...`);
 
@@ -173,7 +146,7 @@ export function SlotPurchaseModal({
                 : "text-[#64748b] hover:text-[#0f172a]"
             }`}
           >
-            ⚡ On-Chain ({NETWORK_NAME.replace("TrobChain ", "")})
+            On-Chain ({NETWORK_NAME.replace("TrobChain ", "")})
           </button>
           <button
             type="button"
@@ -184,7 +157,7 @@ export function SlotPurchaseModal({
                 : "text-[#64748b] hover:text-[#0f172a]"
             }`}
           >
-            🧪 Instant Sandbox
+            Simulated Sandbox
           </button>
         </div>
 
@@ -194,10 +167,10 @@ export function SlotPurchaseModal({
             <span className="text-[12px] font-medium text-[#64748b]">Activation Cost</span>
             <div className="text-right">
               <span className="text-[18px] font-black text-[#0f172a] block leading-none">
-                {cost} TROB
+                ${cost}.00 USD
               </span>
-              <span className="text-[11px] text-[#94a3b8] font-medium block mt-0.5">
-                ≈ ${costUsd} USD
+              <span className="text-[11px] text-[#16a34a] font-medium block mt-0.5">
+                Fixed On-Chain Valuation
               </span>
             </div>
           </div>
@@ -224,14 +197,12 @@ export function SlotPurchaseModal({
                   <div className="flex items-center justify-between text-[#1e40af]">
                     <span className="font-semibold">Token Balance:</span>
                     <span className="font-bold">
-                      {tokenBalance !== null ? `${tokenBalance.toFixed(2)} TROB` : "Checking..."}
+                      {tokenBalance !== null ? `$${tokenBalance.toFixed(2)} USD` : "Checking..."}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[#1e40af]">
-                    <span className="font-semibold">Current Allowance:</span>
-                    <span className="font-bold">
-                      {allowance !== null ? `${allowance.toFixed(2)} TROB` : "Checking..."}
-                    </span>
+                    <span className="font-semibold">Payment Currency:</span>
+                    <span className="font-bold">Native TROB Coin</span>
                   </div>
                 </div>
 
@@ -304,25 +275,14 @@ export function SlotPurchaseModal({
 
           {mode === "onchain" ? (
             slotNumber === 1 ? (
-              allowance !== null && allowance < cost ? (
-                <button
-                  type="button"
-                  onClick={handleApprove}
-                  disabled={loading}
-                  className="flex-1 py-2.5 rounded-xl bg-[#f59e0b] hover:bg-[#d97706] text-white text-[12.5px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {loading ? "Approving..." : `Step 1: Approve ${cost} TROB`}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleOnChainJoin}
-                  disabled={loading || (tokenBalance !== null && tokenBalance < cost)}
-                  className="flex-1 py-2.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[12.5px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {loading ? "Broadcasting..." : `Step 2: Join Slot #01 On-Chain`}
-                </button>
-              )
+              <button
+                type="button"
+                onClick={handleOnChainJoin}
+                disabled={loading}
+                className="flex-1 py-2.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[12.5px] font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {loading ? "Broadcasting..." : `Join Slot #01 On-Chain ($30 USD)`}
+              </button>
             ) : (
               <button
                 type="button"

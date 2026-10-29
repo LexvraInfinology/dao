@@ -922,10 +922,6 @@ abstract contract ERC20Pausable is ERC20, Pausable {
 // File contracts/token/EquoraCoin.sol
 
 // Original license: SPDX_License_Identifier: MIT
-
-
-
-
 /**
  * @title EquoraCoin
  * @dev Equora Platform's native TRC-20 / ERC-20 utility & governance coin.

@@ -5,6 +5,7 @@ import { toast } from "@/lib/toast";
 
 import { useUserStore } from "@/lib/stores";
 import { EXPLORER_URL } from "@/lib/contracts";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export interface SecuritySectionProps {
   copy: (text: string) => void;
@@ -18,8 +19,8 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
 
   const rawAddress = useUserStore((s) => s.address) || "";
   const address = mounted ? rawAddress : "";
-  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
-  const displayAddressSpaced = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
+  const displayAddress = address ? formatAddress(address) : "Not Connected";
+  const displayAddressSpaced = address ? formatAddress(address, "spaced") : "Not Connected";
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
@@ -48,7 +49,7 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
                 <span className="text-[12px] font-mono text-[#64748b]">{displayAddressSpaced}</span>
                 <button
                   type="button"
-                  onClick={() => copy(address)}
+                  onClick={() => copy(toTrobBase58(address))}
                   className="text-[#94a3b8] hover:text-[#2563eb] p-0.5 cursor-pointer transition-colors"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,7 +58,7 @@ export function SecuritySection({ copy }: SecuritySectionProps) {
                   </svg>
                 </button>
                 <a
-                  href={`${EXPLORER_URL}/#/address/${address}`}
+                  href={`${EXPLORER_URL}/#/address/${toTrobBase58(address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#94a3b8] hover:text-[#2563eb] p-0.5 cursor-pointer transition-colors"

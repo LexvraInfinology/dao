@@ -3,6 +3,7 @@
 import React from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
+import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
 
 export interface WalletInfoCardProps {
   copy: (text: string) => void;
@@ -16,8 +17,8 @@ export function WalletInfoCard({ copy, profile: propProfile, onManage }: WalletI
 
   const profile = propProfile !== undefined ? propProfile : storeProfile;
   const address = profile?.address ?? storeAddress ?? "";
-  const displayAddress = address ? `${address.slice(0, 6)} . . . ${address.slice(-4)}` : "Not Connected";
-  const joinedDate = profile?.joinedAt ? new Date(profile.joinedAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Active";
+  const displayAddress = address ? formatAddress(address, "spaced") : "Not Connected";
+  const joinedDate = formatDateSafe(profile?.joinedAt);
 
   return (
     <div className="bg-white rounded-[22px] border border-[#e8ecf1] p-5 lg:p-6 shadow-xs w-full">
@@ -46,7 +47,7 @@ export function WalletInfoCard({ copy, profile: propProfile, onManage }: WalletI
               <p className="text-[10px] font-semibold text-[#64748b] tracking-wider uppercase mb-0.5 leading-none">CONNECTED WALLET</p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px] font-mono font-bold text-[#0f172a]">{displayAddress}</span>
-                <button type="button" onClick={() => copy(address)} className="text-[#94a3b8] hover:text-[#2563eb] cursor-pointer transition-colors p-0.5" title="Copy full address">
+                <button type="button" onClick={() => copy(toTrobBase58(address))} className="text-[#94a3b8] hover:text-[#2563eb] cursor-pointer transition-colors p-0.5" title="Copy full address">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                 </button>
               </div>

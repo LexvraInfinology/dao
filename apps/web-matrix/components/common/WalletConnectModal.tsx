@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import {
   hasTrobSafeProvider,
+  getIncompatibleForeignWallet,
   connectTrobSafe,
   normalizeTo0x,
   DUMMY_TEST_ACCOUNTS,
@@ -31,6 +32,8 @@ import {
   TROBSAFE_APP_STORE_URL,
   TROBSAFE_TESTFLIGHT_URL,
   isMobileDevice,
+  isAndroidDevice,
+  isIOSDevice,
   openInTrobSafeApp,
   triggerApkDownload,
   wakeUpExtension,
@@ -40,6 +43,7 @@ import { matrixApi, WalletEligibility } from "@/lib/api";
 import { useUserStore } from "@/lib/stores/useUserStore";
 import { AndroidIcon } from "./AndroidIcon";
 import { toast } from "@/lib/toast";
+import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
@@ -73,6 +77,10 @@ export function WalletConnectModal({
   const activeAddress = (currentAddress || storeAddress || "").toLowerCase();
 
   const hasTrobSafe = hasTrobSafeProvider();
+  const foreignWallet = mounted && typeof window !== "undefined" ? getIncompatibleForeignWallet() : null;
+  const isAndroid = mounted && typeof window !== "undefined" ? isAndroidDevice() : false;
+  const isIOS = mounted && typeof window !== "undefined" ? isIOSDevice() : false;
+  const isMobile = mounted && typeof window !== "undefined" ? isMobileDevice() : false;
 
   useEffect(() => {
     setMounted(true);
@@ -101,9 +109,10 @@ export function WalletConnectModal({
   const handleCopy = async () => {
     if (!activeAddress) return;
     try {
-      await navigator.clipboard.writeText(activeAddress);
+      const b58 = toTrobBase58(activeAddress);
+      await navigator.clipboard.writeText(b58);
       setCopied(true);
-      toast.copy(activeAddress, "Wallet Address");
+      toast.copy(b58, "Wallet Address");
       setTimeout(() => setCopied(false), 2000);
     } catch {}
   };
@@ -118,8 +127,12 @@ export function WalletConnectModal({
       setStep("connected_account");
       toast.success(
         "TrobSafe Connected",
-        `Active: ${address.slice(0, 6)}...${address.slice(-4)}`
+        `Active: ${formatAddress(address)}`
       );
+      onClose();
+      if (typeof window !== "undefined" && window.location.pathname !== "/matrix") {
+        window.location.href = "/matrix";
+      }
     } catch (err: any) {
       setStep("error");
       setLocalErr(err.message || "Failed to connect TrobSafe wallet.");
@@ -135,12 +148,6 @@ export function WalletConnectModal({
     onClose();
   };
 
-  const handleSelectDummy = (address: string, name: string) => {
-    onSelectAddress(address);
-    toast.success("Simulation Account Loaded", `Active: ${name}`);
-    onClose();
-  };
-
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = customAddress.trim();
@@ -151,7 +158,7 @@ export function WalletConnectModal({
       return;
     }
     onSelectAddress(normalized);
-    toast.success("Account Loaded", `Active: ${normalized.slice(0, 6)}...${normalized.slice(-4)}`);
+    toast.success("Account Loaded", `Active: ${formatAddress(normalized)}`);
     setCustomAddress("");
     onClose();
   };
@@ -214,7 +221,7 @@ export function WalletConnectModal({
                     </span>
                   </div>
                   <a
-                    href={`${EXPLORER_URL}/address/${activeAddress}`}
+                    href={`${EXPLORER_URL}/address/${toTrobBase58(activeAddress)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1"
@@ -226,8 +233,8 @@ export function WalletConnectModal({
                 <div className="p-3 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-2 shadow-xs">
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Address</div>
-                    <div className="text-xs font-mono font-bold text-slate-900 truncate max-w-[250px]" title={activeAddress}>
-                      {activeAddress}
+                    <div className="text-xs font-mono font-bold text-slate-900 truncate max-w-[250px]" title={toTrobBase58(activeAddress)}>
+                      {toTrobBase58(activeAddress)}
                     </div>
                   </div>
                   <button
@@ -261,13 +268,7 @@ export function WalletConnectModal({
                 <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
                   <span className="text-slate-500">Creation Date:</span>
                   <span className="font-mono font-bold text-slate-800">
-                    {eligibilityData?.condition1?.creationDate
-                      ? new Date(eligibilityData.condition1.creationDate).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "Post-Genesis (Oct 2026)"}
+                    {formatDateSafe(eligibilityData?.condition1?.creationDate, "Post-Genesis (Oct 2026)")}
                   </span>
                 </div>
 
@@ -399,8 +400,32 @@ export function WalletConnectModal({
           {/* ── View: Primary Connection Options (Same as DAO) ─────────── */}
           {step === "detect" && (
             <div className="space-y-4">
+              {/* Device Auto-Detection Badge */}
+              <div className="flex items-center justify-between text-[11px] px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/80 text-blue-900 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#0E62E4] animate-pulse" />
+                  <span>Your Device / Platform:</span>
+                </span>
+                <span className="font-bold text-[#0E62E4] bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-2xs">
+                  {isAndroid ? "Android (APK / In-App)" : isIOS ? "iOS (App Store / TestFlight)" : "Desktop (Chrome / Edge / Brave)"}
+                </span>
+              </div>
+
+              {/* Incompatible Foreign Wallet Alert (MetaMask, Phantom, etc.) */}
+              {foreignWallet && !hasTrobSafe && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>{foreignWallet} Detected (Incompatible)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-snug">
+                    Equora Protocol operates exclusively on TrobChain Layer-1. {foreignWallet} cannot execute TrobChain transactions. Only the official <strong>TrobSafe Wallet</strong> is supported.
+                  </p>
+                </div>
+              )}
+
               {/* Mobile Quick Launch Banner */}
-              {isMobileDevice() && (
+              {isMobile && (
                 <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] text-white shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -416,7 +441,7 @@ export function WalletConnectModal({
                   </p>
                   <button
                     type="button"
-                    onClick={() => openInTrobSafeApp()}
+                    onClick={() => openInTrobSafeApp("/matrix")}
                     className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-blue-50 text-[#0E62E4] font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />

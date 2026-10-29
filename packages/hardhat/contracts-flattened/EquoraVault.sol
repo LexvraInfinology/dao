@@ -214,10 +214,10 @@ pragma solidity ^0.8.20;
  *   Every user deposit (registration + slot purchase) flows through this contract.
  *   It splits the incoming TROB into 4 buckets:
  *
- *     35%  ΓåÆ Ecosystem & DAO Pool  (EquoraDAO ΓÇö distributed to 100 Genesis DAO Seat holders)
- *     40%  ΓåÆ Royalty Pool           (EquoraSalaryPool / Leadership Royalty Pool ΓÇö paid out on 11th of each month)
- *     10%  ΓåÆ Magic Blind Box       (EquoraMagicBox ΓÇö quarterly shared lottery pool)
- *     15%  ΓåÆ Level Rewards         (EquoraRewardPool ΓÇö instant one-time milestone payouts)
+ *     35%  → Ecosystem & DAO Pool  (EquoraDAO — distributed to 100 Genesis DAO Seat holders)
+ *     40%  → Royalty Pool           (EquoraSalaryPool / Leadership Royalty Pool — paid out on 11th of each month)
+ *     10%  → Magic Blind Box       (EquoraMagicBox — quarterly shared lottery pool)
+ *     15%  → Level Rewards         (EquoraRewardPool — instant one-time milestone payouts)
  *
  * === ADDITIONAL ROUTE ========================================================
  *   - routePoolDeposit(amount): Called by EquoraMatrix when P4/P5/P14 positions
@@ -231,10 +231,10 @@ pragma solidity ^0.8.20;
  */
 contract EquoraVault is ReentrancyGuard {
 
-    // ΓöÇΓöÇΓöÇ Constants ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Constants ─────────────────────────────────────────────────────────────
 
-    uint256 public constant TIER_STANDARD = 30  * 10 ** 18; // 30 TROB
-    uint256 public constant TIER_DAO      = 300 * 10 ** 18; // 300 TROB (DAO tier per logics.xlsx)
+    uint256 public constant TIER_STANDARD = 30  * 10 ** 6; // 30 TROB in SUN (6 decimals)
+    uint256 public constant TIER_DAO      = 300 * 10 ** 6; // 300 TROB in SUN (6 decimals)
 
     uint256 public constant DAO_BPS      = 3500;  // 35%
     uint256 public constant ROYALTY_BPS  = 4000;  // 40% (Leadership Royalty Pool)
@@ -243,7 +243,7 @@ contract EquoraVault is ReentrancyGuard {
     uint256 public constant REWARDS_BPS  = 1500;  // 15%
     uint256 public constant BPS_BASE     = 10000;
 
-    // ΓöÇΓöÇΓöÇ Interfaces ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Interfaces ────────────────────────────────────────────────────────────
 
     IERC20          public immutable paymentToken;
     IEquoraRegistry public immutable registry;
@@ -258,12 +258,12 @@ contract EquoraVault is ReentrancyGuard {
     // Authorized callers for routePoolDeposit (EquoraMatrix)
     address public matrixContract;
 
-    // ΓöÇΓöÇΓöÇ Global Stats ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Global Stats ──────────────────────────────────────────────────────────
 
     uint256 public totalRoutedFromMatrix; // total TROB forwarded by EquoraMatrix P4/P5/P14
     uint256 public totalRoutedFromUsers;  // total TROB from user registrations
 
-    // ΓöÇΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Events ────────────────────────────────────────────────────────────────
 
     event DepositRouted(
         address indexed user,
@@ -296,7 +296,7 @@ contract EquoraVault is ReentrancyGuard {
     );
     event MatrixContractSet(address indexed matrix);
 
-    // ΓöÇΓöÇΓöÇ Errors ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Errors ────────────────────────────────────────────────────────────────
 
     error AlreadyInitialized();
     error NotInitialized();
@@ -304,7 +304,7 @@ contract EquoraVault is ReentrancyGuard {
     error AlreadyRegistered();
     error Unauthorized();
 
-    // ΓöÇΓöÇΓöÇ Constructor ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Constructor ───────────────────────────────────────────────────────────
 
     constructor(address _paymentToken, address _registry) {
         require(_paymentToken != address(0), "EquoraVault: Invalid token");
@@ -313,7 +313,7 @@ contract EquoraVault is ReentrancyGuard {
         registry     = IEquoraRegistry(_registry);
     }
 
-    // ΓöÇΓöÇΓöÇ One-Time Initialization ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── One-Time Initialization ───────────────────────────────────────────────
 
     /**
      * @dev Set the 4 pool contract addresses. Called ONCE after deploying all contracts.
@@ -359,7 +359,10 @@ contract EquoraVault is ReentrancyGuard {
         return salaryPool;
     }
 
-    // ΓöÇΓöÇΓöÇ Primary Entry Point: User Registration ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    receive() external payable {}
+    fallback() external payable {}
+
+    // ─── Primary Entry Point: User Registration ────────────────────────────────
 
     /**
      * @dev Register a new user and route their deposit to the 4 pools.
@@ -367,14 +370,18 @@ contract EquoraVault is ReentrancyGuard {
      * @param sponsorCode  5-digit referral code of the sponsor (0 = none / use root)
      * @param amount       Must be TIER_STANDARD (30 TROB) or TIER_DAO (300 TROB)
      */
-    function register(uint32 sponsorCode, uint256 amount) external nonReentrant {
+    function register(uint32 sponsorCode, uint256 amount) external payable nonReentrant {
         if (!initialized)                                    revert NotInitialized();
         if (amount != TIER_STANDARD && amount != TIER_DAO)  revert InvalidDepositAmount();
         if (registry.isRegistered(msg.sender))              revert AlreadyRegistered();
 
-        // 1. Pull TROB from user
-        bool ok = paymentToken.transferFrom(msg.sender, address(this), amount);
-        require(ok, "EquoraVault: Transfer failed");
+        // 1. Pull TROB from user (native TROB or token fallback)
+        if (msg.value > 0) {
+            require(msg.value >= amount, "EquoraVault: Insufficient native TROB sent");
+        } else {
+            bool ok = paymentToken.transferFrom(msg.sender, address(this), amount);
+            require(ok, "EquoraVault: Transfer failed");
+        }
 
         // 2. Register user in EquoraRegistry (assigns 5-digit code, records sponsor)
         registry.registerUser(msg.sender, sponsorCode);
@@ -388,18 +395,18 @@ contract EquoraVault is ReentrancyGuard {
         emit UserRegistered(msg.sender, registry.getCodeByUser(msg.sender), tier, block.timestamp);
     }
 
-    // ΓöÇΓöÇΓöÇ Matrix Pool Route (P4 / P5 / P14) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Matrix Pool Route (P4 / P5 / P14) ────────────────────────────────────
 
     /**
      * @dev Called by EquoraMatrix when P4, P5, or P14 positions are filled.
-     *      The matrix contract must pre-approve and transfer TROB to this vault,
+     *      The matrix contract can transfer native TROB (or token) to this vault,
      *      then this function routes it to the 4 protocol pools.
      *
      *      Only callable by the authorized matrixContract address.
      *
-     * @param amount  Amount of TROB already transferred to this vault by the matrix
+     * @param amount  Amount of TROB transferred to this vault by the matrix
      */
-    function routePoolDeposit(uint256 amount) external nonReentrant {
+    function routePoolDeposit(uint256 amount) external payable nonReentrant {
         if (!initialized) revert NotInitialized();
         if (msg.sender != matrixContract) revert Unauthorized();
         require(amount > 0, "EquoraVault: Zero amount");
@@ -430,7 +437,7 @@ contract EquoraVault is ReentrancyGuard {
         );
     }
 
-    // ΓöÇΓöÇΓöÇ Internal Routing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── Internal Routing ──────────────────────────────────────────────────────
 
     /**
      * @dev Route user deposit into 4 buckets and notify pools.
@@ -479,11 +486,20 @@ contract EquoraVault is ReentrancyGuard {
     }
 
     function _sendToPool(address pool, uint256 amount, string memory errMsg) internal {
-        bool ok = paymentToken.transfer(pool, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(pool).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(pool, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         require(ok, errMsg);
     }
 
-    // ΓöÇΓöÇΓöÇ View Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // ─── View Helpers ──────────────────────────────────────────────────────────
 
     /**
      * @dev Preview the 4-bucket split for a given deposit amount.
@@ -513,7 +529,7 @@ contract EquoraVault is ReentrancyGuard {
     }
 }
 
-// ΓöÇΓöÇΓöÇ Minimal Interfaces for Cross-Contract Calls ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ─── Minimal Interfaces for Cross-Contract Calls ──────────────────────────────
 
 interface IEquoraMagicBox {
     function addToPool(uint256 amount) external;

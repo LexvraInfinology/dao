@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { getOnChainProtocolPoolsStats, ProtocolPoolsStats } from "@/lib/contracts";
 
 interface CardSpec {
   id: string;
@@ -138,6 +139,30 @@ const POOL_TIERS: PoolTier[] = [
 
 export function PoolsSection() {
   const [hoveredTier, setHoveredTier] = useState<string | null>(null);
+  const [stats, setStats] = useState<ProtocolPoolsStats | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    let active = true;
+    getOnChainProtocolPoolsStats()
+      .then((data) => {
+        if (active) setStats(data);
+      })
+      .catch((err) => {
+        console.warn("[PoolsSection] Pool stats notice:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const counts: Record<string, number> = {
+    alpha: stats?.salaryPool?.counts?.alpha ?? 0,
+    prime: stats?.salaryPool?.counts?.prime ?? 0,
+    elite: stats?.salaryPool?.counts?.elite ?? 0,
+    crown: stats?.salaryPool?.counts?.crown ?? 0,
+  };
 
   return (
     <section
@@ -217,7 +242,6 @@ export function PoolsSection() {
                       width={1073}
                       height={1466}
                       className="w-full h-full object-contain pointer-events-none select-none"
-                      priority
                     />
                   </div>
                 );
@@ -260,7 +284,6 @@ export function PoolsSection() {
                         width={32}
                         height={32}
                         className="w-full h-full object-contain"
-                        priority
                       />
                     </div>
 
@@ -277,6 +300,14 @@ export function PoolsSection() {
                       <p className="text-[11px] sm:text-[12px] text-slate-500 font-normal leading-snug mt-1">
                         {tier.tagline}
                       </p>
+                      {mounted && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-[10px] font-mono text-slate-400 font-semibold">
+                            {counts[tier.id] ?? 0} Qualified Leaders On-Chain
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -25,7 +25,6 @@ export function FooterSection() {
           src="/e364e6c91d7fbbffe13f4bb9114abf0a61ec30ba.png"
           alt="Footer Sci-Fi Landscape"
           fill
-          priority
           className="object-cover object-center"
         />
         {/* Soft top gradient blend from preceding FAQ section */}
@@ -209,6 +208,16 @@ export function FooterSection() {
                 Resources
               </h4>
               <ul className="space-y-2.5 sm:space-y-3.5 text-xs sm:text-[13px] text-slate-500 font-medium">
+                <li>
+                  <a
+                    href={process.env.NEXT_PUBLIC_DAO_URL || "https://equorafidao.com"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-blue-600 transition-colors font-semibold text-blue-600"
+                  >
+                    Equora DAO Portal ↗
+                  </a>
+                </li>
                 <li>
                   <Link href="/help" className="hover:text-blue-600 transition-colors">
                     Help Center

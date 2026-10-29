@@ -3,6 +3,7 @@
 import React from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
+import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
 
 export interface WalletSectionProps {
   copy: (text: string) => void;
@@ -22,7 +23,8 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
 
   const profile = mounted ? (propProfile !== undefined ? propProfile : storeProfile) : null;
   const address = mounted ? (profile?.address ?? storeAddress ?? "") : "";
-  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected";
+  const displayAddress = address ? formatAddress(address) : "Not Connected";
+  const joinedDate = formatDateSafe(profile?.joinedAt, address ? "Connected" : "—");
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
@@ -66,7 +68,7 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
                   </span>
                   <button
                     type="button"
-                    onClick={() => copy(address)}
+                    onClick={() => copy(toTrobBase58(address))}
                     className="text-[#94a3b8] hover:text-[#2563eb] p-1 rounded-md hover:bg-white transition-colors cursor-pointer flex-shrink-0"
                     title="Copy address"
                     aria-label="Copy address"
@@ -77,7 +79,7 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
                     </svg>
                   </button>
                   <a
-                    href={`https://trobchain.com/#/address/${address}`}
+                    href={`https://trobchain.com/#/address/${toTrobBase58(address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#94a3b8] hover:text-[#2563eb] p-1 rounded-md hover:bg-white transition-colors cursor-pointer flex-shrink-0"
@@ -106,7 +108,7 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-4">
           <button
             type="button"
-            onClick={() => copy(address)}
+            onClick={() => copy(toTrobBase58(address))}
             className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-[#eff6ff] text-[#2563eb] text-[12.5px] sm:text-[13px] font-semibold hover:bg-[#dbeafe] transition-colors cursor-pointer shadow-2xs"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -116,7 +118,7 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
             Copy Address
           </button>
           <a
-            href={`https://trobchain.com/#/address/${address}`}
+            href={`https://trobchain.com/#/address/${toTrobBase58(address)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-[#eff6ff] text-[#2563eb] text-[12.5px] sm:text-[13px] font-semibold hover:bg-[#dbeafe] transition-colors cursor-pointer shadow-2xs"
@@ -188,7 +190,7 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
               Connection Date
             </span>
             <span className="text-[13px] sm:text-[13.5px] font-bold text-[#0f172a] tracking-tight">
-              Aug 12, 2026, 10:24 AM
+              {joinedDate}
             </span>
           </div>
 
@@ -197,8 +199,8 @@ export function WalletSection({ copy, profile: propProfile, onSwitchWallet, onDi
             <span className="text-[12.5px] sm:text-[13.5px] text-[#64748b]">
               Last Activity
             </span>
-            <span className="text-[13px] sm:text-[13.5px] font-bold text-[#0f172a] tracking-tight">
-              Aug 14, 2026, 04:12 PM
+            <span className="text-[13px] sm:text-[13.5px] font-bold text-[#16a34a] tracking-tight">
+              {address ? "Synchronized Live" : "Disconnected"}
             </span>
           </div>
 

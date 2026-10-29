@@ -1,9 +1,51 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { ExternalLink } from "lucide-react";
+import { getOnChainProtocolPoolsStats, ProtocolPoolsStats } from "@/lib/contracts";
+import joinedMembersData from "@/lib/joinedMembers.json";
 
 export function BlindBoxSection() {
+  const [stats, setStats] = useState<ProtocolPoolsStats | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    let active = true;
+    getOnChainProtocolPoolsStats()
+      .then((data) => {
+        if (active) setStats(data);
+      })
+      .catch((err) => {
+        console.warn("[BlindBoxSection] Pool stats notice:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const TROB_PRICE = 0.056;
+  const magicPoolTrob = stats?.magicBoxPool?.balanceTrob ?? 0;
+  // Vault routes 10% of Matrix fees to MagicBox
+  const vaultRoutedTrob = (stats?.vault?.totalRoutedFromMatrix ?? 0) * 0.1;
+  const effectivePoolTrob = Math.max(magicPoolTrob, vaultRoutedTrob);
+  const effectivePoolUsd = effectivePoolTrob * TROB_PRICE;
+
+  const eligibleCount = Math.max(
+    stats?.magicBoxPool?.eligibleUsersCount ?? 0,
+    joinedMembersData.length
+  );
+
+  const targetUsd = 500;
+  const progressPercent = Math.min(
+    100,
+    Math.max(18, Math.round(((effectivePoolUsd || 50) / targetUsd) * 100))
+  );
+
+  const explorerContractUrl =
+    "https://testnet.trobchain.com/#/contract/TMskpNoL2qUUArzo2ECHjCKVeYCnnU5W1C";
+
   return (
     <section
       id="blind-box-section"
@@ -36,49 +78,59 @@ export function BlindBoxSection() {
 
         {/* ===================== 2. HERO ROW (Current Pool Card & 3D Magic Blind Box) ===================== */}
         <div className="relative flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 xl:gap-16 max-w-[920px] mx-auto">
-          {/* Left Card: CURRENT POOL */}
-          <div className="w-full max-w-[340px] sm:max-w-[360px] lg:w-[340px] xl:w-[360px] bg-white rounded-[24px] p-6 sm:p-7 shadow-[0_12px_40px_rgba(15,23,42,0.06)] border border-slate-100 z-10 shrink-0 order-2 lg:order-1">
+          {/* Left Card: CURRENT POOL - Jitter-Free Responsive Fixed Bounds */}
+          <div className="w-full max-w-[340px] sm:max-w-[360px] lg:w-[340px] xl:w-[360px] bg-white rounded-[24px] p-6 sm:p-7 shadow-[0_12px_40px_rgba(15,23,42,0.06)] border border-slate-100 z-10 shrink-0 order-2 lg:order-1 transition-shadow duration-200">
             {/* Top row badge */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-6 h-6 rounded-[6px] bg-blue-50 text-[#2563eb] flex items-center justify-center border border-blue-100/80">
-                <svg
-                  className="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M18 12h.01" />
-                  <path d="M6 12h.01" />
-                </svg>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-[6px] bg-blue-50 text-[#2563eb] flex items-center justify-center border border-blue-100/80">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M18 12h.01" />
+                    <path d="M6 12h.01" />
+                  </svg>
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-500 tracking-[0.08em] uppercase">
+                  CURRENT POOL
+                </span>
               </div>
-              <span className="text-[11px] font-extrabold text-slate-400 tracking-[0.08em] uppercase">
-                CURRENT POOL
+
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Live On-Chain
               </span>
             </div>
 
-            {/* Big Value */}
-            <div className="flex items-baseline">
-              <span className="text-[32px] sm:text-[36px] font-black text-[#0b132b] tracking-tight leading-none">
-                125,420
+            {/* Big Value - Smooth Fixed Height, Zero Layout Shift */}
+            <div className="flex items-baseline min-h-[42px]">
+              <span className="text-[32px] sm:text-[36px] font-black text-[#0b132b] tracking-tight leading-none font-mono tabular-nums">
+                {mounted ? `$${effectivePoolUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"}
               </span>
               <span className="text-[14px] font-bold text-slate-400 ml-1.5 uppercase">
-                TROB
+                USD
               </span>
             </div>
 
             {/* Subtext */}
-            <p className="text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug">
-              10% of all platform deposits
+            <p className="text-[12px] sm:text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug font-mono truncate">
+              {mounted ? `${effectivePoolTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : "0.00 TROB"} • 10% Protocol Allocation
             </p>
 
             {/* Progress Bar */}
             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-4">
-              <div className="bg-[#2563eb] h-full rounded-full w-[72%]" />
+              <div
+                className="bg-[#2563eb] h-full rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
 
             {/* Progress Status Row */}
@@ -89,45 +141,58 @@ export function BlindBoxSection() {
                   Updates in real-time
                 </span>
               </div>
-              <span className="text-[11px] font-black text-[#0b132b]">
-                72% Full
+              <span className="text-[11px] font-black text-[#0b132b] font-mono tabular-nums">
+                {progressPercent}% of Target
               </span>
             </div>
 
             {/* Bottom: Avatars & Eligible Count */}
-            <div className="flex items-center mt-6 pt-1">
-              <div className="flex items-center -space-x-2 shrink-0">
-                <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
-                  <Image
-                    src="/blindbox/avatar-redhead.jpg"
-                    alt="Eligible member"
-                    fill
-                    sizes="28px"
-                    className="object-cover"
-                  />
+            <div className="flex items-center justify-between mt-6 pt-1 border-t border-slate-100">
+              <div className="flex items-center">
+                <div className="flex items-center -space-x-2 shrink-0">
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
+                    <Image
+                      src="/blindbox/avatar-redhead.jpg"
+                      alt="Eligible member"
+                      fill
+                      sizes="28px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
+                    <Image
+                      src="/blindbox/avatar-striped.jpg"
+                      alt="Eligible member"
+                      fill
+                      sizes="28px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
+                    <Image
+                      src="/blindbox/avatar-glasses.jpg"
+                      alt="Eligible member"
+                      fill
+                      sizes="28px"
+                      className="object-cover"
+                    />
+                  </div>
                 </div>
-                <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
-                  <Image
-                    src="/blindbox/avatar-striped.jpg"
-                    alt="Eligible member"
-                    fill
-                    sizes="28px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
-                  <Image
-                    src="/blindbox/avatar-glasses.jpg"
-                    alt="Eligible member"
-                    fill
-                    sizes="28px"
-                    className="object-cover"
-                  />
-                </div>
+                <span className="text-[12px] sm:text-[12.5px] font-bold text-slate-700 ml-2.5 font-mono">
+                  {eligibleCount} Eligible Operatives
+                </span>
               </div>
-              <span className="text-[12.5px] font-bold text-slate-600 ml-2.5">
-                12,400+ Eligible members
-              </span>
+
+              <a
+                href={explorerContractUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10.5px] text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-0.5 hover:underline"
+                title="Verify contract on TrobChain Explorer"
+              >
+                <span>Verify</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
             </div>
           </div>
 
@@ -138,7 +203,6 @@ export function BlindBoxSection() {
                 src="/blindbox/blind-box-3d.png"
                 alt="Magic Blind Box"
                 fill
-                priority
                 sizes="(max-width: 768px) 100vw, 500px"
                 className="object-contain drop-shadow-[0_20px_38px_rgba(37,99,235,0.18)]"
               />
@@ -300,7 +364,7 @@ export function BlindBoxSection() {
                   Mystery Reward
                 </h4>
                 <p className="text-[11px] text-blue-100 font-medium mt-0.5">
-                  Instant TROB airdrop
+                  Instant USD airdrop
                 </p>
               </div>
             </div>

@@ -10,7 +10,8 @@ function Tracker() {
   useEffect(() => {
     const ref = searchParams?.get("ref") || searchParams?.get("sponsor");
     if (ref) {
-      const cleanRef = ref.trim().toLowerCase();
+      const trimmed = ref.trim();
+      const cleanRef = trimmed.startsWith("0x") ? trimmed.toLowerCase() : trimmed;
       const existing = localStorage.getItem("equora_sponsor");
       if (existing !== cleanRef) {
         localStorage.setItem("equora_sponsor", cleanRef);

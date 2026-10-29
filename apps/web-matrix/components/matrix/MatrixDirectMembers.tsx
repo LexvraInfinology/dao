@@ -12,6 +12,7 @@ export interface DirectMemberItem {
 }
 
 import { useMatrixStore } from "@/lib/stores";
+import { formatAddress, formatDateSafe, toTrobBase58 } from "@/lib/format";
 
 export interface MatrixDirectMembersProps {
   handleCopy?: (text: string) => void;
@@ -62,23 +63,31 @@ export function MatrixDirectMembers(props: MatrixDirectMembersProps = {}) {
                   </div>
                   <div className="flex flex-col">
                     <span
-                      onClick={() => handleCopy(m.address)}
+                      onClick={() => handleCopy(toTrobBase58(m.address))}
                       className="font-mono font-bold text-[13.5px] text-[#0f172a] hover:text-[#2563eb] cursor-pointer"
                       title="Click to copy"
                     >
-                      {m.address.slice(0, 6)}...{m.address.slice(-4)}
+                      {formatAddress(m.address)}
                     </span>
                     <span className="text-[10px] text-[#94a3b8]">{m.username}</span>
                   </div>
                 </div>
 
                 <div className="text-[12.5px] text-[#64748b]">
-                  {new Date(m.joinedAt).toLocaleDateString()}
+                  {formatDateSafe(m.joinedAt, "Active")}
                 </div>
 
-                <div className="px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] text-[#16a34a] text-[11px] font-bold">
-                  Active
-                </div>
+                {m.activeSlots >= 1 ? (
+                  <div className="px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#bbf7d0] text-[#16a34a] text-[11px] font-bold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                    <span>Active ($30 Paid)</span>
+                  </div>
+                ) : (
+                  <div className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span>Pending $30</span>
+                  </div>
+                )}
 
                 <div className="text-[12.5px] font-semibold text-[#64748b]">
                   Slot #{m.activeSlots}
@@ -86,7 +95,7 @@ export function MatrixDirectMembers(props: MatrixDirectMembersProps = {}) {
 
                 <div className="text-right">
                   <div className="font-extrabold text-[13.5px] text-[#0f172a]">
-                    {m.totalContributed.toFixed(2)} TROB
+                    ${m.totalContributed.toFixed(2)} USD
                   </div>
                   <div className="text-[10px] text-[#94a3b8]">Volume Contributed</div>
                 </div>

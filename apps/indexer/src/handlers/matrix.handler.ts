@@ -20,6 +20,13 @@ function payoutTypeName(index: number): string {
   return PAYOUT_TYPE_NAMES[index] ?? `UNKNOWN_${index}`;
 }
 
+function formatTokenUnits(amount: bigint): number {
+  if (amount >= BigInt("100000000000000")) {
+    return parseFloat(formatUnits(amount, 18));
+  }
+  return parseFloat(formatUnits(amount, 6));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SlotJoined
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,7 +130,7 @@ export async function handleDistributionExecuted(event: {
   const slotNumber = event.slot;
   const cycle = Number(event.cycle);
   const payoutType = payoutTypeName(event.payoutTypeIndex);
-  const amountDecimal = parseFloat(formatUnits(event.amount, 18));
+  const amountDecimal = formatTokenUnits(event.amount);
   const eventDate = new Date(Number(event.timestamp) * 1000);
 
   // Insert full audit record
@@ -143,6 +150,76 @@ export async function handleDistributionExecuted(event: {
       timestamp: eventDate,
     },
   });
+
+  // Update recipient profile earnings and available balance if not protocol vault
+  const isVault = recipient.includes("vault") || recipient === "0x0000000000000000000000000000000000000000";
+  if (!isVault) {
+    const isDirect = payoutType === "UPLINE_1";
+    
+    // Ensure recipient exists in User table for foreign key relation
+    const existing = await prisma.user.findUnique({ where: { address: recipient } });
+    if (!existing) {
+      const highestUser = await prisma.user.findFirst({
+        orderBy: { userId: "desc" },
+        select: { userId: true },
+      });
+      const nextUserId = (highestUser?.userId ?? 0) + 1;
+      await prisma.user.create({
+        data: {
+          address: recipient,
+          userId: nextUserId,
+          registrationTimestamp: eventDate,
+        },
+      }).catch(() => {});
+    }
+
+    await prisma.matrixProfile.upsert({
+      where: { userAddress: recipient },
+      create: {
+        userAddress: recipient,
+        username: `Operative #${recipient.slice(2, 6).toUpperCase()}`,
+        totalEarnings: amountDecimal,
+        availableBalance: amountDecimal,
+        directEarnings: isDirect ? amountDecimal : 0,
+        matrixEarnings: isDirect ? 0 : amountDecimal,
+      },
+      update: {
+        totalEarnings: { increment: amountDecimal },
+        availableBalance: { increment: amountDecimal },
+        ...(isDirect ? { directEarnings: { increment: amountDecimal } } : { matrixEarnings: { increment: amountDecimal } }),
+      },
+    }).catch(() => {});
+
+    // Create live transaction record for recipient
+    await prisma.matrixTransaction.create({
+      data: {
+        userAddress: recipient,
+        type: isDirect ? "COMMISSION_EARNED" : "SPILLOVER_RECEIVED",
+        amount: amountDecimal,
+        slotNumber,
+        cycle,
+        position: event.position,
+        status: "COMPLETED",
+        txHash: event.txHash,
+        timestamp: eventDate,
+        description: `Matrix reward: ${payoutType} (Slot #${slotNumber}, P${event.position})`,
+      },
+    }).catch(() => {});
+
+    // Record activity feed
+    await prisma.matrixActivity.create({
+      data: {
+        userAddress: recipient,
+        action: "REWARD_DISTRIBUTED",
+        title: `Matrix Commission Received ($${amountDecimal.toFixed(2)} USD)`,
+        description: `Earned from Position #${event.position} on Slot #${slotNumber} (${payoutType})`,
+        slotNumber,
+        amount: amountDecimal,
+        txHash: event.txHash,
+        timestamp: eventDate,
+      },
+    }).catch(() => {});
+  }
 
   // For owner direct income, track totalEarned on slot
   const ownerIncomeTypes = ["OWNER_DIRECT", "SPILLOVER_DOWNLINE1", "SPILLOVER_DOWNLINE2"];
@@ -250,7 +327,7 @@ export async function handleDaoPoolFunded(event: {
   txHash: string;
   blockNumber: bigint;
 }) {
-  const amountDecimal = parseFloat(formatUnits(event.amount, 18));
+  const amountDecimal = formatTokenUnits(event.amount);
   // bigint -> string so Prisma Decimal field accepts it
   const accStr = event.newAccRewardPerShare.toString();
 
@@ -292,7 +369,7 @@ export async function handleDaoRewardClaimed(event: {
   blockNumber: bigint;
 }) {
   const member = event.member.toLowerCase();
-  const amountDecimal = parseFloat(formatUnits(event.amount, 18));
+  const amountDecimal = formatTokenUnits(event.amount);
 
   // Run state update separately (may not exist yet) then insert event
   await prisma.daoPoolState.update({
@@ -322,7 +399,7 @@ export async function handleRankPoolFunded(event: {
   txHash: string;
   blockNumber: bigint;
 }) {
-  const amountDecimal = parseFloat(formatUnits(event.amount, 18));
+  const amountDecimal = formatTokenUnits(event.amount);
 
   await prisma.rankPoolEvent.create({
     data: {

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
+import { formatDateSafe } from "@/lib/format";
 
 export interface PersonalInfoCardProps {
   profile?: MatrixUserProfile | null;
@@ -167,7 +168,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Date Joined</span>
               </div>
               <span className="text-[12.5px] sm:text-[13.5px] font-bold text-[#0f172a] text-right truncate">
-                {profile?.joinedAt ? new Date(profile.joinedAt).toLocaleDateString() : "Active"}
+                {formatDateSafe(profile?.joinedAt)}
               </span>
             </div>
           </div>

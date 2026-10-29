@@ -88,12 +88,42 @@ export function getTrobSafeProvider(): any {
     return w.__eip6963TrobProvider;
   }
 
+  // 4. In-page bridge attribute or global bridge flag
+  if (w.__trobsafeBridge) {
+    return w;
+  }
+  if (typeof document !== "undefined" && document.documentElement?.hasAttribute("data-trobsafe-inpage")) {
+    return w;
+  }
+
   return null;
 }
 
-/** Check if TrobSafe provider exists */
+/** Check if TrobSafe provider exists across Chrome Extension, Android WebView, or iOS Bridge */
 export function hasTrobSafeProvider(): boolean {
-  return !!getTrobSafeProvider();
+  if (typeof window === "undefined") return false;
+  if (getTrobSafeProvider()) return true;
+  const w = window as any;
+  if (w.__trobsafeBridge) return true;
+  if (typeof document !== "undefined" && document.documentElement?.hasAttribute("data-trobsafe-inpage")) return true;
+  return false;
+}
+
+/**
+ * Detects if a foreign/incompatible Web3 wallet is present (e.g. MetaMask, Phantom, Coinbase Wallet).
+ * Equora Protocol exclusively uses TrobSafe for TrobChain Layer-1 transactions.
+ */
+export function getIncompatibleForeignWallet(): string | null {
+  if (typeof window === "undefined") return null;
+  if (hasTrobSafeProvider()) return null; // TrobSafe is present
+  const w = window as any;
+  if (w.ethereum?.isMetaMask) return "MetaMask";
+  if (w.ethereum?.isPhantom || w.phantom) return "Phantom";
+  if (w.ethereum?.isCoinbaseWallet) return "Coinbase Wallet";
+  if (w.ethereum?.isRabby) return "Rabby Wallet";
+  if (w.tronLink?.isTronLink && !w.trobSafe) return "TronLink (Foreign Tron Network)";
+  if (w.ethereum) return "Incompatible EVM Wallet";
+  return null;
 }
 
 /** Check if injected provider exists (TrobSafe is the exclusive provider) */
@@ -102,12 +132,19 @@ export function hasInjectedProvider(): boolean {
 }
 
 /**
- * Normalizes an address from either Base58 or Tron 41-hex into canonical 0x hex
+ * Normalizes an address from either Base58, Tron 41-hex, or JSON storage into canonical 0x hex
  */
 export function normalizeTo0x(raw: string): string {
   if (!raw) return "";
   let clean = String(raw).trim();
-  if (clean.startsWith("T") && clean.length === 34) {
+  if (clean.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(clean);
+      if (parsed.hex) return normalizeTo0x(parsed.hex);
+      if (parsed.base58) return normalizeTo0x(parsed.base58);
+    } catch {}
+  }
+  if (clean.startsWith("T") && clean.length >= 33 && clean.length <= 35) {
     try {
       return toHexAddress(clean);
     } catch {
@@ -144,26 +181,80 @@ export function getInjectedAuthorizedAccount(): string | null {
     if (tw.defaultAddress) {
       const raw = tw.defaultAddress.base58 || tw.defaultAddress.hex;
       if (raw && raw !== "0" && raw !== "0x0" && raw !== "410000000000000000000000000000000000000000") {
-        return normalizeTo0x(raw);
+        const norm = normalizeTo0x(raw);
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
       }
     }
     // 2. Check address property directly
     if (tw.address && typeof tw.address === "string" && tw.address.length > 5) {
-      return normalizeTo0x(tw.address);
+      const norm = normalizeTo0x(tw.address);
+      if (norm.startsWith("0x") && norm.length === 42) return norm;
     }
     // 3. Check selectedAddress (EVM/TrobSafe dual provider)
     if (tw.selectedAddress && typeof tw.selectedAddress === "string" && tw.selectedAddress.length > 5) {
-      return normalizeTo0x(tw.selectedAddress);
+      const norm = normalizeTo0x(tw.selectedAddress);
+      if (norm.startsWith("0x") && norm.length === 42) return norm;
     }
   }
 
-  // 4. Sync with DAO platform's equora_auth_address if available in same browser
+  // 4. Sync with DAO platform's equora_auth_address, trobsafe_address, or matrix storage
   try {
-    const daoAuth = localStorage.getItem("equora_auth_address");
-    if (daoAuth && daoAuth.trim().length > 5 && daoAuth !== "0x0" && daoAuth !== "0") {
-      return normalizeTo0x(daoAuth.trim());
+    const rawStored = localStorage.getItem("trobsafe_address");
+    if (rawStored) {
+      try {
+        const parsed = JSON.parse(rawStored);
+        const val = parsed.hex || parsed.base58;
+        if (val && typeof val === "string") {
+          const norm = normalizeTo0x(val);
+          if (norm.startsWith("0x") && norm.length === 42) return norm;
+        }
+      } catch {
+        const norm = normalizeTo0x(rawStored.trim());
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
+      }
+    }
+    const candidates = [
+      localStorage.getItem("equora_auth_address"),
+      localStorage.getItem("equora_user_address"),
+      localStorage.getItem("equora_matrix_address"),
+    ];
+    for (const c of candidates) {
+      if (c && c.trim().length > 5 && c !== "0x0" && c !== "0") {
+        const norm = normalizeTo0x(c.trim());
+        if (norm.startsWith("0x") && norm.length === 42) return norm;
+      }
     }
   } catch {}
+
+  return null;
+}
+
+/**
+ * Automatically detects whether TrobSafe wallet is installed on this device
+ * and attempts seamless connection. Returns the connected address or null.
+ */
+export async function autoDetectAndConnectTrobSafe(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  wakeUpExtension();
+
+  // 1. Check if already authorized / stored
+  const authorized = getInjectedAuthorizedAccount();
+  if (authorized && authorized.startsWith("0x")) {
+    setStoredUserAddress(authorized);
+    return authorized;
+  }
+
+  // 2. If provider is present and already unlocked, attempt connection
+  if (hasTrobSafeProvider()) {
+    try {
+      const address = await connectTrobSafe();
+      if (address && address.startsWith("0x")) {
+        return address;
+      }
+    } catch (e) {
+      console.warn("[web3Wallet] Auto-connect prompt pending or declined:", e);
+    }
+  }
 
   return null;
 }
@@ -175,11 +266,18 @@ export async function connectTrobSafe(): Promise<string> {
   if (typeof window === "undefined") throw new Error("Window not available");
   wakeUpExtension();
 
+  const foreign = getIncompatibleForeignWallet();
+  if (foreign) {
+    throw new Error(
+      `Incompatible wallet detected (${foreign}). Equora Protocol exclusively runs on TrobChain Layer-1 and requires the official TrobSafe Wallet (Extension, Android APK, or iOS App).`
+    );
+  }
+
   const tw = getTrobSafeProvider();
 
   if (!tw) {
     throw new Error(
-      "TrobSafe wallet was not detected. Please install TrobSafe extension or open this page inside the TrobSafe Mobile App."
+      "TrobSafe wallet was not detected. Please install TrobSafe extension for Chrome/Brave/Edge or open this page inside the TrobSafe Mobile App (Android APK / iOS)."
     );
   }
 
@@ -248,13 +346,18 @@ export function setupWalletListeners(
 ): () => void {
   if (typeof window === "undefined") return () => {};
 
+  let lastKnownAddress = getInjectedAuthorizedAccount();
+
   const handleMessage = (e: MessageEvent) => {
     if (e.data?.message?.action === "setAccount" || e.data?.action === "accountsChanged") {
       const addr = e.data?.message?.data?.address || e.data?.data?.address;
       if (addr) {
         const clean = normalizeTo0x(addr);
-        setStoredUserAddress(clean);
-        onAccountChange(clean);
+        if (clean && clean !== lastKnownAddress) {
+          lastKnownAddress = clean;
+          setStoredUserAddress(clean);
+          onAccountChange(clean);
+        }
       }
     }
     if (e.data?.action === "disconnect" || e.data?.message?.action === "disconnect") {
@@ -265,7 +368,20 @@ export function setupWalletListeners(
 
   window.addEventListener("message", handleMessage);
 
+  // Periodic check for TrobSafe account switch
+  const interval = setInterval(() => {
+    try {
+      const current = getInjectedAuthorizedAccount();
+      if (current && current !== lastKnownAddress) {
+        lastKnownAddress = current;
+        setStoredUserAddress(current);
+        onAccountChange(current);
+      }
+    } catch {}
+  }, 1000);
+
   return () => {
     window.removeEventListener("message", handleMessage);
+    clearInterval(interval);
   };
 }

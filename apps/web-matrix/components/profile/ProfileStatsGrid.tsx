@@ -11,9 +11,9 @@ export interface ProfileStatsGridProps {
 export function ProfileStatsGrid(props: ProfileStatsGridProps = {}) {
   const storeProfile = useUserStore((s) => s.profile);
   const profile = props.profile !== undefined ? props.profile : storeProfile;
-  const directPartners = profile?.directReferralsCount ?? 4;
-  const cycles = profile?.recyclesCount ?? 12;
-  const totalVolume = profile?.totalEarnings ?? 4250.0;
+  const directPartners = profile?.directReferralsCount ?? 0;
+  const cycles = profile?.recyclesCount ?? 0;
+  const totalVolume = profile?.totalEarnings ?? 0.0;
   const rank = profile?.rankName || "Operative";
 
   return (
@@ -59,9 +59,9 @@ export function ProfileStatsGrid(props: ProfileStatsGridProps = {}) {
           </svg>
         </div>
         <div>
-          <div className="text-[24px] lg:text-[28px] font-black text-[#0f172a] leading-none mb-1.5">{totalVolume.toFixed(2)}</div>
+          <div className="text-[24px] lg:text-[28px] font-black text-[#0f172a] leading-none mb-1.5">${totalVolume.toFixed(2)}</div>
           <div className="text-[13px] font-bold text-[#0f172a] leading-tight">Total Volume</div>
-          <div className="text-[11px] text-[#64748b] mt-0.5">TROB</div>
+          <div className="text-[11px] text-[#64748b] mt-0.5">USD</div>
         </div>
       </div>
 

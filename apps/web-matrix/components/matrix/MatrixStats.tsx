@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Lock } from "lucide-react";
 import { MatrixSlotSummary, MatrixUserProfile } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 
@@ -104,8 +105,8 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
             <div>
               <span className="text-[11px] font-semibold text-[#64748b] block">Total Volume</span>
               <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[16px] font-extrabold text-[#0f172a]">{totalEarned.toFixed(2)}</span>
-                <span className="text-[11px] font-bold text-[#2563eb]">TROB</span>
+                <span className="text-[16px] font-extrabold text-[#0f172a]">${totalEarned.toFixed(2)}</span>
+                <span className="text-[11px] font-bold text-[#2563eb]">USD</span>
               </div>
             </div>
           </div>
@@ -140,25 +141,34 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
                   <span className="text-[12px] font-black">
                     #{slotNum.toString().padStart(2, "0")}
                   </span>
-                  {!unlocked && <span className="text-[9px]">🔒</span>}
+                  {!unlocked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
                 </div>
                 <span className={`text-[10px] font-bold mt-0.5 ${isSelected ? "text-white/80" : "text-[#64748b]"}`}>
-                  {item?.cost ?? 30 * Math.pow(2, i)} T
+                  ${item?.cost ?? 30}
                 </span>
               </button>
             );
           })}
 
-          {/* Unlock Button if selected slot is locked */}
-          {!isUnlocked && (
-            <button
-              onClick={() => onBuySlot && onBuySlot(selectedSlotNumber)}
-              disabled={buyingSlot}
-              className="px-4 py-2 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-[12px] font-bold flex items-center gap-1.5 flex-shrink-0 shadow-sm transition-colors"
-            >
-              <span>{buyingSlot ? "Unlocking..." : `Unlock Slot #${selectedSlotNumber} (${slotCost} TROB)`}</span>
-            </button>
-          )}
+          {/* On-Chain Progression Status Badge (Automated via Node 4 & 5) */}
+          <div className="flex-shrink-0">
+            {isUnlocked && currentSlotSummary?.isLive !== false ? (
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#ecfdf5] border border-[#bbf7d0] text-[#16a34a] text-[11.5px] font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
+                <span>Slot #{selectedSlotNumber} Active</span>
+              </div>
+            ) : isUnlocked && currentSlotSummary?.isLive === false ? (
+              <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[11.5px] font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span>Standby Reserved ($0 Out-of-Pocket)</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1.5 rounded-xl bg-[#f1f5f9] border border-slate-200 text-slate-500 text-[11px] font-semibold flex items-center gap-1.5">
+                <Lock className="w-3 h-3 text-slate-400" />
+                <span>Auto-Unlocks via Node 4 & 5 in Slot #{Math.max(1, selectedSlotNumber - 1)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

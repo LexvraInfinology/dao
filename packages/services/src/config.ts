@@ -5,13 +5,12 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
 dotenv.config();
 
-const TARGET_NETWORK = (
-  process.env.TARGET_NETWORK ||
-  process.env.NEXT_PUBLIC_TARGET_NETWORK ||
-  "testnet"
-).toLowerCase();
+const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
+const IS_MAINNET = rawMainnetEnv !== undefined
+  ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
+  : (process.env.TARGET_NETWORK || process.env.NEXT_PUBLIC_TARGET_NETWORK || "testnet").trim().toLowerCase() === "mainnet";
 
-const IS_MAINNET = TARGET_NETWORK === "mainnet";
+const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
 
 export const servicesConfig = {
   jwt: {

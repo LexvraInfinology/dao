@@ -12,6 +12,7 @@ import { IncomeChannelsCard } from '@/components/dao/lounge/IncomeChannelsCard';
 import { useWallet } from '@/context/WalletContext';
 import { useLounge, useTrobPrice } from '@/hooks/useApi';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { GenesisMatrixPriorityBanner } from '@/components/dao/matrix/GenesisMatrixPriorityBanner';
 import { Lock, ShieldAlert } from 'lucide-react';
 import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
 
@@ -89,6 +90,12 @@ export default function MemberLoungePage() {
           </div>
         </div>
       )}
+
+      {/* Genesis Matrix Priority Gateway Banner for DAO Seats 1-100 */}
+      <GenesisMatrixPriorityBanner
+        position={lounge?.position}
+        isMember={Boolean(lounge?.accessGranted && !isUnderfunded)}
+      />
 
       <LoungeHero loungeData={lounge} loading={loading} />
 

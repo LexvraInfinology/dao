@@ -168,11 +168,12 @@ contract EquoraDAOv2 is ReentrancyGuard {
         address _paymentToken,
         address _registry
     ) {
-        require(_paymentToken != address(0), "EquoraDAO: Invalid token");
-        require(_registry     != address(0), "EquoraDAO: Invalid registry");
+        require(_registry != address(0), "EquoraDAO: Invalid registry");
 
         admin        = msg.sender;
-        paymentToken = IERC20(_paymentToken);
+        if (_paymentToken != address(0)) {
+            paymentToken = IERC20(_paymentToken);
+        }
         registry     = IEquoraRegistry(_registry);
 
         daoLaunchTimestamp = block.timestamp;
@@ -569,7 +570,16 @@ contract EquoraDAOv2 is ReentrancyGuard {
         pendingPoolShare[msg.sender] = 0;
         totalPoolDistributed += claimable;
 
-        bool ok = paymentToken.transfer(msg.sender, claimable);
+        bool ok = false;
+        if (address(this).balance >= claimable) {
+            (bool sent, ) = payable(msg.sender).call{value: claimable}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, claimable) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit PoolShareClaimed(msg.sender, claimable, block.timestamp);

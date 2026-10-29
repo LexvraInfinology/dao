@@ -7,6 +7,7 @@ export interface LeaderboardNode {
   rank: number;
   id: string;
   address: string;
+  fullAddress: string;
   slot: string;
   slotTheme: "amber" | "blue" | "slate";
   directPartners: number;
@@ -17,6 +18,7 @@ export interface LeaderboardNode {
 }
 
 import { MatrixLeaderboardEntry } from "@/lib/api";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export interface LeaderboardRankingsTableProps {
   handleCopy: (address: string) => void;
@@ -32,14 +34,15 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
       ? entries.map((e) => ({
           rank: e.rank,
           id: `#${e.userId}`,
-          address: `${e.address.slice(0, 6)}...${e.address.slice(-4)}`,
+          address: formatAddress(e.address),
+          fullAddress: toTrobBase58(e.address),
           slot: `SLOT ${e.highestSlot}`,
           slotTheme: e.highestSlot >= 8 ? "amber" : "blue",
           directPartners: e.directCount,
           matrixCycles: Math.max(Math.floor(e.totalEarned / 120), 0),
           totalVolume: e.totalEarned,
           trend7d: 0,
-          volumeDisplay: `${e.totalEarned.toFixed(2)} TROB`,
+          volumeDisplay: `$${e.totalEarned.toFixed(2)} USD`,
         }))
       : [];
 
@@ -146,7 +149,7 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleCopy(node.address);
+                                  handleCopy(node.fullAddress || node.address);
                                 }}
                                 className="flex items-center gap-1 text-[11px] font-mono text-[#94a3b8] hover:text-[#2563eb] cursor-pointer mt-0.5"
                               >
@@ -298,7 +301,7 @@ export function LeaderboardRankingsTable({ handleCopy, copiedAddress, entries }:
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <div className="text-right">
                       <div className="font-black text-[12.5px] text-[#0f172a]">
-                        {node.totalVolume.toLocaleString("en-US", { minimumFractionDigits: 0 })} TROB
+                        ${node.totalVolume.toLocaleString("en-US", { minimumFractionDigits: 0 })} USD
                       </div>
                       <div
                         className={`text-[10.5px] font-bold mt-0.5 ${

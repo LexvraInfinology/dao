@@ -17,9 +17,12 @@ import {
   Zap,
   Clock,
   AlertTriangle,
+  Network,
+  GitBranch,
 } from 'lucide-react';
 import Link from 'next/link';
 import { playNotificationChime, playPriorityAlertChime } from '@/utils/soundEffects';
+import { getMatrixReferralUrl, resolveSponsorAddressForSeat } from '@/config/matrixTree';
 
 export interface DaoNotification {
   id: string;
@@ -122,9 +125,48 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
     }
   };
 
+  const buildMatrixTop7Notification = (seat: number): DaoNotification => {
+    if (seat === 1) {
+      return {
+        id: 'genesis_matrix_seat_1',
+        type: 'matrix_leader_offer',
+        title: 'Genesis Matrix Allocation: Apex Node (#0001)',
+        message: 'As Founding Council Seat #0001, your wallet is designated as the Founding Matrix Root. Activation initializes the binary tree structure for Council Seats #2 and #3.',
+        timestamp: 'Priority Allocation',
+        read: false,
+        priority: true,
+        actionUrl: getMatrixReferralUrl(1),
+        actionLabel: 'Activate Apex Node (Slot 1)',
+        seatTarget: 1,
+      };
+    }
+
+    const parentSeat = Math.floor(seat / 2);
+    const legName = seat % 2 === 0 ? 'Left' : 'Right';
+    const tierName = seat <= 3 ? 'Tier 1' : 'Tier 2';
+
+    return {
+      id: `genesis_matrix_seat_${seat}`,
+      type: 'matrix_leader_offer',
+      title: `Genesis Matrix Allocation: ${tierName} (${legName} Node)`,
+      message: `Under protocol rules, a sponsor referral is mandatory. Your placement is pre-anchored to Council Seat #${parentSeat} for top-to-bottom binary placement.`,
+      timestamp: 'Priority Allocation',
+      read: false,
+      priority: true,
+      actionUrl: getMatrixReferralUrl(seat),
+      actionLabel: `Join via Council Sponsor #${parentSeat}`,
+      seatTarget: seat,
+    };
+  };
+
   // Initialize concise notifications dynamically based on user's seat position
   useEffect(() => {
     const list: DaoNotification[] = [];
+
+    // Add Genesis Matrix Priority Allocation for Top 7 Members if seat is known
+    if (userSeat && userSeat >= 1 && userSeat <= 7) {
+      list.push(buildMatrixTop7Notification(userSeat));
+    }
 
     // 1. 35% Global Protocol Pool Push (Concise)
     list.push({
@@ -164,31 +206,42 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
 
     setNotifications(list);
 
-    // 0. Check for 48h Retopup & 5X Cap ($1,500 USD) Alert for active wallet
+    // Dynamic resolution for lounge/seat data & 48h retopup alert
     if (userAddress) {
       fetch(`/api/dao/lounge/${encodeURIComponent(userAddress)}`)
         .then((res) => res.json())
         .then((json) => {
           if (json.success && json.data) {
             const d = json.data;
+            const seatPos = d.position || userSeat;
+
+            // Ensure top 7 matrix allocation notification is injected if position is 1-7
+            if (seatPos && seatPos >= 1 && seatPos <= 7) {
+              const matrixItem = buildMatrixTop7Notification(seatPos);
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === matrixItem.id)) return prev;
+                return [matrixItem, ...prev];
+              });
+            }
+
             if (d.isCapped || d.retopupDeadline) {
-              const seatPos = d.position || userSeat || 1;
+              const seatTarget = seatPos || 1;
               const isExpired = d.isExpired;
 
               const retopupItem: DaoNotification = {
                 id: `retopup_alert_${userAddress}`,
                 type: 'retopup_alert',
                 title: isExpired
-                  ? `Seat #${seatPos} Vacated (Expired)`
-                  : `5X Cap Reached — 48h Re-topup (Seat #${seatPos})`,
+                  ? `Seat #${seatTarget} Vacated (Expired)`
+                  : `5X Cap Reached — 48h Re-topup (Seat #${seatTarget})`,
                 message: isExpired
                   ? `48-hour re-topup deadline expired. Seat open for queue reallocation.`
                   : `5X Cap reached ($1,500 USD). Re-topup $300 to reset cap and keep daily dividends.`,
                 timestamp: isExpired ? 'Expired' : 'URGENT (48h)',
                 read: false,
                 priority: !isExpired,
-                actionLabel: isExpired ? undefined : `Re-topup Seat #${seatPos} ($300)`,
-                seatTarget: seatPos,
+                actionLabel: isExpired ? undefined : `Re-topup Seat #${seatTarget} ($300)`,
+                seatTarget: seatTarget,
               };
 
               setNotifications((prev) => {
@@ -270,14 +323,6 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
       const customEvent = e as CustomEvent<DaoNotification>;
       if (!customEvent.detail) return;
       const newNotif = customEvent.detail;
-      // Do not display matrix root/leader opportunity notifications as per user request
-      if (
-        newNotif.type === 'matrix_leader_offer' ||
-        newNotif.title?.toLowerCase().includes('apex matrix root') ||
-        newNotif.title?.toLowerCase().includes('matrix opportunity ready')
-      ) {
-        return;
-      }
       setNotifications((prev) => {
         if (prev.some((n) => n.id === newNotif.id)) return prev;
         return [newNotif, ...prev];
@@ -454,7 +499,9 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                 <div
                   key={item.id}
                   className={`p-2.5 rounded-xl border transition-all text-xs ${
-                    item.priority
+                    item.type === 'matrix_leader_offer'
+                      ? 'bg-gradient-to-br from-blue-50/90 to-indigo-50/60 border-blue-300 shadow-xs'
+                      : item.priority
                       ? 'bg-gradient-to-br from-amber-50/90 to-amber-100/50 border-amber-300 shadow-xs'
                       : item.read
                       ? 'bg-[#F8FAFC] border-[#E8EFF8]'
@@ -465,7 +512,9 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                     {/* Icon */}
                     <div
                       className={`w-6 h-6 rounded-lg shrink-0 flex items-center justify-center mt-0.5 ${
-                        item.type === 'retopup_alert'
+                        item.type === 'matrix_leader_offer'
+                          ? 'bg-[#071A4A] text-white shadow-xs'
+                          : item.type === 'retopup_alert'
                           ? 'bg-amber-600 text-white animate-pulse'
                           : item.priority
                           ? 'bg-amber-500 text-white'
@@ -476,7 +525,9 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                           : 'bg-indigo-500 text-white'
                       }`}
                     >
-                      {item.type === 'retopup_alert' ? (
+                      {item.type === 'matrix_leader_offer' ? (
+                        <GitBranch className="w-3.5 h-3.5 text-[#93C5FD]" />
+                      ) : item.type === 'retopup_alert' ? (
                         <Zap className="w-3 h-3 fill-white" />
                       ) : item.priority ? (
                         <Crown className="w-3 h-3" />
@@ -494,7 +545,11 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span
                           className={`font-bold text-[11px] truncate ${
-                            item.priority || item.type === 'retopup_alert' ? 'text-amber-900' : 'text-[#14304A]'
+                            item.type === 'matrix_leader_offer'
+                              ? 'text-[#071A4A]'
+                              : item.priority || item.type === 'retopup_alert'
+                              ? 'text-amber-900'
+                              : 'text-[#14304A]'
                           }`}
                         >
                           {item.title}
@@ -536,14 +591,27 @@ export const DaoNotificationCenter: React.FC<DaoNotificationCenterProps> = ({
                           </Link>
                         </div>
                       ) : item.actionUrl ? (
-                        <Link
-                          href={item.actionUrl}
-                          onClick={handleClose}
-                          className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#0E62E4] hover:underline"
-                        >
-                          <span>{item.actionLabel || 'View details'}</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </Link>
+                        item.actionUrl.startsWith('http') ? (
+                          <a
+                            href={item.actionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={handleClose}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#071A4A] hover:bg-[#155EEF] text-white text-[10.5px] font-bold shadow-xs transition-colors mt-0.5 cursor-pointer"
+                          >
+                            <span>{item.actionLabel || 'Proceed to Matrix'}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <Link
+                            href={item.actionUrl}
+                            onClick={handleClose}
+                            className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#0E62E4] hover:underline"
+                          >
+                            <span>{item.actionLabel || 'View details'}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </Link>
+                        )
                       ) : null}
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import prisma from "@equora/database";
+import { daoService, priceService } from "../dao";
 import {
   MatrixSlotSummaryDTO,
   MatrixSlotDetailsDTO,
@@ -14,24 +15,31 @@ import {
   MatrixEarningsOverviewDTO,
 } from "./model";
 
+export const BASE_SLOT_COST = 30;
+
 export const SLOT_COSTS: Record<number, number> = {
   1: 30,
-  2: 60,
-  3: 120,
-  4: 240,
-  5: 480,
-  6: 960,
-  7: 1920,
-  8: 3840,
-  9: 7680,
-  10: 15360,
-  11: 30720,
-  12: 61440,
+  2: 30,
+  3: 30,
+  4: 30,
+  5: 30,
+  6: 30,
+  7: 30,
+  8: 30,
+  9: 30,
+  10: 30,
+  11: 30,
+  12: 30,
 };
 
-const TROB_PRICE_USD = 0.15;
+export function getSlotCost(slotNumber: number): number {
+  return 30;
+}
 
-function getRankName(tier: number): string {
+export const DEFAULT_BENCHMARK_TROB_PRICE = 0.037146; // Live market fallback
+export const TROB_PRICE_USD = DEFAULT_BENCHMARK_TROB_PRICE;
+
+export function getRankName(tier: number): string {
   switch (tier) {
     case 1:
       return "ALPHA";
@@ -41,9 +49,20 @@ function getRankName(tier: number): string {
       return "ELITE";
     case 4:
       return "CROWN";
+    case 5:
+      return "CROWN PRESTIGE";
     default:
       return "NONE";
   }
+}
+
+export function computeRankTier(highestSlot: number): number {
+  if (highestSlot > 12) return 5;  // CROWN PRESTIGE (Infinite tier)
+  if (highestSlot >= 10) return 4; // CROWN (Slots 10-12)
+  if (highestSlot >= 7) return 3;  // ELITE (Slots 7-9)
+  if (highestSlot >= 4) return 2;  // PRIME (Slots 4-6)
+  if (highestSlot >= 1) return 1;  // ALPHA (Slots 1-3)
+  return 0;
 }
 
 function getLevelForPosition(pos: number): number {
@@ -52,7 +71,176 @@ function getLevelForPosition(pos: number): number {
   return 3;
 }
 
+export async function getRootMatrixOwnerAddress(): Promise<string> {
+  try {
+    const rootUser = await prisma.user.findFirst({
+      where: { userId: 1 },
+      select: { address: true },
+    });
+    if (rootUser?.address) return rootUser.address.toLowerCase();
+
+    const firstUser = await prisma.user.findFirst({
+      orderBy: { userId: "asc" },
+      select: { address: true },
+    });
+    if (firstUser?.address) return firstUser.address.toLowerCase();
+  } catch {}
+  return "0x0000000000000000000000000000000000000001";
+}
+
+function getFallbackProfile(canonicalAddress: string): MatrixUserProfileDTO {
+  return {
+    address: canonicalAddress,
+    userId: 1,
+    username: `Operative #${canonicalAddress.slice(2, 6).toUpperCase()}`,
+    avatarUrl: null,
+    bio: null,
+    telegram: null,
+    twitter: null,
+    sponsorAddress: null,
+    sponsorUserId: null,
+    directReferralsCount: 0,
+    activeDirectsCount: 0,
+    isQualified: false,
+    teamCount: 0,
+    rankTier: 0,
+    rankName: "NONE",
+    totalEarnings: 0,
+    directEarnings: 0,
+    matrixEarnings: 0,
+    poolEarnings: 0,
+    availableBalance: 0,
+    withdrawnTotal: 0,
+    recyclesCount: 0,
+    highestUnlockedSlot: 0,
+    joinedAt: new Date(),
+  };
+}
+
+function getFallbackUserSlots(): MatrixSlotSummaryDTO[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const slotNumber = i + 1;
+    return {
+      slotNumber,
+      cost: SLOT_COSTS[slotNumber] || 0,
+      isUnlocked: false,
+      currentCycle: 1,
+      recyclesCount: 0,
+      filledNodes: 0,
+      upgradeReserve: 0,
+      totalEarned: 0,
+      unlockedAt: null,
+    };
+  });
+}
+
+function getFallbackSlotDetails(slotNumber: number, cycle: number = 1): MatrixSlotDetailsDTO {
+  const nodesArray = Array.from({ length: 14 }, (_, i) => {
+    const pos = i + 1;
+    return {
+      position: pos,
+      level: getLevelForPosition(pos),
+      filled: false,
+      placedUser: null,
+      userId: null,
+      payoutType: null,
+      recipientAddress: null,
+      wasFallback: false,
+      amount: 0,
+      timestamp: null,
+      isDirect: false,
+      isDirectDeposited: false,
+      isSpillover: false,
+    };
+  });
+  return {
+    slotNumber,
+    cost: SLOT_COSTS[slotNumber] || 0,
+    isUnlocked: slotNumber === 1,
+    currentCycle: cycle,
+    recyclesCount: 0,
+    filledNodes: 0,
+    upgradeReserve: 0,
+    totalEarned: 0,
+    nodes: nodesArray,
+  };
+}
+
+function getFallbackDashboard(canonicalAddress: string): MatrixDashboardDTO {
+  return {
+    currentSlot: 1,
+    totalEarnedTrob: 0,
+    totalEarnedUsd: 0,
+    availableWithdrawTrob: 0,
+    availableWithdrawUsd: 0,
+    recyclesCount: 0,
+    trobPriceUsd: TROB_PRICE_USD,
+    isQualified: false,
+    activeDirectsCount: 0,
+    activeSlotProgress: {
+      slotNumber: 1,
+      filledNodes: 0,
+      totalNodes: 14,
+      cycle: 1,
+      upgradeReserve: 0,
+      level1Filled: 0,
+      level2Filled: 0,
+      level3Filled: 0,
+    },
+    nextPosition: {
+      positionNumber: 1,
+      title: "Position #1 - Direct Line 1",
+      description: "Distributed directly to level 1 direct upline",
+      rewardType: "Pass-Up / Sponsor",
+    },
+    recentActivity: [],
+  };
+}
+
+function getFallbackEarningsOverview(): MatrixEarningsOverviewDTO {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return {
+    totalEarnings: 0,
+    totalEarningsUsd: 0,
+    availableBalance: 0,
+    availableBalanceUsd: 0,
+    withdrawnTotal: 0,
+    withdrawnTotalUsd: 0,
+    trobPriceUsd: TROB_PRICE_USD,
+    breakdown: {
+      directBonus: 0,
+      matrixPlacements: 0,
+      upgradeReserves: 0,
+      poolShares: 0,
+    },
+    chartData: days.map((day) => ({ date: day, amount: 0 })),
+    recentPayouts: [],
+  };
+}
+
 const inMemorySettingsCache = new Map<string, MatrixSettingsDTO>();
+
+export async function isUserMatrixQualified(address: string): Promise<boolean> {
+  if (!address || address === "0x0000000000000000000000000000000000000000") return false;
+  const canonical = address.toLowerCase();
+  const user = await prisma.user.findUnique({
+    where: { address: canonical },
+    select: { isQualified: true, userId: true, sponsorAddress: true },
+  });
+  if (!user) return false;
+  // Genesis root (userId 1 or no sponsor) is always qualified as protocol apex
+  if (user.userId === 1 || !user.sponsorAddress) return true;
+  if (user.isQualified) return true;
+  // Fallback: count active Slot 1 deposited directs (>= 2)
+  const activeCount = await prisma.matrixSlot.count({
+    where: {
+      slotNumber: 1,
+      isUnlocked: true,
+      user: { sponsorAddress: canonical },
+    },
+  }).catch(() => 0);
+  return activeCount >= 2;
+}
 
 export class MatrixService {
   // ── USER LIFECYCLE & PROFILE ──────────────────────────────────────────────
@@ -60,169 +248,214 @@ export class MatrixService {
   async getOrCreateUser(address: string, sponsorAddress?: string): Promise<MatrixUserProfileDTO> {
     const canonicalAddress = address.toLowerCase();
 
-    let user = await prisma.user.findUnique({
-      where: { address: canonicalAddress },
-      include: {
-        matrixProfile: true,
-        matrixSettings: true,
-        matrixSlots: true,
-      },
-    });
-
-    if (!user) {
-      // Find highest userId
-      const highestUser = await prisma.user.findFirst({
-        orderBy: { userId: "desc" },
-        select: { userId: true },
+    try {
+      let user = await prisma.user.findUnique({
+        where: { address: canonicalAddress },
+        include: {
+          matrixProfile: true,
+          matrixSettings: true,
+          matrixSlots: true,
+        },
       });
-      const nextUserId = (highestUser?.userId ?? 0) + 1;
 
-      const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
-
-      let createdNew = false;
-      try {
-        user = await prisma.user.create({
-          data: {
-            address: canonicalAddress,
-            userId: nextUserId,
-            sponsorAddress: normalizedSponsor,
-            registrationTimestamp: new Date(),
-            matrixProfile: {
-              create: {
-                username: `Operative #${nextUserId}`,
-                totalEarnings: 0,
-                availableBalance: 0,
-                withdrawnTotal: 0,
-              },
-            },
-            matrixSettings: {
-              create: {
-                autoUpgrade: true,
-                autoReinvest: true,
-                soundEffects: true,
-                theme: "dark",
-              },
-            },
-            matrixSlots: {
-              create: {
-                slotNumber: 1,
-                isUnlocked: true,
-                unlockedAt: new Date(),
-                currentCycle: 1,
-                filledNodes: 0,
-              },
-            },
-          },
-          include: {
-            matrixProfile: true,
-            matrixSettings: true,
-            matrixSlots: true,
-          },
+      if (!user) {
+        // Find highest userId
+        const highestUser = await prisma.user.findFirst({
+          orderBy: { userId: "desc" },
+          select: { userId: true },
         });
-        createdNew = true;
-      } catch (err: any) {
-        if (err?.code === "P2002") {
-          user = await prisma.user.findUnique({
-            where: { address: canonicalAddress },
+        const nextUserId = (highestUser?.userId ?? 0) + 1;
+
+        const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
+
+        let createdNew = false;
+        try {
+          user = await prisma.user.create({
+            data: {
+              address: canonicalAddress,
+              userId: nextUserId,
+              sponsorAddress: normalizedSponsor,
+              registrationTimestamp: new Date(),
+              matrixProfile: {
+                create: {
+                  username: `Operative #${nextUserId}`,
+                  totalEarnings: 0,
+                  availableBalance: 0,
+                  withdrawnTotal: 0,
+                },
+              },
+              matrixSettings: {
+                create: {
+                  autoUpgrade: true,
+                  autoReinvest: true,
+                  soundEffects: true,
+                  theme: "dark",
+                },
+              },
+              matrixSlots: {
+                create: {
+                  slotNumber: 1,
+                  isUnlocked: false,
+                  unlockedAt: null,
+                  currentCycle: 1,
+                  filledNodes: 0,
+                },
+              },
+            },
             include: {
               matrixProfile: true,
               matrixSettings: true,
               matrixSlots: true,
             },
           });
-        } else {
-          throw err;
+          createdNew = true;
+        } catch (err: any) {
+          if (err?.code === "P2002") {
+            user = await prisma.user.findUnique({
+              where: { address: canonicalAddress },
+              include: {
+                matrixProfile: true,
+                matrixSettings: true,
+                matrixSlots: true,
+              },
+            });
+          } else {
+            throw err;
+          }
+        }
+
+        // Update sponsor direct referrals count (qualification requires $30 deposit)
+        if (createdNew && normalizedSponsor) {
+          const count = await prisma.user.count({ where: { sponsorAddress: normalizedSponsor } }).catch(() => 0);
+          const depositedCount = await prisma.matrixSlot.count({
+            where: {
+              slotNumber: 1,
+              isUnlocked: true,
+              user: { sponsorAddress: normalizedSponsor },
+            },
+          }).catch(() => 0);
+          await prisma.user.update({
+            where: { address: normalizedSponsor },
+            data: {
+              directReferralsCount: count,
+              isQualified: depositedCount >= 2,
+            },
+          }).catch(() => {});
+        }
+
+        // Record welcome activity
+        if (createdNew) {
+          await prisma.matrixActivity.create({
+            data: {
+              userAddress: canonicalAddress,
+              action: "MEMBER_JOINED",
+              title: "Account Activated",
+              description: `Joined EQUORA Matrix Network as Operative #${nextUserId}`,
+              slotNumber: 1,
+            },
+          }).catch(() => {});
+        }
+      } else {
+        const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
+        if (!user.sponsorAddress && normalizedSponsor && normalizedSponsor !== canonicalAddress) {
+          await prisma.user.update({
+            where: { address: canonicalAddress },
+            data: { sponsorAddress: normalizedSponsor },
+          }).catch(() => {});
+          const count = await prisma.user.count({ where: { sponsorAddress: normalizedSponsor } }).catch(() => 0);
+          await prisma.user.update({
+            where: { address: normalizedSponsor },
+            data: { directReferralsCount: count },
+          }).catch(() => {});
+        }
+
+        if (!user.matrixProfile) {
+          await prisma.matrixProfile.create({
+            data: {
+              userAddress: canonicalAddress,
+              username: `Operative #${user.userId}`,
+            },
+          }).catch(() => {});
+          user = await prisma.user.findUnique({
+            where: { address: canonicalAddress },
+            include: { matrixProfile: true, matrixSettings: true, matrixSlots: true },
+          }) as any;
         }
       }
 
-      // Update sponsor direct referrals count if applicable
-      if (createdNew && normalizedSponsor) {
-        const count = await prisma.user.count({ where: { sponsorAddress: normalizedSponsor } });
-        await prisma.user.update({
-          where: { address: normalizedSponsor },
-          data: {
-            directReferralsCount: count,
-            isQualified: count >= 2,
-          },
-        }).catch(() => {});
-      }
-
-      // Record welcome activity
-      if (createdNew) {
-        await prisma.matrixActivity.create({
-          data: {
-            userAddress: canonicalAddress,
-            action: "MEMBER_JOINED",
-            title: "Account Activated",
-            description: `Joined EQUORA Matrix Network as Operative #${nextUserId}`,
-            slotNumber: 1,
-          },
-        }).catch(() => {});
-      }
-    } else if (!user.matrixProfile) {
-      await prisma.matrixProfile.create({
-        data: {
-          userAddress: canonicalAddress,
-          username: `Operative #${user.userId}`,
-        },
-      }).catch(() => {});
-      user = await prisma.user.findUnique({
-        where: { address: canonicalAddress },
-        include: { matrixProfile: true, matrixSettings: true, matrixSlots: true },
-      }) as any;
+      return await this.getUserProfile(canonicalAddress);
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getOrCreateUser(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackProfile(canonicalAddress);
     }
-
-    return this.getUserProfile(canonicalAddress);
   }
 
   async getUserProfile(address: string, sponsorAddress?: string): Promise<MatrixUserProfileDTO> {
     const canonicalAddress = address.toLowerCase();
 
-    let user = await prisma.user.findUnique({
-      where: { address: canonicalAddress },
-      include: {
-        matrixProfile: true,
-        sponsor: { select: { address: true, userId: true } },
-        matrixSlots: { where: { isUnlocked: true }, orderBy: { slotNumber: "desc" } },
-      },
-    });
+    try {
+      let user = await prisma.user.findUnique({
+        where: { address: canonicalAddress },
+        include: {
+          matrixProfile: true,
+          sponsor: { select: { address: true, userId: true } },
+          matrixSlots: { where: { isUnlocked: true }, orderBy: { slotNumber: "desc" } },
+        },
+      });
 
-    if (!user) {
-      return this.getOrCreateUser(canonicalAddress, sponsorAddress);
+      if (!user) {
+        return await this.getOrCreateUser(canonicalAddress, sponsorAddress);
+      }
+
+      const profile = user.matrixProfile;
+      const highestSlot = user.matrixSlots[0]?.slotNumber ?? 0;
+
+      // Team count and active qualification calculation
+      const directTeamCount = await prisma.user.count({
+        where: { sponsorAddress: canonicalAddress },
+      }).catch(() => 0);
+
+      const activeDirectsCount = await prisma.matrixSlot.count({
+        where: {
+          slotNumber: 1,
+          isUnlocked: true,
+          user: { sponsorAddress: canonicalAddress },
+        },
+      }).catch(() => 0);
+
+      const isRoot = user.userId === 1 || !user.sponsorAddress;
+      const isQualified = isRoot || activeDirectsCount >= 2;
+
+      return {
+        address: canonicalAddress,
+        userId: user.userId,
+        username: profile?.username || `Operative #${user.userId}`,
+        avatarUrl: profile?.avatarUrl || null,
+        bio: profile?.bio || null,
+        telegram: profile?.telegram || null,
+        twitter: profile?.twitter || null,
+        sponsorAddress: user.sponsorAddress,
+        sponsorUserId: user.sponsor?.userId || null,
+        directReferralsCount: user.directReferralsCount || directTeamCount,
+        activeDirectsCount,
+        isQualified,
+        teamCount: directTeamCount,
+        rankTier: profile?.rankTier || 0,
+        rankName: getRankName(profile?.rankTier || 0),
+        totalEarnings: Number(profile?.totalEarnings || 0),
+        directEarnings: Number(profile?.directEarnings || 0),
+        matrixEarnings: Number(profile?.matrixEarnings || 0),
+        poolEarnings: Number(profile?.poolEarnings || 0),
+        availableBalance: Number(profile?.availableBalance || 0),
+        withdrawnTotal: Number(profile?.withdrawnTotal || 0),
+        recyclesCount: profile?.recyclesCount || 0,
+        highestUnlockedSlot: highestSlot,
+        joinedAt: user.registrationTimestamp,
+      };
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getUserProfile(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackProfile(canonicalAddress);
     }
-
-    const profile = user.matrixProfile;
-    const highestSlot = user.matrixSlots[0]?.slotNumber ?? 1;
-
-    // Team count calculation: recursive or 3-tier count
-    const directTeamCount = await prisma.user.count({
-      where: { sponsorAddress: canonicalAddress },
-    });
-
-    return {
-      address: canonicalAddress,
-      userId: user.userId,
-      username: profile?.username || `Operative #${user.userId}`,
-      avatarUrl: profile?.avatarUrl || null,
-      bio: profile?.bio || null,
-      telegram: profile?.telegram || null,
-      twitter: profile?.twitter || null,
-      sponsorAddress: user.sponsorAddress,
-      sponsorUserId: user.sponsor?.userId || null,
-      directReferralsCount: user.directReferralsCount,
-      teamCount: directTeamCount,
-      rankTier: profile?.rankTier || 0,
-      rankName: getRankName(profile?.rankTier || 0),
-      totalEarnings: Number(profile?.totalEarnings || 0),
-      directEarnings: Number(profile?.directEarnings || 0),
-      matrixEarnings: Number(profile?.matrixEarnings || 0),
-      poolEarnings: Number(profile?.poolEarnings || 0),
-      availableBalance: Number(profile?.availableBalance || 0),
-      withdrawnTotal: Number(profile?.withdrawnTotal || 0),
-      recyclesCount: profile?.recyclesCount || 0,
-      highestUnlockedSlot: highestSlot,
-      joinedAt: user.registrationTimestamp,
-    };
   }
 
   async updateUserProfile(
@@ -263,28 +496,33 @@ export class MatrixService {
 
   async getUserSlots(address: string): Promise<MatrixSlotSummaryDTO[]> {
     const canonicalAddress = address.toLowerCase();
-    const slots = await prisma.matrixSlot.findMany({
-      where: { userAddress: canonicalAddress },
-      orderBy: { slotNumber: "asc" },
-    });
+    try {
+      const slots = await prisma.matrixSlot.findMany({
+        where: { userAddress: canonicalAddress },
+        orderBy: { slotNumber: "asc" },
+      });
 
-    const slotsMap = new Map<number, any>(slots.map((s: any) => [s.slotNumber, s]));
+      const slotsMap = new Map<number, any>(slots.map((s: any) => [s.slotNumber, s]));
 
-    return Array.from({ length: 12 }, (_, i) => {
-      const slotNumber = i + 1;
-      const s = slotsMap.get(slotNumber);
-      return {
-        slotNumber,
-        cost: SLOT_COSTS[slotNumber] || 0,
-        isUnlocked: s?.isUnlocked ?? (slotNumber === 1),
-        currentCycle: s?.currentCycle ?? 1,
-        recyclesCount: s?.recyclesCount ?? 0,
-        filledNodes: s?.filledNodes ?? 0,
-        upgradeReserve: Number(s?.upgradeReserve ?? 0),
-        totalEarned: Number(s?.totalEarned ?? 0),
-        unlockedAt: s?.unlockedAt ?? null,
-      };
-    });
+      return Array.from({ length: 12 }, (_, i) => {
+        const slotNumber = i + 1;
+        const s = slotsMap.get(slotNumber);
+        return {
+          slotNumber,
+          cost: SLOT_COSTS[slotNumber] || 0,
+          isUnlocked: Boolean(s?.isUnlocked),
+          currentCycle: s?.currentCycle ?? 1,
+          recyclesCount: s?.recyclesCount ?? 0,
+          filledNodes: s?.filledNodes ?? 0,
+          upgradeReserve: Number(s?.upgradeReserve ?? 0),
+          totalEarned: Number(s?.totalEarned ?? 0),
+          unlockedAt: s?.unlockedAt ?? null,
+        };
+      });
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getUserSlots(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackUserSlots();
+    }
   }
 
   async getSlotDetails(
@@ -294,87 +532,107 @@ export class MatrixService {
   ): Promise<MatrixSlotDetailsDTO | null> {
     const canonicalAddress = address.toLowerCase();
 
-    const slot = await prisma.matrixSlot.findUnique({
-      where: {
-        userAddress_slotNumber: {
-          userAddress: canonicalAddress,
-          slotNumber,
+    try {
+      const slot = await prisma.matrixSlot.findUnique({
+        where: {
+          userAddress_slotNumber: {
+            userAddress: canonicalAddress,
+            slotNumber,
+          },
         },
-      },
-      include: {
-        placements: {
-          where: { slotNumber },
-          orderBy: { position: "asc" },
-          include: {
-            placedUser: {
-              select: {
-                userId: true,
-                address: true,
+        include: {
+          placements: {
+            where: { slotNumber },
+            orderBy: { position: "asc" },
+            include: {
+              placedUser: {
+                select: {
+                  userId: true,
+                  address: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    const targetCycle = cycle || slot?.currentCycle || 1;
-    const currentPlacements: any[] =
-      slot?.placements.filter((p: any) => p.cycle === targetCycle) ?? [];
+      const targetCycle = cycle || slot?.currentCycle || 1;
+      const currentPlacements: any[] =
+        slot?.placements.filter((p: any) => p.cycle === targetCycle) ?? [];
 
-    const directReferrals = await prisma.user.findMany({
-      where: { sponsorAddress: canonicalAddress },
-      select: { address: true },
-    });
-    const directSet = new Set(directReferrals.map((r: any) => r.address.toLowerCase()));
+      const directReferrals = await prisma.user.findMany({
+        where: { sponsorAddress: canonicalAddress },
+        select: {
+          address: true,
+          matrixSlots: {
+            where: { slotNumber: 1, isUnlocked: true },
+            select: { id: true },
+          },
+        },
+      }).catch(() => []);
+      const directSet = new Set(directReferrals.map((r: any) => r.address.toLowerCase()));
+      const depositedDirectSet = new Set(
+        directReferrals
+          .filter((r: any) => r.matrixSlots && r.matrixSlots.length > 0)
+          .map((r: any) => r.address.toLowerCase())
+      );
 
-    const nodesArray = Array.from({ length: 14 }, (_, i) => {
-      const pos = i + 1;
-      const level = getLevelForPosition(pos);
-      const placement = currentPlacements.find((p: any) => p.position === pos);
-      if (placement) {
-        const isDirect = directSet.has(placement.placedUserAddress.toLowerCase());
+      const nodesArray = Array.from({ length: 14 }, (_, i) => {
+        const pos = i + 1;
+        const level = getLevelForPosition(pos);
+        const placement = currentPlacements.find((p: any) => p.position === pos);
+        if (placement) {
+          const placedLower = placement.placedUserAddress.toLowerCase();
+          const isDirect = directSet.has(placedLower);
+          const isDirectDeposited = depositedDirectSet.has(placedLower);
+          return {
+            position: pos,
+            level,
+            filled: true,
+            placedUser: placement.placedUserAddress,
+            userId: placement.placedUser?.userId ?? null,
+            payoutType: placement.payoutType,
+            recipientAddress: placement.recipientAddress,
+            wasFallback: placement.wasFallback,
+            amount: Number(placement.amount),
+            timestamp: placement.timestamp,
+            isDirect,
+            isDirectDeposited,
+            isSpillover: !isDirect,
+          };
+        }
         return {
           position: pos,
           level,
-          filled: true,
-          placedUser: placement.placedUserAddress,
-          userId: placement.placedUser?.userId ?? null,
-          payoutType: placement.payoutType,
-          recipientAddress: placement.recipientAddress,
-          wasFallback: placement.wasFallback,
-          amount: Number(placement.amount),
-          timestamp: placement.timestamp,
-          isDirect,
-          isSpillover: !isDirect,
+          filled: false,
+          placedUser: null,
+          userId: null,
+          payoutType: null,
+          recipientAddress: null,
+          wasFallback: false,
+          amount: 0,
+          timestamp: null,
+          isDirect: false,
+          isDirectDeposited: false,
+          isSpillover: false,
         };
-      }
-      return {
-        position: pos,
-        level,
-        filled: false,
-        placedUser: null,
-        userId: null,
-        payoutType: null,
-        recipientAddress: null,
-        wasFallback: false,
-        amount: 0,
-        timestamp: null,
-        isDirect: false,
-        isSpillover: false,
-      };
-    });
+      });
 
-    return {
-      slotNumber,
-      cost: SLOT_COSTS[slotNumber] || 0,
-      isUnlocked: slot?.isUnlocked ?? (slotNumber === 1),
-      currentCycle: targetCycle,
-      recyclesCount: slot?.recyclesCount ?? 0,
-      filledNodes: slot?.filledNodes ?? 0,
-      upgradeReserve: Number(slot?.upgradeReserve ?? 0),
-      totalEarned: Number(slot?.totalEarned ?? 0),
-      nodes: nodesArray,
-    };
+      return {
+        slotNumber,
+        cost: SLOT_COSTS[slotNumber] || 0,
+        isUnlocked: Boolean(slot?.isUnlocked),
+        currentCycle: targetCycle,
+        recyclesCount: slot?.recyclesCount ?? 0,
+        filledNodes: slot?.filledNodes ?? 0,
+        upgradeReserve: Number(slot?.upgradeReserve ?? 0),
+        totalEarned: Number(slot?.totalEarned ?? 0),
+        nodes: nodesArray,
+      };
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getSlotDetails(${canonicalAddress}, ${slotNumber}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackSlotDetails(slotNumber, cycle || 1);
+    }
   }
 
   // ── MATRIX BUY & PLACEMENT LOGIC ──────────────────────────────────────────
@@ -382,7 +640,8 @@ export class MatrixService {
   async buySlot(
     userAddress: string,
     slotNumber: number,
-    txHash?: string
+    txHash?: string,
+    sponsorAddress?: string
   ): Promise<{ success: boolean; slot: MatrixSlotSummaryDTO; message: string }> {
     const canonicalAddress = userAddress.toLowerCase();
 
@@ -391,7 +650,7 @@ export class MatrixService {
     }
 
     // Ensure user exists
-    await this.getOrCreateUser(canonicalAddress);
+    await this.getOrCreateUser(canonicalAddress, sponsorAddress);
 
     // If slot > 1, check prior slot is unlocked
     if (slotNumber > 1) {
@@ -438,40 +697,313 @@ export class MatrixService {
     const currentUser = await prisma.user.findUnique({
       where: { address: canonicalAddress },
     });
-    const uplineAddress = currentUser?.sponsorAddress || null;
+    let uplineAddress = currentUser?.sponsorAddress || null;
+
+    // Organic entry fallback: if user has no sponsor and is not the root, route into Genesis Root Matrix
+    if (!uplineAddress) {
+      const rootAddress = await getRootMatrixOwnerAddress();
+      if (rootAddress && rootAddress.toLowerCase() !== canonicalAddress) {
+        uplineAddress = rootAddress;
+        await prisma.user.update({
+          where: { address: canonicalAddress },
+          data: { sponsorAddress: uplineAddress },
+        }).catch(() => {});
+      }
+    }
 
     if (uplineAddress) {
-      // Find upline's slot
-      const uplineSlot = await prisma.matrixSlot.findUnique({
-        where: {
-          userAddress_slotNumber: {
-            userAddress: uplineAddress,
-            slotNumber,
+      // If Slot 1 deposit, update sponsor's active direct referrals count and qualification
+      if (slotNumber === 1) {
+        const depositedDirects = await prisma.matrixSlot.count({
+          where: {
+            slotNumber: 1,
+            isUnlocked: true,
+            user: { sponsorAddress: uplineAddress },
           },
-        },
-      });
+        });
+        const totalDirects = await prisma.user.count({
+          where: { sponsorAddress: uplineAddress },
+        });
+        await prisma.user.update({
+          where: { address: uplineAddress },
+          data: {
+            directReferralsCount: totalDirects,
+            isQualified: depositedDirects >= 2,
+          },
+        }).catch(() => {});
+      }
+
+      // Resolve matrix owner with bubble-up upline traversal (up to 12 levels)
+      let targetMatrixOwner: string = uplineAddress;
+      let depth = 0;
+      let uplineSlot: any = null;
+
+      while (targetMatrixOwner && depth < 12) {
+        const slotRec = await prisma.matrixSlot.findUnique({
+          where: {
+            userAddress_slotNumber: {
+              userAddress: targetMatrixOwner,
+              slotNumber,
+            },
+          },
+        });
+
+        const isOwnerQualified = await isUserMatrixQualified(targetMatrixOwner);
+        const isSponsor = targetMatrixOwner.toLowerCase() === uplineAddress.toLowerCase();
+
+        if (slotRec && slotRec.isUnlocked && (isSponsor || isOwnerQualified)) {
+          uplineSlot = slotRec;
+          break;
+        }
+
+        const parentUser = await prisma.user.findUnique({
+          where: { address: targetMatrixOwner },
+          select: { sponsorAddress: true },
+        });
+        if (!parentUser?.sponsorAddress || parentUser.sponsorAddress.toLowerCase() === targetMatrixOwner.toLowerCase()) {
+          break;
+        }
+        targetMatrixOwner = parentUser.sponsorAddress;
+        depth++;
+      }
+
+      // If matrix owner slot not yet initialized in DB, auto-initialize
+      if (!uplineSlot && targetMatrixOwner) {
+        uplineSlot = await prisma.matrixSlot.upsert({
+          where: {
+            userAddress_slotNumber: {
+              userAddress: targetMatrixOwner,
+              slotNumber,
+            },
+          },
+          update: { isUnlocked: true },
+          create: {
+            userAddress: targetMatrixOwner,
+            slotNumber,
+            isUnlocked: true,
+            currentCycle: 1,
+            filledNodes: 0,
+            upgradeReserve: 0,
+            totalEarned: 0,
+          },
+        });
+      }
 
       if (uplineSlot && uplineSlot.isUnlocked) {
         const nextPos = (uplineSlot.filledNodes % 14) + 1;
         const currentUplineCycle = uplineSlot.currentCycle;
 
-        // Determine payout type based on position
+        // Determine exact payout type & recipient according to EquoraMatrix.sol
         let payoutType = "OWNER_DIRECT";
-        let recipient = uplineAddress;
+        let recipient = targetMatrixOwner;
         let amount = slotCost;
+        let isOwnerIncome = false;
 
-        if (nextPos <= 2) {
-          payoutType = "UPLINE_1";
-        } else if (nextPos <= 6) {
-          payoutType = "UPLINE_2";
-        } else if (nextPos >= 7 && nextPos <= 10) {
+        if (nextPos === 1) {
+          // P1 -> Upline 1 (Sponsor of matrix owner)
+          const matrixOwnerUser = await prisma.user.findUnique({
+            where: { address: targetMatrixOwner },
+            select: { sponsorAddress: true },
+          });
+          const upline1 = matrixOwnerUser?.sponsorAddress;
+          if (upline1) {
+            const isUp1Qualified = await isUserMatrixQualified(upline1);
+            if (isUp1Qualified) {
+              payoutType = "UPLINE_1";
+              recipient = upline1;
+            } else {
+              payoutType = "PROTOCOL_POOL";
+              recipient = "0xProtocolPools_EquoraVault";
+            }
+          } else {
+            payoutType = "PROTOCOL_POOL";
+            recipient = "0xProtocolPools_EquoraVault";
+          }
+        } else if (nextPos === 2) {
+          // P2 -> Upline 2 (Sponsor of Upline 1, strictly distinct from Upline 1 and targetMatrixOwner to prevent double payout)
+          const matrixOwnerUser = await prisma.user.findUnique({
+            where: { address: targetMatrixOwner },
+            select: { sponsorAddress: true },
+          });
+          const upline1 = matrixOwnerUser?.sponsorAddress;
+          let upline2: string | null = null;
+
+          if (upline1) {
+            let currentSearch = upline1;
+            let uplineDepth = 0;
+            while (currentSearch && uplineDepth < 12) {
+              const upRecord = await prisma.user.findUnique({
+                where: { address: currentSearch },
+                select: { sponsorAddress: true },
+              });
+              const candidate = upRecord?.sponsorAddress || null;
+              if (!candidate || candidate.toLowerCase() === currentSearch.toLowerCase()) {
+                break;
+              }
+              const isDistinct =
+                candidate.toLowerCase() !== upline1.toLowerCase() &&
+                candidate.toLowerCase() !== targetMatrixOwner.toLowerCase();
+              if (isDistinct) {
+                const isCandQualified = await isUserMatrixQualified(candidate);
+                if (isCandQualified) {
+                  upline2 = candidate;
+                  break;
+                }
+              }
+              currentSearch = candidate;
+              uplineDepth++;
+            }
+          }
+
+          if (upline2) {
+            payoutType = "UPLINE_2";
+            recipient = upline2;
+          } else {
+            payoutType = "PROTOCOL_POOL";
+            recipient = "0xProtocolPools_EquoraVault";
+          }
+        } else if (
+          nextPos === 3 || nextPos === 6 ||
+          nextPos === 8 || nextPos === 9 ||
+          nextPos === 11 || nextPos === 12
+        ) {
+          // P3, P6, P8, P9, P11, P12 -> Slot Owner (YOU) when qualified
           payoutType = "OWNER_DIRECT";
-        } else if (nextPos === 11 || nextPos === 12) {
-          payoutType = "AUTO_UPGRADE";
+          const isOwnerQualified = await isUserMatrixQualified(targetMatrixOwner);
+          if (isOwnerQualified) {
+            recipient = targetMatrixOwner;
+            isOwnerIncome = true;
+          } else {
+            recipient = "0xProtocolPools_EquoraVault";
+            isOwnerIncome = false;
+          }
+        } else if (nextPos === 4 || nextPos === 5 || nextPos === 14) {
+          // P4, P5, P14 -> 4 Protocol Pools (35% DAO, 40% Royalty, 15% Rewards, 10% Magic Blind Box)
+          payoutType = "PROTOCOL_POOL";
+          recipient = "0xProtocolPools_EquoraVault";
+          isOwnerIncome = false;
+        } else if (nextPos === 7) {
+          // P7 -> Downline 1 (occupant at position 1 in this cycle). Fallback to Downline 2. Else pools.
+          const dl1Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 1 },
+            select: { placedUserAddress: true },
+          });
+          const dl2Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 2 },
+            select: { placedUserAddress: true },
+          });
+          const dl1 = dl1Node?.placedUserAddress;
+          const dl2 = dl2Node?.placedUserAddress;
+
+          const dl1Qualified = dl1 ? await isUserMatrixQualified(dl1) : false;
+          const dl2Qualified = dl2 ? await isUserMatrixQualified(dl2) : false;
+
+          if (dl1 && dl1Qualified) {
+            recipient = dl1;
+            payoutType = "SPILLOVER_DOWNLINE1";
+          } else if (dl2 && dl2Qualified) {
+            recipient = dl2;
+            payoutType = "SPILLOVER_DOWNLINE2";
+          } else {
+            recipient = "0xProtocolPools_EquoraVault";
+            payoutType = "PROTOCOL_POOL";
+          }
+        } else if (nextPos === 10) {
+          // P10 -> Downline 2 (occupant at position 2 in this cycle), strictly avoiding who was paid at P7
+          const dl1Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 1 },
+            select: { placedUserAddress: true },
+          });
+          const dl2Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 2 },
+            select: { placedUserAddress: true },
+          });
+          const p7Placement = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 7 },
+            select: { recipientAddress: true },
+          });
+          const alreadyPaidAtP7 = p7Placement?.recipientAddress ? p7Placement.recipientAddress.toLowerCase() : null;
+          const dl1 = dl1Node?.placedUserAddress;
+          const dl2 = dl2Node?.placedUserAddress;
+
+          const dl1Qualified = dl1 ? await isUserMatrixQualified(dl1) : false;
+          const dl2Qualified = dl2 ? await isUserMatrixQualified(dl2) : false;
+
+          if (dl2 && dl2Qualified && dl2.toLowerCase() !== alreadyPaidAtP7) {
+            recipient = dl2;
+            payoutType = "SPILLOVER_DOWNLINE2";
+          } else if (dl1 && dl1Qualified && dl1.toLowerCase() !== alreadyPaidAtP7) {
+            recipient = dl1;
+            payoutType = "SPILLOVER_DOWNLINE1";
+          } else {
+            recipient = "0xProtocolPools_EquoraVault";
+            payoutType = "PROTOCOL_POOL";
+          }
         } else if (nextPos === 13) {
-          payoutType = "DAO_POOL";
-        } else if (nextPos === 14) {
-          payoutType = "RECYCLE_SPONSOR";
+          // P13 -> Scans downlines at pos 3, 4, 5, 6 in this cycle (distinct from owner and pos 1 & 2)
+          const dl1Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 1 },
+            select: { placedUserAddress: true },
+          });
+          const dl2Node = await prisma.matrixPlacement.findFirst({
+            where: { matrixOwnerAddress: targetMatrixOwner, slotNumber, cycle: currentUplineCycle, position: 2 },
+            select: { placedUserAddress: true },
+          });
+          const dl1Lower = dl1Node?.placedUserAddress?.toLowerCase();
+          const dl2Lower = dl2Node?.placedUserAddress?.toLowerCase();
+          const ownerLower = targetMatrixOwner.toLowerCase();
+
+          const downlineNodes = await prisma.matrixPlacement.findMany({
+            where: {
+              matrixOwnerAddress: targetMatrixOwner,
+              slotNumber,
+              cycle: currentUplineCycle,
+              position: { in: [3, 4, 5, 6] },
+            },
+            select: { placedUserAddress: true },
+          });
+          let candidate: string | null = null;
+          for (const d of downlineNodes) {
+            const candLower = d.placedUserAddress.toLowerCase();
+            if (candLower !== ownerLower && candLower !== dl1Lower && candLower !== dl2Lower) {
+              const isCandQualified = await isUserMatrixQualified(d.placedUserAddress);
+              if (isCandQualified) {
+                candidate = d.placedUserAddress;
+                break;
+              }
+            }
+          }
+          if (candidate) {
+            recipient = candidate;
+            payoutType = "SPILLOVER_DOWNLINE1";
+          } else {
+            recipient = "0xProtocolPools_EquoraVault";
+            payoutType = "PROTOCOL_POOL";
+          }
+        }
+
+        // Two-Stage Auto-Progression (Stage 1):
+        // At position 5, the next slot is UNLOCKED & RESERVED in standby mode ($0 out-of-pocket)
+        if (nextPos === 5 && slotNumber < 12) {
+          const nextSlotNum = slotNumber + 1;
+          await prisma.matrixSlot.upsert({
+            where: {
+              userAddress_slotNumber: {
+                userAddress: targetMatrixOwner,
+                slotNumber: nextSlotNum,
+              },
+            },
+            update: { isUnlocked: true },
+            create: {
+              userAddress: targetMatrixOwner,
+              slotNumber: nextSlotNum,
+              isUnlocked: true,
+              currentCycle: 1,
+              filledNodes: 0,
+              upgradeReserve: 0,
+              totalEarned: 0,
+            },
+          }).catch(() => {});
         }
 
         // Record placement
@@ -479,14 +1011,14 @@ export class MatrixService {
 
         await prisma.matrixPlacement.create({
           data: {
-            matrixOwnerAddress: uplineAddress,
+            matrixOwnerAddress: targetMatrixOwner,
             placedUserAddress: canonicalAddress,
             slotNumber,
             position: nextPos,
             cycle: currentUplineCycle,
             payoutType,
             recipientAddress: recipient,
-            wasFallback: false,
+            wasFallback: !isOwnerIncome && payoutType === "OWNER_DIRECT",
             amount,
             txHash: genTxHash,
             blockNumber: BigInt(1000000),
@@ -494,13 +1026,80 @@ export class MatrixService {
           },
         });
 
+        // Credit recipient profile & record transaction/activity if not protocol vault
+        const isVault = recipient.startsWith("0xProtocolPools") || recipient === "0x0000000000000000000000000000000000000000";
+        if (!isVault) {
+          const isDirect = payoutType === "UPLINE_1";
+
+          // Ensure recipient exists in User table for foreign key integrity
+          const existingRecipientUser = await prisma.user.findUnique({ where: { address: recipient } });
+          if (!existingRecipientUser) {
+            const highestUser = await prisma.user.findFirst({
+              orderBy: { userId: "desc" },
+              select: { userId: true },
+            });
+            const nextUserId = (highestUser?.userId ?? 0) + 1;
+            await prisma.user.create({
+              data: {
+                address: recipient,
+                userId: nextUserId,
+                registrationTimestamp: new Date(),
+              },
+            }).catch(() => {});
+          }
+
+          await prisma.matrixProfile.upsert({
+            where: { userAddress: recipient },
+            create: {
+              userAddress: recipient,
+              username: `Operative #${recipient.slice(2, 6).toUpperCase()}`,
+              totalEarnings: amount,
+              availableBalance: amount,
+              directEarnings: isDirect ? amount : 0,
+              matrixEarnings: isDirect ? 0 : amount,
+            },
+            update: {
+              totalEarnings: { increment: amount },
+              availableBalance: { increment: amount },
+              ...(isDirect ? { directEarnings: { increment: amount } } : { matrixEarnings: { increment: amount } }),
+            },
+          }).catch(() => {});
+
+          await prisma.matrixTransaction.create({
+            data: {
+              userAddress: recipient,
+              type: isDirect ? "COMMISSION_EARNED" : "SPILLOVER_RECEIVED",
+              amount,
+              slotNumber,
+              cycle: currentUplineCycle,
+              position: nextPos,
+              status: "COMPLETED",
+              txHash: genTxHash,
+              timestamp: new Date(),
+              description: `Matrix reward: ${payoutType} (Slot #${slotNumber}, P${nextPos})`,
+            },
+          }).catch(() => {});
+
+          await prisma.matrixActivity.create({
+            data: {
+              userAddress: recipient,
+              action: "REWARD_DISTRIBUTED",
+              title: `Matrix Commission Received ($${amount.toFixed(2)} USD)`,
+              description: `Earned from Position #${nextPos} on Slot #${slotNumber} (${payoutType})`,
+              slotNumber,
+              amount,
+            },
+          }).catch(() => {});
+        }
+
         // Update upline slot counters
         const newFilled = uplineSlot.filledNodes + 1;
         if (newFilled >= 14) {
-          // Complete cycle & recycle
+          // Two-Stage Auto-Progression (Stage 2):
+          // Complete cycle & recycle, and next slot activates live!
           await prisma.matrixCycleEvent.create({
             data: {
-              userAddress: uplineAddress,
+              userAddress: targetMatrixOwner,
               slotNumber,
               cycleNumber: currentUplineCycle,
               nodes: [],
@@ -516,35 +1115,26 @@ export class MatrixService {
               currentCycle: currentUplineCycle + 1,
               recyclesCount: uplineSlot.recyclesCount + 1,
               filledNodes: 0,
-              totalEarned: { increment: amount },
+              ...(isOwnerIncome ? { totalEarned: { increment: amount } } : {}),
             },
           });
 
-          await prisma.matrixProfile.update({
-            where: { userAddress: uplineAddress },
-            data: {
-              recyclesCount: { increment: 1 },
-              totalEarnings: { increment: amount },
-              availableBalance: { increment: amount },
-            },
-          }).catch(() => {});
+          if (isOwnerIncome) {
+            await prisma.matrixProfile.update({
+              where: { userAddress: targetMatrixOwner },
+              data: {
+                recyclesCount: { increment: 1 },
+              },
+            }).catch(() => {});
+          }
         } else {
           await prisma.matrixSlot.update({
             where: { id: uplineSlot.id },
             data: {
               filledNodes: newFilled,
-              totalEarned: { increment: amount },
-              ...(payoutType === "AUTO_UPGRADE" ? { upgradeReserve: { increment: amount } } : {}),
+              ...(isOwnerIncome ? { totalEarned: { increment: amount } } : {}),
             },
           });
-
-          await prisma.matrixProfile.update({
-            where: { userAddress: uplineAddress },
-            data: {
-              totalEarnings: { increment: amount },
-              availableBalance: { increment: amount },
-            },
-          }).catch(() => {});
         }
       }
     }
@@ -558,11 +1148,11 @@ export class MatrixService {
         slotNumber,
         cycle: 1,
         amount: slotCost,
-        amountUsd: slotCost * TROB_PRICE_USD,
-        token: "TROB",
+        amountUsd: slotCost,
+        token: "USD",
         txHash: buyTxHash,
         status: "COMPLETED",
-        description: `Unlocked Matrix Slot #${slotNumber} for ${slotCost} TROB`,
+        description: `Unlocked Matrix Slot #${slotNumber} for $${slotCost}`,
       },
     });
 
@@ -572,7 +1162,7 @@ export class MatrixService {
         userAddress: canonicalAddress,
         action: "SLOT_ACTIVATED",
         title: `Slot #${slotNumber} Activated`,
-        description: `Successfully unlocked Slot #${slotNumber} for ${slotCost} TROB`,
+        description: `Successfully unlocked Slot #${slotNumber} for $${slotCost}`,
         slotNumber,
         amount: slotCost,
         txHash: buyTxHash,
@@ -602,96 +1192,125 @@ export class MatrixService {
 
   async getDashboardOverview(address: string): Promise<MatrixDashboardDTO> {
     const canonicalAddress = address.toLowerCase();
-    const user = await this.getOrCreateUser(canonicalAddress);
+    try {
+      const user = await this.getOrCreateUser(canonicalAddress);
 
-    const slots = await prisma.matrixSlot.findMany({
-      where: { userAddress: canonicalAddress, isUnlocked: true },
-      orderBy: { slotNumber: "desc" },
-    });
+      const slots = await prisma.matrixSlot.findMany({
+        where: { userAddress: canonicalAddress, isUnlocked: true },
+        orderBy: { slotNumber: "desc" },
+      });
 
-    const highestSlot = slots[0]?.slotNumber || 1;
-    const activeSlot = slots[0] || {
-      slotNumber: 1,
-      filledNodes: 0,
-      currentCycle: 1,
-      upgradeReserve: 0,
-    };
+      const highestSlot = slots[0]?.slotNumber || 1;
+      const activeSlot = slots[0] || {
+        slotNumber: 1,
+        filledNodes: 0,
+        currentCycle: 1,
+        upgradeReserve: 0,
+      };
 
-    const filled = activeSlot.filledNodes;
-    const l1 = Math.min(filled, 2);
-    const l2 = Math.min(Math.max(filled - 2, 0), 4);
-    const l3 = Math.min(Math.max(filled - 6, 0), 8);
+      const filled = activeSlot.filledNodes;
+      const l1 = Math.min(filled, 2);
+      const l2 = Math.min(Math.max(filled - 2, 0), 4);
+      const l3 = Math.min(Math.max(filled - 6, 0), 8);
 
-    const nextPosNumber = (filled % 14) + 1;
-    let nextPosTitle = `Position #${nextPosNumber}`;
-    let nextPosDesc = "Direct matrix commission distribution";
-    let nextReward = "Direct Distribution";
+      const nextPosNumber = (filled % 14) + 1;
+      let nextPosTitle = `Position #${nextPosNumber}`;
+      let nextPosDesc = "Direct matrix commission distribution";
+      let nextReward = "Direct Distribution";
 
-    if (nextPosNumber <= 2) {
-      nextPosTitle = `Position #${nextPosNumber} - Direct Line 1`;
-      nextPosDesc = "Distributed directly to level 1 direct upline";
-      nextReward = "Pass-Up / Sponsor";
-    } else if (nextPosNumber <= 6) {
-      nextPosTitle = `Position #${nextPosNumber} - Level 2 Matrix`;
-      nextPosDesc = "Distributed to level 2 upline structure";
-      nextReward = "Direct Payout";
-    } else if (nextPosNumber === 11 || nextPosNumber === 12) {
-      nextPosTitle = `Position #${nextPosNumber} - Auto-Upgrade Reserve`;
-      nextPosDesc = "Reserved for auto-advancing to the next tier slot";
-      nextReward = "Auto-Upgrade";
-    } else if (nextPosNumber === 13) {
-      nextPosTitle = `Position #${nextPosNumber} - 4-Bucket Split`;
-      nextPosDesc = "DAO 35%, Salary 40%, Magic Box 10%, Rewards 15%";
-      nextReward = "Pool Accumulator";
-    } else if (nextPosNumber === 14) {
-      nextPosTitle = `Position #${nextPosNumber} - Matrix Recycle`;
-      nextPosDesc = "Completes current cycle & re-opens slot under sponsor";
-      nextReward = "Recycle Re-entry";
+      if (nextPosNumber === 1) {
+        nextPosTitle = "Position #1 - Level 1 Pass-Up";
+        nextPosDesc = "100% payout to direct Upline 1 (or 4 Protocol Pools if unqualified)";
+        nextReward = "Upline 1 (Pass-Up)";
+      } else if (nextPosNumber === 2) {
+        nextPosTitle = "Position #2 - Level 1 Pass-Up";
+        nextPosDesc = "100% payout to second-line Upline 2 (or 4 Protocol Pools if unqualified)";
+        nextReward = "Upline 2 (Pass-Up)";
+      } else if (
+        nextPosNumber === 3 || nextPosNumber === 6 ||
+        nextPosNumber === 8 || nextPosNumber === 9 ||
+        nextPosNumber === 11 || nextPosNumber === 12
+      ) {
+        nextPosTitle = `Position #${nextPosNumber} - 100% Direct P2P`;
+        nextPosDesc = "100% payout goes directly to YOU as Slot Owner (requires 2 active directs)";
+        nextReward = "Slot Owner (100% P2P)";
+      } else if (nextPosNumber === 4) {
+        nextPosTitle = "Position #4 - 4 Protocol Pools";
+        nextPosDesc = "35% DAO, 40% Royalty Pool, 15% Level Rewards, 10% Magic Blind Box";
+        nextReward = "Protocol Pools";
+      } else if (nextPosNumber === 5) {
+        nextPosTitle = "Position #5 - Stage 1 Next Slot Reserve";
+        nextPosDesc = "Funds Protocol Pools and automatically unlocks & reserves Next Slot in Standby ($0 out-of-pocket)";
+        nextReward = "Stage 1 Reserve";
+      } else if (nextPosNumber === 7) {
+        nextPosTitle = "Position #7 - Downline Spillover";
+        nextPosDesc = "Spillover reward to Node 1 occupant (fallback to Node 2)";
+        nextReward = "Downline Spillover";
+      } else if (nextPosNumber === 10) {
+        nextPosTitle = "Position #10 - Downline Spillover";
+        nextPosDesc = "Spillover reward to Node 2 occupant (with anti-double payout protection)";
+        nextReward = "Downline Spillover";
+      } else if (nextPosNumber === 13) {
+        nextPosTitle = "Position #13 - Downline Waterfall";
+        nextPosDesc = "Queue scan across downlines at Nodes 3, 4, 5, 6; splits equally among qualified candidates";
+        nextReward = "Downline Waterfall";
+      } else if (nextPosNumber === 14) {
+        nextPosTitle = "Position #14 - Stage 2 Board Recycle";
+        nextPosDesc = "Completes board cycle, activates reserved next slot live, and recycles under sponsor";
+        nextReward = "Recycle & Stage 2 Live";
+      }
+
+      const activities = await prisma.matrixActivity.findMany({
+        where: { userAddress: canonicalAddress },
+        orderBy: { timestamp: "desc" },
+        take: 8,
+      }).catch(() => []);
+
+      const recentActivity = activities.map((a: any) => ({
+        id: a.id,
+        action: a.action,
+        title: a.title,
+        description: a.description,
+        slotNumber: a.slotNumber || undefined,
+        amount: a.amount ? Number(a.amount) : undefined,
+        timestamp: a.timestamp,
+        status: "Success",
+      }));
+
+      const livePrice = await this.getLiveTrobPriceUsd();
+
+      return {
+        currentSlot: highestSlot,
+        totalEarnedTrob: livePrice > 0 ? Math.round((user.totalEarnings / livePrice) * 100) / 100 : user.totalEarnings,
+        totalEarnedUsd: user.totalEarnings,
+        availableWithdrawTrob: livePrice > 0 ? Math.round((user.availableBalance / livePrice) * 100) / 100 : user.availableBalance,
+        availableWithdrawUsd: user.availableBalance,
+        recyclesCount: user.recyclesCount,
+        trobPriceUsd: livePrice,
+        isQualified: user.isQualified ?? false,
+        activeDirectsCount: user.activeDirectsCount ?? 0,
+        activeSlotProgress: {
+          slotNumber: activeSlot.slotNumber,
+          filledNodes: filled,
+          totalNodes: 14,
+          cycle: activeSlot.currentCycle,
+          upgradeReserve: Number(activeSlot.upgradeReserve),
+          level1Filled: l1,
+          level2Filled: l2,
+          level3Filled: l3,
+        },
+        nextPosition: {
+          positionNumber: nextPosNumber,
+          title: nextPosTitle,
+          description: nextPosDesc,
+          rewardType: nextReward,
+        },
+        recentActivity,
+      };
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getDashboardOverview(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackDashboard(canonicalAddress);
     }
-
-    const activities = await prisma.matrixActivity.findMany({
-      where: { userAddress: canonicalAddress },
-      orderBy: { timestamp: "desc" },
-      take: 8,
-    });
-
-    const recentActivity = activities.map((a: any) => ({
-      id: a.id,
-      action: a.action,
-      title: a.title,
-      description: a.description,
-      slotNumber: a.slotNumber || undefined,
-      amount: a.amount ? Number(a.amount) : undefined,
-      timestamp: a.timestamp,
-      status: "Success",
-    }));
-
-    return {
-      currentSlot: highestSlot,
-      totalEarnedTrob: user.totalEarnings,
-      totalEarnedUsd: user.totalEarnings * TROB_PRICE_USD,
-      availableWithdrawTrob: user.availableBalance,
-      availableWithdrawUsd: user.availableBalance * TROB_PRICE_USD,
-      recyclesCount: user.recyclesCount,
-      trobPriceUsd: TROB_PRICE_USD,
-      activeSlotProgress: {
-        slotNumber: activeSlot.slotNumber,
-        filledNodes: filled,
-        totalNodes: 14,
-        cycle: activeSlot.currentCycle,
-        upgradeReserve: Number(activeSlot.upgradeReserve),
-        level1Filled: l1,
-        level2Filled: l2,
-        level3Filled: l3,
-      },
-      nextPosition: {
-        positionNumber: nextPosNumber,
-        title: nextPosTitle,
-        description: nextPosDesc,
-        rewardType: nextReward,
-      },
-      recentActivity,
-    };
   }
 
   // ── LEADERBOARD ───────────────────────────────────────────────────────────
@@ -782,123 +1401,147 @@ export class MatrixService {
       where.type = options.type;
     }
 
-    const [total, txs, allUserTxs] = await Promise.all([
-      prisma.matrixTransaction.count({ where }),
-      prisma.matrixTransaction.findMany({
-        where,
-        orderBy: { timestamp: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.matrixTransaction.findMany({
-        where: { userAddress: canonicalAddress },
-        select: { type: true, amount: true, status: true },
-      }),
-    ]);
+    try {
+      const [total, txs, allUserTxs] = await Promise.all([
+        prisma.matrixTransaction.count({ where }),
+        prisma.matrixTransaction.findMany({
+          where,
+          orderBy: { timestamp: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.matrixTransaction.findMany({
+          where: { userAddress: canonicalAddress },
+          select: { type: true, amount: true, status: true },
+        }),
+      ]);
 
-    let totalInflow = 0;
-    let totalOutflow = 0;
-    let pendingCount = 0;
+      let totalInflow = 0;
+      let totalOutflow = 0;
+      let pendingCount = 0;
 
-    for (const t of allUserTxs) {
-      const amt = Number(t.amount);
-      if (t.type === "WITHDRAWAL" || t.type === "SLOT_PURCHASE") {
-        totalOutflow += amt;
-      } else {
-        totalInflow += amt;
+      for (const t of allUserTxs) {
+        const amt = Number(t.amount);
+        if (t.type === "WITHDRAWAL" || t.type === "SLOT_PURCHASE") {
+          totalOutflow += amt;
+        } else {
+          totalInflow += amt;
+        }
+        if (t.status === "PENDING") pendingCount++;
       }
-      if (t.status === "PENDING") pendingCount++;
+
+      const items: MatrixTransactionDTO[] = txs.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        slotNumber: t.slotNumber,
+        cycle: t.cycle,
+        position: t.position,
+        amount: Number(t.amount),
+        amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
+        token: t.token,
+        fromAddress: t.fromAddress,
+        toAddress: t.toAddress,
+        txHash: t.txHash,
+        status: t.status,
+        description: t.description,
+        timestamp: t.timestamp,
+      }));
+
+      return {
+        items,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+        stats: {
+          totalInflow,
+          totalOutflow,
+          pendingCount,
+          netProfit: totalInflow - totalOutflow,
+        },
+      };
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getTransactions(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return {
+        items: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 1,
+        stats: {
+          totalInflow: 0,
+          totalOutflow: 0,
+          pendingCount: 0,
+          netProfit: 0,
+        },
+      };
     }
-
-    const items: MatrixTransactionDTO[] = txs.map((t: any) => ({
-      id: t.id,
-      type: t.type,
-      slotNumber: t.slotNumber,
-      cycle: t.cycle,
-      position: t.position,
-      amount: Number(t.amount),
-      amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
-      token: t.token,
-      fromAddress: t.fromAddress,
-      toAddress: t.toAddress,
-      txHash: t.txHash,
-      status: t.status,
-      description: t.description,
-      timestamp: t.timestamp,
-    }));
-
-    return {
-      items,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1,
-      stats: {
-        totalInflow,
-        totalOutflow,
-        pendingCount,
-        netProfit: totalInflow - totalOutflow,
-      },
-    };
   }
 
   // ── EARNINGS & WITHDRAWALS ─────────────────────────────────────────────────
 
   async getEarningsOverview(address: string): Promise<MatrixEarningsOverviewDTO> {
     const canonicalAddress = address.toLowerCase();
-    const user = await this.getUserProfile(canonicalAddress);
+    try {
+      const user = await this.getUserProfile(canonicalAddress);
 
-    const recentTxs = await prisma.matrixTransaction.findMany({
-      where: {
-        userAddress: canonicalAddress,
-        type: { not: "SLOT_PURCHASE" },
-      },
-      orderBy: { timestamp: "desc" },
-      take: 10,
-    });
+      const recentTxs = await prisma.matrixTransaction.findMany({
+        where: {
+          userAddress: canonicalAddress,
+          type: { not: "SLOT_PURCHASE" },
+        },
+        orderBy: { timestamp: "desc" },
+        take: 10,
+      }).catch(() => []);
 
-    const recentPayouts: MatrixTransactionDTO[] = recentTxs.map((t: any) => ({
-      id: t.id,
-      type: t.type,
-      slotNumber: t.slotNumber,
-      cycle: t.cycle,
-      position: t.position,
-      amount: Number(t.amount),
-      amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
-      token: t.token,
-      fromAddress: t.fromAddress,
-      toAddress: t.toAddress,
-      txHash: t.txHash,
-      status: t.status,
-      description: t.description,
-      timestamp: t.timestamp,
-    }));
+      const recentPayouts: MatrixTransactionDTO[] = recentTxs.map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        slotNumber: t.slotNumber,
+        cycle: t.cycle,
+        position: t.position,
+        amount: Number(t.amount),
+        amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
+        token: t.token,
+        fromAddress: t.fromAddress,
+        toAddress: t.toAddress,
+        txHash: t.txHash,
+        status: t.status,
+        description: t.description,
+        timestamp: t.timestamp,
+      }));
 
-    // Mock 7-day trend based on user earnings
-    const total = user.totalEarnings;
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const chartData = days.map((day, idx) => ({
-      date: day,
-      amount: Math.round((total / 7) * (0.6 + (idx * 0.12)) * 100) / 100,
-    }));
+      // Mock 7-day trend based on user earnings
+      const total = user.totalEarnings;
+      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const chartData = days.map((day, idx) => ({
+        date: day,
+        amount: Math.round((total / 7) * (0.6 + (idx * 0.12)) * 100) / 100,
+      }));
 
-    return {
-      totalEarnings: user.totalEarnings,
-      totalEarningsUsd: user.totalEarnings * TROB_PRICE_USD,
-      availableBalance: user.availableBalance,
-      availableBalanceUsd: user.availableBalance * TROB_PRICE_USD,
-      withdrawnTotal: user.withdrawnTotal,
-      withdrawnTotalUsd: user.withdrawnTotal * TROB_PRICE_USD,
-      trobPriceUsd: TROB_PRICE_USD,
-      breakdown: {
-        directBonus: user.directEarnings || Math.round(total * 0.35 * 100) / 100,
-        matrixPlacements: user.matrixEarnings || Math.round(total * 0.45 * 100) / 100,
-        upgradeReserves: Math.round(total * 0.1 * 100) / 100,
-        poolShares: user.poolEarnings || Math.round(total * 0.1 * 100) / 100,
-      },
-      chartData,
-      recentPayouts,
-    };
+      const livePrice = await this.getLiveTrobPriceUsd();
+
+      return {
+        totalEarnings: livePrice > 0 ? Math.round((user.totalEarnings / livePrice) * 100) / 100 : user.totalEarnings,
+        totalEarningsUsd: user.totalEarnings,
+        availableBalance: livePrice > 0 ? Math.round((user.availableBalance / livePrice) * 100) / 100 : user.availableBalance,
+        availableBalanceUsd: user.availableBalance,
+        withdrawnTotal: livePrice > 0 ? Math.round((user.withdrawnTotal / livePrice) * 100) / 100 : user.withdrawnTotal,
+        withdrawnTotalUsd: user.withdrawnTotal,
+        trobPriceUsd: livePrice,
+        breakdown: {
+          directBonus: user.directEarnings || Math.round(total * 0.35 * 100) / 100,
+          matrixPlacements: user.matrixEarnings || Math.round(total * 0.45 * 100) / 100,
+          upgradeReserves: Math.round(total * 0.1 * 100) / 100,
+          poolShares: user.poolEarnings || Math.round(total * 0.1 * 100) / 100,
+        },
+        chartData,
+        recentPayouts,
+      };
+    } catch (dbErr: any) {
+      console.warn(`[MatrixService] DB notice in getEarningsOverview(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
+      return getFallbackEarningsOverview();
+    }
   }
 
   async requestWithdrawal(
@@ -915,7 +1558,7 @@ export class MatrixService {
     });
 
     if (!profile || Number(profile.availableBalance) < amount) {
-      throw new Error(`Insufficient available balance. Available: ${Number(profile?.availableBalance || 0)} TROB`);
+      throw new Error(`Insufficient available balance. Available: $${Number(profile?.availableBalance || 0).toFixed(2)} USD`);
     }
 
     const txHash =
@@ -937,11 +1580,11 @@ export class MatrixService {
         userAddress: canonicalAddress,
         type: "WITHDRAWAL",
         amount,
-        amountUsd: amount * TROB_PRICE_USD,
-        token: "TROB",
+        amountUsd: amount,
+        token: "USD",
         txHash,
         status: "COMPLETED",
-        description: `Withdrew ${amount} TROB to wallet`,
+        description: `Withdrew $${amount.toFixed(2)} USD to wallet`,
       },
     });
 
@@ -963,7 +1606,7 @@ export class MatrixService {
         userAddress: canonicalAddress,
         action: "WITHDRAWAL_COMPLETED",
         title: "Withdrawal Completed",
-        description: `Successfully processed withdrawal of ${amount} TROB`,
+        description: `Successfully processed withdrawal of $${amount.toFixed(2)} USD`,
         amount,
         txHash,
       },
@@ -1267,6 +1910,150 @@ export class MatrixService {
     }));
   }
 
+  // ── LIVE PRICE & MARKET ORACLE ──────────────────────────────────────────
+
+  async getLiveTrobPriceUsd(): Promise<number> {
+    try {
+      const p = await priceService.getTrobUsdPrice();
+      if (p && p.priceUsd > 0) return p.priceUsd;
+    } catch {}
+    return DEFAULT_BENCHMARK_TROB_PRICE;
+  }
+
+  // ── MATRIX STATS & PROTOCOL POOL ──────────────────────────────────────────
+
+  async getMatrixStats(): Promise<MatrixStatsDTO> {
+    try {
+      const [totalPlacements, totalRecycles, daoStats] = await Promise.all([
+        prisma.matrixPlacement.count().catch(() => 0),
+        prisma.matrixCycleEvent.count().catch(() => 0),
+        prisma.daoMember.aggregate({
+          _sum: { entryAmountBtt: true },
+          _count: { _all: true },
+        }).catch(() => null),
+      ]);
+
+      return {
+        totalPlacements,
+        totalRecycles,
+        daoPool: {
+          totalShares: daoStats?._count?._all ?? 0,
+          totalDeposited: Number(daoStats?._sum?.entryAmountBtt ?? 0),
+          totalClaimed: 0,
+        },
+      };
+    } catch {
+      return {
+        totalPlacements: 0,
+        totalRecycles: 0,
+        daoPool: { totalShares: 0, totalDeposited: 0, totalClaimed: 0 },
+      };
+    }
+  }
+
+  // ── CYCLES & PLACEMENT AUDIT HISTORY ──────────────────────────────────────
+
+  async getUserCycles(address: string, slotNumber?: number): Promise<MatrixCycleEventDTO[]> {
+    const canonical = address.toLowerCase();
+    try {
+      const where: any = { userAddress: canonical };
+      if (typeof slotNumber === "number") {
+        where.slotNumber = slotNumber;
+      }
+      const events = await prisma.matrixCycleEvent.findMany({
+        where,
+        orderBy: { cycleNumber: "desc" },
+      });
+      return events.map((e: any) => ({
+        cycleNumber: e.cycleNumber,
+        nodes: e.nodes,
+        completedAt: e.completedAt,
+        txHash: e.txHash,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getCycleHistory(address: string, slotNumber: number): Promise<MatrixCycleHistoryDTO[]> {
+    const canonical = address.toLowerCase();
+    try {
+      const events = await prisma.matrixCycleEvent.findMany({
+        where: { userAddress: canonical, slotNumber },
+        orderBy: { cycleNumber: "desc" },
+      });
+      return events.map((e: any) => ({
+        cycle: e.cycleNumber,
+        completedAt: e.completedAt,
+        txHash: e.txHash,
+        nodesCount: e.nodes?.length || 14,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getPlacementHistory(
+    address: string,
+    page = 1,
+    limit = 20
+  ): Promise<MatrixPlacementHistoryResultDTO> {
+    const canonical = address.toLowerCase();
+    const skip = (page - 1) * limit;
+
+    try {
+      const where = {
+        OR: [
+          { matrixOwnerAddress: canonical },
+          { placedUserAddress: canonical },
+          { recipientAddress: canonical },
+        ],
+      };
+
+      const [total, placements] = await Promise.all([
+        prisma.matrixPlacement.count({ where }),
+        prisma.matrixPlacement.findMany({
+          where,
+          orderBy: { timestamp: "desc" },
+          skip,
+          take: limit,
+        }),
+      ]);
+
+      const history = placements.map((p: any) => ({
+        id: p.id,
+        slotNumber: p.slotNumber,
+        position: p.position,
+        cycle: p.cycle,
+        payoutType: p.payoutType,
+        recipientAddress: p.recipientAddress,
+        wasFallback: p.wasFallback,
+        amount: Number(p.amount),
+        isIncome: p.recipientAddress.toLowerCase() === canonical,
+        matrixOwner: p.matrixOwnerAddress,
+        placedUser: p.placedUserAddress,
+        txHash: p.txHash,
+        timestamp: p.timestamp,
+      }));
+
+      return {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+        history,
+      };
+    } catch {
+      return {
+        total: 0,
+        page,
+        limit,
+        totalPages: 1,
+        history: [],
+      };
+    }
+  }
+
   // ── SEEDING DEV DATA ──────────────────────────────────────────────────────
 
   async seedMatrixDevData(userAddress: string): Promise<void> {
@@ -1363,7 +2150,7 @@ export class MatrixService {
     // Create activity records
     const sampleActs = [
       { action: "MEMBER_JOINED", title: "New Member Joined", description: "Slot #01 filled by 0x3b1...7890", amount: 30, slot: 1 },
-      { action: "REWARD_RECEIVED", title: "Reward Received", description: "+12.50 TROB direct distribution", amount: 12.5, slot: 1 },
+      { action: "REWARD_RECEIVED", title: "Reward Received", description: "+$30.00 direct distribution", amount: 30, slot: 1 },
       { action: "CYCLE_COMPLETED", title: "Cycle Completed", description: "Slot #01 cycle completed & recycled", amount: 60, slot: 1 },
     ];
 

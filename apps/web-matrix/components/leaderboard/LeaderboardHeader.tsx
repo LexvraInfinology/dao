@@ -1,5 +1,6 @@
 import React from "react";
 import { useUserStore } from "@/lib/stores";
+import { formatAddress } from "@/lib/format";
 
 export interface LeaderboardHeaderProps {
   timeframe: "All Time" | "30 Days" | "7 Days";
@@ -10,7 +11,7 @@ export interface LeaderboardHeaderProps {
 export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: LeaderboardHeaderProps) {
   const address = useUserStore((s) => s.address);
   const profile = useUserStore((s) => s.profile);
-  const displayAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet";
+  const displayAddress = formatAddress(address, "short", "Connect Wallet");
   const partnersCount = profile?.directReferralsCount ?? 0;
   const lifetimeEarned = Number(profile?.totalEarnings ?? 0);
   const cyclesCount = Math.floor(lifetimeEarned / 180);
@@ -162,9 +163,9 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                   </svg>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-[#0f172a] leading-tight">{lifetimeEarned.toFixed(2)}</div>
+                  <div className="text-2xl font-black text-[#0f172a] leading-tight">${lifetimeEarned.toFixed(2)}</div>
                   <div className="text-[12px] font-bold text-[#0f172a] leading-tight mt-0.5">Total Volume</div>
-                  <div className="text-[10.5px] text-[#94a3b8]">TROB</div>
+                  <div className="text-[10.5px] text-[#94a3b8]">USD</div>
                 </div>
               </div>
 
@@ -247,7 +248,7 @@ export function LeaderboardHeader({ timeframe, setTimeframe, handleCopy }: Leade
                 <div className="min-w-0">
                   <div className="text-[10px] text-[#94a3b8] font-medium truncate">Total Volume</div>
                   <div className="text-base sm:text-lg font-black text-[#2563eb] mt-0.5 flex flex-wrap items-baseline gap-0.5">
-                    <span>{lifetimeEarned.toFixed(2)}</span> <span className="text-[9.5px] font-medium text-[#64748b]">TROB</span>
+                    <span>${lifetimeEarned.toFixed(2)}</span> <span className="text-[9.5px] font-medium text-[#64748b]">USD</span>
                   </div>
                 </div>
               </div>

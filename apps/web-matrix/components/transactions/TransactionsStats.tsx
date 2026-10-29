@@ -15,10 +15,10 @@ export interface TransactionsStatsProps {
 export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) {
   const storeStats = useFinanceStore((s) => s.transactionStats);
   const stats = propStats !== undefined ? propStats : storeStats;
-  const totalInflow = stats?.totalInflow ?? 4250.0;
-  const totalOutflow = stats?.totalOutflow ?? 1320.0;
+  const totalInflow = stats?.totalInflow ?? 0.0;
+  const totalOutflow = stats?.totalOutflow ?? 0.0;
   const pendingCount = stats?.pendingCount ?? 0;
-  const netProfit = stats?.netProfit ?? totalInflow - totalOutflow;
+  const netProfit = stats?.netProfit ?? Math.max(0, totalInflow - totalOutflow);
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">
@@ -33,7 +33,7 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
           </div>
         </div>
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
-          {totalInflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">TROB</span>
+          ${totalInflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#16a34a] flex items-center gap-0.5">
@@ -56,7 +56,7 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
           </div>
         </div>
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
-          {totalOutflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">TROB</span>
+          ${totalOutflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#e11d48] flex items-center gap-0.5">
@@ -95,7 +95,7 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
           </div>
         </div>
         <div className="text-[18px] lg:text-[22px] font-black text-[#16a34a] leading-tight">
-          {netProfit >= 0 ? `+${netProfit.toFixed(2)}` : netProfit.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">TROB</span>
+          {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
         <div className="flex items-center justify-between mt-2">
           <span className="text-[10px] text-[#16a34a] font-semibold">Net Accumulated</span>

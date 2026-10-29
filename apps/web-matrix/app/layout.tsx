@@ -10,9 +10,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://equorafimatrix.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_MATRIX_URL || "https://equorafimatrix.com"),
   title: "Equora Matrix | The Matrix Built to Move",
-  description: "Next-gen decentralized multi-layered matrix system engineered for sustainable peer-to-peer distribution, automated spillover, and verified on-chain transparency on TrobChain.",
+  description: "Equora Matrix — Next-gen decentralized recursive matrix system engineered for sustainable peer-to-peer distribution, automated spillover, and verified on-chain transparency on TrobChain.",
   alternates: {
     canonical: "/",
   },
@@ -36,6 +36,7 @@ export const metadata: Metadata = {
 };
 
 import { ReferralTracker } from "@/components/common/ReferralTracker";
+import { MagicBlindBoxWidget } from "@/components/blindbox/MagicBlindBoxWidget";
 
 export default function RootLayout({
   children,
@@ -47,6 +48,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#f1f5f9] text-[#0f172a] font-sans overflow-x-hidden selection:bg-blue-600 selection:text-white" suppressHydrationWarning>
         <ReferralTracker />
         {children}
+        <MagicBlindBoxWidget />
         <Toaster />
       </body>
     </html>

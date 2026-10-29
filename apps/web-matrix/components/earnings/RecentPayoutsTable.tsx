@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { MatrixTransactionItem } from "@/lib/api";
 import { useFinanceStore } from "@/lib/stores";
+import { formatDateSafe, formatAddress } from "@/lib/format";
 
 export interface Transaction {
   id: string;
@@ -27,63 +28,21 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
   const [activeTxFilter, setActiveTxFilter] = useState("All");
   const [txFilterDropdownOpen, setTxFilterDropdownOpen] = useState(false);
 
-  const defaultTransactions: Transaction[] = [
-    {
-      id: "tx-1",
-      type: "direct",
-      typeName: "Direct Reward",
-      description: "Direct Reward",
-      subDescriptionMobile: "Pos #02 (0x3A2...9F1C)",
-      subDescriptionDesktop: "From position #02 (0x3A2...9F1C)",
-      amount: 25.0,
-      date: "14 Sep 2026",
-      time: "10:24 AM",
-      status: "Completed",
-    },
-    {
-      id: "tx-2",
-      type: "level",
-      typeName: "Level Reward",
-      description: "Level Reward",
-      subDescriptionMobile: "Level 1 matrix completion",
-      subDescriptionDesktop: "Level 1 matrix completion",
-      amount: 17.5,
-      date: "15 Sep 2026",
-      time: "02:15 PM",
-      status: "Completed",
-    },
-    {
-      id: "tx-3",
-      type: "referral",
-      typeName: "Referral Bonus",
-      description: "Referral Bonus",
-      subDescriptionMobile: "New member joined network",
-      subDescriptionDesktop: "New member joined",
-      amount: 15.0,
-      date: "16 Sep 2026",
-      time: "11:40 AM",
-      status: "Completed",
-    },
-    {
-      id: "tx-4",
-      type: "level",
-      typeName: "Level Reward",
-      description: "Level Reward",
-      subDescriptionMobile: "Level 1 matrix completion",
-      subDescriptionDesktop: "Level 1 matrix completion",
-      amount: 10.0,
-      date: "17 Sep 2026",
-      time: "09:18 AM",
-      status: "Completed",
-    },
-  ];
-
   const allTransactions: Transaction[] = (payouts && payouts.length > 0)
     ? payouts.map((p) => {
         const isDirect = p.type.toLowerCase().includes("direct") || p.type.toLowerCase().includes("slot");
         const isLevel = p.type.toLowerCase().includes("level") || p.type.toLowerCase().includes("override");
         const kind: "direct" | "level" | "referral" = isDirect ? "direct" : isLevel ? "level" : "referral";
-        const dt = new Date(p.timestamp);
+        const dateStr = formatDateSafe(p.timestamp);
+        let timeStr = "";
+        try {
+          const d = new Date(p.timestamp);
+          if (!isNaN(d.getTime())) {
+            timeStr = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+          }
+        } catch {
+          timeStr = "";
+        }
         return {
           id: p.id,
           type: kind,
@@ -92,12 +51,12 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
           subDescriptionMobile: p.slotIndex ? `Slot #${p.slotIndex}` : p.description || "Node placement",
           subDescriptionDesktop: p.txHash ? `Tx: ${p.txHash.slice(0, 10)}...` : p.description || "Node placement",
           amount: p.amount,
-          date: dt.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }),
-          time: dt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+          date: dateStr,
+          time: timeStr,
           status: p.status === "COMPLETED" ? "Completed" : "Pending",
         };
       })
-    : defaultTransactions;
+    : [];
 
   const filteredTransactions = allTransactions.filter((tx) => {
     if (activeTxFilter === "All" || activeTxFilter === "All Transactions") return true;
@@ -185,7 +144,12 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
 
                 {/* Table Rows (Desktop shows top 4 transactions like Figma desktop screenshot) */}
                 <div className="divide-y divide-[#f8fafc]">
-                  {filteredTransactions.slice(0, 4).map((tx) => (
+                  {filteredTransactions.length === 0 ? (
+                    <div className="py-12 text-center text-[#94a3b8] text-[13px]">
+                      No recent transactions found on-chain.
+                    </div>
+                  ) : (
+                    filteredTransactions.slice(0, 4).map((tx) => (
                     <div
                       key={tx.id}
                       className="grid grid-cols-12 items-center py-3.5 px-3 rounded-xl hover:bg-[#f8fafc] transition-colors group cursor-pointer"
@@ -222,8 +186,8 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
 
                       {/* AMOUNT */}
                       <div className="col-span-2 whitespace-nowrap">
-                        <span className="text-[13.5px] font-black text-[#0f172a]">
-                          +{tx.amount.toFixed(2)} TROB
+                        <span className="text-[13.5px] font-black text-[#16a34a]">
+                          +${tx.amount.toFixed(2)} USD
                         </span>
                       </div>
 
@@ -249,14 +213,19 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
                         </svg>
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               </div>
             </div>
 
             {/* ───── MOBILE LIST VIEW (Visible on < 768px) ───── */}
             <div className="md:hidden divide-y divide-[#f1f5f9]">
-              {filteredTransactions.map((tx) => (
+              {filteredTransactions.length === 0 ? (
+                <div className="py-8 text-center text-[#94a3b8] text-[13px]">
+                  No recent transactions found on-chain.
+                </div>
+              ) : (
+                filteredTransactions.map((tx) => (
                 <div
                   key={tx.id}
                   className="flex items-center justify-between py-3 first:pt-1 last:pb-1 cursor-pointer active:bg-[#f8fafc]"
@@ -299,8 +268,8 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
                   {/* Right: Amount + Completed Badge + Chevron */}
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <div className="text-[13.5px] font-black text-[#0f172a]">
-                        +{tx.amount.toFixed(2)} <span className="text-[#2563eb] font-bold">TROB</span>
+                      <div className="text-[13.5px] font-black text-[#16a34a]">
+                        +${tx.amount.toFixed(2)} <span className="text-[#16a34a] font-bold">USD</span>
                       </div>
                       <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-[#ecfdf5] text-[#16a34a] text-[10px] font-bold">
                         {tx.status}
@@ -312,7 +281,7 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
                     </svg>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
 
             {/* Bottom Button for small screens (< sm) */}

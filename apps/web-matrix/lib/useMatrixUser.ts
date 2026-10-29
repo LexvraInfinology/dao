@@ -57,7 +57,7 @@ export function useMatrixUser() {
   }, [initAddress, setAddress]);
 
   const refreshAll = useCallback(
-    async (force = false) => {
+    async (force = false, followUp = false) => {
       await Promise.all([
         fetchProfile(force),
         fetchDashboard(undefined, force),
@@ -66,6 +66,18 @@ export function useMatrixUser() {
         fetchSettings(force),
         fetchSlotDetails(undefined, undefined, undefined, force),
       ]);
+
+      if (followUp) {
+        setTimeout(async () => {
+          await Promise.all([
+            fetchProfile(true),
+            fetchDashboard(undefined, true),
+            fetchSlots(undefined, true),
+            fetchEarnings(undefined, true),
+            fetchSlotDetails(undefined, undefined, undefined, true),
+          ]).catch(() => {});
+        }, 3500);
+      }
     },
     [
       fetchProfile,
@@ -80,7 +92,7 @@ export function useMatrixUser() {
   // Refresh when address changes
   useEffect(() => {
     if (address) {
-      refreshAll(true);
+      refreshAll(true, true);
     }
   }, [address, refreshAll]);
 
@@ -135,7 +147,7 @@ export function useMatrixUser() {
     leaderboard,
     loading,
     error,
-    refreshAll: () => refreshAll(true),
+    refreshAll: (force?: boolean, followUp?: boolean) => refreshAll(force ?? true, followUp ?? false),
     loadSlot,
     buySlot,
   };

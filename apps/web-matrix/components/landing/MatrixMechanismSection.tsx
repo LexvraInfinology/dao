@@ -42,7 +42,7 @@ export function MatrixMechanismSection() {
                     Join the Matrix
                   </h4>
                   <p className="text-xs sm:text-[13px] text-slate-500 font-medium leading-relaxed mt-1">
-                    Start with just 30 TROB ($30) and get placed in Slot 1.
+                    Start with just $30 USD and get placed in Slot 1.
                   </p>
                 </div>
               </div>

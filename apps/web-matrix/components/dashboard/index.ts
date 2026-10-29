@@ -4,3 +4,5 @@ export { MatrixTreePanel } from "./MatrixTreePanel";
 export { NextPositionPanel } from "./NextPositionPanel";
 export { RecentActivityPanel } from "./RecentActivityPanel";
 export { DashboardMobileCard } from "./DashboardMobileCard";
+export { ProtocolPoolsPanel } from "./ProtocolPoolsPanel";
+

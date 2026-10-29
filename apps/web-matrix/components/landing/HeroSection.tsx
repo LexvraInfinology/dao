@@ -1,12 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Copy, Check, LogOut, ShieldCheck, Wallet } from "lucide-react";
 import { HeroVideo } from "./HeroVideo";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useUserStore } from "@/lib/stores";
+import {
+  hasTrobSafeProvider,
+  connectTrobSafe,
+  getInjectedAuthorizedAccount,
+} from "@/lib/web3Wallet";
+import { wakeUpExtension } from "@/lib/walletConnect";
+import { getStoredUserAddress } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import { formatAddress, toTrobBase58 } from "@/lib/format";
 
 export function HeroSection() {
   const router = useRouter();
@@ -15,13 +25,99 @@ export function HeroSection() {
   const disconnect = useUserStore((s) => s.disconnect);
   const [mounted, setMounted] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeNav, setActiveNav] = useState("#about");
+  const walletDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Click outside listener for wallet dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (walletDropdownRef.current && !walletDropdownRef.current.contains(e.target as Node)) {
+        setWalletDropdownOpen(false);
+      }
+    };
+    if (walletDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [walletDropdownOpen]);
+
+  // Read existing wallet if user did not explicitly disconnect
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (typeof window !== "undefined" && localStorage.getItem("equora_wallet_explicit_disconnect") === "true") {
+      return;
+    }
+    const existing = getInjectedAuthorizedAccount() || getStoredUserAddress();
+    if (existing && existing.startsWith("0x")) {
+      setAddress(existing);
+    }
+  }, [setAddress]);
+
+  // Navigate directly to Matrix Access Gate
+  const handleEnterMatrix = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("equora_wallet_explicit_disconnect");
+    }
+    router.push("/gate");
+  };
+
+  const handleConnectClick = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("equora_wallet_explicit_disconnect");
+    }
+    wakeUpExtension();
+    if (hasTrobSafeProvider()) {
+      try {
+        const connected = await connectTrobSafe();
+        if (connected && connected.startsWith("0x")) {
+          setAddress(connected);
+          toast.success("Wallet Connected", `Active: ${formatAddress(connected)}`);
+          router.push("/gate");
+          return;
+        }
+      } catch (err: any) {
+        console.warn("[Landing] Direct connect notice:", err);
+      }
+    }
+    setWalletModalOpen(true);
+  };
+
+  const handleCopyAddress = () => {
+    if (!address) return;
+    const b58 = toTrobBase58(address);
+    navigator.clipboard.writeText(b58 || address);
+    setCopied(true);
+    toast.copy(formatAddress(b58 || address), "Wallet Address");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDisconnectWallet = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("equora_wallet_explicit_disconnect", "true");
+      localStorage.removeItem("equora_auth_address");
+      localStorage.removeItem("trobsafe_address");
+      localStorage.removeItem("equora_matrix_address");
+      localStorage.removeItem("equora_user_address");
+      localStorage.removeItem("walletconnect");
+      if (address) {
+        localStorage.removeItem(`equora_matrix_registered_${address.toLowerCase()}`);
+      }
+    }
+    setAddress("");
+    disconnect();
+    setWalletDropdownOpen(false);
+    setMobileMenuOpen(false);
+    toast.info("Wallet Disconnected", "Active wallet disconnected successfully.");
+    window.location.href = "/";
+  };
+
+
 
   const navLinks = [
     { label: "About", href: "#about" },
@@ -109,35 +205,106 @@ export function HeroSection() {
             </nav>
 
             {/* Right Action Button & Mobile Toggle */}
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setWalletModalOpen(true)}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
-              >
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Connect / Active Wallet Dropdown Button - Visible on ALL screens including mobile */}
+              <div className="relative" ref={walletDropdownRef}>
                 {mounted && address ? (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                    <span className="font-mono text-xs">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
-                    <span className="text-[10px] text-white/50">▼</span>
+                    <button
+                      type="button"
+                      onClick={() => setWalletDropdownOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer border border-slate-700/60"
+                      title="Manage Wallet"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                      <span className="font-mono text-xs">{formatAddress(address)}</span>
+                      <svg
+                        className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${walletDropdownOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {walletDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white border border-slate-200/90 shadow-[0_12px_40px_rgba(15,23,42,0.18)] p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {/* Network Badge */}
+                        <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-[11px] font-semibold text-slate-500">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            TrobChain Testnet
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono text-[10px]">
+                            13000
+                          </span>
+                        </div>
+
+                        {/* Account Address Card */}
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 mb-3">
+                          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">
+                            Connected Account
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-xs text-slate-800 font-bold truncate">
+                              {toTrobBase58(address) || address}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyAddress}
+                              className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 transition-colors shrink-0 cursor-pointer"
+                              title="Copy Address"
+                            >
+                              {copied ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Action Links */}
+                        <div className="space-y-1.5 mb-2">
+                          <Link
+                            href="/gate"
+                            onClick={() => setWalletDropdownOpen(false)}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-700 text-xs font-semibold transition-colors group cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-blue-600" />
+                              Matrix Access Gate
+                            </span>
+                            <span className="text-[11px] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                          </Link>
+                        </div>
+
+                        {/* Disconnect Button */}
+                        <button
+                          type="button"
+                          onClick={handleDisconnectWallet}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-100 text-xs font-bold transition-all cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Disconnect Wallet</span>
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4 text-[#38bdf8]"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <rect x="3" y="6" width="18" height="15" rx="3" />
-                      <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-                      <circle cx="12" cy="13" r="1.5" fill="currentColor" />
-                    </svg>
+                  <button
+                    type="button"
+                    onClick={handleConnectClick}
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#38bdf8]" />
                     <span>Connect Wallet</span>
-                  </>
+                  </button>
                 )}
-              </button>
+              </div>
 
               {/* Mobile Menu Toggle Button */}
               <button
@@ -263,38 +430,59 @@ export function HeroSection() {
           </nav>
         </div>
 
-        {/* Bottom Action Section: Connect Wallet Button with appropriate balanced gap */}
-        <div className="pt-4 pb-1 sm:pb-2 border-t border-slate-100 mt-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setMobileMenuOpen(false);
-              setWalletModalOpen(true);
-            }}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-[15px] font-bold flex items-center justify-center gap-2.5 shadow-md shadow-blue-500/25 transition-all cursor-pointer"
-          >
-            {mounted && address ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="font-mono">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="3" y="6" width="18" height="15" rx="3" />
-                  <path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-                  <circle cx="12" cy="13" r="1.5" fill="currentColor" />
-                </svg>
-                <span>Connect Wallet</span>
-              </>
-            )}
-          </button>
+        {/* Bottom Action Section: Connected details or Connect button */}
+        <div className="pt-4 pb-1 sm:pb-2 border-t border-slate-100 mt-auto shrink-0 space-y-2">
+          {mounted && address ? (
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">
+                  Active Wallet
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-mono text-xs text-slate-800 font-bold truncate">
+                    {formatAddress(address)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-200/60"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <Link
+                href="/gate"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-3 px-4 rounded-xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all cursor-pointer text-center"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Matrix Access Gate</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleDisconnectWallet}
+                className="w-full py-2.5 px-4 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect Wallet</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleConnectClick();
+              }}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-[15px] font-bold flex items-center justify-center gap-2.5 shadow-md shadow-blue-500/25 transition-all cursor-pointer"
+            >
+              <Wallet className="w-5 h-5 text-white" />
+              <span>Connect Wallet</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -331,17 +519,18 @@ export function HeroSection() {
 
               {/* Subtitle - Exact copy from Figma */}
               <p className="text-sm sm:text-base text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-5 sm:mb-6">
-                Start with just 30 TROB ($30) and step into a 12-slot progression
+                Start with just $30 USD and step into a 12-slot progression
                 system. Grow your network, unlock higher tiers automatically, and
                 earn real rewards on-chain.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3.5 sm:gap-4.5 mb-5 sm:mb-6">
-                {/* Primary: Start Now → */}
-                <a
-                  href="#about"
-                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-sm sm:text-base inline-flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95"
+                {/* Primary: Start Now → Direct Matrix Buy Gate */}
+                <button
+                  type="button"
+                  onClick={handleEnterMatrix}
+                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-sm sm:text-base inline-flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95 cursor-pointer"
                 >
                   <span>Start Now</span>
                   <svg
@@ -357,7 +546,7 @@ export function HeroSection() {
                       d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
                     />
                   </svg>
-                </a>
+                </button>
 
                 {/* Secondary: Watch Our Story */}
                 <button
@@ -429,10 +618,14 @@ export function HeroSection() {
         onClose={() => setWalletModalOpen(false)}
         currentAddress={address || undefined}
         onSelectAddress={(newAddr) => {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("equora_wallet_explicit_disconnect");
+          }
           setAddress(newAddr);
-          router.push("/dashboard");
+          setWalletModalOpen(false);
+          router.push("/gate");
         }}
-        onDisconnect={disconnect}
+        onDisconnect={handleDisconnectWallet}
       />
     </>
   );

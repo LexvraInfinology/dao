@@ -4,7 +4,7 @@ import { getOnChainDaoTransactions } from '../../_lib/blockchainSync';
 import type { TransactionItem } from '@/hooks/useApi';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
 import { getMergedOnChainDaoStats, getMemberOnChainFinancials } from '../../_lib/onChainMergedDao';
-import { TROB_PRICE_API_URL } from '@/config/env';
+import { TROB_PRICE_API_URL, IS_MAINNET, NETWORK_NAME } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,18 +54,22 @@ export async function GET(req: NextRequest) {
         console.warn('[Transactions API] On-chain fetch warning:', chainErr);
       }
 
-      // 2. Query Neon DB for confirmed protocol ledger events and stats concurrently
+      // 2. Query Neon DB for confirmed protocol ledger events and stats
       let dbItems: TransactionItem[] = [];
-      let protocolInflowsUsd = 26400;
-      let protocolOutflowsUsd = 26261.01;
+      let protocolInflowsUsd = IS_MAINNET ? 26400 : 3000;
+      let protocolOutflowsUsd = IS_MAINNET ? 26261.01 : 3000;
+      let mergedOnChain: any = null;
 
       try {
+        const networkPriceFilter = IS_MAINNET ? 'trobchain-mainnet' : 'trobchain-testnet';
         const [rowsRes, statsRes] = await Promise.all([
           queryNeon<any>(
             `SELECT id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason
              FROM "DaoEvent"
+             WHERE "priceSource" = $1 OR ($2 = true AND "priceSource" = 'blockchain-onchain')
              ORDER BY "timestamp" DESC, "createdAt" DESC
-             LIMIT 1000`
+             LIMIT 1000`,
+            [networkPriceFilter, IS_MAINNET]
           ),
           queryNeon<any>(
             `SELECT 
@@ -84,86 +88,86 @@ export async function GET(req: NextRequest) {
             }
             return true;
           })
-          .map((evt) => {
-            const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
-            const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
-            const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * 0.056) * 100) / 100;
+            .map((evt) => {
+              const isPositive = evt.eventType === 'pushed' || evt.eventType === 'fallback_claimed';
+              const amtBtt = Math.round(parseFloat(evt.amountBtt || '0') * 100) / 100;
+              const amtUsd = Math.round((parseFloat(evt.amountUsdEst || '0') || amtBtt * 0.056) * 100) / 100;
 
-            let categoryBadge: string | undefined;
-            const reasonLower = (evt.reason || '').toLowerCase();
-            if (evt.eventType === 'retopup' || reasonLower.includes('retopup')) {
-              categoryBadge = '5X Retopup';
-            } else if (reasonLower.includes('cap reached') || reasonLower.includes('5x cap')) {
-              categoryBadge = '5X Cap Event';
-            } else if (reasonLower.includes('cashback')) {
-              categoryBadge = 'Instant Cashback';
-            } else if (reasonLower.includes('retopup loop') || reasonLower.includes('retopup distribution')) {
-              categoryBadge = 'Retopup Share';
-            }
+              let categoryBadge: string | undefined;
+              const reasonLower = (evt.reason || '').toLowerCase();
+              if (evt.eventType === 'retopup' || reasonLower.includes('retopup')) {
+                categoryBadge = '5X Retopup';
+              } else if (reasonLower.includes('cap reached') || reasonLower.includes('5x cap')) {
+                categoryBadge = '5X Cap Event';
+              } else if (reasonLower.includes('cashback')) {
+                categoryBadge = 'Instant Cashback';
+              } else if (reasonLower.includes('retopup loop') || reasonLower.includes('retopup distribution')) {
+                categoryBadge = 'Retopup Share';
+              }
 
-            return {
-              id: evt.id,
-              type: evt.eventType as any,
-              typeLabel:
-                evt.reason ||
-                (evt.eventType === 'joined'
-                  ? `Council Seat #${evt.incomingPosition || ''} Activated`
-                  : evt.eventType === 'pushed'
-                  ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
-                  : evt.eventType === 'retopup'
-                  ? '5X Cap Retopup'
-                  : 'Dividend Reward Claimed'),
-              amountBtt: amtBtt,
-              amountTrob: amtBtt,
-              amountUsd: amtUsd,
-              isPositive,
-              from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
-              to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
-              txHash: evt.txHash || '',
-              timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
-              status: 'Confirmed',
-              incomingPosition: evt.incomingPosition,
-              categoryBadge,
-              blockNumber: evt.blockNumber ? String(evt.blockNumber) : undefined,
-              contractAddress: PROTOCOL_ADDRESS,
-              distributionFormula:
-                evt.eventType === 'pushed'
-                  ? `Rule: 300 / ${evt.incomingPosition || 'N'} USD ($${amtUsd} = ${amtBtt} TROB) automated on-chain push`
-                  : evt.eventType === 'joined'
-                  ? 'Rule: Fixed $300 USD deposit with 35% instant automated push to preceding council seats'
-                  : evt.eventType === 'retopup'
-                  ? 'Rule: 5X Cap ($1,500) reached; $300 retopup distributed to active council members'
-                  : undefined,
-              note:
-                evt.reason ||
-                (evt.eventType === 'pushed'
-                  ? `Automated on-chain dividend distribution pushed from Seat #${evt.incomingPosition || ''}.`
-                  : evt.eventType === 'joined'
-                  ? `Council Seat #${evt.incomingPosition || ''} activated on TrobChain Mainnet.`
-                  : 'Confirmed on-chain transaction.'),
-            };
-          });
+              return {
+                id: evt.id,
+                type: evt.eventType as any,
+                typeLabel:
+                  evt.reason ||
+                  (evt.eventType === 'joined'
+                    ? `Council Seat #${evt.incomingPosition || ''} Activated`
+                    : evt.eventType === 'pushed'
+                    ? `Instant Cashback (Seat #${evt.incomingPosition || ''})`
+                    : evt.eventType === 'retopup'
+                    ? '5X Cap Retopup'
+                    : 'Dividend Reward Claimed'),
+                amountBtt: amtBtt,
+                amountTrob: amtBtt,
+                amountUsd: amtUsd,
+                isPositive,
+                from: isPositive ? PROTOCOL_ADDRESS : evt.userAddress,
+                to: isPositive ? evt.userAddress : PROTOCOL_ADDRESS,
+                txHash: evt.txHash || '',
+                timestamp: toIsoUtc(evt.timestamp || evt.createdAt),
+                status: 'Confirmed',
+                incomingPosition: evt.incomingPosition,
+                categoryBadge,
+                blockNumber: evt.blockNumber ? String(evt.blockNumber) : undefined,
+                contractAddress: PROTOCOL_ADDRESS,
+                distributionFormula:
+                  evt.eventType === 'pushed'
+                    ? `Rule: 300 / ${evt.incomingPosition || 'N'} USD ($${amtUsd} = ${amtBtt} TROB) automated on-chain push`
+                    : evt.eventType === 'joined'
+                    ? 'Rule: Fixed $300 USD deposit with 35% instant automated push to preceding council seats'
+                    : evt.eventType === 'retopup'
+                    ? 'Rule: 5X Cap ($1,500) reached; $300 retopup distributed to active council members'
+                    : undefined,
+                note:
+                  evt.reason ||
+                  (evt.eventType === 'pushed'
+                    ? `Automated on-chain dividend distribution pushed from Seat #${evt.incomingPosition || ''}.`
+                    : evt.eventType === 'joined'
+                    ? `Council Seat #${evt.incomingPosition || ''} activated on ${NETWORK_NAME}.`
+                    : 'Confirmed on-chain transaction.'),
+              };
+            });
 
-        if (statsRes.rows[0]?.inflows) {
-          const inf = Math.round(parseFloat(statsRes.rows[0].inflows) * 100) / 100;
-          if (inf > 0) protocolInflowsUsd = inf;
+          if (statsRes.rows[0]?.inflows) {
+            const inf = Math.round(parseFloat(statsRes.rows[0].inflows) * 100) / 100;
+            if (inf > 0) protocolInflowsUsd = inf;
+          }
+          if (statsRes.rows[0]?.raw_outflows) {
+            const rawOut = Math.round(parseFloat(statsRes.rows[0].raw_outflows) * 100) / 100;
+            if (rawOut > 0) protocolOutflowsUsd = rawOut;
+          }
+        } catch (dbErr) {
+          console.warn('[Transactions API] DB fetch warning:', dbErr);
         }
-        if (statsRes.rows[0]?.raw_outflows) {
-          const rawOut = Math.round(parseFloat(statsRes.rows[0].raw_outflows) * 100) / 100;
-          if (rawOut > 0) protocolOutflowsUsd = rawOut;
-        }
-      } catch (dbErr) {
-        console.warn('[Transactions API] DB fetch warning:', dbErr);
-      }
 
-      // Live On-Chain Merged (V1 + V2) stats
-      const mergedOnChain = await getMergedOnChainDaoStats(trobPriceUsd);
-      if (!protocolInflowsUsd || protocolInflowsUsd === 0) {
-        protocolInflowsUsd = mergedOnChain.mergedCollectedUsd || 26400;
-      }
-      if (!protocolOutflowsUsd || protocolOutflowsUsd === 0) {
-        protocolOutflowsUsd = mergedOnChain.mergedDistributedUsd || 26261.01;
-      }
+        // Live On-Chain Merged / Testnet stats
+        mergedOnChain = await getMergedOnChainDaoStats(trobPriceUsd);
+        if (!protocolInflowsUsd || protocolInflowsUsd === 0) {
+          protocolInflowsUsd = mergedOnChain.mergedCollectedUsd || (IS_MAINNET ? 26400 : 3000);
+        }
+        if (!protocolOutflowsUsd || protocolOutflowsUsd === 0) {
+          protocolOutflowsUsd = mergedOnChain.mergedDistributedUsd || (IS_MAINNET ? 26261.01 : 3000);
+        }
 
       // Merge and deduplicate by transaction hash / ID and recipient
       const mergedMap = new Map<string, TransactionItem>();

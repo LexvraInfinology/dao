@@ -1,7 +1,7 @@
 import { getActiveDaoAddress, getActiveDaoHex, toTrobBase58, toTronHex } from '@/utils/trobAddress';
 import { queryNeon } from './neonDb';
 import type { TransactionItem } from '@/hooks/useApi';
-import { EXPLORER_API_URL } from '@/config/env';
+import { EXPLORER_API_URL, IS_MAINNET, NETWORK_NAME } from '@/config/env';
 import { getOnChainMemberPosition, getOnChainUnderfundedReservation } from './txVerifier';
 
 const BACKEND_EXPLORER_API = EXPLORER_API_URL;
@@ -35,8 +35,10 @@ export async function getOnChainDaoTransactions(
   }
 
   try {
-    const v1DaoAddress = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
-    const addressesToQuery = [daoAddress, v1DaoAddress];
+    const addressesToQuery = [daoAddress];
+    if (IS_MAINNET) {
+      addressesToQuery.push('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto');
+    }
     if (filterAddress && filterAddress.trim()) {
       const cleanFilter = filterAddress.trim();
       if (!addressesToQuery.includes(cleanFilter)) {
@@ -48,7 +50,7 @@ export async function getOnChainDaoTransactions(
       addressesToQuery.map((addr) =>
         fetch(`${BACKEND_EXPLORER_API}/accounts/${addr}/transactions?limit=100`, {
           cache: 'no-store',
-          signal: AbortSignal.timeout(2000),
+          signal: AbortSignal.timeout(6000),
         })
           .then((r) => (r.ok ? r.json() : { data: [] }))
           .catch(() => ({ data: [] }))
@@ -119,26 +121,32 @@ export async function getOnChainDaoTransactions(
       );
     });
 
-    // 2. Fetch missing transaction details in PARALLEL with low timeout
+    // 2. Fetch missing transaction details in batches with high resilience
     const missingCandidates = candidateTxs.filter((tx) => !txDetailCache.has(tx.hash));
     if (missingCandidates.length > 0) {
-      await Promise.all(
-        missingCandidates.map(async (tx) => {
-          try {
-            const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${tx.hash}`, {
-              cache: 'no-store',
-              signal: AbortSignal.timeout(1200),
-            });
-            if (detailRes.ok) {
-              const detailJson = await detailRes.json();
-              const d = detailJson.data || tx;
-              if (d.confirmed) {
-                txDetailCache.set(tx.hash, d);
+      const batchSize = 3;
+      for (let i = 0; i < missingCandidates.length; i += batchSize) {
+        const batch = missingCandidates.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (tx) => {
+            try {
+              const detailRes = await fetch(`${BACKEND_EXPLORER_API}/transactions/${tx.hash}`, {
+                cache: 'no-store',
+                signal: AbortSignal.timeout(8000),
+              });
+              if (detailRes.ok) {
+                const detailJson = await detailRes.json();
+                const d = detailJson.data || tx;
+                if (d && (d.confirmed || d.events || d.result === 'SUCCESS')) {
+                  txDetailCache.set(tx.hash, d);
+                }
               }
+            } catch (fetchErr) {
+              console.warn(`[blockchainSync] Failed to fetch details for ${tx.hash}:`, fetchErr);
             }
-          } catch {}
-        })
-      );
+          })
+        );
+      }
     }
 
     for (const tx of candidateTxs) {
@@ -182,7 +190,7 @@ export async function getOnChainDaoTransactions(
         const tokenId = joinEvt?.args?.tokenId ? parseInt(joinEvt.args.tokenId, 10) : pos;
 
         // Paid amount in TROB
-        let paidAmountTrob = 5357.14;
+        let paidAmountTrob = IS_MAINNET ? 5357.14 : 8078.0;
         if (detail.call_value) {
           paidAmountTrob = Number(detail.call_value) / 1e6;
         } else if (tx.call_value) {
@@ -219,7 +227,7 @@ export async function getOnChainDaoTransactions(
           blockNumber: txBlock ? String(txBlock) : undefined,
           contractAddress: daoAddress,
           distributionFormula: 'Rule: Fixed $300 USD deposit with 35% instant automated push to preceding council seats',
-          note: `Council Seat #${pos} activated on TrobChain Mainnet. Soulbound Council NFT #${pos} minted.`,
+          note: `Council Seat #${pos} activated on ${NETWORK_NAME}. Soulbound Council NFT #${pos} minted.`,
         });
 
         discoveredMembers.push({
@@ -284,24 +292,48 @@ export async function getOnChainDaoTransactions(
             });
           }
         } else {
-          // If event logs weren't parsed by explorer API, synthesize according to EquoraDAO.sol logic
-          const cashbackTrob = Math.round((paidAmountTrob / pos) * 100) / 100;
-          const cashbackUsd = Math.round((300 / pos) * 100) / 100;
-          parsedItems.push({
-            id: `${hash}-cashback`,
-            type: 'pushed',
-            typeLabel: `Instant Cashback (Seat #${pos})`,
-            amountBtt: cashbackTrob,
-            amountTrob: cashbackTrob,
-            amountUsd: cashbackUsd,
-            isPositive: true,
-            from: daoAddress,
-            to: caller,
-            txHash: hash,
-            timestamp: cashbackTime,
-            status: 'Confirmed',
-            incomingPosition: pos,
-          });
+          // If event logs weren't parsed by explorer API, synthesize according to EquoraDAO.sol on-chain rules:
+          // Rule: 35% automated push is split equally among seats 1..pos (each receives 300 / pos USD)
+          const shareTrob = Math.round((paidAmountTrob / pos) * 100) / 100;
+          const shareUsd = Math.round((300 / pos) * 100) / 100;
+
+          for (let seatIdx = 1; seatIdx <= pos; seatIdx++) {
+            const isCashback = seatIdx === pos;
+            const targetMember = discoveredMembers.find((m) => m.position === seatIdx);
+            const recipient = isCashback
+              ? caller
+              : (targetMember?.user || (seatIdx === 1 ? 'TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf' : ''));
+            if (!recipient) continue;
+
+            const itemTime = isCashback
+              ? cashbackTime
+              : new Date(baseMs - 1000 + seatIdx * 10).toISOString();
+
+            parsedItems.push({
+              id: `${hash}-push-${seatIdx}-${recipient}`,
+              type: 'pushed',
+              typeLabel: isCashback
+                ? `Instant Cashback (Seat #${pos})`
+                : `Dividend Push from Seat #${pos}`,
+              amountBtt: shareTrob,
+              amountTrob: shareTrob,
+              amountUsd: shareUsd,
+              isPositive: true,
+              from: daoAddress,
+              to: recipient,
+              txHash: hash,
+              timestamp: itemTime,
+              status: 'Confirmed',
+              incomingPosition: pos,
+              contractAddress: daoAddress,
+              distributionFormula: isCashback
+                ? `Rule: Instant Cashback of $${shareUsd} (${shareTrob} TROB)`
+                : `Rule: 300 / ${pos} USD ($${shareUsd} = ${shareTrob} TROB) automated on-chain push`,
+              note: isCashback
+                ? `Instant cashback returned directly to activating member.`
+                : `Automated on-chain dividend distribution pushed from Seat #${pos} on ${NETWORK_NAME}.`,
+            });
+          }
         }
       } else if (isRetopup) {
         // Parse retopup
@@ -355,15 +387,17 @@ export async function getOnChainDaoTransactions(
 
     cachedParsedItems = parsedItems;
 
-    // Reconcile discovered on-chain members into Neon DB
-    syncOnChainMembersToDb(discoveredMembers).catch((err) => {
-      console.warn('[BlockchainSync] DB sync error:', err);
-    });
+    if (IS_MAINNET) {
+      // Reconcile discovered on-chain members into Neon DB
+      syncOnChainMembersToDb(discoveredMembers).catch((err) => {
+        console.warn('[BlockchainSync] DB sync error:', err);
+      });
 
-    // Also trigger direct on-chain state sync
-    syncOnChainMembersState().catch((err) => {
-      console.warn('[BlockchainSync] Direct on-chain sync error:', err);
-    });
+      // Also trigger direct on-chain state sync
+      syncOnChainMembersState().catch((err) => {
+        console.warn('[BlockchainSync] Direct on-chain sync error:', err);
+      });
+    }
 
     return filterItems(cachedParsedItems, filterAddress);
   } catch (err) {
@@ -384,6 +418,11 @@ export async function syncOnChainMembersState(force = false): Promise<{
   dbCount: number;
   newMembersAdded: number;
 }> {
+  if (!IS_MAINNET) {
+    // In testnet mode, NEVER modify or overwrite production Neon DB members!
+    return { onChainCount: 1, dbCount: 1, newMembersAdded: 0 };
+  }
+
   const now = Date.now();
   if (!force && (now - lastOnChainSyncTime < 15000 || isSyncingOnChain)) {
     return { onChainCount: 0, dbCount: 0, newMembersAdded: 0 };

@@ -6,3 +6,4 @@ export * from "./MatrixTreeView";
 export * from "./MatrixPositionDetails";
 export * from "./MatrixDirectMembers";
 export * from "./MatrixAccessGate";
+export * from "./MatrixQualificationAlert";

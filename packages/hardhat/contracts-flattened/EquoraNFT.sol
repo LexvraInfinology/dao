@@ -39,6 +39,7 @@ abstract contract Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -139,6 +140,7 @@ abstract contract Ownable is Context {
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (interfaces/draft-IERC6093.sol)
+pragma solidity ^0.8.20;
 
 /**
  * @dev Standard ERC20 Errors
@@ -304,6 +306,7 @@ interface IERC1155Errors {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/introspection/IERC165.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Interface of the ERC165 standard, as defined in the
@@ -332,6 +335,7 @@ interface IERC165 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/IERC721.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Required interface of an ERC721 compliant contract.
@@ -468,6 +472,7 @@ interface IERC721 is IERC165 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/IERC721Metadata.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @title ERC-721 Non-Fungible Token Standard, optional metadata extension
@@ -496,6 +501,7 @@ interface IERC721Metadata is IERC721 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/IERC721Receiver.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @title ERC721 token receiver interface
@@ -527,6 +533,7 @@ interface IERC721Receiver {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/introspection/ERC165.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Implementation of the {IERC165} interface.
@@ -555,6 +562,7 @@ abstract contract ERC165 is IERC165 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/math/Math.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Standard math utilities missing in the Solidity language.
@@ -973,6 +981,7 @@ library Math {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/math/SignedMath.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Standard signed math utilities missing in the Solidity language.
@@ -1019,6 +1028,7 @@ library SignedMath {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/Strings.sol)
 
+pragma solidity ^0.8.20;
 
 
 /**
@@ -1114,6 +1124,7 @@ library Strings {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/ERC721.sol)
 
+pragma solidity ^0.8.20;
 
 
 
@@ -1598,6 +1609,7 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/IERC721Enumerable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @title ERC-721 Non-Fungible Token Standard, optional enumeration extension
@@ -1628,6 +1640,7 @@ interface IERC721Enumerable is IERC721 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC721/extensions/ERC721Enumerable.sol)
 
+pragma solidity ^0.8.20;
 
 
 
@@ -1799,6 +1812,7 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 // File contracts/interfaces/IEquoraNFT.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 /**
  * @title IEquoraNFT
@@ -1824,6 +1838,7 @@ interface IEquoraNFT {
 // File contracts/rewards/EquoraNFT.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 
 

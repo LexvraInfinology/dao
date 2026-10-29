@@ -12,13 +12,24 @@ let waterfallState = {
   isClaimed: false,
 };
 
+import { IS_MAINNET } from '@/config/env';
+
 export async function GET(req: NextRequest) {
   try {
-    // 1. Fetch active DAO member count
-    const countRes = await queryNeon<any>(
-      `SELECT count(*)::int as count FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
-    );
-    const activeDaoCount = countRes.rows[0]?.count || 93;
+    // 1. Fetch active DAO member count dynamically from on-chain smart contract
+    let activeDaoCount = 10;
+    try {
+      const { getMergedOnChainDaoStats } = await import('../../_lib/onChainMergedDao');
+      const stats = await getMergedOnChainDaoStats();
+      activeDaoCount = Math.max(1, stats.activeMemberCount);
+    } catch {
+      if (IS_MAINNET) {
+        const countRes = await queryNeon<any>(
+          `SELECT count(*)::int as count FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
+        );
+        activeDaoCount = countRes.rows[0]?.count || 87;
+      }
+    }
 
     // 2. Fetch live TROB price (dynamically query market API with fallback)
     let bttPriceUsd = 0.042206;

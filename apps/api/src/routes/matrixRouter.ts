@@ -107,11 +107,11 @@ matrixRouter.get("/slots/:address/:slotNumber", async (req: Request, res: Respon
  */
 matrixRouter.post("/slots/buy", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userAddress, slotNumber, txHash } = req.body;
+    const { userAddress, slotNumber, txHash, sponsorAddress } = req.body;
     if (!userAddress || !slotNumber) {
       return res.status(400).json({ success: false, error: "userAddress and slotNumber are required" });
     }
-    const result = await matrixService.buySlot(userAddress, Number(slotNumber), txHash);
+    const result = await matrixService.buySlot(userAddress, Number(slotNumber), txHash, sponsorAddress);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message || "Failed to buy slot" });

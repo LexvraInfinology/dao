@@ -10,6 +10,8 @@ import {
   getOnChainAllSlots,
   getOnChainSlotDetails,
   getOnChainDirectMembers,
+  getOnChainUserProfile,
+  getOnChainQualification,
 } from "../contracts";
 import { useUserStore } from "./useUserStore";
 
@@ -215,6 +217,79 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     if (dashboard && !force) return;
 
     set({ loadingDashboard: true, error: null });
+
+    // 1. Prioritize live on-chain contract state
+    try {
+      const [onChainDetails, onChainProf, onChainQual] = await Promise.all([
+        getOnChainSlotDetails(addr, 1).catch(() => null),
+        getOnChainUserProfile(addr).catch(() => null),
+        getOnChainQualification(addr).catch(() => null),
+      ]);
+
+      if (onChainDetails || onChainProf) {
+        const TROB_PRICE_USD = 0.056;
+        const totalEarnedTrob = onChainProf?.totalEarningsTrob ?? (onChainDetails?.totalEarned ?? 0);
+        const totalEarnedUsd = onChainProf?.totalEarningsUsd ?? (totalEarnedTrob * TROB_PRICE_USD);
+        const availableWithdrawTrob = onChainProf?.availableBalanceTrob ?? 0;
+        const availableWithdrawUsd = onChainProf?.availableBalanceUsd ?? (availableWithdrawTrob * TROB_PRICE_USD);
+        const filledCount = onChainDetails?.filledNodes ?? 0;
+
+        const onChainDashboard: MatrixDashboardOverview = {
+          address: addr,
+          currentSlot: onChainProf?.currentSlot || 1,
+          highestUnlockedSlot: onChainProf?.highestUnlockedSlot || 1,
+          totalEarnedTrob,
+          totalEarnedUsd,
+          availableWithdrawTrob,
+          availableWithdrawUsd,
+          totalWithdrawnTrob: onChainProf?.withdrawnTotalTrob ?? 0,
+          totalWithdrawnUsd: onChainProf?.withdrawnTotalUsd ?? 0,
+          recyclesCount: onChainDetails?.recyclesCount ?? 0,
+          trobPriceUsd: TROB_PRICE_USD,
+          activeSlotProgress: {
+            slotNumber: 1,
+            filledNodes: filledCount,
+            totalNodes: 14,
+            cycle: onChainDetails?.currentCycle ?? 1,
+            upgradeReserve: 0,
+            level1Filled: Math.min(2, filledCount),
+            level2Filled: Math.max(0, Math.min(4, filledCount - 2)),
+            level3Filled: Math.max(0, filledCount - 6),
+            nodes: onChainDetails?.nodes ?? [],
+          },
+          recentActivity: (onChainDetails?.nodes || [])
+            .filter((n: any) => n.filled)
+            .map((n: any) => ({
+              id: `onchain-pos-${n.position}`,
+              slot: 1,
+              position: n.position,
+              amount: n.amount || 535.714285,
+              amountUsd: 30.0,
+              token: "TROB",
+              fromAddress: n.placedUser,
+              toAddress: addr,
+              txHash: null,
+              status: "CONFIRMED",
+              description: `Position #${n.position} filled by ${n.code ? `Operative #${n.code}` : (n.placedUser ? n.placedUser.slice(0, 6) : "Member")} (${n.payoutType})`,
+              timestamp: n.timestamp || new Date().toISOString(),
+            })),
+          isQualified: onChainQual?.isQualified ?? onChainProf?.isQualified ?? false,
+          activeDirectsCount: onChainQual?.activeDirectsCount ?? onChainProf?.activeDirectsCount ?? 0,
+          sponsorAddress: onChainProf?.sponsorAddress || null,
+        };
+
+        set({ dashboard: onChainDashboard, loadingDashboard: false });
+
+        // Synchronize slotDetails so tree view components have the complete node array
+        if (onChainDetails) {
+          set({ slotDetails: onChainDetails });
+        }
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[MatrixStore] Direct on-chain dashboard query notice:", err);
+    }
+
     try {
       const dash = await matrixApi.getDashboard(addr);
       set({ dashboard: dash, loadingDashboard: false });

@@ -22,6 +22,8 @@
     "build": "turbo run build",
     "build:dao": "turbo run build --filter=equora-app",
     "build:matrix": "turbo run build --filter=@equora/web-matrix",
+    "build:render": "pnpm --filter @equora/database build && pnpm --filter @equora/web-matrix build && pnpm --filter equora-app build",
+    "start:render": "node scripts/render-gateway.js",
     "db:generate": "pnpm --filter @equora/database db:generate",
     "db:push": "pnpm --filter @equora/database db:push",
     "db:migrate": "pnpm --filter @equora/database db:migrate",

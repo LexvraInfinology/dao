@@ -11,7 +11,7 @@ interface OverviewTabProps {
   address?: string | null;
   profile?: MatrixUserProfile | null;
   dashboard?: MatrixDashboardOverview | null;
-  onSwitchTab: (tabId: "overview" | "matrix" | "team" | "activity" | "pools" | "links") => void;
+  onSwitchTab?: (tabId: "overview" | "matrix" | "pools") => void;
 }
 
 export function OverviewTab({
@@ -23,54 +23,19 @@ export function OverviewTab({
   const currentSlot = dashboard?.currentSlot ?? profile?.currentSlot ?? 1;
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
 
-  const totalEarnedUsd = dashboard?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? 180.0);
-  const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? 5671.08);
+  const totalEarnedUsd = dashboard?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? 0);
+  const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? 0);
 
-  const directsCount = profile?.directReferralsCount ?? 14;
+  const directsCount = profile?.directReferralsCount ?? 0;
   const isQualified = profile?.isQualified ?? directsCount >= 2;
 
   const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? 0;
-  const currentRank = profile?.rankName || "ALPHA";
+  const currentRank = profile?.rankName || "NONE";
 
   // Recent activity list
-  const recentActivities = dashboard?.recentActivity || [
-    {
-      id: "act-1",
-      action: "COMMISSION_RECEIVED",
-      title: "Direct Matrix Yield",
-      description: "P3 direct placement completed on Slot 01",
-      timestamp: new Date().toISOString(),
-      status: "COMPLETED",
-      amountTrob: 945.18,
-    },
-    {
-      id: "act-2",
-      action: "REWARD_RECEIVED",
-      title: "DAO Instant Push (35%)",
-      description: "Streamed directly to Genesis DAO Vault",
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      status: "COMPLETED",
-      amountTrob: 330.81,
-    },
-    {
-      id: "act-3",
-      action: "MEMBER_JOINED",
-      title: "Direct Operative Joined",
-      description: "Operative registered via referral link into Slot 01",
-      timestamp: new Date(Date.now() - 7200000).toISOString(),
-      status: "CONFIRMED",
-      amountTrob: 945.18,
-    },
-    {
-      id: "act-4",
-      action: "REWARD_RECEIVED",
-      title: "Leadership Royalty Allocated",
-      description: "40% allocated to 11th monthly royalty pool",
-      timestamp: new Date(Date.now() - 14400000).toISOString(),
-      status: "POOLED",
-      amountTrob: 378.07,
-    },
-  ];
+  const recentActivities = (dashboard?.recentActivity && dashboard.recentActivity.length > 0)
+    ? dashboard.recentActivity
+    : [];
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6 animate-fade-in">
@@ -103,7 +68,7 @@ export function OverviewTab({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Focus member income */}
         <div
-          onClick={() => onSwitchTab("activity")}
+          onClick={() => onSwitchTab?.("overview")}
           className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">
@@ -126,7 +91,7 @@ export function OverviewTab({
 
         {/* Card 2: Completed slots */}
         <div
-          onClick={() => onSwitchTab("matrix")}
+          onClick={() => onSwitchTab?.("matrix")}
           className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">
@@ -152,7 +117,7 @@ export function OverviewTab({
 
         {/* Card 3: Direct referrals */}
         <div
-          onClick={() => onSwitchTab("team")}
+          onClick={() => onSwitchTab?.("matrix")}
           className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">
@@ -179,7 +144,7 @@ export function OverviewTab({
 
         {/* Card 4: All pools combined */}
         <div
-          onClick={() => onSwitchTab("pools")}
+          onClick={() => onSwitchTab?.("pools")}
           className="bg-white border border-[#e0eaf7] rounded-2xl p-4 sm:p-5 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">
@@ -313,69 +278,74 @@ export function OverviewTab({
                   Real-time blockchain matrix settlements.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => onSwitchTab("activity")}
+              <Link
+                href="/transactions"
                 className="px-2.5 py-1 rounded-lg bg-[#f0f5fc] hover:bg-[#e7f1ff] text-[#2868e8] text-[11px] font-bold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
               >
                 <span>View all</span>
                 <ArrowUpRight className="w-3 h-3" />
-              </button>
+              </Link>
             </div>
 
             {/* Activity List */}
             <div className="flex flex-col gap-2.5 mt-3.5">
-              {recentActivities.slice(0, 4).map((act, i) => {
-                const isIncome = act.action === "COMMISSION_RECEIVED" || act.action === "MEMBER_JOINED";
-                const isPool = act.action === "REWARD_RECEIVED";
+              {recentActivities.length === 0 ? (
+                <div className="py-6 text-center text-[#9aa8ba] text-[12px]">
+                  No recent matrix activity yet. New cycle settlements will appear here live.
+                </div>
+              ) : (
+                recentActivities.slice(0, 4).map((act, i) => {
+                  const isIncome = act.action === "COMMISSION_RECEIVED" || act.action === "MEMBER_JOINED";
+                  const isPool = act.action === "REWARD_RECEIVED";
 
-                return (
-                  <div
-                    key={act.id || i}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl border text-[11px] transition-all ${
-                      isIncome
-                        ? "bg-gradient-to-r from-[#effcf7] to-white border-[#d9f5e9]"
-                        : isPool
-                        ? "bg-[#fffbef] border-[#f8ebc9]"
-                        : "bg-white border-[#edf2f8]"
-                    }`}
-                  >
+                  return (
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0 ${
+                      key={act.id || i}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border text-[11px] transition-all ${
                         isIncome
-                          ? "bg-[#d8f8eb] text-[#0b956d]"
+                          ? "bg-gradient-to-r from-[#effcf7] to-white border-[#d9f5e9]"
                           : isPool
-                          ? "bg-[#fff0c7] text-[#ac7212]"
-                          : "bg-[#eaf2ff] text-[#2868e8]"
+                          ? "bg-[#fffbef] border-[#f8ebc9]"
+                          : "bg-white border-[#edf2f8]"
                       }`}
                     >
-                      {isIncome ? (
-                        <Coins className="w-3.5 h-3.5 text-[#0b956d]" />
-                      ) : isPool ? (
-                        <Building2 className="w-3.5 h-3.5 text-[#ac7212]" />
-                      ) : (
-                        <Zap className="w-3.5 h-3.5 text-[#2868e8]" />
-                      )}
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0 ${
+                          isIncome
+                            ? "bg-[#d8f8eb] text-[#0b956d]"
+                            : isPool
+                            ? "bg-[#fff0c7] text-[#ac7212]"
+                            : "bg-[#eaf2ff] text-[#2868e8]"
+                        }`}
+                      >
+                        {isIncome ? (
+                          <Coins className="w-3.5 h-3.5 text-[#0b956d]" />
+                        ) : isPool ? (
+                          <Building2 className="w-3.5 h-3.5 text-[#ac7212]" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5 text-[#2868e8]" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-extrabold text-[#102341] block truncate">
+                          {act.title}
+                        </span>
+                        <span className="text-[10px] text-[#657895] block truncate mt-0.5">
+                          {act.description}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-black text-[#0b956d] block text-[11.5px]">
+                          +{((act as any).amountTrob || (act as any).amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB
+                        </span>
+                        <span className="text-[9.5px] text-[#9aa8ba]">
+                          Just now
+                        </span>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="font-extrabold text-[#102341] block truncate">
-                        {act.title}
-                      </span>
-                      <span className="text-[10px] text-[#657895] block truncate mt-0.5">
-                        {act.description}
-                      </span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-black text-[#0b956d] block text-[11.5px]">
-                        +{((act as any).amountTrob || (act as any).amount || 945).toLocaleString(undefined, { maximumFractionDigits: 0 })} TROB
-                      </span>
-                      <span className="text-[9.5px] text-[#9aa8ba]">
-                        Just now
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 

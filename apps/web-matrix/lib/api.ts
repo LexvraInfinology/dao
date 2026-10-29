@@ -272,14 +272,19 @@ export { MatrixApiError };
 
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
   try {
     const res = await fetch(url, {
       ...options,
+      signal: options.signal || controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
       },
     });
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -291,6 +296,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     const data = await res.json();
     return data.data !== undefined ? data.data : data;
   } catch (error) {
+    clearTimeout(timeoutId);
     if (error instanceof MatrixApiError) {
       throw error;
     }

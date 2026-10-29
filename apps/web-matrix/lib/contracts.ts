@@ -740,9 +740,9 @@ export async function getOnChainSlotDetails(
     recyclesCount: Math.max(0, totalCycles - 1),
     filledNodes: Math.max(Number(liveFilledNodes) || 0, computedFilledCount),
     upgradeReserve: 0,
-    totalEarned: totalEarnedUsd > 0 ? totalEarnedUsd : (totalCycles > 1 ? 180 : 0),
-    totalEarnedUsd: totalEarnedUsd > 0 ? totalEarnedUsd : (totalCycles > 1 ? 180 : 0),
-    totalEarnedTrob: rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? Number((totalEarnedUsd / 0.03174).toFixed(2)) : (totalCycles > 1 ? 5671.08 : 0)),
+    totalEarned: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
+    totalEarnedUsd: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
+    totalEarnedTrob: rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? Number((totalEarnedUsd / 0.03174).toFixed(2)) : 0),
     nodes: formattedNodes,
   };
 }
@@ -1041,7 +1041,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     rankTier,
     rankName: rankNames[rankTier],
     currentSlot: currentActiveSlot, // Currently active, live playable slot (Slot 1)
-    highestUnlockedSlot: Math.max(highestUnlockedSlot, 1),
+    highestUnlockedSlot,
     isSlot2Reserved: highestUnlockedSlot >= 2,
     totalEarnings: effectiveEarnedUsd, // Exact on-chain board earnings ($60.00 USD)
     totalEarningsUsd: effectiveEarnedUsd,
@@ -1056,7 +1056,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     withdrawnTotalUsd,
     withdrawnTotalTrob: withdrawnTotal,
     recyclesCount: 0,
-    isRegistered: Boolean(isRegistered || highestUnlockedSlot >= 1 || boardEarnedTrob > 0),
+    isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 || joinedMeta),
     joinedAt: new Date().toISOString(),
   };
 }
@@ -1064,19 +1064,13 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 /**
  * Fast & definitive check if user is already registered / has Slot 1 unlocked.
  * Once registered on-chain, the user MUST NEVER see the /gate purchase page.
+ * If user is unregistered, any stale local cache is purged immediately.
  */
 export async function isUserRegisteredInMatrix(userAddress: string): Promise<boolean> {
   if (!userAddress) return false;
   const clean = userAddress.trim().toLowerCase();
 
-  // 1. Check local storage cache
-  if (typeof window !== "undefined") {
-    if (localStorage.getItem(`equora_matrix_registered_${clean}`) === "true") {
-      return true;
-    }
-  }
-
-  // 2. Genesis Seat 1 is permanently registered
+  // 1. Genesis Seat 1 is permanently registered
   if (
     clean === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02" ||
     userAddress === "TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf"
@@ -1087,7 +1081,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     return true;
   }
 
-  // 3. Check local joined-members registry
+  // 2. Check local joined-members registry
   try {
     const joined = require("./joinedMembers.json");
     if (Array.isArray(joined)) {
@@ -1106,7 +1100,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
-  // 4. Check on-chain Slot 1 status
+  // 3. Check on-chain Slot 1 status
   try {
     const slot1 = await getOnChainSlotStatus(userAddress, 1);
     if (slot1 && slot1.isUnlocked) {
@@ -1117,7 +1111,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
-  // 5. Check Registry contract isRegistered
+  // 4. Check Registry contract isRegistered
   try {
     const coder = new ethers.AbiCoder();
     const userHex = toHexAddress(userAddress);
@@ -1134,6 +1128,10 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
+  // If user is definitively not registered, purge false local cache!
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(`equora_matrix_registered_${clean}`);
+  }
   return false;
 }
 

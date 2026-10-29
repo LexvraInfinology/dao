@@ -5,16 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   WelcomeBanner,
-  DashboardStats,
   MatrixTreePanel,
   NextPositionPanel,
-  RecentActivityPanel,
   DashboardMobileCard,
   ProtocolPoolsPanel,
   OverviewTab,
 } from "@/components/dashboard";
-import { ReferralLinkCard } from "@/components/dashboard/ReferralLinkCard";
-import { MatrixAccessGate, MatrixQualificationAlert, MatrixDirectMembers } from "@/components/matrix";
+import { MatrixAccessGate, MatrixQualificationAlert } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
 import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
@@ -22,17 +19,14 @@ import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { LayoutDashboard, Network, Users, Activity, Layers, Link2 } from "lucide-react";
+import { LayoutDashboard, Network, Layers } from "lucide-react";
 
-type TabId = "overview" | "matrix" | "team" | "activity" | "pools" | "links";
+type TabId = "overview" | "matrix" | "pools";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-  { id: "matrix", label: "Matrix", icon: <Network className="w-3.5 h-3.5" /> },
-  { id: "team", label: "Team", icon: <Users className="w-3.5 h-3.5" /> },
-  { id: "activity", label: "Activity", icon: <Activity className="w-3.5 h-3.5" /> },
-  { id: "pools", label: "Pools", icon: <Layers className="w-3.5 h-3.5" /> },
-  { id: "links", label: "Links", icon: <Link2 className="w-3.5 h-3.5" /> },
+  { id: "matrix", label: "Matrix Board", icon: <Network className="w-3.5 h-3.5" /> },
+  { id: "pools", label: "Protocol Pools", icon: <Layers className="w-3.5 h-3.5" /> },
 ];
 
 export default function DashboardPage() {
@@ -422,62 +416,12 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TAB 3: TEAM */}
-          {activeTab === "team" && (
-            <div className="space-y-5 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#e0eaf7] gap-2">
-                <div>
-                  <h2 className="text-[20px] font-black text-[#102341]">Referral Team &amp; Direct Operatives</h2>
-                  <p className="text-[12px] text-[#657895]">Direct sponsor downlines and live on-chain member registrations.</p>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-[#e8fbf5] text-[#138261] font-bold text-[11px] border border-[#bbf7d0] self-start sm:self-auto">
-                  On-Chain Verified
-                </span>
-              </div>
-
-              <MatrixDirectMembers />
-            </div>
-          )}
-
-          {/* TAB 4: ACTIVITY */}
-          {activeTab === "activity" && (
-            <div className="space-y-5 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#e0eaf7] gap-2">
-                <div>
-                  <h2 className="text-[20px] font-black text-[#102341]">Income &amp; Placement Activity</h2>
-                  <p className="text-[12px] text-[#657895]">Every $30 flow has a single on-chain settlement ID.</p>
-                </div>
-              </div>
-
-              <RecentActivityPanel activities={dashboard?.recentActivity} />
-            </div>
-          )}
-
-          {/* TAB 5: POOLS & APEX CARDS */}
+          {/* TAB 3: POOLS & APEX CARDS */}
           {activeTab === "pools" && (
             <div className="space-y-5 animate-fade-in">
               <ProtocolPoolsPanel
                 currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
                 isQualified={profile?.isQualified ?? false}
-              />
-            </div>
-          )}
-
-          {/* TAB 6: LINKS */}
-          {activeTab === "links" && (
-            <div className="space-y-5 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#e0eaf7] gap-2">
-                <div>
-                  <h2 className="text-[20px] font-black text-[#102341]">Affiliate &amp; Referral Links</h2>
-                  <p className="text-[12px] text-[#657895]">Share your personal matrix link to register and place direct partners.</p>
-                </div>
-              </div>
-
-              <ReferralLinkCard
-                address={address}
-                directsCount={profile?.directReferralsCount ?? 0}
-                sponsorAddress={profile?.sponsorAddress}
-                upline2Address={profile?.upline2Address}
               />
             </div>
           )}

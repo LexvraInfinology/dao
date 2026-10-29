@@ -375,7 +375,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     }
   };
 
-  // Node Component Render (Vibrant, high-contrast, zero truncation)
+  // Node Component Render (Uncluttered, responsive, focused on seat number and clean status)
   const renderNodeCard = (pos: number) => {
     const cfg = SEAT_METAS[pos];
     const node = getNodeInfo(pos);
@@ -387,39 +387,29 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         key={pos}
         type="button"
         onClick={() => setSelectedNodeModal(cfg)}
-        className={`relative flex-1 min-w-0 rounded-xl sm:rounded-2xl border p-1.5 sm:p-2 text-center flex flex-col items-center justify-between gap-1 transition-all active:scale-95 cursor-pointer select-none ${styles.container}`}
+        className={`relative flex-1 min-w-0 rounded-xl sm:rounded-2xl border p-2 text-center flex flex-col items-center justify-between gap-1 transition-all hover:shadow-sm active:scale-95 cursor-pointer select-none ${styles.container}`}
         title={`Position #${pos} (${cfg.fullRole}) — Click to inspect`}
       >
         {/* Top bar: Seat number and role type dot */}
         <div className="w-full flex items-center justify-between px-0.5 leading-none">
-          <span className="text-[9.5px] sm:text-[10px] font-black text-slate-700">{cfg.label}</span>
-          <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${styles.dot}`} />
+          <span className="text-[10px] sm:text-[11px] font-black text-slate-800">{cfg.label}</span>
+          <span className={`w-2 h-2 rounded-full ${styles.dot}`} />
         </div>
 
         {/* Center icon / checkmark */}
-        <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center my-0.5 shrink-0 ${styles.iconBg}`}>
+        <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl flex items-center justify-center my-0.5 shrink-0 shadow-2xs ${styles.iconBg}`}>
           {filled ? (
-            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+            <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
           ) : (
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+            <Plus className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
           )}
         </div>
 
-        {/* Occupant / ID label */}
+        {/* Concise Status Tag (Zero clutter, perfectly legible) */}
         <div className="w-full min-w-0">
-          <div className={`text-[9.5px] sm:text-[11px] font-extrabold truncate px-0.5 ${styles.labelColor}`}>
-            {filled ? node.label : "Available"}
+          <div className={`text-[10px] sm:text-[11px] font-bold truncate px-1 py-0.5 rounded-md border ${styles.badge}`}>
+            {filled ? (cfg.type === "income" ? "+$30 YOU" : node.label || cfg.role) : cfg.role}
           </div>
-          {filled && node.address && (
-            <div className="text-[7.5px] sm:text-[8.5px] font-mono text-slate-500 truncate -mt-0.5">
-              {formatAddress(node.address)}
-            </div>
-          )}
-          <span
-            className={`text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 rounded-md border inline-block mt-0.5 max-w-full truncate ${styles.badge}`}
-          >
-            {filled ? (cfg.type === "income" ? "+$30 Settled" : cfg.role) : cfg.role}
-          </span>
         </div>
       </button>
     );
@@ -565,127 +555,99 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
       </div>
 
-      {/* ───────────────── TREE VISUALIZER CONTAINER ───────────────── */}
+      {/* ───────────────── TREE VISUALIZER CONTAINER WITH SLIDER ───────────────── */}
       {viewMode === "tree" ? (
         <div className="mt-3.5 bg-gradient-to-br from-[#f8fbff] via-[#edf5ff] to-[#f4f9ff] border border-[#d8e6f8] rounded-2xl p-2.5 sm:p-5 lg:p-6 w-full min-w-0">
-          {/* 1. UPLINE SPONSOR CARD */}
-          <div className="flex justify-center mb-1">
-            {isVaultSponsor ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
-                <span className="w-2 h-2 rounded-full bg-[#2868e8] animate-pulse shrink-0" />
-                <span className="text-slate-500 font-semibold truncate">Upline Sponsor:</span>
-                <span className="font-bold text-slate-900 truncate">Protocol Vault (4 Streams)</span>
+          {/* Mobile slider helper prompt */}
+          <div className="sm:hidden flex items-center justify-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50/80 border border-blue-200/60 rounded-full py-1 px-3 mb-3 mx-auto w-fit">
+            <span>← Swipe horizontally to explore tree board →</span>
+          </div>
+
+          <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 pb-2">
+            <div className="min-w-[620px] sm:min-w-0">
+              {/* 1. UPLINE SPONSOR CARD */}
+              <div className="flex justify-center mb-1">
+                {isVaultSponsor ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
+                    <span className="w-2 h-2 rounded-full bg-[#2868e8] animate-pulse shrink-0" />
+                    <span className="text-slate-500 font-semibold truncate">Upline Sponsor:</span>
+                    <span className="font-bold text-slate-900 truncate">Protocol Vault (4 Streams)</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-slate-500 font-semibold truncate">Sponsor:</span>
+                    <span className="font-mono font-bold text-slate-900 truncate">
+                      {profile?.sponsorCode ? `#${profile.sponsorCode} • ` : ""}
+                      {formatAddress(toTrobBase58(sponsor))}
+                    </span>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white border border-[#cbdfff] shadow-xs text-[10.5px] sm:text-[11px] max-w-full">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-slate-500 font-semibold truncate">Sponsor:</span>
-                <span className="font-mono font-bold text-slate-900 truncate">
-                  {profile?.sponsorCode ? `#${profile.sponsorCode} • ` : ""}
-                  {formatAddress(toTrobBase58(sponsor))}
-                </span>
+
+              {/* SVG Vertical Stem to Root */}
+              <div className="flex justify-center">
+                <div className="w-px h-3 sm:h-4 bg-[#93c5fd]" />
               </div>
-            )}
-          </div>
 
-          {/* SVG Vertical Stem to Root */}
-          <div className="flex justify-center">
-            <div className="w-px h-3 sm:h-4 bg-[#93c5fd]" />
-          </div>
-
-          {/* 2. ROOT NODE (YOU) */}
-          <div className="flex justify-center mb-1">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white border border-[#bfdbfe] shadow-sm text-[11px] sm:text-[12px] font-black text-[#102341] max-w-full">
-              <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#2868e8] shadow-[0_0_0_3px_#e6f0ff] shrink-0" />
-              <span className="truncate">YOU: ROOT OPERATIVE (SEAT 1)</span>
-              <span className="px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 text-[10px] font-mono hidden xs:inline">
-                #{String(selectedSlot).padStart(2, "0")}
-              </span>
-            </div>
-          </div>
-
-          {/* SVG Branching Lines: Root -> Level 1 (P1, P2) */}
-          <div className="w-full flex justify-center">
-            <svg className="w-[50%] max-w-[280px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-              <path d="M 50 0 L 50 8 L 25 8 L 25 20 M 50 8 L 75 8 L 75 20" fill="none" stroke="#93c5fd" strokeWidth="2" />
-            </svg>
-          </div>
-
-          {/* 3. LEVEL 1: SEATS P1 and P2 (Upline Stream) */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-sm mx-auto mb-1">
-            {renderNodeCard(1)}
-            {renderNodeCard(2)}
-          </div>
-
-          {/* SVG Branching Lines: Level 1 -> Level 2 */}
-          <div className="w-full flex justify-center">
-            <svg className="w-[90%] max-w-[500px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-              {/* From P1 (left half) to P3 & P4 */}
-              <path d="M 25 0 L 25 8 L 12.5 8 L 12.5 20 M 25 8 L 37.5 8 L 37.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
-              {/* From P2 (right half) to P5 & P6 */}
-              <path d="M 75 0 L 75 8 L 62.5 8 L 62.5 20 M 75 8 L 87.5 8 L 87.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
-            </svg>
-          </div>
-
-          {/* 4. LEVEL 2: SEATS P3, P4, P5, P6 */}
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 max-w-xl mx-auto mb-1">
-            {renderNodeCard(3)}
-            {renderNodeCard(4)}
-            {renderNodeCard(5)}
-            {renderNodeCard(6)}
-          </div>
-
-          {/* SVG Branching Lines: Level 2 -> Level 3 */}
-          <div className="w-full flex justify-center">
-            <svg className="w-full max-w-[700px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
-              {/* P3 -> P7, P8 */}
-              <path d="M 12.5 0 L 12.5 8 L 6.25 8 L 6.25 20 M 12.5 8 L 18.75 8 L 18.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-              {/* P4 -> P9, P10 */}
-              <path d="M 37.5 0 L 37.5 8 L 31.25 8 L 31.25 20 M 37.5 8 L 43.75 8 L 43.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-              {/* P5 -> P11, P12 */}
-              <path d="M 62.5 0 L 62.5 8 L 56.25 8 L 56.25 20 M 62.5 8 L 68.75 8 L 68.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-              {/* P6 -> P13, P14 */}
-              <path d="M 87.5 0 L 87.5 8 L 81.25 8 L 81.25 20 M 87.5 8 L 93.75 8 L 93.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
-            </svg>
-          </div>
-
-          {/* 5. LEVEL 3: SEATS P7 to P14 (Fluid responsive: 8 columns on sm+, paired cards on mobile) */}
-          <div className="hidden sm:grid sm:grid-cols-8 gap-1.5 sm:gap-2 max-w-4xl mx-auto">
-            {renderNodeCard(7)}
-            {renderNodeCard(8)}
-            {renderNodeCard(9)}
-            {renderNodeCard(10)}
-            {renderNodeCard(11)}
-            {renderNodeCard(12)}
-            {renderNodeCard(13)}
-            {renderNodeCard(14)}
-          </div>
-
-          {/* Mobile-Optimized Level 3 (< sm, 320px - 640px) */}
-          <div className="grid grid-cols-2 gap-2 sm:hidden mt-1">
-            <div className="p-1.5 bg-white/70 border border-blue-200/60 rounded-xl">
-              <div className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-1 px-1">
-                Branch P1 (Under P3 & P4)
+              {/* 2. ROOT NODE (YOU) */}
+              <div className="flex justify-center mb-1">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white border border-[#bfdbfe] shadow-sm text-[11px] sm:text-[12px] font-black text-[#102341] max-w-full">
+                  <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#2868e8] shadow-[0_0_0_3px_#e6f0ff] shrink-0" />
+                  <span className="truncate">YOU: ROOT OPERATIVE (SEAT 1)</span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-blue-50 text-blue-700 text-[10px] font-mono hidden xs:inline">
+                    #{String(selectedSlot).padStart(2, "0")}
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-1 mb-1">
+
+              {/* SVG Branching Lines: Root -> Level 1 (P1, P2) */}
+              <div className="w-full flex justify-center">
+                <svg className="w-[50%] max-w-[280px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
+                  <path d="M 50 0 L 50 8 L 25 8 L 25 20 M 50 8 L 75 8 L 75 20" fill="none" stroke="#93c5fd" strokeWidth="2" />
+                </svg>
+              </div>
+
+              {/* 3. LEVEL 1: SEATS P1 and P2 (Upline Stream) */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-sm mx-auto mb-1">
+                {renderNodeCard(1)}
+                {renderNodeCard(2)}
+              </div>
+
+              {/* SVG Branching Lines: Level 1 -> Level 2 */}
+              <div className="w-full flex justify-center">
+                <svg className="w-[90%] max-w-[500px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
+                  <path d="M 25 0 L 25 8 L 12.5 8 L 12.5 20 M 25 8 L 37.5 8 L 37.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
+                  <path d="M 75 0 L 75 8 L 62.5 8 L 62.5 20 M 75 8 L 87.5 8 L 87.5 20" fill="none" stroke="#93c5fd" strokeWidth="1.8" />
+                </svg>
+              </div>
+
+              {/* 4. LEVEL 2: SEATS P3, P4, P5, P6 */}
+              <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-xl mx-auto mb-1">
+                {renderNodeCard(3)}
+                {renderNodeCard(4)}
+                {renderNodeCard(5)}
+                {renderNodeCard(6)}
+              </div>
+
+              {/* SVG Branching Lines: Level 2 -> Level 3 */}
+              <div className="w-full flex justify-center">
+                <svg className="w-full max-w-[700px] h-4 sm:h-5" viewBox="0 0 100 20" preserveAspectRatio="none">
+                  <path d="M 12.5 0 L 12.5 8 L 6.25 8 L 6.25 20 M 12.5 8 L 18.75 8 L 18.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
+                  <path d="M 37.5 0 L 37.5 8 L 31.25 8 L 31.25 20 M 37.5 8 L 43.75 8 L 43.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
+                  <path d="M 62.5 0 L 62.5 8 L 56.25 8 L 56.25 20 M 62.5 8 L 68.75 8 L 68.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
+                  <path d="M 87.5 0 L 87.5 8 L 81.25 8 L 81.25 20 M 87.5 8 L 93.75 8 L 93.75 20" fill="none" stroke="#93c5fd" strokeWidth="1.5" />
+                </svg>
+              </div>
+
+              {/* 5. LEVEL 3: SEATS P7 to P14 (True binary 8-node symmetrical layout) */}
+              <div className="grid grid-cols-8 gap-1.5 sm:gap-2 max-w-4xl mx-auto">
                 {renderNodeCard(7)}
                 {renderNodeCard(8)}
-              </div>
-              <div className="grid grid-cols-2 gap-1">
                 {renderNodeCard(9)}
                 {renderNodeCard(10)}
-              </div>
-            </div>
-
-            <div className="p-1.5 bg-white/70 border border-blue-200/60 rounded-xl">
-              <div className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-1 px-1">
-                Branch P2 (Under P5 & P6)
-              </div>
-              <div className="grid grid-cols-2 gap-1 mb-1">
                 {renderNodeCard(11)}
                 {renderNodeCard(12)}
-              </div>
-              <div className="grid grid-cols-2 gap-1">
                 {renderNodeCard(13)}
                 {renderNodeCard(14)}
               </div>

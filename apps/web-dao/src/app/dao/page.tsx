@@ -1,0 +1,810 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  ShieldCheck,
+  Shield,
+  TrendingUp,
+  Eye,
+  Vote,
+  Play,
+  Calendar,
+  CheckCircle2,
+  Loader2,
+  Wallet,
+  Zap,
+  Clock,
+  Lock,
+  GitBranch,
+} from 'lucide-react';
+import { VideoModal } from '@/components/ui/VideoModal';
+import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
+import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { GenesisMatrixPriorityBanner } from '@/components/dao/matrix/GenesisMatrixPriorityBanner';
+import { getMatrixReferralUrl } from '@/config/matrixTree';
+import { useWallet } from '@/context/WalletContext';
+import {
+  useDaoMember,
+  useDaoStats,
+  useDaoEvents,
+} from '@/hooks/useApi';
+import { calculateMemberEarnedUsd } from '@/utils/daoEconomics';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function truncateAddress(addr: string, chars = 6): string {
+  if (!addr || addr.length < chars * 2 + 3) return addr;
+  return `${addr.slice(0, chars)}...${addr.slice(-4)}`;
+}
+
+function parseUtcTimestamp(ts: string | number | Date | null | undefined): number {
+  if (!ts) return Date.now();
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts === 'number') return ts;
+  const s = String(ts).trim();
+  if (s.endsWith('Z') || s.includes('+') || (s.lastIndexOf('-') > 10)) {
+    return new Date(s).getTime();
+  }
+  // PostgreSQL "YYYY-MM-DD HH:mm:ss.sss" without Z is UTC
+  return new Date(s.replace(' ', 'T') + 'Z').getTime();
+}
+
+function timeAgo(iso: string): string {
+  const ts = parseUtcTimestamp(iso);
+  const diff = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diff < 10) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function DaoDashboardPage() {
+  const [videoOpen, setVideoOpen] = useState(false);
+
+  // ── Live data hooks ─────────────────────────────────────────────────────────
+  const wallet = useWallet();
+  const activeAddress = wallet.base58Address || wallet.hexAddress;
+
+  const { data: memberData, loading: memberLoading } = useDaoMember(activeAddress);
+  const { data: stats } = useDaoStats(30_000);
+  const { data: events } = useDaoEvents(5, 15_000);
+
+  const isMemberChecking = Boolean(wallet.isConnected && activeAddress && memberLoading && !memberData);
+  const isMember = memberData?.isMember ?? false;
+  const myPosition = memberData?.position ?? null;
+  const myNftId = memberData?.nftTokenId ?? null;
+
+  return (
+    <div className="space-y-4 sm:space-y-5 lg:space-y-6 animate-fadeIn w-full max-w-full overflow-x-hidden font-sans">
+      <UnderfundedAlertBanner />
+      <GenesisMatrixPriorityBanner isMember={isMember} position={myPosition} />
+
+      {/* =======================================================================
+          1. HERO SECTION — Member-Aware, Trobium Styled & Tightly Packed
+         ======================================================================= */}
+      <div className="relative rounded-2xl overflow-hidden bg-white border border-[#0E62E4]/18 p-4 sm:p-6 lg:p-7 shadow-[0_4px_20px_rgba(14,98,228,0.06)]">
+        <div className="ambient-glow top-0 right-1/4 w-80 h-80 bg-[#0E62E4]/10 pointer-events-none" />
+
+        {/* --- DESKTOP HERO --- */}
+        <div className="hidden lg:grid grid-cols-12 gap-6 items-center relative z-10">
+          <div className="col-span-7 space-y-3">
+            <span className="chip text-[10px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg">
+              Genesis DAO Council
+            </span>
+
+            <h1 className="text-2xl xl:text-3xl font-bold text-[#17334F] tracking-tight leading-tight uppercase">
+              Genesis <span className="text-[#0E62E4]">DAO</span> Council
+            </h1>
+
+            <h2 className="text-xs xl:text-sm font-semibold text-[#3E6180] leading-snug">
+              100 sovereign seats. One protocol. A stronger tomorrow.
+            </h2>
+
+            <p className="text-[11px] xl:text-xs text-[#4F6D87] leading-relaxed max-w-lg">
+              Be part of the founding 100 governing members of Equora. Secure your seat, earn from global matrix volume, and shape the future.
+            </p>
+
+            {/* ── CTA: Member vs Non-Member ── */}
+            {isMemberChecking ? (
+              <div className="flex items-center gap-2 text-xs text-[#4F6D87] pt-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
+                <span>Verifying on-chain membership…</span>
+              </div>
+            ) : isMember ? (
+              /* Member CTA */
+              <div className="space-y-2.5 pt-1">
+                {memberData?.isCapped ? (
+                  <div className="rounded-xl bg-amber-50 border border-amber-300 p-3.5 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+                      <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                      <span>5X Cap Reached — 48H Re-topup Window Open (Seat #{myPosition})</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-snug">
+                      Your seat has earned 5X ($1,500 USD). Re-topup $300 USD within 48 hours to preserve your active council seat.
+                    </p>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('dao:open-retopup', {
+                              detail: { seatPosition: myPosition, deadline: memberData?.retopupDeadline },
+                            })
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-white" />
+                        <span>Quick Re-topup ($300)</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                      <Link
+                        href="/dao/lounge"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition-all"
+                      >
+                        <span>Open Lounge</span>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (memberData?.status === 'underfunded' || memberData?.underfunded) ? (
+                  <div className="space-y-2.5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-600 text-xs font-semibold">
+                      <Lock className="w-3.5 h-3.5 text-red-600" />
+                      <span>Council Seat #{myPosition} Underfunded (Dashboard & Lounge Locked)</span>
+                    </div>
+                    <p className="text-[11.5px] text-red-700 font-medium">
+                      Incomplete deposit detected. Re-topup the required $300 USD entry fee to activate council privileges.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Link
+                        href="/dao/seats"
+                        className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <span>View Council Grid</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-xs font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#1F8A5B]" />
+                      <span>You Own Council Seat #{myPosition}</span>
+                      {myNftId && <span className="text-[#1F8A5B] font-normal text-[11px]">• SBT #{myNftId}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <Link
+                        href="/dao/lounge"
+                        className="btn-primary px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <Wallet className="w-3.5 h-3.5" />
+                        <span>Open Member Lounge</span>
+                      </Link>
+                      {myPosition && myPosition >= 1 && myPosition <= 7 && (
+                        <a
+                          href={getMatrixReferralUrl(myPosition)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5 bg-[#071A4A] hover:bg-[#155EEF] text-white shadow-xs transition-colors"
+                        >
+                          <GitBranch className="w-3.5 h-3.5 text-[#93C5FD]" />
+                          <span>
+                            {myPosition === 1
+                              ? 'Activate Apex Node (Slot 1)'
+                              : `Join Matrix (Sponsor #${Math.floor(myPosition / 2)})`}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <Link
+                        href="/dao/seats"
+                        className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <span>Explore Council Grid</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              /* Non-member Overview CTA */
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                <Link
+                  href="/dao/seats"
+                  className="btn-primary px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  <span>Explore Council Grid</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  href="/dao/seats"
+                  className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  <span>Protocol Details</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
+
+            {!isMember && !isMemberChecking && (
+              <div className="pt-1 flex items-center gap-1.5 text-[11px] font-medium text-[#4F6D87]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#1F8A5B]" />
+                <span>Zero Referrals Required &bull; 100 Sovereign Seats</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right 3D Visual */}
+          <div className="col-span-5 relative flex items-center justify-end min-h-[200px]">
+            <div className="absolute top-0 right-0 text-[9px] font-semibold tracking-widest text-[#4F6D87] uppercase text-right leading-tight select-none">
+              <div>PEOPLE</div>
+              <div>PROTOCOL</div>
+              <div>PROGRESS</div>
+              <div className="w-6 h-[2px] bg-[#0E62E4] ml-auto rounded-full mt-1" />
+            </div>
+
+            <div className="relative w-52 h-52 flex items-center justify-center mr-2">
+              <div className="absolute w-44 h-44 rounded-full bg-[#0E62E4]/15 blur-2xl pointer-events-none" />
+              {/* Floating Big Equora Logo */}
+              <div className="relative w-40 h-40 animate-float flex items-center justify-center">
+                <img
+                  src="/dao/equoranewlogo.png"
+                  alt="EQUORA DAO Official Emblem"
+                  className="w-full h-full object-contain drop-shadow-[0_12px_28px_rgba(14,98,228,0.28)]"
+                />
+                {/* Secondary Small Trobium Logo Badge */}
+                <div
+                  className="absolute -bottom-1 -right-1 w-11 h-11 rounded-2xl bg-white/95 backdrop-blur-md p-2 border border-blue-200/80 shadow-[0_4px_16px_rgba(14,98,228,0.18)] flex items-center justify-center"
+                  title="Powered by Trobchain"
+                >
+                  <img
+                    src="/dao/trobiumdashboard.png"
+                    alt="Trobchain Network"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-0 right-0 text-[8px] font-medium tracking-wider text-[#5E7B94] uppercase text-right leading-tight select-none">
+              <div>DECENTRALIZED</div>
+              <div>TRANSPARENT</div>
+              <div>SOVEREIGN</div>
+            </div>
+          </div>
+        </div>
+
+        {/* --- MOBILE HERO with Big Floating Equora & Trobium Emblem --- */}
+        <div className="lg:hidden text-center space-y-3 relative z-10">
+          <div className="flex items-center justify-center gap-2">
+            <span className="chip text-[9px] tracking-[0.08em] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-2.5 py-0.5 rounded-lg inline-flex">
+              Genesis DAO Council
+            </span>
+            {isMember && myPosition ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 text-[#1F8A5B] text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1F8A5B] animate-pulse" />
+                <span>Seat #{myPosition}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0E62E4]/10 border border-[#0E62E4]/25 text-[#0E62E4] text-[10px] font-semibold">
+                <span>100 Seats</span>
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-xl min-[380px]:text-2xl font-bold text-[#17334F] tracking-tight uppercase leading-tight">
+            Genesis <span className="text-[#0E62E4]">DAO</span> Council
+          </h1>
+          <p className="text-xs font-medium text-[#3E6180] max-w-xs mx-auto leading-snug">
+            100 sovereign seats. One protocol. A stronger tomorrow.
+          </p>
+
+          {/* Floating Big Equora Logo & Trobium Badge */}
+          <div className="relative py-2 flex flex-col items-center justify-center">
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
+              <div className="absolute w-32 h-32 rounded-full bg-[#0E62E4]/15 blur-xl pointer-events-none" />
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 animate-float flex items-center justify-center">
+                <img
+                  src="/dao/equoranewlogo.png"
+                  alt="EQUORA DAO Official Emblem"
+                  className="w-full h-full object-contain drop-shadow-[0_10px_24px_rgba(14,98,228,0.25)]"
+                />
+                {/* Secondary Trobium Logo Badge */}
+                <div
+                  className="absolute -bottom-1 -right-1 w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-white/95 backdrop-blur-md p-1.5 border border-blue-200/90 shadow-[0_4px_14px_rgba(14,98,228,0.18)] flex items-center justify-center"
+                  title="Powered by Trobchain"
+                >
+                  <img
+                    src="/dao/trobiumdashboard.png"
+                    alt="Trobchain Network"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0E62E4]/10 border border-[#0E62E4]/20 text-[9px] font-semibold text-[#0E62E4] tracking-wide uppercase select-none">
+              DECENTRALIZED &bull; TRANSPARENT
+            </div>
+          </div>
+
+          {/* Mobile CTA */}
+          <div className="pt-1">
+            {isMemberChecking ? (
+              <div className="flex items-center justify-center gap-2 text-xs text-[#4F6D87] py-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E62E4]" />
+                <span>Verifying on-chain membership…</span>
+              </div>
+            ) : isMember ? (
+              <div className="space-y-2">
+                {memberData?.isCapped ? (
+                  <div className="rounded-xl bg-amber-50 border border-amber-300 p-3 space-y-2 text-left">
+                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                      <span>5X Cap Reached (Seat #{myPosition})</span>
+                    </div>
+                    <p className="text-[10.5px] text-amber-800 leading-snug">
+                      48h retopup window open. Re-topup $300 to claim instant cashback loop.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent('dao:open-retopup', {
+                            detail: { seatPosition: myPosition, deadline: memberData?.retopupDeadline },
+                          })
+                        )
+                      }
+                      className="w-full py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                      <span>Quick Re-topup ($300)</span>
+                    </button>
+                  </div>
+                ) : (memberData?.status === 'underfunded' || memberData?.underfunded) ? (
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-500/10 border border-red-500/25 text-red-600 text-xs font-semibold">
+                      <Lock className="w-3 h-3 text-red-600" />
+                      <span>Seat #{myPosition} Underfunded (Locked)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent('dao:open-retopup', {
+                            detail: { seatPosition: myPosition },
+                          })
+                        )
+                      }
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                      <span>Complete Re-topup ($300)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/dao/lounge"
+                      className="btn-primary py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Member Lounge</span>
+                    </Link>
+                    <Link
+                      href="/dao/seats"
+                      className="btn-ghost py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1"
+                    >
+                      <span>Council Grid</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/dao/seats"
+                  className="btn-primary w-full py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1"
+                >
+                  <span>Explore Grid</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+                <Link
+                  href="/dao/seats"
+                  className="btn-ghost w-full py-2 px-3 text-[11px] font-semibold rounded-xl uppercase tracking-wider flex items-center justify-center gap-1"
+                >
+                  <span>Details</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {!isMember && !memberLoading && (
+            <div className="flex items-center justify-between text-[10px] font-medium text-[#4F6D87] pt-1 px-1">
+              <div className="flex items-center gap-1 text-[#1F8A5B]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Zero Referrals Required</span>
+              </div>
+              <Link href="/dao/seats" className="text-[#0E62E4] hover:underline flex items-center gap-0.5 font-semibold">
+                <span>Seats &rarr;</span>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* =======================================================================
+          2. PROTOCOL METRICS / STATS CARDS
+         ======================================================================= */}
+      <div>
+        <div className="flex items-center justify-between mb-2 px-0.5">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#4F6D87]">
+            PROTOCOL METRICS
+          </div>
+          <div className="text-[10px] font-semibold text-[#0E62E4] flex items-center gap-1">
+            <span>Founding 100 Seats</span>
+          </div>
+        </div>
+        <DaoDashboardStats />
+      </div>
+
+      {/* =======================================================================
+          3. FINANCIAL ARCHITECTURE & 300 / N ECONOMICS
+         ======================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
+        {/* Left: Financial Architecture & 4-Item Calculation Grid */}
+        <div className="lg:col-span-8 p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#4F6D87]">
+                  FINANCIAL ARCHITECTURE
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-[#17334F] uppercase tracking-tight mt-0.5">
+                  {isMember ? 'Your Council Position & Capital Ledger' : 'Council Capital & 300 / N Economics'}
+                </h3>
+              </div>
+
+              <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                stats?.memberCount && stats.memberCount >= 100
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-[#0E62E4]/10 border-[#0E62E4]/20 text-[#0E62E4]'
+              }`}>
+                {stats?.memberCount && stats.memberCount >= 100 ? 'Queue Complete' : 'Genesis Queue Open'}
+              </span>
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-[#3E6180] leading-relaxed max-w-2xl">
+              {isMember && myPosition
+                ? `You hold Council Seat #${myPosition}. Review your initial gross deposit, instant algorithmic cashback received, and net deployed capital.`
+                : 'All sovereign seats require a fixed deposit. Every member receives instant on-chain cashback calculated via the 300 / N protocol rule upon entering the queue.'}
+            </p>
+
+            {/* 300/N Calculation Architecture Grid — 2x2 on mobile, 4 columns on desktop */}
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+                {/* 1. Deposit — Solid Sky Blue box matching Trobium */}
+                <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-[#0E62E4] to-[#0A3F9A] text-white shadow-xs space-y-1">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-white/80">
+                    DEPOSIT
+                  </div>
+                  <div className="text-base sm:text-xl font-bold tabular-nums text-white">
+                    $300 USD
+                  </div>
+                  <div className="text-[9px] text-white/75 font-medium leading-tight">
+                    Fixed Entry (in TROB)
+                  </div>
+                </div>
+
+                {/* 2. Instant Cashback */}
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#0E62E4]">
+                    CASHBACK
+                  </div>
+                  <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
+                    {isMember && myPosition ? `+$${(300 / myPosition).toFixed(2)}` : '300 / N'}
+                  </div>
+                  <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
+                    {isMember && myPosition ? `Seat #${myPosition} Payout` : 'Instant P2P Refund'}
+                  </div>
+                </div>
+
+                {/* 3. Total Inflow */}
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-[#1F8A5B]">
+                      TOTAL INFLOW
+                    </div>
+                    {memberData?.retopupCount && memberData.retopupCount > 0 ? (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] uppercase">
+                        Cycle {memberData.retopupCount + 1}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-base sm:text-xl font-bold tabular-nums text-[#1F8A5B]">
+                    {(() => {
+                      if (!isMember || !myPosition) return 'Total Return';
+                      if (memberData?.status === 'underfunded') return '+$0.00';
+                      if (memberData?.status === 'capped') return '+$1,500.00';
+                      if (typeof memberData?.currentCycleUsd === 'number') {
+                        return `+$${memberData.currentCycleUsd.toFixed(2)}`;
+                      }
+                      const calculated = calculateMemberEarnedUsd(
+                        myPosition,
+                        memberData?.status,
+                        93,
+                        memberData?.retopupCount ?? 0,
+                        memberData?.pushedAmountBtt ?? 0
+                      );
+                      const exactUsd = calculated > 0
+                        ? calculated
+                        : (memberData?.pushedAmountUsdEstimate && memberData.pushedAmountUsdEstimate > 0 && !memberData?.retopupCount
+                            ? memberData.pushedAmountUsdEstimate
+                            : 0);
+                      return `+$${exactUsd.toFixed(2)}`;
+                    })()}
+                  </div>
+                  <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
+                    {memberData?.retopupCount && memberData.retopupCount > 0
+                      ? `Cycle ${memberData.retopupCount + 1} • Reset`
+                      : 'Cashback + Dividends'}
+                  </div>
+                </div>
+
+                {/* 4. Max Return Cap */}
+                <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 text-[#17334F] space-y-1">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#4F6D87]">
+                    MAX INFLOW
+                  </div>
+                  <div className="text-base sm:text-xl font-bold tabular-nums text-[#17334F]">
+                    $1,500 USD
+                  </div>
+                  <div className="text-[9px] text-[#4F6D87] font-medium leading-tight">
+                    5X Cap ($1,500 USD in TROB)
+                  </div>
+                </div>
+              </div>
+
+              {/* Status bar — 100% contained, no text clipping or overlap on ANY screen size */}
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/16 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+                {/* Row 1 on mobile, left on desktop */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-[#1F8A5B] animate-pulse shrink-0" />
+                  <span className="font-bold text-[#17334F] text-xs whitespace-nowrap">
+                    {isMember && myPosition ? `Council Seat #${myPosition}:` : 'Council Status:'}
+                  </span>
+                  <span className="text-xs text-[#4F6D87] font-medium truncate">
+                    {isMember && myPosition
+                      ? `Active Member • ${myNftId ? `SBT #${myNftId}` : 'Pass'}`
+                      : (stats?.memberCount && stats.memberCount >= 100 ? 'Queue Complete' : 'Seats Available')}
+                  </span>
+                </div>
+
+                {/* Row 2 on mobile, right on desktop */}
+                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#0E62E4]/10">
+                  <span className="text-[10px] font-semibold text-[#1F8A5B] bg-[#1F8A5B]/10 px-2 py-0.5 rounded border border-[#1F8A5B]/20 shrink-0">
+                    1.0% Vote Weight
+                  </span>
+                  {isMember ? (
+                    <Link
+                      href="/dao/lounge"
+                      className="text-xs font-semibold text-[#0E62E4] hover:underline flex items-center gap-1 shrink-0"
+                    >
+                      <span>Member Lounge</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/dao/seats"
+                      className="text-xs font-semibold text-[#0E62E4] hover:underline flex items-center gap-1 shrink-0"
+                    >
+                      <span>Inspect Grid</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Governance Principles */}
+        <div className="lg:col-span-4 p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] space-y-3 flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#4F6D87]">
+              GOVERNANCE PRINCIPLES
+            </span>
+            <h3 className="text-base sm:text-lg font-bold text-[#17334F] uppercase tracking-tight mt-0.5">
+              Why Join the Genesis DAO?
+            </h3>
+
+            <div className="space-y-2.5 pt-3">
+              {[
+                { icon: Shield, title: 'Fixed 100-Seat Supply', desc: 'No 101st seat can ever be created on-chain.' },
+                { icon: TrendingUp, title: 'Dual Cash Flow Streams', desc: 'Instant 300/N cashback + 35% global matrix share.' },
+                { icon: Eye, title: 'On-Chain Transparency', desc: 'All ledger states verifiable on blockchain.' },
+                { icon: Vote, title: '1.0% Governance Power', desc: '1 Seat = 1 Vote across all protocol upgrades.' },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#EFF6FF] transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 mt-0.5 border border-[#0E62E4]/15">
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-semibold text-[#17334F]">{title}</h4>
+                    <p className="text-[11px] text-[#4F6D87] leading-snug mt-0.5">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =======================================================================
+          4. RECENT ACTIVITY FEED — Live Real Events
+         ======================================================================= */}
+      {events && events.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#1F8A5B] animate-pulse" />
+              <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-tight text-[#17334F]">
+                Live Council Activity
+              </h3>
+              <span className="text-[9px] font-semibold text-[#1F8A5B] bg-[#1F8A5B]/10 border border-[#1F8A5B]/25 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Real-Time
+              </span>
+            </div>
+            <Link href="/dao/transactions" className="text-[11px] font-semibold text-[#0E62E4] hover:underline flex items-center gap-1">
+              <span>View all</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="divide-y divide-[#0E62E4]/10">
+            {events.map((event) => {
+              const isJoined = event.eventType === 'joined' || event.reason?.toLowerCase().includes('activated');
+              const isRetopup = event.eventType === 'retopup' || event.reason?.toLowerCase().includes('retopup');
+              const isDistribution = event.eventType === 'seat_distribution' || event.reason?.toLowerCase().includes('distribution');
+
+              let badgeText = event.incomingPosition ? `Seat #${event.incomingPosition}` : 'Council';
+              let titleText = 'Instant 300/N Cashback';
+              if (isJoined) {
+                titleText = 'Council Seat Activated';
+              } else if (isRetopup) {
+                titleText = '5X Cap Re-topup';
+              } else if (isDistribution) {
+                titleText = 'Instant 300/N Cashback';
+              } else if (event.reason) {
+                titleText = event.reason.replace(/\s*\(Seat\s*#\d+\)/i, '').replace(/Dividend push from Seat #\d+/i, 'Instant 300/N Dividend');
+              }
+
+              const subtitleText = event.recipientCount && event.recipientCount > 1
+                ? `${event.recipientCount} Council seats distributed`
+                : event.userAddress ? truncateAddress(event.userAddress, 8) : 'Council Member';
+
+              return (
+                <div key={event.id} className="flex items-center justify-between py-2.5 hover:bg-[#EFF6FF]/60 transition-colors px-1 sm:px-2 rounded-xl">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <div className={`w-8 h-8 rounded-xl ${
+                      isJoined ? 'bg-[#0E62E4]/10 text-[#0E62E4]' : isRetopup ? 'bg-amber-500/10 text-amber-600' : 'bg-[#1F8A5B]/10 text-[#1F8A5B]'
+                    } flex items-center justify-center shrink-0 border border-current/15`}>
+                      {isJoined ? <ShieldCheck className="w-4 h-4" /> : isRetopup ? <Zap className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#17334F] flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                        <span className="truncate">{titleText}</span>
+                        {event.incomingPosition && (
+                          <span className="text-[9px] font-bold text-[#0E62E4] bg-[#0E62E4]/10 border border-[#0E62E4]/20 px-1.5 py-0.2 rounded-md shrink-0">
+                            {badgeText}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-[#5E7B94] font-mono mt-0.5 truncate">
+                        {subtitleText}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={`text-xs font-bold tabular-nums ${isJoined ? 'text-[#17334F]' : 'text-[#1F8A5B]'}`}>
+                      {isJoined ? '' : '+'}{event.amountBtt ? Number(event.amountBtt).toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} TROB
+                    </div>
+                    <div className="text-[10px] text-[#5E7B94] font-medium flex items-center justify-end gap-1">
+                      {event.amountUsdEstimate > 0 && (
+                        <span>(≈ ${Number(event.amountUsdEstimate).toFixed(2)})</span>
+                      )}
+                      <span>&bull;</span>
+                      <span>{timeAgo(event.timestamp)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          5. BOTTOM ROW: THE VISION & RETAIL MATRIX LAUNCH
+         ======================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+        {/* Card 1: The Vision */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4">
+          <button
+            onClick={() => setVideoOpen(true)}
+            className="relative w-full md:w-24 h-24 md:h-20 rounded-xl overflow-hidden bg-[#17334F] shrink-0 flex items-center justify-center group shadow-xs border border-[#0E62E4]/20 cursor-pointer"
+            aria-label="Play Vision Video"
+          >
+            <img
+              src="/dao/SVG 10.png"
+              alt="Protocol Artwork"
+              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="relative w-8 h-8 rounded-full bg-white text-[#17334F] flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+              <Play className="w-3 h-3 fill-[#17334F] text-[#17334F] ml-0.5" />
+            </div>
+          </button>
+
+          <div className="space-y-1 min-w-0">
+            <span className="text-[9px] font-semibold text-[#4F6D87] uppercase tracking-[0.1em]">
+              THE VISION
+            </span>
+            <h4 className="text-xs sm:text-sm font-semibold text-[#17334F] leading-snug">
+              A Decentralized Network for a Stronger Tomorrow.
+            </h4>
+            <button
+              onClick={() => setVideoOpen(true)}
+              className="text-[11px] font-semibold text-[#0E62E4] hover:underline inline-flex items-center gap-1 mt-0.5 transition-colors cursor-pointer"
+            >
+              <span>Watch Protocol Video</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Card 2: Retail Matrix Launch */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#0E62E4]/18 shadow-[0_4px_16px_rgba(14,98,228,0.06)] flex items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 border border-[#0E62E4]/20 mt-0.5 sm:mt-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-semibold text-[#17334F] leading-snug truncate">
+                  Retail Matrix Launch
+                </h4>
+                <span className="text-[9px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-1.5 py-0.5 rounded border border-[#0E62E4]/20 shrink-0">
+                  Day 22
+                </span>
+              </div>
+              <p className="text-[11px] text-[#4F6D87] leading-relaxed max-w-md line-clamp-2">
+                Global $30 retail matrix launches on Day 22 with 35% of all protocol matrix volume distributed directly to DAO members.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/dao/matrix-bridge"
+            className="w-8 h-8 rounded-lg bg-[#0E62E4]/10 hover:bg-[#0E62E4]/20 text-[#0E62E4] flex items-center justify-center shrink-0 transition-colors shadow-2xs border border-[#0E62E4]/20"
+            title="Go to Matrix Bridge"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Video Modal */}
+      <VideoModal
+        isOpen={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        title="EQUORA Genesis DAO Protocol Vision"
+      />
+    </div>
+  );
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "RPC_URL",
+    "NEXT_PUBLIC_*",
+    "TROB_PRICE_API_URL",
+    "DATABASE_URL",
+    "ENABLE_EXPERIMENTAL_COREPACK"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "compile": {
+      "outputs": ["artifacts/**", "cache/**", "typechain-types/**"]
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "test": {
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

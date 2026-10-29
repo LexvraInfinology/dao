@@ -1,0 +1,191 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { queryNeon } from '../../../_lib/neonDb';
+import { getAndSyncMemberState } from '../../../_lib/onChainMemberSync';
+import { IS_MAINNET } from '@/config/env';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { address: string } }
+) {
+  const address = params.address;
+  if (!address) {
+    return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
+  }
+
+  const bttPriceUsd = 0.056; // Smart contract fixed peg
+
+  const earningsCapUsd = 1500;
+  const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap (26,785.71 TROB = $1,500.00 USD)
+
+  try {
+    const synced = await getAndSyncMemberState(address);
+
+    if (synced.isMember && synced.position) {
+      const isUnderfunded = synced.status === 'underfunded';
+      const isCapped = synced.isCapped;
+      const pos = synced.position;
+
+      // Count active members for equal cashback calculation
+      let activeCount = 10;
+      try {
+        const { getMergedOnChainDaoStats } = await import('../../../_lib/onChainMergedDao');
+        const stats = await getMergedOnChainDaoStats();
+        activeCount = Math.max(1, stats.activeMemberCount);
+      } catch {
+        if (IS_MAINNET) {
+          try {
+            const countRes = await queryNeon<any>(
+              `SELECT COUNT(*) as cnt FROM "DaoMember" WHERE LOWER(status) NOT IN ('vacant', 'blank')`
+            );
+            const dbActive = parseInt(countRes.rows[0]?.cnt || '87', 10);
+            activeCount = Math.max(1, dbActive);
+          } catch {}
+        }
+      }
+
+      const retopupCashbackUsd = parseFloat((300 / activeCount).toFixed(2));
+      const retopupCashbackTrob = Math.round((retopupCashbackUsd / bttPriceUsd) * 100) / 100;
+
+      let bypassedToCouncilUsd = 0;
+      let newActivationsSinceCap = 0;
+      if (isCapped && IS_MAINNET) {
+        try {
+          const capTimeRes = await queryNeon<any>(
+            `SELECT "cappedAt" FROM "DaoMember" WHERE position = $1 LIMIT 1`,
+            [pos]
+          );
+          const cappedAt = capTimeRes.rows[0]?.cappedAt;
+          if (cappedAt) {
+            const evtsRes = await queryNeon<any>(
+              `SELECT COUNT(*) as cnt, COALESCE(SUM("amountUsdEst"), 0) as total_usd
+               FROM "DaoEvent"
+               WHERE "eventType" IN ('joined', 'retopup')
+                 AND ("timestamp" > $1 OR "createdAt" > $1)`,
+              [cappedAt]
+            );
+            newActivationsSinceCap = parseInt(evtsRes.rows[0]?.cnt || '0', 10);
+            const totalInflows = parseFloat(evtsRes.rows[0]?.total_usd || '0');
+            bypassedToCouncilUsd = activeCount > 0 ? Math.round((totalInflows / activeCount) * 100) / 100 : 0;
+          }
+        } catch {}
+      }
+
+      const displayPushedUsd = isUnderfunded ? 0 : isCapped ? earningsCapUsd : synced.lifetimeUsd;
+      const displayRemainingCapUsd = isUnderfunded ? earningsCapUsd : isCapped ? 0 : Math.max(0, earningsCapUsd - synced.currentCycleUsd);
+      const displayRemainingCapBtt = isCapped ? 0 : Math.max(0, earningsCapBtt - synced.totalEarnedTrob);
+      const poolClaimable = synced.poolClaimableTrob ?? 0;
+      const fallbackClaimable = synced.fallbackClaimableTrob ?? 0;
+      const totalClaimableTrob = Math.round((poolClaimable + fallbackClaimable) * 100) / 100;
+      const totalClaimableUsd = Math.round(totalClaimableTrob * bttPriceUsd * 100) / 100;
+      const unearnedDebtTrob = synced.unearnedDebtTrob ?? 0;
+      const unearnedDebtUsd = Math.round(unearnedDebtTrob * bttPriceUsd * 100) / 100;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          isMember: true,
+          address: synced.address,
+          position: pos,
+          nftTokenId: synced.nftTokenId || pos,
+          status: synced.status,
+          claimableDividendsBtt: totalClaimableTrob,
+          claimableDividendsTrob: totalClaimableTrob,
+          claimableDividendsUsd: totalClaimableUsd,
+          poolClaimableTrob: poolClaimable,
+          fallbackClaimableTrob: fallbackClaimable,
+          totalClaimableTrob,
+          unearnedDebtTrob,
+          unearnedDebtUsd,
+          totalReceivedBtt: isCapped ? earningsCapBtt : synced.totalEarnedTrob,
+          totalReceivedUsd: displayPushedUsd,
+          earningsCapBtt,
+          earningsCapTrob: earningsCapBtt,
+          earningsCapUsd,
+          pushedBtt: isCapped ? earningsCapBtt : synced.totalEarnedTrob,
+          pushedTrob: isCapped ? earningsCapBtt : synced.totalEarnedTrob,
+          pushedUsd: displayPushedUsd,
+          capProgressPct: synced.capProgressPct,
+          remainingCapBtt: displayRemainingCapBtt,
+          remainingCapTrob: displayRemainingCapBtt,
+          remainingCapUsd: displayRemainingCapUsd,
+          isCapped,
+          currentCycleUsd: synced.currentCycleUsd,
+          retopupCount: synced.retopupCount,
+          retopupDeadline: synced.retopupDeadline,
+          retopupTimeRemainingSeconds: synced.retopupTimeRemainingSeconds,
+          retopupCashbackUsd,
+          retopupCashbackTrob,
+          activeMembersCount: activeCount,
+          bypassedToCouncilUsd,
+          newActivationsSinceCap,
+          isExpired: synced.status === 'vacant',
+          bttPriceUsd,
+          trobPriceUsd: bttPriceUsd,
+          soulboundPass: {
+            tokenId: synced.nftTokenId || pos,
+            seatNumber: pos,
+            memberId: `#${String(pos).padStart(4, '0')}`,
+            tier: 'Genesis Council',
+            joinedAt: synced.joinedAt || '2026-10-03T15:31:06.000Z',
+          },
+          incomeChannels: {
+            daoSeats: {
+              label: 'Council Seat Distribution',
+              earnedUsd: displayPushedUsd,
+              earnedBtt: isCapped ? earningsCapBtt : synced.totalEarnedTrob,
+            },
+            matrixSlots: {
+              label: 'Matrix Spillover',
+              highestSlot: 0,
+              earnedUsd: 0,
+              earnedBtt: 0,
+            },
+            rankPools: {
+              label: 'Rank Pool Rewards',
+              unlockedPools: [],
+            },
+          },
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('[lounge route] Error:', err);
+  }
+
+  const nonMemberLounge = {
+    isMember: false,
+    address,
+    position: undefined,
+    nftTokenId: undefined,
+    status: 'unclaimed',
+    claimableDividendsBtt: 0,
+    claimableDividendsUsd: 0,
+    totalReceivedBtt: 0,
+    totalReceivedUsd: 0,
+    earningsCapBtt,
+    earningsCapTrob: earningsCapBtt,
+    earningsCapUsd,
+    pushedBtt: 0,
+    pushedTrob: 0,
+    pushedUsd: 0,
+    capProgressPct: 0,
+    remainingCapBtt: earningsCapBtt,
+    remainingCapTrob: earningsCapBtt,
+    remainingCapUsd: earningsCapUsd,
+    isCapped: false,
+    bttPriceUsd,
+    trobPriceUsd: bttPriceUsd,
+    soulboundPass: null,
+    incomeChannels: {
+      daoSeats: { earnedUsd: 0, earnedBtt: 0 },
+      matrixSlots: { highestSlot: 0, earnedUsd: 0, earnedBtt: 0 },
+    },
+  };
+
+  return NextResponse.json({
+    success: true,
+    data: nonMemberLounge,
+  });
+}

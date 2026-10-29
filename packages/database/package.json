@@ -1,0 +1,24 @@
+{
+  "name": "@equora/database",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "db:generate": "node node_modules/prisma/build/index.js generate",
+    "db:push": "node node_modules/prisma/build/index.js db push",
+    "db:migrate": "node node_modules/prisma/build/index.js migrate dev",
+    "db:studio": "node node_modules/prisma/build/index.js studio",
+    "build": "tsc",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@equora/tsconfig": "workspace:*",
+    "@types/node": "^20.17.6",
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.3"
+  }
+}

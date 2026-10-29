@@ -1,0 +1,104 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:22-bookworm-slim AS base
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates openssl \
+    && rm -rf /var/lib/apt/lists/* \
+    && corepack enable \
+    && corepack prepare pnpm@11.8.0 --activate \
+    && pnpm config set store-dir /pnpm/store
+WORKDIR /workspace
+
+FROM base AS dependencies
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
+COPY scripts/patch-qr.js scripts/patch-qr.js
+COPY apps/api/package.json apps/api/package.json
+COPY apps/indexer/package.json apps/indexer/package.json
+COPY apps/queue/package.json apps/queue/package.json
+COPY apps/web-dao/package.json apps/web-dao/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/hardhat/package.json packages/hardhat/package.json
+COPY packages/logger/package.json packages/logger/package.json
+COPY packages/services/package.json packages/services/package.json
+COPY packages/trpc/package.json packages/trpc/package.json
+COPY packages/tsconfig/package.json packages/tsconfig/package.json
+COPY packages/types/package.json packages/types/package.json
+
+RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+FROM dependencies AS builder
+
+ARG SERVICE_PACKAGE
+ARG SERVICE_DIR
+
+COPY . .
+RUN pnpm --filter @equora/database db:generate
+RUN pnpm --filter "${SERVICE_PACKAGE}..." build
+RUN CI=true pnpm install --prod --filter="${SERVICE_PACKAGE}..." --frozen-lockfile --ignore-scripts
+
+RUN set -eux; \
+    rm -rf /out; \
+    mkdir -p /out; \
+    cp package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc /out/; \
+    for manifest in apps/*/package.json packages/*/package.json; do \
+      target="/out/${manifest}"; \
+      mkdir -p "$(dirname "${target}")"; \
+      cp "${manifest}" "${target}"; \
+    done; \
+    cp -R "${SERVICE_DIR}/dist" "/out/${SERVICE_DIR}/dist"; \
+    for package_dir in packages/database packages/logger packages/services packages/trpc packages/types; do \
+      if [ -d "${package_dir}/dist" ]; then \
+        mkdir -p "/out/${package_dir}"; \
+        cp -R "${package_dir}/dist" "/out/${package_dir}/dist"; \
+      fi; \
+    done; \
+    mkdir -p /out/packages/database; \
+    cp -R packages/database/prisma /out/packages/database/prisma; \
+    prisma_client_dir="$(find node_modules -type d -path '*/.prisma/client' -print -quit)"; \
+    test -n "${prisma_client_dir}"; \
+    mkdir -p /out/prisma-client; \
+    cp -R "${prisma_client_dir}/." /out/prisma-client/
+
+FROM base AS production-dependencies
+
+ARG SERVICE_PACKAGE
+WORKDIR /app
+
+COPY --from=builder /out/ ./
+COPY --from=builder /out/prisma-client /tmp/prisma-client
+RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
+    CI=true pnpm install --prod --filter="${SERVICE_PACKAGE}..." --frozen-lockfile --ignore-scripts
+# Restore the generated Prisma client that was built in the builder stage.
+# Place .prisma/client inside the same node_modules that contains @prisma/client
+# so Node's module resolution finds it immediately.
+RUN set -eux; \
+    prisma_client_dir="$(find /app/node_modules -type d -path '*/@prisma/client' -print -quit)"; \
+    test -n "${prisma_client_dir}" || { echo "ERROR: @prisma/client not found"; exit 1; }; \
+    target_node_modules="$(dirname "$(dirname "${prisma_client_dir}")")"; \
+    mkdir -p "${target_node_modules}/.prisma/client"; \
+    cp -R /tmp/prisma-client/. "${target_node_modules}/.prisma/client/"; \
+    rm -rf /tmp/prisma-client; \
+    echo "Prisma client installed at ${target_node_modules}/.prisma/client"; \
+    ls "${target_node_modules}/.prisma/client/"
+
+FROM base AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+ARG SERVICE_PACKAGE
+ARG SERVICE_DIR
+ENV SERVICE_DIR=$SERVICE_DIR
+
+COPY --from=production-dependencies /app/ ./
+
+USER node
+
+CMD ["sh", "-c", "exec node /app/$SERVICE_DIR/dist/index.js"]

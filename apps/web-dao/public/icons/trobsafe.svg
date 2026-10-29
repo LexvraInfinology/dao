@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="topFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="leftFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF" />
+      <stop offset="100%" stop-color="#0A1E4A" />
+    </linearGradient>
+    <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA" />
+      <stop offset="100%" stop-color="#1E40AF" />
+    </linearGradient>
+    <linearGradient id="tHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#BAE6FD" />
+    </linearGradient>
+  </defs>
+  <!-- Outer Isometric Cube Hexagon -->
+  <polygon points="50,6 90,28 90,72 50,94 10,72 10,28" fill="#071A4A" stroke="#2563EB" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Top Face -->
+  <polygon points="50,11 85,29.5 50,48 15,29.5" fill="url(#topFace)"/>
+  <!-- Left Face -->
+  <polygon points="15,31.5 49,49.5 49,89 15,70" fill="url(#leftFace)"/>
+  <!-- Right Face -->
+  <polygon points="51,49.5 85,31.5 85,70 51,89" fill="url(#rightFace)"/>
+  <!-- Stylized T Core -->
+  <path d="M30 32 L70 32 L70 42 L56 42 L56 76 L44 76 L44 42 L30 42 Z" fill="url(#tHighlight)" filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.4))"/>
+</svg>

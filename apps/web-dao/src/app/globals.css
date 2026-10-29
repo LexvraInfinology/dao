@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+:root {
+  --font-poppins: 'Poppins', sans-serif;
+  --font-sora: 'Sora', sans-serif;
+  --font-inter: 'Inter', sans-serif;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  background-color: #F0F4F8;
+  color: #0F1B35;
+  font-family: var(--font-inter);
+  overflow-x: hidden;
+}
+
+/* Poppins Fallback override matching Trobium font metrics */
+@font-face {
+  font-family: 'Poppins Fallback';
+  src: local('Arial');
+  ascent-override: 93.62%;
+  descent-override: 31.21%;
+  line-gap-override: 8.92%;
+  size-adjust: 112.16%;
+}
+
+/* Landing Page Poppins Typography Scope (Strictly isolated to landing page) */
+.landing-page-root {
+  --font-sans: var(--font-poppins), 'Poppins', 'Poppins Fallback', system-ui, -apple-system, sans-serif;
+  --font-inter: var(--font-sans);
+  --font-sora: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.landing-page-root *,
+.landing-page-root *::before,
+.landing-page-root *::after {
+  font-family: inherit;
+}
+
+.landing-page-root .font-mono,
+.landing-page-root code,
+.landing-page-root pre,
+.landing-page-root kbd {
+  font-family: var(--font-mono) !important;
+}
+
+/* Trobium Typography Tokens Scoped to Landing Page */
+.landing-page-root .chip {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 3D Flip Card Styles */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Pristine Card & Panel Styles */
+.figma-card {
+  background: #FFFFFF;
+  border: 1px solid #E2ECF9;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+}
+
+.figma-card-hover:hover {
+  border-color: #BFDBFE;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ── Live Activity Sheer Glass on Mobile (reveals pointing boy & hand) ── */
+.activity-card-mobile {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.02) 80%, rgba(255, 255, 255, 0) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.40) !important;
+  backdrop-filter: blur(1px) !important;
+  -webkit-backdrop-filter: blur(1px) !important;
+}
+@media (min-width: 640px) {
+  .activity-card-mobile {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+}
+
+.activity-row-mobile {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.35) 45%, rgba(255, 255, 255, 0.05) 80%, rgba(255, 255, 255, 0) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+@media (min-width: 640px) {
+  .activity-row-mobile {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  }
+}
+
+.figma-glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #E2ECF9;
+}
+
+/* Custom Clean Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Octahedron 3D floating animation */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+.animate-float {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+/* Ambient glow subtle background helpers */
+.ambient-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(100px);
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Trobium Global Design Utility Classes (Vibrant Trobium Logo Blue) */
+.btn-primary {
+  color: #fff;
+  letter-spacing: 0.05em;
+  background-color: #0E62E4;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  display: inline-flex;
+  box-shadow: 0 4px 14px rgba(14, 98, 228, 0.32);
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #0B52C4;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(14, 98, 228, 0.4);
+}
+
+.btn-ghost {
+  color: #0E62E4;
+  letter-spacing: 0.05em;
+  background-color: #fff;
+  border: 1px solid rgba(14, 98, 228, 0.35);
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background-color: rgba(14, 98, 228, 0.08);
+  border-color: #0E62E4;
+}
+
+.chip {
+  color: #0E62E4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background-color: rgba(14, 98, 228, 0.08);
+  border: 1px solid rgba(14, 98, 228, 0.22);
+  border-radius: 8px;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  display: inline-flex;
+}
+

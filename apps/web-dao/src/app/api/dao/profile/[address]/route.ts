@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getActiveDaoAddress } from '@/utils/trobAddress';
+import { getAndSyncMemberState } from '../../../_lib/onChainMemberSync';
+
+// Dynamic profile route
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { address: string } }
+) {
+  const address = params.address;
+  if (!address) {
+    return NextResponse.json({ success: false, error: 'Address required' }, { status: 400 });
+  }
+
+  const bttPriceUsd = 0.056; // Smart contract fixed peg
+
+  const earningsCapUsd = 1500;
+  const earningsCapBtt = 26785.71; // Smart contract on-chain 5X cap (26,785.71 TROB = $1,500.00 USD)
+
+  try {
+    const synced = await getAndSyncMemberState(address);
+
+    if (synced.isMember && synced.position) {
+      const pos = synced.position;
+      const isUnderfunded = synced.status === 'underfunded';
+
+      const nftBadges = [
+        {
+          id: `sbt-${pos}`,
+          tokenId: synced.nftTokenId || pos,
+          name: `Genesis Council Seat #${pos}`,
+          type: 'Soulbound Token (SBT)',
+          contractAddress: getActiveDaoAddress(),
+          mintDate: synced.joinedAt || '2026-10-03 15:31:06',
+          rarity: 'Genesis Founder (1 of 100)',
+          image: '/badges/genesis-founder.png',
+        },
+      ];
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          address: synced.address,
+          userId: synced.userId || pos,
+          isMember: true,
+          underfunded: isUnderfunded,
+          position: pos,
+          nftTokenId: synced.nftTokenId || pos,
+          sponsorAddress: null,
+          joinedAt: synced.joinedAt,
+          registrationTimestamp: synced.joinedAt,
+          status: synced.status,
+          retopupCount: synced.retopupCount,
+          currentCycleUsd: synced.currentCycleUsd,
+          retopupDeadline: synced.retopupDeadline,
+          retopupTimeRemainingSeconds: synced.retopupTimeRemainingSeconds,
+          isExpired: synced.status === 'vacant',
+          txHash: synced.txHash,
+          highestMatrixSlot: isUnderfunded ? 0 : 1,
+          matrixSlots: [],
+          nftBadges,
+          poolCards: [
+            {
+              tier: 1,
+              tierName: 'Genesis Council Payouts',
+              targetEarningsUsd: 1500,
+              pushedAmountUsd: synced.lifetimeUsd,
+              progressPct: synced.capProgressPct,
+              unlockedAt: synced.joinedAt || '2026-10-03 15:31:06',
+              status: isUnderfunded ? 'underfunded' : synced.isCapped ? 'capped' : 'active',
+            },
+          ],
+          totalEarnedUsd: synced.lifetimeUsd,
+          totalEarnedBtt: synced.totalEarnedTrob,
+          totalEarnedTrob: synced.totalEarnedTrob,
+          pushedAmountBtt: synced.totalEarnedTrob,
+          pushedAmountTrob: synced.totalEarnedTrob,
+          pushedAmountUsdEstimate: synced.lifetimeUsd,
+          entryAmountTrob: synced.entryAmountTrob,
+          entryAmountBtt: synced.entryAmountTrob,
+          entryAmountUsd: synced.entryAmountUsd,
+          earningsCapUsd: 1500,
+          earningsCapBtt,
+          earningsCapTrob: earningsCapBtt,
+          remainingCapUsd: Math.max(0, 1500 - synced.currentCycleUsd),
+          remainingCapTrob: Math.max(0, earningsCapBtt - synced.totalEarnedTrob),
+          capProgressPct: synced.capProgressPct,
+          isCapped: synced.isCapped,
+          unearnedDebtTrob: synced.unearnedDebtTrob ?? 0,
+          unearnedDebtUsd: synced.unearnedDebtTrob ? Math.round(synced.unearnedDebtTrob * bttPriceUsd * 100) / 100 : 0,
+          poolClaimableTrob: synced.poolClaimableTrob ?? 0,
+          fallbackClaimableTrob: synced.fallbackClaimableTrob ?? 0,
+          bttPriceUsd,
+          trobPriceUsd: bttPriceUsd,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('[profile route] Error:', err);
+  }
+
+  // Non-member profile response
+  return NextResponse.json({
+    success: true,
+    data: {
+      address,
+      userId: null,
+      isMember: false,
+      underfunded: false,
+      position: null,
+      nftTokenId: null,
+      sponsorAddress: null,
+      registrationTimestamp: null,
+      status: 'unclaimed',
+      retopupDeadline: null,
+      retopupTimeRemainingSeconds: null,
+      isExpired: false,
+      txHash: null,
+      highestMatrixSlot: 0,
+      matrixSlots: [],
+      nftBadges: [],
+      poolCards: [],
+      totalEarnedUsd: 0,
+      totalEarnedBtt: 0,
+      pushedAmountBtt: 0,
+      pushedAmountTrob: 0,
+      pushedAmountUsdEstimate: 0,
+      earningsCapUsd: 1500,
+      earningsCapBtt,
+      earningsCapTrob: earningsCapBtt,
+      remainingCapUsd: 1500,
+      remainingCapTrob: earningsCapBtt,
+      capProgressPct: 0,
+      isCapped: false,
+      bttPriceUsd,
+      trobPriceUsd: bttPriceUsd,
+    },
+  });
+}

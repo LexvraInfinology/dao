@@ -1,0 +1,626 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuthContext } from '@/context/AuthContext';
+
+export const BACKEND_API_URL = 'https://api.equorafidao.com';
+const API_BASE = '';
+
+// ─── Generic fetch hook ───────────────────────────────────────────────────────
+
+export interface UseApiResult<T> {
+  data: T | null;
+  loading: boolean;
+  isValidating?: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
+/**
+ * useApi<T> — fetches a GET endpoint and returns { data, loading, error, refetch }.
+ * Automatically attaches JWT Bearer token from AuthContext when available.
+ */
+export const EQUORA_CACHE_VERSION = 'v2026_10_25_live_v3';
+
+// Auto-purge stale client caches on version bump
+if (typeof window !== 'undefined') {
+  try {
+    const currentVer = localStorage.getItem('equora_cache_version');
+    if (currentVer !== EQUORA_CACHE_VERSION) {
+      sessionStorage.clear();
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (
+          k &&
+          (k.startsWith('equora_dao_member_') ||
+            k.startsWith('equora_wa_joined_') ||
+            k.startsWith('eq_cache_') ||
+            k.startsWith('trob_member_') ||
+            k.includes('member') ||
+            k.includes('claimed') ||
+            k.includes('stats'))
+        ) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('equora_cache_version', EQUORA_CACHE_VERSION);
+    }
+  } catch {}
+}
+
+export function clearDaoClientCaches() {
+  if (typeof window === 'undefined') return;
+  try {
+    memoryApiCache.clear();
+    sessionStorage.clear();
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (
+        k &&
+        (k.startsWith('equora_dao_member_') ||
+          k.startsWith('equora_wa_joined_') ||
+          k.startsWith('eq_cache_') ||
+          k.startsWith('trob_member_'))
+      ) {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
+// Global in-memory cache for live dynamic API responses (persists across component mounts)
+const memoryApiCache = new Map<string, any>();
+const inFlightClientRequests = new Map<string, Promise<any>>();
+
+function isDynamicPath(path: string): boolean {
+  return (
+    path.includes('/dao/') ||
+    path.includes('/price/') ||
+    path.includes('/user/')
+  );
+}
+
+function getInitialCachedData<T>(path: string | null, fallback: T | null): T | null {
+  if (!path || isDynamicPath(path)) return fallback;
+  if (memoryApiCache.has(path)) {
+    return memoryApiCache.get(path) as T;
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`eq_cache_${path}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        memoryApiCache.set(path, parsed);
+        return parsed as T;
+      }
+    } catch {}
+  }
+  return fallback;
+}
+
+export function useApi<T>(
+  path: string | null,
+  options?: {
+    /** Poll interval in ms. No polling if omitted. */
+    pollMs?: number;
+    /** Fallback value returned while loading */
+    fallback?: T;
+    /** Don't fetch until this is true */
+    enabled?: boolean;
+  }
+): UseApiResult<T> {
+  const auth = useAuthContext();
+  const { fallback = null, pollMs, enabled = true } = options ?? {};
+
+  // Initial state matches server-rendered HTML or cached data in memory
+  const [data, setData]       = useState<T | null>(() => {
+    if (fallback !== null && fallback !== undefined) return fallback;
+    if (path && memoryApiCache.has(path)) {
+      return memoryApiCache.get(path) as T;
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (fallback !== null && fallback !== undefined) return false;
+    if (path && memoryApiCache.has(path)) return false;
+    return Boolean(enabled && path);
+  });
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+  const [error, setError]     = useState<string | null>(null);
+  const pollRef               = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dataRef               = useRef<T | null>(data);
+  dataRef.current = data;
+
+  // Safely hydrate from memory cache (or static non-dynamic sessionStorage) on client immediately after mount
+  useEffect(() => {
+    if (!path) return;
+    if (memoryApiCache.has(path)) {
+      const cached = memoryApiCache.get(path);
+      setData(cached);
+      dataRef.current = cached;
+      setLoading(false);
+      return;
+    }
+    if (typeof window !== 'undefined' && !isDynamicPath(path)) {
+      try {
+        const stored = sessionStorage.getItem(`eq_cache_${path}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          memoryApiCache.set(path, parsed);
+          setData(parsed);
+          dataRef.current = parsed;
+          setLoading(false);
+        }
+      } catch {}
+    }
+  }, [path]);
+
+  const fetchData = useCallback(async () => {
+    if (!path || !enabled) return;
+
+    // Only set loading = true on initial load if we don't have data yet!
+    // On background updates/polling, data stays on screen and loading stays false!
+    if (!dataRef.current && !memoryApiCache.has(path)) {
+      setLoading(true);
+    }
+    setIsValidating(true);
+    setError(null);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
+
+    const cacheKey = `${API_BASE}${path}`;
+    try {
+      let reqPromise = inFlightClientRequests.get(cacheKey);
+      if (!reqPromise) {
+        reqPromise = fetch(cacheKey, {
+          headers,
+          cache: 'no-store',
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+            return res.json();
+          })
+          .finally(() => {
+            inFlightClientRequests.delete(cacheKey);
+          });
+        inFlightClientRequests.set(cacheKey, reqPromise);
+      }
+
+      const json = await reqPromise;
+      const result = json.data !== undefined ? json.data : json;
+      setData(result);
+      dataRef.current = result;
+      memoryApiCache.set(path, result);
+      if (typeof window !== 'undefined' && !isDynamicPath(path)) {
+        try {
+          sessionStorage.setItem(`eq_cache_${path}`, JSON.stringify(result));
+        } catch {}
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Network error';
+      setError(msg);
+      // Keep stale data if we have it
+    } finally {
+      setLoading(false);
+      setIsValidating(false);
+    }
+  }, [path, enabled, auth.token]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Polling
+  useEffect(() => {
+    if (!pollMs || !path || !enabled) return;
+    pollRef.current = setInterval(fetchData, pollMs);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchData, pollMs, path, enabled]);
+
+  const isActivelyLoading = loading && data === null;
+  return { data, loading: isActivelyLoading, isValidating, error, refetch: fetchData };
+}
+
+// ─── Typed shortcuts ──────────────────────────────────────────────────────────
+
+export interface DaoStatsData {
+  memberCount: number;
+  activeMembers: number;
+  capacity: number;
+  remainingPositions: number;
+  entryFeeUsd?: number;
+  earningsCapUsd?: number;
+  entryFeeBtt: number;
+  entryFeeTrob?: number;
+  earningsCapBtt: number;
+  earningsCapTrob?: number;
+  totalCollectedBTT: number;
+  totalCollectedTROB?: number;
+  totalDistributedBTT: number;
+  totalDistributedTROB?: number;
+  isClosed: boolean;
+  bttPriceUsd: number;
+  trobPriceUsd?: number;
+  priceSource: string;
+  priceUpdatedAt: string;
+  dividendYieldApy?: string;
+  treasurySnapshotUsd?: number;
+}
+
+export interface DaoEventData {
+  id: string;
+  eventType: string;
+  userAddress: string | null;
+  incomingPosition: number | null;
+  recipientCount?: number | null;
+  amountBtt: number;
+  amountTrob?: number;
+  amountUsdEstimate: number;
+  reason?: string | null;
+  txHash: string;
+  blockNumber: string;
+  timestamp: string;
+}
+
+export interface TrobPriceData {
+  priceUsd: number;
+  priceSource: string;
+  updatedAt: string;
+  isStale: boolean;
+  seatEntryUsd: number;
+  seatEntryTrob: number;
+  earningsCapUsd?: number;
+  earningsCapTrob?: number;
+}
+
+export interface MemberDetailsData {
+  isMember: boolean;
+  position: number | null;
+  nftTokenId: number | null;
+  status?: string;
+  joinedAt?: string;
+  pushedAmountBtt: number;
+  pushedAmountUsdEstimate: number;
+  earningsCapUsd?: number;
+  earningsCapBtt?: number;
+  entryAmountUsdEstimate?: number;
+  entryAmountBtt?: number;
+  capProgressPct?: number;
+  isCapped?: boolean;
+  capHitAt?: string | null;
+  retopupDeadline?: string | null;
+  retopupTimeRemainingSeconds?: number | null;
+  directReferralsCount: number;
+  isQualified: boolean;
+  userId: number | null;
+  txHash?: string;
+  underfunded?: boolean;
+  entryAmountTrob?: number;
+  retopupCount?: number;
+  currentCycleUsd?: number;
+  unearnedDebtTrob?: number;
+  unearnedDebtUsd?: number;
+  poolClaimableTrob?: number;
+  fallbackClaimableTrob?: number;
+  totalClaimableTrob?: number;
+  notice?: string;
+}
+
+export interface ProfileData extends MemberDetailsData {
+  address: string;
+  sponsorAddress: string | null;
+  registrationTimestamp: string | null;
+  highestMatrixSlot: number;
+  matrixSlots: Array<{
+    slotNumber: number;
+    isUnlocked: boolean;
+    currentCycle: number;
+    filledNodes: number;
+    totalEarned: number;
+    totalEarnedUsd: number;
+  }>;
+  nftBadges: Array<{ tokenId: number; rank: number; mintedAt: string }>;
+  poolCards: Array<{ tier: number; tierName: string; unlockedAt: string }>;
+  totalEarnedBtt: number;
+  totalEarnedUsd: number;
+  remainingCapUsd?: number;
+  remainingCapTrob?: number;
+  bttPriceUsd: number;
+  priceSource: string;
+}
+
+export interface LoungeData {
+  isMember: boolean;
+  address?: string;
+  position?: number;
+  nftTokenId?: number;
+  status?: string;
+  accessGranted?: boolean;
+  underfunded?: boolean;
+  entryAmountBtt?: number;
+  soulboundPass?: {
+    tokenId: number | null;
+    seatNumber: number | null;
+    memberId: string;
+    tier: string;
+    joinedAt: string;
+  };
+  claimableDividendsBtt: number;
+  claimableDividendsTrob?: number;
+  claimableDividendsUsd: number;
+  poolClaimableTrob?: number;
+  fallbackClaimableTrob?: number;
+  totalClaimableTrob?: number;
+  unearnedDebtTrob?: number;
+  unearnedDebtUsd?: number;
+  totalReceivedBtt: number;
+  totalReceivedUsd: number;
+  earningsCapBtt: number;
+  earningsCapUsd: number;
+  pushedBtt: number;
+  pushedUsd: number;
+  capProgressPct: number;
+  remainingCapBtt: number;
+  remainingCapUsd: number;
+  isCapped: boolean;
+  capHitAt?: string | null;
+  retopupDeadline?: string | null;
+  retopupTimeRemainingSeconds?: number | null;
+  activeMembersCount?: number;
+  retopupCashbackUsd?: number;
+  retopupCashbackTrob?: number;
+  bypassedToCouncilUsd?: number;
+  newActivationsSinceCap?: number;
+  cappedAt?: string | null;
+  incomeChannels?: {
+    daoSeats: { label: string; earnedBtt: number; earnedUsd: number };
+    matrixSlots: { label: string; earnedBtt: number; earnedUsd: number; highestSlot: number };
+    rankPools: { label: string; unlockedPools: string[] };
+  };
+  bttPriceUsd: number;
+  trobPriceUsd?: number;
+  priceSource: string;
+  retopupCount?: number;
+  currentCycleUsd?: number;
+}
+
+export interface TransactionItem {
+  id: string;
+  type: string;
+  typeLabel: string;
+  amountBtt: number;
+  amountTrob?: number;
+  amountUsd: number;
+  isPositive: boolean | null;
+  from: string;
+  to: string;
+  txHash: string;
+  timestamp: string;
+  status: string;
+  incomingPosition?: number | null;
+  categoryBadge?: string;
+  sourceSeat?: number;
+  note?: string;
+  blockNumber?: number | string;
+  contractAddress?: string;
+  distributionFormula?: string;
+  rawType?: string;
+}
+
+export interface TransactionsData {
+  transactions: TransactionItem[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+  bttPriceUsd: number;
+  trobPriceUsd?: number;
+  priceSource: string;
+  protocolInflowsUsd?: number;
+  protocolOutflowsUsd?: number;
+  userInflowUsd?: number;
+  userInflowTrob?: number;
+  userOutflowUsd?: number;
+  userOutflowTrob?: number;
+  userNetReturnUsd?: number;
+  userMultiplier?: number;
+  memberFinancials?: {
+    address: string;
+    position: number | null;
+    isMember: boolean;
+    status: 'active' | 'capped' | 'vacant' | 'non-member';
+    userInflowUsd: number;
+    userInflowTrob: number;
+    userOutflowUsd: number;
+    userOutflowTrob: number;
+    userNetReturnUsd: number;
+    userMultiplier: number;
+    retopupCount: number;
+    underfundedAudit?: {
+      wasUnderfunded: boolean;
+      unearnedDebtTrob: number;
+      initialV1DepositTrob: number;
+      completionDepositTrob?: number;
+      cashbackReceivedTrob?: number;
+      recovered: boolean;
+      note: string;
+    };
+  };
+}
+
+// ─── Convenience wrappers ─────────────────────────────────────────────────────
+
+export function useDaoStats(pollMs?: number) {
+  return useApi<DaoStatsData>('/api/dao/stats', { pollMs });
+}
+
+export function useTrobPrice(pollMs: number = 15_000) {
+  return useApi<TrobPriceData>('/api/price/trob', {
+    pollMs,
+  });
+}
+
+export function useDaoEvents(limit = 20, pollMs?: number) {
+  return useApi<DaoEventData[]>(`/api/dao/events?limit=${limit}`, { pollMs });
+}
+
+export function useDaoMember(address: string | null, pollMs: number = 10_000) {
+  return useApi<MemberDetailsData>(
+    address ? `/api/dao/member/${address}` : null,
+    { enabled: !!address, pollMs }
+  );
+}
+
+export interface DaoMemberListItem {
+  id: string;
+  position: number;
+  address: string;
+  nftTokenId?: number | null;
+  status: string;
+  joinedAt?: string;
+  retopupCount?: number;
+  isActive?: boolean;
+  referralCode?: string | number;
+}
+
+export interface DaoMembersData {
+  members: DaoMemberListItem[];
+  total: number;
+  claimedCount?: number;
+}
+
+export function useDaoMembers(pollMs: number = 30_000) {
+  return useApi<DaoMembersData>('/api/dao/members?page=1&limit=100', { pollMs });
+}
+
+export function useDaoProfile(address: string | null) {
+  return useApi<ProfileData>(
+    address ? `/api/dao/profile/${address}` : null,
+    { enabled: !!address }
+  );
+}
+
+export function useLounge(address: string | null, pollMs: number = 15_000) {
+  return useApi<LoungeData>(
+    address ? `/api/dao/lounge/${address}` : null,
+    { enabled: !!address, pollMs }
+  );
+}
+
+export function useTransactions(
+  address: string | null = null,
+  page = 1,
+  limit = 20,
+  type?: string,
+  search?: string,
+  pollMs: number = 8000,
+  userWallet: string | null = null
+) {
+  const params = new URLSearchParams();
+  if (address) params.set('address', address);
+  if (userWallet) params.set('userWallet', userWallet);
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  if (type && type !== 'all') params.set('type', type);
+  if (search && search.trim()) params.set('search', search.trim());
+
+  return useApi<TransactionsData>(`/api/dao/transactions?${params.toString()}`, { pollMs });
+}
+
+export function useDaoProposals(limit = 20) {
+  return useApi<unknown[]>(`/api/dao/proposals?limit=${limit}`);
+}
+
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export interface UserSettingsData {
+  id: string;
+  userAddress: string;
+  // Notifications
+  notifDaoActivity: boolean;
+  notifGovernance: boolean;
+  notifCouncilSeat: boolean;
+  notifMatrixBridge: boolean;
+  notifProtocolUpdates: boolean;
+  notifSecurityAlerts: boolean;
+  notifMarketingEvents: boolean;
+  // Privacy
+  privDaoProfileVisible: boolean;
+  privWalletVisible: boolean;
+  privSeatActivity: boolean;
+  privGovernanceActivity: boolean;
+  privEarningsVisible: boolean;
+}
+
+/**
+ * useUserSettings — loads the authenticated user's notification + privacy prefs.
+ * Returns null when not authenticated (token absent).
+ */
+export function useUserSettings(token: string | null) {
+  return useApi<UserSettingsData>('/api/user/settings', { enabled: !!token });
+}
+
+/**
+ * saveUserSettings — persists one or more settings fields to the backend.
+ * Fires-and-forgets; caller handles error display.
+ */
+export async function saveUserSettings(
+  fields: Partial<Omit<UserSettingsData, 'id' | 'userAddress'>>,
+  token: string
+): Promise<UserSettingsData> {
+  return apiPut<UserSettingsData>('/api/user/settings', fields, token);
+}
+
+// ─── POST helper ──────────────────────────────────────────────────────────────
+
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  token?: string | null
+): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `Request failed (${res.status})`);
+  return (json.data !== undefined ? json.data : json) as T;
+}
+
+/**
+ * apiPut — generic PUT helper, mirrors apiPost but uses PUT method.
+ */
+export async function apiPut<T>(
+  path: string,
+  body: unknown,
+  token?: string | null
+): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `Request failed (${res.status})`);
+  return (json.data !== undefined ? json.data : json) as T;
+}
+

@@ -1,0 +1,23 @@
+import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
+import fs from 'fs';
+import { TROBSAFE_APK_URL } from '@/config/env';
+
+// ---------------------------------------------------------------------------
+// GET /api/trobsafe/apk
+//
+// Serves the TrobSafe Android APK (84MB+) via high-performance static streaming
+// ---------------------------------------------------------------------------
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
+  const localApk = path.resolve(process.cwd(), 'public', 'downloads', 'trobsafe.apk');
+  
+  if (fs.existsSync(localApk)) {
+    return NextResponse.redirect(new URL('/downloads/trobsafe.apk', req.url));
+  }
+
+  return NextResponse.redirect(TROBSAFE_APK_URL, { status: 302 });
+}
+

@@ -1,0 +1,1508 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import {
+  ShieldCheck,
+  Loader2,
+  AlertTriangle,
+  ArrowRight,
+  Download,
+  Wallet,
+  CheckCircle2,
+  ExternalLink,
+  Smartphone,
+  LogOut,
+  Zap,
+  Radio,
+  Vote,
+  Sparkles,
+  Info,
+  Check,
+  AlertCircle,
+  HelpCircle,
+  Calendar,
+  Crown,
+  Copy,
+  Lock,
+  TrendingUp,
+  Layers,
+  Clock,
+  ShieldAlert,
+  Coins,
+  RefreshCw,
+  X,
+  ChevronDown,
+} from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
+import { useAuthContext } from '@/context/AuthContext';
+import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
+import { RetopupModal } from '@/components/dao/lounge/RetopupModal';
+import { getExplorerAddressUrl } from '@/utils/explorer';
+import { WalletModal } from '@/components/ui/WalletModal';
+import { TermsModal } from '@/components/dao/TermsModal';
+import {
+  triggerSmartConnectWallet,
+  TROBSAFE_CHROME_STORE_URL,
+  TROBSAFE_APP_STORE_URL,
+  isMobileDevice,
+  openInTrobSafeApp,
+} from '@/utils/walletConnect';
+import { EquoraLogo } from '@/components/ui/EquoraLogo';
+import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
+import { getActiveDaoAddress, toTronHex } from '@/utils/trobAddress';
+import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
+
+import {
+  OFFICIAL_SR_TESTNET,
+  OFFICIAL_SR_MAINNET,
+  FULLNODE_RPC_URL,
+} from '@/config/env';
+
+// ─── Constants & Addresses ───────────────────────────────────────────────────
+const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
+export const OFFICIAL_EQUORA_SR = OFFICIAL_SR_MAINNET;
+export const OFFICIAL_EQUORA_TESTNET_SR = OFFICIAL_SR_TESTNET;
+
+// ─── Eligibility Types (matches PDF) ──────────────────────────────────────────
+
+interface EligibilityData {
+  address: string;
+  canonicalAddress: string;
+  condition1: {
+    passed: boolean;
+    creationTimestamp: number | null;
+    creationDate: string | null;
+    minRequiredDate: string;
+    reason?: string;
+  };
+  condition2: {
+    passed: boolean;
+    energy: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    bandwidth: {
+      stakedTrob: number;
+      requiredTrob: number;
+      passed: boolean;
+    };
+    srVote: {
+      voted: boolean;
+      officialSrAddress: string;
+      passed: boolean;
+    };
+    missingRequirements: string[];
+  };
+  whatsapp: {
+    joined: boolean;
+    verifiedAt: string | null;
+  };
+  deviceRestriction?: {
+    hasClaimed: boolean;
+    claimedSeat?: number;
+    claimedAddress?: string;
+  };
+  walletAlreadyHasSeat?: boolean;
+  ownedSeatNumber?: number | null;
+  eligibleToDeposit: boolean;
+  status: string;
+  formula?: any;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DaoAccessGateProps {
+  children: React.ReactNode;
+}
+
+export function DaoAccessGate({ children }: DaoAccessGateProps) {
+  const wallet = useWallet();
+  const auth   = useAuthContext();
+
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen]   = useState(false);
+  const [termsAccepted, setTermsAccepted]     = useState(true);
+
+  const [eligibility, setEligibility]         = useState<EligibilityData | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [eligibilityError, setEligibilityError]     = useState<string | null>(null);
+
+  const [isLocalMember, setIsLocalMember]     = useState(false);
+
+  // Resource staking & SR voting helper state
+  const [isStakingHelper, setIsStakingHelper] = useState(false);
+
+  // Payment states
+  const [payError, setPayError]               = useState<string | null>(null);
+  const [payTxHash, setPayTxHash]             = useState<string | null>(null);
+  const [detectTimeout, setDetectTimeout]     = useState(false);
+  const [underfundedRetopupOpen, setUnderfundedRetopupOpen] = useState(false);
+  const [showMobilePrivileges, setShowMobilePrivileges]       = useState(false);
+
+  // Wallet address resolution
+  const activeAddress = wallet.base58Address || wallet.hexAddress || auth.user?.address || '';
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Cross-device & tunnel testing support (?testWallet=... or ?preview=...)
+  const [testWalletParam, setTestWalletParam] = useState<string>('');
+
+  // Quick fallback timeout for detection probe (800ms max) & client mount flag
+  useEffect(() => {
+    setMounted(true);
+    const timer = setTimeout(() => setDetectTimeout(true), 800);
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const tw = sp.get('testWallet') || sp.get('preview') || sp.get('wallet') || '';
+      if (tw) setTestWalletParam(tw.trim());
+    }
+    return () => clearTimeout(timer);
+  }, []);
+
+  const effectiveAddress = mounted ? (activeAddress || testWalletParam) : '';
+  const isEffectiveConnected = mounted && (wallet.isConnected || Boolean(testWalletParam));
+
+  const handleCopyAddress = () => {
+    if (!effectiveAddress) return;
+    try {
+      navigator.clipboard.writeText(effectiveAddress);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  // Fetch DAO membership details (position > 0)
+  const { data: memberData, loading: memberLoading, refetch: refetchMember } =
+    useDaoMember(effectiveAddress);
+
+  // Fetch live TROB market price for the $300 USD calculation (polls every 15s)
+  const { data: priceData, loading: priceLoading } = useTrobPrice(15_000);
+  const liveTrobPrice = (priceData?.priceUsd && priceData.priceUsd > 0) ? priceData.priceUsd : null;
+  const liveSeatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+    ? priceData.seatEntryTrob
+    : (liveTrobPrice ? Math.round((300 / liveTrobPrice) * 100) / 100 : null);
+
+  // Synchronize local membership cache and purge stale keys
+  useEffect(() => {
+    if (!effectiveAddress || typeof window === 'undefined') return;
+    if (memberData?.underfunded || memberData?.status === 'underfunded') {
+      setIsLocalMember(false);
+      try {
+        localStorage.removeItem(`equora_dao_member_${effectiveAddress.toLowerCase()}`);
+      } catch {}
+    } else if (memberData?.isMember || Number(memberData?.position) > 0) {
+      setIsLocalMember(true);
+      try {
+        localStorage.setItem(`equora_dao_member_${effectiveAddress.toLowerCase()}`, 'true');
+      } catch {}
+    } else if (!memberLoading && memberData && !memberData.isMember) {
+      setIsLocalMember(false);
+      try {
+        localStorage.removeItem(`equora_dao_member_${effectiveAddress.toLowerCase()}`);
+        localStorage.removeItem(`equora_wa_joined_${effectiveAddress}`);
+        localStorage.removeItem(`equora_wa_joined_${effectiveAddress.toLowerCase()}`);
+      } catch {}
+    }
+  }, [effectiveAddress, memberData, memberLoading]);
+
+  // Check if member is underfunded (held under temporary 48h reservation)
+  const isUnderfunded = Boolean(
+    isEffectiveConnected &&
+    effectiveAddress &&
+    (memberData?.underfunded === true || memberData?.status === 'underfunded')
+  );
+
+  // Strict verified membership: MUST have connected wallet or test wallet, verified active seat from live backend/contract, AND NOT be underfunded
+  const isVerifiedMember = Boolean(
+    isEffectiveConnected &&
+    effectiveAddress &&
+    !isUnderfunded &&
+    (memberData?.isMember === true || Number(memberData?.position) > 0)
+  );
+
+  // 12-Hour Live Countdown Timer hook for underfunded members
+  const [underfundedTimeLeft, setUnderfundedTimeLeft] = useState<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+    isExpired: boolean;
+  }>({ hours: 12, minutes: 0, seconds: 0, totalSeconds: 12 * 3600, isExpired: false });
+
+  useEffect(() => {
+    if (!isUnderfunded) return;
+
+    function calc() {
+      let targetMs: number;
+      if (memberData?.retopupDeadline) {
+        targetMs = new Date(memberData.retopupDeadline).getTime();
+      } else {
+        targetMs = Date.now() + 12 * 3600 * 1000;
+      }
+      const diff = targetMs - Date.now();
+      if (diff <= 0) {
+        setUnderfundedTimeLeft({ hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, isExpired: true });
+        return;
+      }
+      const totalSeconds = Math.floor(diff / 1000);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setUnderfundedTimeLeft({ hours, minutes, seconds, totalSeconds, isExpired: false });
+    }
+
+    calc();
+    const interval = setInterval(calc, 1000);
+    return () => clearInterval(interval);
+  }, [isUnderfunded, memberData?.retopupDeadline]);
+
+  // Note: Do not kick disconnected mobile users back to landing page;
+  // allow them to view registration criteria and connect wallet directly on mobile.
+
+  // ── Fetch protocol eligibility conditions from API with Hardware Anti-Sybil ─
+  const fetchEligibility = useCallback(async () => {
+    if (!effectiveAddress) return;
+    setEligibilityLoading(true);
+    try {
+      const deviceFingerprint = await getDeviceFingerprint();
+      const res = await fetch(
+        `/api/dao/eligibility/${encodeURIComponent(effectiveAddress)}?deviceFingerprint=${encodeURIComponent(deviceFingerprint)}`,
+        {
+          headers: {
+            'x-device-fingerprint': deviceFingerprint,
+          },
+        }
+      );
+      const json = await res.json();
+      if (json.success && json.data) {
+        setEligibility(json.data);
+      } else {
+        setEligibilityError(json.error || 'Failed to check protocol eligibility');
+      }
+    } catch (err: unknown) {
+      setEligibilityError((err as Error).message);
+    } finally {
+      setEligibilityLoading(false);
+    }
+  }, [effectiveAddress]);
+
+  useEffect(() => {
+    if (effectiveAddress && isEffectiveConnected) {
+      fetchEligibility();
+    }
+  }, [effectiveAddress, isEffectiveConnected, fetchEligibility]);
+
+
+
+  // ── Live On-Chain Resource Staking & SR Voting helper ──────────
+  const handleStakeAndVote = async () => {
+    const targetAddr = activeAddress || effectiveAddress;
+    if (!targetAddr) return;
+    setIsStakingHelper(true);
+    setPayError(null);
+    try {
+      if (typeof window === 'undefined') return;
+      const w = window as any;
+      const tw = w?.trobSafe || w?.trobWeb || w?.trob || w?.trobium || w?.tronWeb;
+
+      let freezeAttempted = false;
+
+      // If TronWeb/TrobSafe wallet is present and can sign
+      if (tw && tw.trx && typeof tw.trx.sign === 'function') {
+        const fullnodeRpc = FULLNODE_RPC_URL || 'https://fullnode-one.trobchain.com';
+
+        try {
+          // 1. Freeze Energy if needed
+          if (!eligibility?.condition2.energy.passed) {
+            const targetEnergy = eligibility?.formula?.dao?.energyStakeTrob ?? 1070;
+            const currentEnergy = eligibility?.condition2.energy.stakedTrob ?? 0;
+            const missingEnergy = Math.max(0, targetEnergy - currentEnergy);
+            if (missingEnergy > 0) {
+              const energySun = Math.round(missingEnergy * 1e6);
+              let txEnergy: any;
+              if (tw.transactionBuilder?.freezeBalanceV2) {
+                txEnergy = await tw.transactionBuilder.freezeBalanceV2(energySun, 'ENERGY', targetAddr);
+              } else {
+                const rpcRes = await fetch(`${fullnodeRpc}/wallet/freezebalancev2`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    owner_address: toTronHex(targetAddr),
+                    frozen_balance: energySun,
+                    resource: 'ENERGY',
+                  }),
+                });
+                if (rpcRes.ok) txEnergy = await rpcRes.json();
+              }
+              if (txEnergy && !txEnergy.Error) {
+                const signedEnergy = await tw.trx.sign(txEnergy);
+                const sendMethod = tw.trx.sendRawTransaction || tw.trx.sendHexTransaction;
+                if (sendMethod) {
+                  await sendMethod.call(tw.trx, signedEnergy);
+                  freezeAttempted = true;
+                }
+              }
+            }
+          }
+
+          // 2. Freeze Bandwidth if needed
+          if (!eligibility?.condition2.bandwidth.passed) {
+            const targetBandwidth = eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237;
+            const currentBandwidth = eligibility?.condition2.bandwidth.stakedTrob ?? 0;
+            const missingBandwidth = Math.max(0, targetBandwidth - currentBandwidth);
+            if (missingBandwidth > 0) {
+              const bandwidthSun = Math.round(missingBandwidth * 1e6);
+              let txBandwidth: any;
+              if (tw.transactionBuilder?.freezeBalanceV2) {
+                txBandwidth = await tw.transactionBuilder.freezeBalanceV2(bandwidthSun, 'BANDWIDTH', targetAddr);
+              } else {
+                const rpcRes = await fetch(`${fullnodeRpc}/wallet/freezebalancev2`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    owner_address: toTronHex(targetAddr),
+                    frozen_balance: bandwidthSun,
+                    resource: 'BANDWIDTH',
+                  }),
+                });
+                if (rpcRes.ok) txBandwidth = await rpcRes.json();
+              }
+              if (txBandwidth && !txBandwidth.Error) {
+                const signedBandwidth = await tw.trx.sign(txBandwidth);
+                const sendMethod = tw.trx.sendRawTransaction || tw.trx.sendHexTransaction;
+                if (sendMethod) {
+                  await sendMethod.call(tw.trx, signedBandwidth);
+                  freezeAttempted = true;
+                }
+              }
+            }
+          }
+
+          // 3. Cast SR Governance Vote if needed
+          if (!eligibility?.condition2.srVote.passed) {
+            const totalFrozen =
+              (eligibility?.condition2.energy.stakedTrob ?? 1070) +
+              (eligibility?.condition2.bandwidth.stakedTrob ?? 237);
+            const votesToCast = Math.max(1, Math.min(1000, totalFrozen));
+
+            const isTestnet = process.env.NEXT_PUBLIC_TARGET_NETWORK === 'testnet';
+            const primarySr = isTestnet
+              ? (OFFICIAL_EQUORA_TESTNET_SR || OFFICIAL_EQUORA_SR)
+              : (OFFICIAL_EQUORA_SR || OFFICIAL_EQUORA_TESTNET_SR);
+            if (primarySr) {
+              let txVote: any;
+              const voteMethod = (tw.transactionBuilder?.voteWitnessAccount || tw.transactionBuilder?.vote)?.bind(tw.transactionBuilder);
+              if (voteMethod) {
+                txVote = await voteMethod({ [primarySr]: votesToCast }, targetAddr);
+              } else {
+                const rpcRes = await fetch(`${fullnodeRpc}/wallet/votewitnessaccount`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    owner_address: toTronHex(targetAddr),
+                    votes: [{ vote_address: toTronHex(primarySr), vote_count: votesToCast }],
+                  }),
+                });
+                if (rpcRes.ok) txVote = await rpcRes.json();
+              }
+              if (txVote && !txVote.Error) {
+                const signedVote = await tw.trx.sign(txVote);
+                const sendMethod = tw.trx.sendRawTransaction || tw.trx.sendHexTransaction;
+                if (sendMethod) {
+                  await sendMethod.call(tw.trx, signedVote);
+                  freezeAttempted = true;
+                }
+              }
+            }
+          }
+
+          if (freezeAttempted) {
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        } catch (innerErr) {
+          console.warn('[DaoAccessGate] Inpage Freeze V2 notice:', innerErr);
+        }
+      }
+
+      // Query live on-chain status from TrobChain node
+      await fetch('/api/dao/stake-resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: targetAddr }),
+      });
+      await fetchEligibility();
+
+      if (freezeAttempted) {
+        setPayError('Notice: Live on-chain resources updated and verified! You can proceed below to deposit $300 TROB and activate your seat.');
+      } else {
+        setPayError('Notice: Resource staking provides free daily gas. You are already eligible to proceed directly below to deposit $300 TROB and activate your Genesis seat!');
+      }
+    } catch (err: unknown) {
+      console.warn('[DaoAccessGate] Resource stake helper notice:', err);
+      setPayError('Notice: Resource staking is optional for zero gas. You can proceed directly to deposit $300 TROB to activate your seat.');
+    } finally {
+      setIsStakingHelper(false);
+    }
+  };
+
+  // ── Seat Payment Handler: $300 worth of TROB at live rate ──────────────────
+  const handleClaimSeat = async (bypassCondition2 = false) => {
+    if (!wallet.isConnected) {
+      setPayError('Please connect your TrobSafe wallet first.');
+      return;
+    }
+    if (!termsAccepted) {
+      setTermsAccepted(true);
+    }
+
+    // Strict check: Only block if eligibility check is loaded and explicitly failed (passed === false)
+    if (eligibility?.condition1 && eligibility.condition1.passed === false) {
+      setPayError(eligibility.condition1.reason || 'Eligible wallet must be created on or after 1 October 2026.');
+      return;
+    }
+    // Protocol condition 2 is optional for gas optimization and does NOT block the $300 deposit
+    if (!liveSeatEntryTrob || !liveTrobPrice) {
+      setPayError('Live TROB market rate is currently loading. Please wait for the real-time oracle price.');
+      return;
+    }
+    const activeAddr = wallet.base58Address || wallet.hexAddress;
+    if (!activeAddr) {
+      setPayError('No active address found from TrobSafe. Please unlock your wallet.');
+      return;
+    }
+
+    setPayError(null);
+    setPayTxHash('pending');
+
+    try {
+      const targetContract =
+        DAO_CONTRACT_ADDRESS &&
+        DAO_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' &&
+        DAO_CONTRACT_ADDRESS.length > 10
+          ? DAO_CONTRACT_ADDRESS
+          : getActiveDaoAddress();
+
+      const seatEntryTrob = (priceData?.seatEntryTrob && priceData.seatEntryTrob > 0)
+        ? priceData.seatEntryTrob
+        : liveSeatEntryTrob;
+
+      // Security floor: Entry fee is strictly pegged to $300 USD (minimum 3,000 TROB)
+      if (seatEntryTrob < 3000) {
+        throw new Error(`Invalid entry fee calculation (${seatEntryTrob} TROB). A minimum of $300 USD is strictly required.`);
+      }
+      const callValueSun  = Math.ceil(seatEntryTrob * 1_000_000);
+
+      const payload = {
+        contract_address:   targetContract,
+        function_selector: 'joinDAO()',
+        parameter:         '',
+        call_value:        callValueSun,
+        fee_limit:         100_000_000,
+        owner_address:     activeAddr,
+        network:           process.env.NEXT_PUBLIC_TARGET_NETWORK || 'mainnet',
+      };
+
+      let txId: string | null = null;
+
+      try {
+        const res = await wallet.callContract(payload);
+        if (res?.txid) {
+          txId = res.txid;
+        } else if (res && (res as any).result === false) {
+          const errorDetail = (res as any)?.Error || (res as any)?.message || 'Transaction rejected or failed in TrobSafe wallet.';
+          throw new Error(errorDetail);
+        }
+      } catch (contractErr: unknown) {
+        console.warn('[DaoAccessGate] Contract invocation notice:', contractErr);
+        const errMsg = contractErr instanceof Error ? contractErr.message : String(contractErr);
+        throw new Error(errMsg || 'Transaction was cancelled or rejected in TrobSafe.');
+      }
+
+      if (!txId) {
+        throw new Error('On-chain deposit was not confirmed by TrobSafe. Please approve the payment in your wallet.');
+      }
+
+      // Verify on-chain execution receipt from TrobChain FullNode
+      const confirmCheck = await pollOnChainTxSuccess(txId);
+      if (!confirmCheck.success) {
+        throw new Error(confirmCheck.error || 'Transaction failed or reverted on blockchain. Deposit was not accepted.');
+      }
+
+      // 2. Register membership in database via API route with verified on-chain tx & Anti-Sybil device fingerprint
+      const deviceFingerprint = await getDeviceFingerprint();
+      const claimRes = await fetch('/api/dao/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-device-fingerprint': deviceFingerprint,
+        },
+        body: JSON.stringify({
+          address: activeAddr,
+          txHash: txId,
+          deviceFingerprint,
+          termsAccepted: true,
+        }),
+      });
+      const data = await claimRes.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to verify membership payment on TrobChain.');
+      }
+
+      localStorage.setItem(`equora_dao_member_${activeAddr.toLowerCase()}`, 'true');
+      setIsLocalMember(true);
+      setPayTxHash(txId);
+      await refetchMember();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Claim transaction failed. Please try again.';
+      setPayError(msg);
+      setPayTxHash(null);
+    }
+  };
+
+  const handleDisconnect = () => {
+    wallet.disconnect();
+    auth.signOut();
+    try {
+      localStorage.setItem('equora_wallet_explicit_disconnect', 'true');
+      localStorage.removeItem('trobsafe_address');
+      localStorage.removeItem('equora_auth_address');
+      localStorage.removeItem('equora_jwt');
+      sessionStorage.clear();
+    } catch { /* ignore */ }
+    window.location.href = '/';
+  };
+
+  // ── Access Restricted: Underfunded 12-Hour Dashboard Barrier Screen ────────
+  if (isUnderfunded) {
+    const underfundedPos = memberData?.position || '—';
+    const underfundedPaidTrob = memberData?.entryAmountTrob ?? memberData?.entryAmountBtt ?? 1.5;
+    const liveRateUsd = liveTrobPrice ?? 0;
+    const requiredTotalTrob = liveSeatEntryTrob ?? 0;
+    const netRemainingTrob = Math.max(0, Math.round((requiredTotalTrob - underfundedPaidTrob) * 100) / 100);
+    const paidUsdEstimate = memberData?.entryAmountUsdEstimate ?? (liveRateUsd > 0 ? Math.round(underfundedPaidTrob * liveRateUsd * 100) / 100 : 0);
+    const remainingUsdEstimate = Math.max(0, Math.round((300 - paidUsdEstimate) * 100) / 100);
+
+    return (
+      <div className="min-h-[100dvh] w-full bg-[#F8FAFD] text-[#14304A] flex flex-col items-center justify-center p-4 sm:p-6 font-sans relative select-none">
+        {/* Subtle Ambient Brand Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-72 bg-gradient-to-b from-[#0E62E4]/8 to-transparent pointer-events-none" />
+
+        {/* Minimal Luxury Card Matching Equora Project */}
+        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-[0_20px_50px_rgba(14,98,228,0.08)] p-6 sm:p-8 space-y-5 relative backdrop-blur-xl">
+
+          {/* Top Logo & Title */}
+          <div className="text-center space-y-2">
+            <div className="relative inline-block mx-auto">
+              <EquoraLogo size={48} className="mx-auto" />
+              <div className="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full p-1 shadow-xs border border-white">
+                <Crown className="w-3 h-3 text-white" />
+              </div>
+            </div>
+
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80">
+                <Clock className="w-3 h-3 text-amber-600" />
+                <span>Seat #{underfundedPos} Reserved</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black font-sora text-[#14304A] tracking-tight mt-1.5">
+                EQUORA <span className="text-[#0E62E4]">DAO</span>
+              </h1>
+              <p className="text-xs text-[#60739A] mt-0.5">
+                Complete remaining balance to activate your Genesis seat.
+              </p>
+            </div>
+          </div>
+
+          {/* Minimal 3-Part Digital Countdown */}
+          <div className="bg-[#F8FAFD] rounded-2xl border border-slate-200/70 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#60739A]">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#0E62E4]" />
+                <span>12h Reservation Window</span>
+              </span>
+              <span className="font-mono font-bold text-[#0E62E4]">
+                {underfundedTimeLeft.isExpired ? 'Expired' : 'Active'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                  {String(underfundedTimeLeft.hours).padStart(2, '0')}
+                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Hours</div>
+              </div>
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-[#14304A]">
+                  {String(underfundedTimeLeft.minutes).padStart(2, '0')}
+                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Minutes</div>
+              </div>
+              <div className="bg-white rounded-xl p-2 border border-slate-200/80 shadow-xs">
+                <div className="text-xl sm:text-2xl font-black font-mono text-rose-600 animate-pulse">
+                  {String(underfundedTimeLeft.seconds).padStart(2, '0')}
+                </div>
+                <div className="text-[9px] uppercase font-bold text-slate-400">Seconds</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Minimal Financial Summary */}
+          <div className="bg-[#EFF6FF] rounded-2xl border border-[#0E62E4]/20 p-4 space-y-2 text-xs">
+            <div className="flex justify-between items-center text-[#60739A]">
+              <span>Council Seat Fee (Fixed $300)</span>
+              <span className="font-mono font-semibold text-[#14304A]">
+                {requiredTotalTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-emerald-600">
+              <span>Initial Deposit Credited</span>
+              <span className="font-mono font-semibold">
+                - {underfundedPaidTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+              </span>
+            </div>
+            <div className="pt-2 border-t border-[#0E62E4]/15 flex justify-between items-center">
+              <span className="font-bold text-[#14304A] text-sm">Remaining Due</span>
+              <div className="text-right">
+                <span className="text-lg sm:text-xl font-black font-mono text-[#0E62E4]">
+                  {netRemainingTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB
+                </span>
+                <div className="text-[10px] text-[#60739A]">≈ ${remainingUsdEstimate}.00 USD</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Action Button */}
+          <div className="space-y-3 pt-1">
+            <button
+              type="button"
+              disabled={underfundedTimeLeft.isExpired}
+              onClick={() => setUnderfundedRetopupOpen(true)}
+              className={`w-full min-h-[48px] py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-center leading-snug font-sans ${
+                underfundedTimeLeft.isExpired
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] active:scale-[0.99]'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>
+                {underfundedTimeLeft.isExpired
+                  ? 'Reservation Window Expired'
+                  : `Complete Seat Activation (${netRemainingTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)`}
+              </span>
+              <ArrowRight className="w-4 h-4 shrink-0" />
+            </button>
+
+            {/* Clean Secondary Links */}
+            <div className="flex items-center justify-center text-xs text-[#60739A] px-1 pt-1">
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="hover:text-rose-600 transition-colors flex items-center gap-1 cursor-pointer font-semibold text-[11px]"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect Wallet</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Retopup Modal */}
+        <RetopupModal
+          isOpen={underfundedRetopupOpen}
+          onClose={() => setUnderfundedRetopupOpen(false)}
+          seatPosition={typeof underfundedPos === 'number' ? underfundedPos : 1}
+          retopupDeadline={memberData?.retopupDeadline}
+          trobPriceUsd={liveRateUsd}
+          alreadyPaidTrob={underfundedPaidTrob}
+          isUnderfunded={true}
+          unearnedDebtTrob={memberData?.unearnedDebtTrob}
+          onSuccess={() => {
+            setUnderfundedRetopupOpen(false);
+            refetchMember();
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // ── Access Granted: Render DAO Dashboard Layout ────────────────────────────
+  if (isVerifiedMember) {
+    return <>{children}</>;
+  }
+
+  // If verifying membership on load, display clean loader instead of gate window
+  if (wallet.isConnected && activeAddress && memberLoading && !memberData) {
+    return (
+      <div className="min-h-screen bg-[#F0F4F8] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-[#0E62E4] animate-spin" />
+          <span className="text-xs font-semibold text-[#60739A] tracking-wider uppercase font-sans">
+            Verifying Council Membership…
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-[#F0F4F8] via-[#F6F9FF] to-[#EBF3FC] text-[#17334F] flex flex-col items-center justify-start sm:justify-center p-3 sm:p-6 lg:p-10 py-6 sm:py-10 relative select-none font-sans overflow-x-hidden overflow-y-auto">
+        {/* Soft Ambient Background Glows matching project */}
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#0E62E4]/8 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-[#38BDF8]/10 rounded-full blur-[120px] pointer-events-none" />
+
+        {/* ── Main Registration Card (Light Fintech Theme • Fully Responsive Desktop & Mobile) ────── */}
+        <div className="w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl my-auto bg-white rounded-[20px] min-[360px]:rounded-[24px] sm:rounded-[32px] border border-[#E2ECF9] shadow-[0_24px_70px_-15px_rgba(14,98,228,0.1)] p-3.5 min-[360px]:p-4 sm:p-6 lg:p-8 xl:p-10 relative transition-all">
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-start">
+
+            {/* ── LEFT COLUMN: Brand Overview, Entry Fee & Protocol Privileges (Desktop) ────── */}
+            <div className="lg:col-span-5 space-y-4 sm:space-y-5 lg:sticky lg:top-6">
+
+              {/* Top Brand Header: Official EQUORA Logo + EQUORA DAO */}
+              <div className="text-center lg:text-left space-y-2.5 pt-0.5 sm:pt-1">
+                <div className="flex justify-center lg:justify-start">
+                  <div className="relative group">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/20 p-2 sm:p-2.5 flex items-center justify-center shadow-[0_6px_20px_rgba(14,98,228,0.14)] transition-transform duration-200 group-hover:scale-105">
+                      <EquoraLogo className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(14,98,228,0.25)]" />
+                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center shadow-md border-2 border-white">
+                        <Crown className="w-2.5 h-2.5 text-amber-950" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-wider uppercase font-inter text-[#17334F]">
+                    EQUORA <span className="text-[#0E62E4]">DAO</span>
+                  </h1>
+                  <div className="flex items-center justify-center lg:justify-start gap-1.5 text-[10px] sm:text-[11px] font-bold text-[#4F6D87] tracking-wider uppercase font-sans">
+                    <span>Genesis Council</span>
+                    <span className="text-[#CBD5E1]">•</span>
+                    <span className="text-[#0E62E4] font-semibold">100 Seats Cap</span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] sm:text-xs text-[#60739A] leading-relaxed max-w-[340px] lg:max-w-none mx-auto lg:mx-0 font-sans">
+                  {!wallet.isConnected
+                    ? 'Connect your verified TrobSafe wallet to evaluate protocol criteria and claim your Genesis seat.'
+                    : 'Wallet active. Verify mandatory protocol compliance and authorize real-time 300 USD entry payment.'}
+                </p>
+              </div>
+
+              {/* ── Council Seat Entry Price Box ($300 Worth Pegged to Live Rate) ── */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-[#0E62E4]/25 space-y-2.5 shadow-xs">
+                {/* Header row: Title + Live Market Price badge */}
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-sans">
+                  <span className="font-bold text-[#17334F] text-[11px] sm:text-xs">
+                    Council Seat Entry Fee ($300 USD)
+                  </span>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] sm:text-[11px] font-semibold text-emerald-800 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-mono">
+                      {liveTrobPrice ? `1 TROB = $${liveTrobPrice.toFixed(4)} USD` : 'Fetching Live Price…'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary numbers row: Live TROB amount required for $300 USD */}
+                <div className="flex flex-wrap items-baseline justify-between gap-2 pt-0.5">
+                  <div className="flex items-baseline gap-1.5 min-w-0">
+                    {liveSeatEntryTrob ? (
+                      <>
+                        <span suppressHydrationWarning className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-black font-sora text-[#17334F] tracking-tight">
+                          {liveSeatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-xs sm:text-sm font-bold text-[#0E62E4] font-sans shrink-0">TROB</span>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 py-1 text-slate-500 text-xs sm:text-sm font-semibold">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#0E62E4]" />
+                        <span>Connecting to live market oracle…</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold bg-[#0E62E4]/10 text-[#0E62E4] border border-[#0E62E4]/25 font-sans shrink-0">
+                    $300.00 USD Worth
+                  </span>
+                </div>
+
+                {/* Micro note: Real-time calculation */}
+                <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-[#4F6D87] pt-1.5 border-t border-[#0E62E4]/15 flex-wrap gap-1 font-sans">
+                  <span>Payable via connected TrobSafe wallet</span>
+                  <span className="font-mono text-[10px] sm:text-[11px] text-[#0E62E4] font-semibold">
+                    {liveTrobPrice ? `($300.00 ÷ $${liveTrobPrice.toFixed(4)})` : 'Live Market Oracle'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ── Mobile & Tablet Exclusive: Collapsible Genesis Privileges ── */}
+              <div className="lg:hidden rounded-2xl bg-[#F8FAFD] border border-[#E2ECF9] overflow-hidden font-sans transition-all shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setShowMobilePrivileges(!showMobilePrivileges)}
+                  className="w-full py-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-[#17334F] hover:bg-[#EFF6FF] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#0E62E4]" />
+                    <span>Genesis Council Privileges (4 Sovereign Benefits)</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[#0E62E4] transition-transform duration-200 ${
+                      showMobilePrivileges ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {showMobilePrivileges && (
+                  <ul className="p-3.5 pt-1 space-y-2.5 text-xs text-[#4F6D87] border-t border-[#E2ECF9] animate-in fade-in duration-150">
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 mt-0.5">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="leading-snug">
+                        <span className="font-bold text-[#17334F]">100 Sovereign Seats:</span> Permanently capped supply. Zero additional Genesis seats can ever be created on-chain.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="leading-snug">
+                        <span className="font-bold text-[#17334F]">Instant 300 / N Cashback:</span> Automated real-time P2P algorithmic disbursement upon seat activation.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="leading-snug">
+                        <span className="font-bold text-[#17334F]">35% Matrix Volume Share:</span> Perpetual dividend distribution from global retail protocol volume.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Vote className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="leading-snug">
+                        <span className="font-bold text-[#17334F]">1.0% Governance Power:</span> Sovereign on-chain voting rights across all decentralized governance votes.
+                      </div>
+                    </li>
+                  </ul>
+                )}
+              </div>
+
+              {/* ── Desktop Exclusive: Protocol Genesis Privileges Card ─────── */}
+              <div className="hidden lg:block p-4 rounded-2xl bg-[#F8FAFD] border border-[#E2ECF9] space-y-3 font-sans">
+                <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#17334F]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0E62E4]" />
+                  <span>Genesis Council Privileges</span>
+                </div>
+                <ul className="space-y-2.5 text-xs text-[#4F6D87]">
+                  <li className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-[#0E62E4]/10 text-[#0E62E4] flex items-center justify-center shrink-0 mt-0.5">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="leading-snug">
+                      <span className="font-bold text-[#17334F]">100 Sovereign Seats:</span> Permanently capped supply. Zero additional Genesis seats can ever be created on-chain.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="leading-snug">
+                      <span className="font-bold text-[#17334F]">Instant 300 / N Cashback:</span> Automated real-time P2P algorithmic disbursement upon seat activation.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <Layers className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="leading-snug">
+                      <span className="font-bold text-[#17334F]">35% Matrix Volume Share:</span> Perpetual dividend distribution from global retail protocol volume.
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <Vote className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="leading-snug">
+                      <span className="font-bold text-[#17334F]">1.0% Governance Power:</span> Sovereign on-chain voting rights across all decentralized governance votes.
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Desktop Consensus & Security Footnote */}
+              <div className="hidden lg:flex items-center justify-between text-[11px] text-[#60739A] px-1 font-sans">
+                <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>TrobChain L1 Consensus Verified</span>
+                </div>
+                <span className="text-[10px] font-semibold text-[#0E62E4] bg-[#0E62E4]/10 px-2 py-0.5 rounded-full border border-[#0E62E4]/20">
+                  Zero Referrals Required
+                </span>
+              </div>
+            </div>
+
+            {/* ── RIGHT COLUMN: Wallet, Requirements, Verification, Action CTA ────── */}
+            <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+
+              {/* ── Anti-Sybil Device Limit Warning (Enforces 1 Seat Per Device) ── */}
+              {eligibility?.deviceRestriction?.hasClaimed && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300/80 text-amber-950 font-sans space-y-1.5 shadow-xs">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                        Device Restriction Enforced (1 Seat Per Device)
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed">
+                        This physical device is already associated with{' '}
+                        <strong className="font-bold text-amber-950">
+                          Council Seat #{eligibility.deviceRestriction.claimedSeat}
+                        </strong>{' '}
+                        ({eligibility.deviceRestriction.claimedAddress?.slice(0, 6)}...{eligibility.deviceRestriction.claimedAddress?.slice(-4)}).
+                        To protect decentralized governance and prevent Sybil farming, only 1 seat per physical device is permitted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 1. YOUR WALLET ─────────────────────────────────────────────── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-[#17334F] font-sans">
+                    Your Wallet
+                  </label>
+                  {wallet.isConnected && (
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      className="text-[10px] font-bold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer font-sans"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      <span>Disconnect</span>
+                    </button>
+                  )}
+                </div>
+
+                {wallet.isConnected && activeAddress ? (
+                  <div className="relative">
+                    <div className="w-full py-2.5 sm:py-3 px-3 sm:px-3.5 rounded-xl bg-[#F8FAFD] border border-[#E2ECF9] text-xs font-mono font-medium text-[#17334F] flex items-center justify-between shadow-xs">
+                      <span className="truncate pr-2 font-mono text-[11px] sm:text-xs font-semibold">{activeAddress}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleCopyAddress}
+                          title="Copy Address"
+                          className="p-1 rounded hover:bg-[#EFF6FF] text-[#60739A] hover:text-[#0E62E4] transition-colors cursor-pointer"
+                        >
+                          {copiedAddress ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#60739A] mt-1 pl-1 font-sans">
+                      <div className="flex items-center gap-1.5">
+                        <span>Connected from TrobSafe (Active)</span>
+                        {isMobileDevice() && (
+                          <button
+                            type="button"
+                            onClick={() => openInTrobSafeApp()}
+                            className="text-[#0E62E4] hover:underline font-bold inline-flex items-center gap-0.5 ml-1 cursor-pointer"
+                          >
+                            <span>Open in App</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                      {copiedAddress && <span className="text-emerald-600 font-semibold">Address copied</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => triggerSmartConnectWallet({ wallet, openModal: () => setWalletModalOpen(true) })}
+                      className="w-full py-3 sm:py-3.5 px-4 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(14,98,228,0.25)] transition-all cursor-pointer font-sans"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      <span>Connect TrobSafe Wallet</span>
+                    </button>
+                    <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] text-[#60739A] px-1 font-sans">
+                      <a
+                        href={TROBSAFE_CHROME_STORE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Chrome Extension</span>
+                      </a>
+                      <a
+                        href="/downloads/trobsafe.apk"
+                        download="trobsafe.apk"
+                        className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Smartphone className="w-3 h-3" />
+                        <span>Android APK</span>
+                      </a>
+                      <a
+                        href={TROBSAFE_APP_STORE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0E62E4] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>iOS App</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── 2. Protocol Deposit Requirements Checklist (PDF Page 4) ─────── */}
+              <div className="space-y-2 pt-0.5 sm:pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-extrabold uppercase tracking-wider text-[#17334F] text-[10px] sm:text-[11px] font-sans">
+                    On-Chain Eligibility & Gas Optimization
+                  </span>
+                  {eligibilityLoading && <Loader2 className="w-3.5 h-3.5 text-[#0E62E4] animate-spin" />}
+                </div>
+
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-[#F8FAFD] border border-[#E2ECF9] space-y-2.5 text-xs font-sans">
+                  {/* Energy Requirement */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                        <Zap className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[#334155] text-[11px] sm:text-xs font-semibold block truncate">
+                          Energy Stake ({eligibility?.formula?.dao?.energyStakeTrob ?? 1070} TROB)
+                        </span>
+                        <span className="text-[10px] text-[#60739A] block truncate">
+                          {!isEffectiveConnected
+                            ? 'Free daily contract execution gas'
+                            : eligibilityLoading
+                            ? 'Checking frozen energy on TrobChain…'
+                            : eligibility?.condition2.energy.passed
+                            ? `${(eligibility.condition2.energy.stakedTrob).toLocaleString()} TROB staked • Zero Gas Active`
+                            : `${(eligibility?.condition2.energy.stakedTrob ?? 0).toLocaleString()} / ${(eligibility?.formula?.dao?.energyStakeTrob ?? 1070).toLocaleString()} TROB staked`}
+                        </span>
+                      </div>
+                    </div>
+                    {!isEffectiveConnected ? (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md shrink-0">
+                        Optional (0 Gas)
+                      </span>
+                    ) : eligibilityLoading ? (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md shrink-0">
+                        <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" />
+                      </span>
+                    ) : eligibility?.condition2.energy.passed ? (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" /> Staked
+                      </span>
+                    ) : (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md shrink-0">
+                        {eligibility?.condition2.energy.stakedTrob ?? 0} / {eligibility?.formula?.dao?.energyStakeTrob ?? 1070} (Optional)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bandwidth Requirement */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-[#0E62E4] flex items-center justify-center shrink-0">
+                        <Radio className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[#334155] text-[11px] sm:text-xs font-semibold block truncate">
+                          Bandwidth Stake ({eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237} TROB)
+                        </span>
+                        <span className="text-[10px] text-[#60739A] block truncate">
+                          {!isEffectiveConnected
+                            ? 'Free network byte broadcast gas'
+                            : eligibilityLoading
+                            ? 'Checking frozen bandwidth on TrobChain…'
+                            : eligibility?.condition2.bandwidth.passed
+                            ? `${(eligibility.condition2.bandwidth.stakedTrob).toLocaleString()} TROB staked • Zero Gas Active`
+                            : `${(eligibility?.condition2.bandwidth.stakedTrob ?? 0).toLocaleString()} / ${(eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237).toLocaleString()} TROB staked`}
+                        </span>
+                      </div>
+                    </div>
+                    {!isEffectiveConnected ? (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md shrink-0">
+                        Optional (0 Gas)
+                      </span>
+                    ) : eligibilityLoading ? (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md shrink-0">
+                        <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" />
+                      </span>
+                    ) : eligibility?.condition2.bandwidth.passed ? (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" /> Staked
+                      </span>
+                    ) : (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md shrink-0">
+                        {eligibility?.condition2.bandwidth.stakedTrob ?? 0} / {eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237} (Optional)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Equora_Fi SR Vote */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Vote className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[#334155] text-[11px] sm:text-xs font-semibold block truncate">
+                          Equora_Fi SR Governance Vote
+                        </span>
+                        <span className="text-[10px] text-[#60739A] block truncate font-mono">
+                          {eligibility?.condition2.srVote.officialSrAddress || OFFICIAL_EQUORA_SR || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}
+                        </span>
+                      </div>
+                    </div>
+                    {!isEffectiveConnected ? (
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-md shrink-0">
+                        Optional
+                      </span>
+                    ) : eligibilityLoading ? (
+                      <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md shrink-0">
+                        <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" />
+                      </span>
+                    ) : eligibility?.condition2.srVote.passed ? (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" /> Confirmed
+                      </span>
+                    ) : (
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-md shrink-0">
+                        Optional
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Condition 1: Wallet Creation Date */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#E2ECF9]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-lg bg-cyan-500/10 text-cyan-600 flex items-center justify-center shrink-0">
+                        <Calendar className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[#334155] text-[11px] sm:text-xs font-semibold block truncate">
+                          Activation Date (≥ 1 Oct 2026)
+                        </span>
+                        {!isEffectiveConnected ? (
+                          <span className="text-[10px] text-[#60739A] block truncate">
+                            Auto-verified on TrobChain upon connection
+                          </span>
+                        ) : eligibilityLoading ? (
+                          <span className="text-[10px] text-[#0E62E4] block truncate">
+                            Querying genesis timestamp on-chain…
+                          </span>
+                        ) : eligibility?.condition1.creationDate ? (
+                          <span className="text-[10px] text-[#475569] font-medium block truncate">
+                            {new Date(eligibility.condition1.creationDate).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                            {' • '}
+                            {new Date(eligibility.condition1.creationDate).toLocaleTimeString(undefined, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-600 font-medium block truncate">
+                            Verified on TrobChain
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {!isEffectiveConnected ? (
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md shrink-0">
+                        Connect Wallet
+                      </span>
+                    ) : eligibilityLoading ? (
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Loader2 className="w-3 h-3 animate-spin text-[#0E62E4]" /> Verifying…
+                      </span>
+                    ) : eligibility?.condition1.passed ? (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" /> Eligible
+                      </span>
+                    ) : (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-md shrink-0">
+                        Not Eligible
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Helper Action: Auto-Stake & Vote for Testnet / Live */}
+                {wallet.isConnected && (!eligibility?.condition2.passed) && (
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={handleStakeAndVote}
+                      disabled={isStakingHelper}
+                      className="w-full min-h-[40px] py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-slate-700 text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-2xs active:scale-[0.98] font-sans text-center leading-tight"
+                    >
+                      {isStakingHelper ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600 shrink-0" />
+                      ) : (
+                        <Zap className="w-3.5 h-3.5 text-[#0E62E4] shrink-0" />
+                      )}
+                      <span className="leading-snug break-words">
+                        {isStakingHelper ? 'Checking On-Chain Resources…' : 'Check / Stake Resources (Optional Zero Gas)'}
+                      </span>
+                    </button>
+                    <p className="text-[10px] text-[#60739A] text-center font-sans">
+                      Staking TROB for energy/bandwidth gives free daily gas. You can proceed directly to deposit $300 TROB below.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* ── 3. Terms & Conditions Checkbox ────────────────────────────── */}
+              <div className="pt-0.5 sm:pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#334155] font-sans">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-[#CBD5E1] bg-white text-[#0E62E4] focus:ring-[#0E62E4] focus:ring-offset-0 cursor-pointer shrink-0"
+                  />
+                  <span className="text-[11px] leading-tight select-none text-[#60739A]">
+                    I accept the{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setTermsModalOpen(true);
+                      }}
+                      className="font-bold text-[#0E62E4] hover:text-[#0B52C4] hover:underline cursor-pointer"
+                    >
+                      Genesis DAO Governance Terms & Conditions
+                    </button>
+                    .
+                  </span>
+                </label>
+              </div>
+
+              {/* ── Beautiful Protocol Alert / Notices ───────────────────────── */}
+              {payError === 'CONDITION_2_REQUIRED' ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-50/80 to-blue-50/50 border border-amber-300/90 shadow-sm text-xs font-sans space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <Zap className="w-4 h-4 fill-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-white">
+                            Protocol Condition 2
+                          </span>
+                          <span className="text-[11px] font-bold text-amber-950">Resource Staking</span>
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-bold text-[#14304A]">
+                          Energy & Bandwidth Staking Recommended
+                        </h4>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPayError(null)}
+                      className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-[#475569] leading-relaxed">
+                    Staking TROB gives your wallet free energy & bandwidth to execute 50+ DAO transactions daily with zero gas burn.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-xl bg-white/90 border border-amber-200/90 flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" /> Energy Stake:
+                      </span>
+                      <span className="text-[11px] font-bold font-mono text-amber-900">
+                        {eligibility?.condition2.energy.stakedTrob ?? 0} / {eligibility?.formula?.dao?.energyStakeTrob ?? 1070} TROB
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/90 border border-amber-200/90 flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
+                        <Radio className="w-3.5 h-3.5 text-blue-500" /> Bandwidth Stake:
+                      </span>
+                      <span className="text-[11px] font-bold font-mono text-amber-900">
+                        {eligibility?.condition2.bandwidth.stakedTrob ?? 0} / {eligibility?.formula?.dao?.bandwidthStakeTrob ?? 237} TROB
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={handleStakeAndVote}
+                      disabled={isStakingHelper}
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                    >
+                      {isStakingHelper ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Zap className="w-3.5 h-3.5 fill-white" />
+                      )}
+                      <span>One-Click Stake & Vote</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClaimSeat(true)}
+                      className="py-2.5 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <span>Proceed Direct to Deposit</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+              ) : payError ? (
+                <div
+                  className={`p-3.5 rounded-2xl border text-xs font-sans space-y-2 animate-in fade-in duration-200 ${
+                    payError.startsWith('Notice:')
+                      ? 'bg-blue-50/90 border-blue-200 text-blue-900'
+                      : 'bg-gradient-to-r from-rose-50 to-amber-50/50 border-rose-200/90 text-rose-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2">
+                      {payError.startsWith('Notice:') ? (
+                        <Info className="w-4 h-4 text-[#0E62E4] shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      )}
+                      <p
+                        className={`leading-snug text-[11px] sm:text-xs font-medium ${
+                          payError.startsWith('Notice:') ? 'text-blue-900' : 'text-rose-700'
+                        }`}
+                      >
+                        {payError}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPayError(null)}
+                      className={`p-0.5 cursor-pointer shrink-0 ${
+                        payError.startsWith('Notice:') ? 'text-blue-400 hover:text-blue-600' : 'text-rose-400 hover:text-rose-600'
+                      }`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {isMobileDevice() && (
+                    <div className="pt-0.5 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openInTrobSafeApp()}
+                        className="px-3 py-1.5 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in TrobSafe App</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* ── 4. Primary Action Button (Register & Pay) ──────────────────── */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!wallet.isConnected) {
+                    triggerSmartConnectWallet({ wallet, openModal: () => setWalletModalOpen(true) });
+                    return;
+                  }
+                  handleClaimSeat();
+                }}
+                disabled={payTxHash === 'pending' || (wallet.isConnected && !liveSeatEntryTrob)}
+                className={`w-full min-h-[48px] py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm md:text-base flex items-center justify-center gap-2 text-center transition-all font-sans cursor-pointer ${
+                  payTxHash === 'pending'
+                    ? 'bg-slate-200 text-slate-500 cursor-wait'
+                    : !wallet.isConnected
+                    ? 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] ring-2 ring-blue-300/40 active:scale-[0.99]'
+                    : !liveSeatEntryTrob
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] hover:from-[#0B52C4] hover:to-[#083E96] text-white shadow-[0_8px_25px_rgba(14,98,228,0.3)] ring-2 ring-blue-300/40 active:scale-[0.99]'
+                }`}
+              >
+                {payTxHash === 'pending' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
+                    <span className="truncate">Broadcasting Transaction…</span>
+                  </>
+                ) : !wallet.isConnected ? (
+                  <>
+                    <Wallet className="w-4 h-4 shrink-0" />
+                    <span>Connect TrobSafe Wallet to Register</span>
+                  </>
+                ) : !liveSeatEntryTrob ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400 shrink-0" />
+                    <span>Fetching Live Market Rate…</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="leading-snug break-words">
+                      {`Submit Entry Deposit (${liveSeatEntryTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB) • $300 USD`}
+                    </span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* ── Bottom Branding (Full Width Across Desktop Grid) ──────────── */}
+            <div className="lg:col-span-12 pt-3 sm:pt-4 text-center border-t border-[#E2ECF9]">
+              <p className="text-[10px] sm:text-[11px] text-[#60739A] flex flex-wrap items-center justify-center gap-1.5 font-sans font-medium">
+                <span>Autonomous Consensus Protocol</span>
+                <span>•</span>
+                <span>TrobChain L1</span>
+                <span>•</span>
+                <Link href="/" className="text-[#0E62E4] hover:underline font-semibold">
+                  EQUORA.FI
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <WalletModal isOpen={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+      <TermsModal
+        isOpen={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
+    </>
+  );
+}

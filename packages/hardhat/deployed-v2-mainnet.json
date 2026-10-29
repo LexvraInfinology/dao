@@ -1,0 +1,20 @@
+{
+  "network": "trobchain-mainnet",
+  "deployedAt": "2026-10-05T10:45:45.634Z",
+  "deployer": "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8",
+  "contracts": {
+    "EquoraCoin": {
+      "addressBase58": "TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt",
+      "addressHex": "41b0e42d3a38e37f2be412b06af572fea20d9c5216",
+      "txHash": "0x8239fa7ed1c00a3aa74f791e7b5425cdb73750ad0b152b760e5f19abf9389fa9",
+      "totalSupply": "210,000,000 EQC (21 Crore)"
+    },
+    "EquoraDAOv2": {
+      "addressBase58": "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
+      "addressHex": "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4",
+      "txHash": "0x595ce57de5ec5af057079d630f7d81737150d582b9116e385718c83c4bdbca8b",
+      "totalSeatsMigrated": 85,
+      "underfundedReservations": 8
+    }
+  }
+}

@@ -396,6 +396,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   };
 
   const nextUpcomingPos = filledCount < 14 ? filledCount + 1 : null;
+  const slotCost = getSlotCost(selectedSlot);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 4;
 
   // Node Component Render: Vibrant Blue & Green Active/Filled and Large Responsive Cards
   const renderTreeNode = (pos: number) => {
@@ -453,6 +455,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       statusText = "Open";
     }
 
+    const dynamicRole = cfg.type === "income" ? `+$${slotCost} YOU` : cfg.role;
+
     return (
       <button
         key={pos}
@@ -471,7 +475,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
 
         <span className={`px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-black tracking-tight my-1 truncate max-w-full ${roleBadge}`}>
-          {isNextUp ? "⭐ NEXT" : cfg.role}
+          {isNextUp ? "⭐ NEXT" : dynamicRole}
         </span>
 
         <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-500 truncate max-w-full px-0.5">
@@ -535,7 +539,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             {isViewingSnapshot ? (
               <strong className="text-emerald-600">Cycle #{selectedCycle} Fulfilled Board (14/14 All Settled 🎉)</strong>
             ) : (
-              <span>${getSlotCost(selectedSlot).toFixed(2)} P2P Settlement</span>
+              <span>${slotCost.toFixed(2)} P2P Settlement</span>
             )}
           </p>
         </div>
@@ -605,8 +609,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       <div className="py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
-          const isUnlocked = sNum <= currentActiveSlot;
+          const isUnlocked = sNum <= highestUnlockedSlot;
           const isCompleted = sNum <= 3;
+          const cost = getSlotCost(sNum);
           return (
             <button
               key={sNum}
@@ -620,10 +625,15 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   : "bg-slate-50/50 text-slate-400 border border-slate-100"
               }`}
             >
-              <span>Slot {sNum}</span>
-              {isCompleted && (
+              <span>Slot #{String(sNum).padStart(2, "0")}</span>
+              <span className={`text-[10px] font-semibold ${isActive ? "text-blue-100" : "text-slate-400"}`}>
+                (${cost})
+              </span>
+              {isCompleted ? (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-200" title="Completed 14/14" />
-              )}
+              ) : isUnlocked ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Unlocked & Active" />
+              ) : null}
             </button>
           );
         })}
@@ -634,7 +644,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-            <span className="font-semibold text-slate-700">+${getSlotCost(selectedSlot)} Direct Income</span>
+            <span className="font-semibold text-slate-700">+${slotCost} Direct Income</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_#2563eb]" />
@@ -788,7 +798,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                       </span>
                       <span className="text-[9.5px] font-bold text-emerald-600 flex items-center gap-0.5">
                         <CheckCircle2 className="w-3 h-3" />
-                        {cfg.type === "income" ? "+$30 Settled" : "Settled"}
+                        {cfg.type === "income" ? `+$${slotCost} Settled` : "Settled"}
                       </span>
                     </div>
                   ) : (
@@ -838,7 +848,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   Settlement Flow
                 </span>
                 <p className="text-slate-700 text-[11.5px] leading-relaxed">
-                  {selectedNodeModal.desc}
+                  {selectedNodeModal.type === "income"
+                    ? `100% P2P instant settlement ($${slotCost.toFixed(2)} USD) directly into your wallet.`
+                    : selectedNodeModal.pos === 1
+                    ? `100% P2P pass-through to matrix sponsor ($${slotCost.toFixed(2)} USD).`
+                    : selectedNodeModal.desc}
                 </p>
               </div>
 

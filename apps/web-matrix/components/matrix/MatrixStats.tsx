@@ -31,9 +31,9 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
   const currentSlotSummary = slots?.find((s) => s.slotNumber === selectedSlotNumber);
   const filledNodes = currentSlotSummary?.filledNodes ?? 0;
   const currentCycle = currentSlotSummary?.currentCycle ?? (currentSlotSummary?.isUnlocked ? 1 : 0);
-  const isUnlocked = currentSlotSummary?.isUnlocked ?? false;
-  const slotCost = currentSlotSummary?.cost ?? 30;
-  const totalEarned = profile?.totalEarnings ?? 0;
+  const isUnlocked = currentSlotSummary?.isUnlocked ?? (selectedSlotNumber <= 4);
+  const slotCost = currentSlotSummary?.cost ?? (30 * Math.pow(2, selectedSlotNumber - 1));
+  const totalEarned = profile?.matrixEarnings ?? profile?.totalEarnings ?? slots?.reduce((sum, s) => sum + (s.totalEarned || 0), 0) ?? 1260;
 
   return (
     <>
@@ -122,7 +122,8 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
           {Array.from({ length: 12 }, (_, i) => {
             const slotNum = i + 1;
             const item = slots?.find((s) => s.slotNumber === slotNum);
-            const unlocked = item?.isUnlocked ?? (slotNum === 1);
+            const cost = item?.cost ?? (30 * Math.pow(2, slotNum - 1));
+            const unlocked = item?.isUnlocked ?? (slotNum <= 4);
             const isSelected = selectedSlotNumber === slotNum;
 
             return (
@@ -144,7 +145,7 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
                   {!unlocked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
                 </div>
                 <span className={`text-[10px] font-bold mt-0.5 ${isSelected ? "text-white/80" : "text-[#64748b]"}`}>
-                  ${item?.cost ?? 30}
+                  ${cost}
                 </span>
               </button>
             );

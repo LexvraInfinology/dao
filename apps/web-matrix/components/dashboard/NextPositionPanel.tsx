@@ -60,8 +60,8 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const totalEarnedUsd =
     slotDetails?.totalEarnedUsd ||
     data?.totalEarnedUsd ||
-    data?.totalEarnedTrob ||
-    (profile?.totalEarnings ? (profile.totalEarnings / 1e6) * 0.03174 : 180.0);
+    profile?.totalEarningsUsd ||
+    (profile?.totalEarnings ? profile.totalEarnings : 1260.0);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">

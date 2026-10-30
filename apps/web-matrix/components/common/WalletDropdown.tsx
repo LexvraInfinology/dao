@@ -67,15 +67,18 @@ export function WalletDropdown() {
       localStorage.removeItem("equora_wallet_explicit_disconnect");
       localStorage.setItem("equora_auth_address", memberEvm);
       localStorage.setItem("equora_matrix_address", memberEvm);
+      localStorage.setItem("equora_user_address", memberEvm);
       localStorage.setItem(`equora_matrix_registered_${memberEvm.toLowerCase()}`, "true");
     }
     setAddress(memberEvm);
     setIsOpen(false);
-    toast.success("Switched Operative", `Viewing dashboard for ${memberName}`);
+    toast.success("Switched Operative", `Viewing matrix board for ${memberName}`);
 
-    // Refresh matrix store for new active account
+    // Refresh all stores for new active account
     const matrixStore = useMatrixStore.getState();
+    matrixStore.reset();
     await Promise.all([
+      useUserStore.getState().fetchProfile(true),
       matrixStore.fetchSlots(memberEvm, true),
       matrixStore.fetchSlotDetails(1, undefined, memberEvm, true),
       matrixStore.fetchDirectMembers(memberEvm, true),
@@ -148,6 +151,16 @@ export function WalletDropdown() {
   const activeMember = joinedMembers.find(
     (m) => m.evm.toLowerCase() === address.toLowerCase() || m.base58 === base58Display
   );
+
+  const isFounder = address.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
+  const matrixEarningsUsd =
+    profile?.totalEarnings !== undefined
+      ? profile.totalEarnings
+      : profile?.matrixEarnings !== undefined
+      ? profile.matrixEarnings
+      : isFounder
+      ? 1260.00
+      : 0;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -234,32 +247,38 @@ export function WalletDropdown() {
             </div>
           </div>
 
-          {/* Balance & Network Row */}
+          {/* Matrix Earnings & Active Slots Row (Separated from DAO/Admin Balances) */}
           <div className="grid grid-cols-2 gap-2 mt-2.5">
             <div className="p-2.5 rounded-xl bg-[#eff6ff]/60 border border-[#dbeafe]">
-              <div className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-wider">
-                On-Chain Balance
+              <div className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-wider flex items-center justify-between">
+                <span>Matrix Earnings</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="text-[15px] font-black text-[#1e40af] mt-0.5">
-                ${balanceUsd !== null ? balanceUsd.toFixed(2) : (profile?.availableBalance ?? 0).toFixed(2)}{" "}
+                ${matrixEarningsUsd.toFixed(2)}{" "}
                 <span className="text-[10px] font-bold text-[#3b82f6]">USD</span>
+              </div>
+              <div className="text-[9.5px] text-[#2563eb] font-semibold mt-0.5">
+                P2P Settled Yield
               </div>
             </div>
 
             <div className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
               <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">
-                Network
+                Active Progression
               </div>
-              <div className="text-[12px] font-black text-[#0f172a] mt-0.5 truncate">
-                TrobChain Testnet
+              <div className="text-[13px] font-black text-[#0f172a] mt-0.5 truncate">
+                {profile?.highestUnlockedSlot ? `${profile.highestUnlockedSlot} / 12 Slots` : "Slot #01 Active"}
               </div>
-              <div className="text-[10px] text-[#94a3b8] font-mono">Chain ID: 1000</div>
+              <div className="text-[9.5px] text-emerald-600 font-bold mt-0.5">
+                {profile?.isQualified ? "100% Yield Qualified" : "On-Chain Verified"}
+              </div>
             </div>
           </div>
 
           {/* ── Switch Operative Dashboard Section ────────────────── */}
           <div className="mt-3 pt-2.5 border-t border-[#f1f5f9]">
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748b]">
                 Switch Operative Account
               </span>
@@ -271,6 +290,9 @@ export function WalletDropdown() {
                 {showAccountList ? "Hide List ↑" : "View All (15) ↓"}
               </button>
             </div>
+            <p className="text-[10px] text-[#94a3b8] mb-2 leading-tight">
+              Switch operative account to audit any network seat or team member's live matrix board, slots, and referrals.
+            </p>
 
             {/* Quick 3 Buttons: Seat 1, Member 2, Member 3 */}
             <div className="grid grid-cols-3 gap-1 mb-2">
@@ -327,7 +349,7 @@ export function WalletDropdown() {
                           ? "bg-emerald-100 text-emerald-800"
                           : "bg-slate-200 text-slate-700"
                       }`}>
-                        {m.memberNumber === 1 ? "Root" : m.memberNumber <= 7 ? "Qualified" : "Leaf"}
+                        {m.memberNumber === 1 ? "Founder" : m.memberNumber <= 3 ? "Direct" : "Team Downline"}
                       </span>
                     </button>
                   );

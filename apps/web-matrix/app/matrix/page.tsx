@@ -425,13 +425,28 @@ export default function MatrixPage() {
                 onBuySlot={handleOpenBuyModal}
               />
             ) : activeTab === "list" ? (
-              <MatrixListView handleCopy={handleCopy} />
+              <MatrixListView
+                handleCopy={handleCopy}
+                slotDetails={slotDetails}
+                selectedSlotNumber={selectedSlotNumber}
+                slots={slots}
+              />
             ) : (
-              <MatrixTreeView slotDetails={slotDetails} selectedSlotNumber={selectedSlotNumber} slots={slots} />
+              <MatrixTreeView
+                slotDetails={slotDetails}
+                selectedSlotNumber={selectedSlotNumber}
+                slots={slots}
+              />
             )}
 
             {/* ──────── RIGHT CARD: POSITION DETAILS (Desktop) / NODE 1 (Mobile) ──────── */}
-            <MatrixPositionDetails handleCopy={handleCopy} onBuySlot={handleOpenBuyModal} />
+            <MatrixPositionDetails
+              handleCopy={handleCopy}
+              onBuySlot={handleOpenBuyModal}
+              slotDetails={slotDetails}
+              selectedSlotNumber={selectedSlotNumber}
+              address={address}
+            />
           </div>
 
           {/* ═══════════ DIRECT MEMBERS (LEVEL 1) SECTION ═══════════ */}

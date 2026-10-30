@@ -7,14 +7,14 @@ export function getApiBaseUrl(): string {
     const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
     return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
   }
-  // In the browser, only default to localhost:4000 if we are genuinely on localhost
+  // In the browser, check if running on localhost
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
-    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-      return ""; // No remote API URL provided; frontend gracefully falls back to direct on-chain RPC reads
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:4000/api/matrix";
     }
   }
-  return "http://localhost:4000/api/matrix";
+  return "https://equora-api-rh9d.onrender.com/api/matrix";
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -189,6 +189,8 @@ export interface MatrixSlotDetails {
   isUnlocked: boolean;
   isLive?: boolean;
   currentCycle: number;
+  totalCycles?: number;
+  isViewingSnapshot?: boolean;
   recyclesCount: number;
   filledNodes: number;
   upgradeReserve: number;
@@ -289,7 +291,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
   const url = `${baseUrl}${endpoint}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000);
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
 
   try {
     const res = await fetch(url, {

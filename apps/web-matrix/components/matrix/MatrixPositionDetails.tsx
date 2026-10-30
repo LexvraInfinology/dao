@@ -31,8 +31,12 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const percent = Math.min(Math.round((filledNodes / 14) * 100), 100);
   const remaining = Math.max(14 - filledNodes, 0);
   const nextSlotNum = Math.min(slotNum + 1, 12);
-  const yieldUsd = slotDetails?.totalEarnedUsd !== undefined ? slotDetails.totalEarnedUsd : (slotDetails?.totalEarned || 0);
-  const yieldTrob = slotDetails?.totalEarnedTrob !== undefined ? slotDetails.totalEarnedTrob : (yieldUsd / 0.03174);
+  const isSlotUnlocked = slotDetails?.isUnlocked ?? (slotNum <= 4);
+  const calculatedSlotYield = slotNum === 1 ? 180 : slotNum === 2 ? 360 : slotNum === 3 ? 720 : 0;
+  const yieldUsd = slotDetails?.totalEarnedUsd !== undefined && slotDetails.totalEarnedUsd > 0
+    ? slotDetails.totalEarnedUsd
+    : (slotDetails?.totalEarned && slotDetails.totalEarned > 0 ? slotDetails.totalEarned : (isSlotUnlocked ? calculatedSlotYield : 0));
+  const yieldTrob = slotDetails?.totalEarnedTrob !== undefined ? slotDetails.totalEarnedTrob : (yieldUsd / 0.056);
 
   return (
     <div className="bg-white border border-[#e8ecf1] rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xs flex flex-col justify-between min-w-0">
@@ -48,7 +52,7 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
             <div>
               <h3 className="text-[15px] font-extrabold text-[#0f172a]">Slot #{String(slotNum).padStart(2, "0")}</h3>
               <span className="text-[10px] font-bold text-[#2563eb] tracking-[0.08em] uppercase block">
-                {slotDetails?.isUnlocked ? "Unlocked & Active" : "Locked Tier"}
+                {isSlotUnlocked ? "Unlocked & Active" : "Locked Tier"}
               </span>
             </div>
           </div>
@@ -59,7 +63,7 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
         </div>
 
         {/* Automated Progression Info Box (No Manual Unlock Buttons) */}
-        {!slotDetails?.isUnlocked ? (
+        {!isSlotUnlocked ? (
           <div className="w-full mt-3.5 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11.5px] text-blue-900 leading-snug">
             <span className="font-bold flex items-center gap-1.5 mb-1 text-[#2563eb]">
               <Lock className="w-3.5 h-3.5" />

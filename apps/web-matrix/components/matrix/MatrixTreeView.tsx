@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
-import { getOnChainQualification } from "@/lib/contracts";
+import { getOnChainQualification, getSlotCost } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress as formatB58Address, toTrobBase58 } from "@/lib/format";
 import { ShieldCheck, AlertCircle, CheckCircle2, Check } from "lucide-react";
@@ -26,10 +26,13 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     sponsor.toLowerCase() === "415181d06090f16c9bffef71e2ccd7ed17f676aad9";
   const upline2 = profile?.upline2Address;
 
+  const selectSlotStore = useMatrixStore((s) => s.selectSlot);
   const slotDetails = props.slotDetails !== undefined ? props.slotDetails : storeSlotDetails;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const slots = props.slots ?? storeSlots;
+  const slotCost = getSlotCost(selectedSlotNumber);
   const currentCycle = slotDetails?.currentCycle ?? 1;
+  const totalCycles = slotDetails?.totalCycles ?? (currentCycle > 1 ? currentCycle : (selectedSlotNumber <= 3 ? 2 : 1));
   const nodes = slotDetails?.nodes ?? [];
 
   // Live on-chain qualification state
@@ -58,7 +61,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const getNodeRole = (pos: number) => {
     if (pos <= 2) return { role: "DIRECT", label: `Direct Ref #${pos}` };
     if (pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12) {
-      return { role: "OWNER", label: "YOU (100% P2P)" };
+      return { role: "OWNER", label: `YOU (+$${slotCost})` };
     }
     if (pos === 4 || pos === 5 || pos === 14) {
       return {
@@ -85,7 +88,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       if (isDirectNode) {
         if (isDepositedDirect) {
           bgClasses = "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400";
-          statusLabel = "Active ($30)";
+          statusLabel = `Active ($${slotCost})`;
           badgeColor = "bg-emerald-200";
         } else {
           bgClasses = "bg-amber-50 border-2 border-dashed border-amber-400 hover:bg-amber-100 text-amber-900";
@@ -228,13 +231,40 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       {/* Matrix Card Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3 border-b border-[#f1f5f9]">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-[13.5px] sm:text-[14px] font-extrabold text-[#0f172a] uppercase tracking-wide">
-              YOUR 14–NODE MATRIX (SLOT #{String(selectedSlotNumber).padStart(2, "0")})
+              YOUR 14–NODE MATRIX (SLOT #{String(selectedSlotNumber).padStart(2, "0")} • ${slotCost})
             </h2>
-            <span className="px-2 py-0.5 rounded-md bg-[#dbeafe] text-[#1d4ed8] text-[10.5px] font-bold">
-              CYCLE #{String(currentCycle).padStart(2, "0")}
-            </span>
+            {totalCycles > 1 ? (
+              <div className="flex items-center gap-1 p-0.5 bg-[#eff6ff] rounded-lg border border-[#bfdbfe]">
+                <button
+                  type="button"
+                  onClick={() => selectSlotStore(selectedSlotNumber, 1, address || undefined)}
+                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
+                    currentCycle === 1
+                      ? "bg-[#2563eb] text-white shadow-xs"
+                      : "text-[#2563eb] hover:bg-blue-100/60"
+                  }`}
+                >
+                  🏆 Cycle 1 (14/14 Fulfilled)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectSlotStore(selectedSlotNumber, 2, address || undefined)}
+                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
+                    currentCycle >= 2
+                      ? "bg-[#2563eb] text-white shadow-xs"
+                      : "text-[#2563eb] hover:bg-blue-100/60"
+                  }`}
+                >
+                  ⚡ Cycle 2 (Active Board)
+                </button>
+              </div>
+            ) : (
+              <span className="px-2 py-0.5 rounded-md bg-[#dbeafe] text-[#1d4ed8] text-[10.5px] font-bold">
+                CYCLE #{String(currentCycle).padStart(2, "0")}
+              </span>
+            )}
           </div>
           <p className="text-[12px] text-[#64748b] mt-0.5">
             Single-leg binary matrix engine governed by Solidity smart contracts. Instant on-chain payouts.
@@ -244,11 +274,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         <div className="hidden sm:flex items-center gap-3 text-[11px] font-semibold text-[#64748b]">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-            <span>Active Direct ($30)</span>
+            <span>Active Direct (${slotCost})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
-            <span>Owner (YOU)</span>
+            <span>Owner (+${slotCost} YOU)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-700" />

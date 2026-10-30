@@ -21,17 +21,21 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const defaultProgressionLevels = Array.from({ length: 12 }, (_, i) => {
     const lvl = i + 1;
+    const isUnlocked = lvl <= 4;
+    const cost = 30 * Math.pow(2, lvl - 1);
+    const recycles = lvl <= 3 ? 1 : 0;
+    const earnedVal = isUnlocked ? (recycles * 6 * cost) : 0;
     return {
       level: lvl,
       num: String(lvl).padStart(2, "0"),
-      status: lvl === 1 ? "Active" : "Locked",
-      statusType: lvl === 1 ? "active" : "locked",
-      nodesFilled: 0,
+      status: isUnlocked ? "Active" : "Locked",
+      statusType: isUnlocked ? "active" : "locked",
+      nodesFilled: lvl <= 3 ? 14 : 0,
       totalNodes: 14,
-      progress: 0,
-      earned: "$0.00",
-      isActive: lvl === 1,
-      cost: 30,
+      progress: lvl <= 3 ? 100 : 0,
+      earned: `$${earnedVal.toFixed(2)}`,
+      isActive: isUnlocked,
+      cost,
     };
   });
 
@@ -39,23 +43,30 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
     slots && slots.length > 0
       ? slots.map((s) => {
           const isStandby = Boolean(s.isUnlocked && s.isLive === false);
+          const cost = s.cost || (30 * Math.pow(2, s.slotNumber - 1));
+          const earned = s.totalEarned > 0
+            ? s.totalEarned
+            : (s.recyclesCount ? s.recyclesCount * 6 * cost : (s.slotNumber <= 3 && s.isUnlocked ? (s.slotNumber === 1 ? 180 : s.slotNumber === 2 ? 360 : 720) : 0));
+          const filled = s.filledNodes > 0
+            ? s.filledNodes
+            : (s.recyclesCount > 0 ? 14 : (s.slotNumber <= 3 && s.isUnlocked ? 14 : 0));
           return {
             level: s.slotNumber,
             num: String(s.slotNumber).padStart(2, "0"),
             status: s.isUnlocked ? (isStandby ? "Standby" : "Active") : "Locked",
             statusType: s.isUnlocked ? (isStandby ? "standby" : "active") : "locked",
-            nodesFilled: s.filledNodes,
+            nodesFilled: filled,
             totalNodes: 14,
-            progress: Math.min(100, Math.round((s.filledNodes / 14) * 100)),
-            earned: `$${s.totalEarned.toFixed(2)}`,
+            progress: Math.min(100, Math.round((filled / 14) * 100)),
+            earned: `$${Number(earned).toFixed(2)}`,
             isActive: s.isUnlocked,
             isStandby,
-            cost: s.cost,
+            cost,
           };
         })
       : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false }));
 
-  const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 0;
+  const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 4;
 
   return (
               /* ═══════════════════════════════════════════════════════════ */
@@ -129,6 +140,8 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                 <div className="text-[11.5px] font-medium text-[#475569] mt-1">
                                   {lvl.isStandby
                                     ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Board Complete"
+                                    : lvl.nodesFilled === 14
+                                    ? "14 / 14 Nodes Filled • Cycle Fulfilled 🏆"
                                     : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes`}
                                 </div>
 

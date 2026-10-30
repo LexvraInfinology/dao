@@ -126,11 +126,11 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
   10: {
     pos: 10,
     label: "P10",
-    role: "Downline 1",
-    fullRole: "Row 1 Team Spill",
+    role: "Downline 2",
+    fullRole: "Downline 2 Team Spill",
     type: "downline",
     parentPos: 4,
-    desc: "Spillover reward distributed to eligible first-row team downline.",
+    desc: "Spillover reward distributed to eligible second-row team downline (Node 2).",
   },
   11: {
     pos: 11,
@@ -798,7 +798,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                       </span>
                       <span className="text-[9.5px] font-bold text-emerald-600 flex items-center gap-0.5">
                         <CheckCircle2 className="w-3 h-3" />
-                        {cfg.type === "income" ? `+$${slotCost} Settled` : "Settled"}
+                        {cfg.type === "income"
+                          ? `+$${slotCost} (YOU)`
+                          : pos === 1
+                          ? "Upline 1 (Sponsor)"
+                          : pos === 2
+                          ? "Upline 2 (Sponsor's Sponsor)"
+                          : pos === 7
+                          ? "Downline 1 Spill"
+                          : pos === 10
+                          ? "Downline 2 Spill"
+                          : pos === 13
+                          ? "Waterfall Spill"
+                          : "Protocol Pools"}
                       </span>
                     </div>
                   ) : (
@@ -870,6 +882,34 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     <span className="text-slate-500">Member:</span>
                     <span className="font-bold text-slate-900">
                       {getNodeInfo(selectedNodeModal.pos).label}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Payout Recipient:</span>
+                    <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      {selectedNodeModal.type === "income"
+                        ? "YOU (Matrix Owner)"
+                        : selectedNodeModal.pos === 1
+                        ? "Upline 1 (Sponsor)"
+                        : selectedNodeModal.pos === 2
+                        ? "Upline 2 (Sponsor's Sponsor)"
+                        : selectedNodeModal.pos === 7
+                        ? "Downline 1 (Node 1 Spillover)"
+                        : selectedNodeModal.pos === 10
+                        ? "Downline 2 (Node 2 Spillover)"
+                        : selectedNodeModal.pos === 13
+                        ? "Waterfall (Nodes 3, 4, 5, 6)"
+                        : selectedNodeModal.pos === 5
+                        ? "Pools + Slot Reserve"
+                        : selectedNodeModal.pos === 14
+                        ? "Pools + Cycle Recycle"
+                        : "4 Protocol Pools (Vault)"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Settled Amount:</span>
+                    <span className="font-bold text-emerald-700">
+                      ${slotCost.toFixed(2)} USD (100% On-Chain)
                     </span>
                   </div>
                   {getNodeInfo(selectedNodeModal.pos).address && (

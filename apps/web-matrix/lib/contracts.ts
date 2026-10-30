@@ -142,13 +142,13 @@ export const MATRIX_DOMAIN = process.env.NEXT_PUBLIC_MATRIX_DOMAIN || "equorafim
 export const DAO_DOMAIN = process.env.NEXT_PUBLIC_DAO_DOMAIN || "equorafidao.com";
 export const MATRIX_URL =
   process.env.NEXT_PUBLIC_MATRIX_URL ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:3001"
+  (typeof window !== "undefined"
+    ? window.location.origin
     : `https://${MATRIX_DOMAIN}`);
 export const DAO_URL =
   process.env.NEXT_PUBLIC_DAO_URL ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:3000"
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? `${window.location.protocol}//${window.location.hostname}:3000`
     : `https://${DAO_DOMAIN}`);
 
 export const ACTIVE_RPC_URL = IS_MAINNET

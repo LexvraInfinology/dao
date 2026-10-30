@@ -7,8 +7,8 @@ import { useUserStore, useMatrixStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { getOnChainTokenBalance } from "@/lib/contracts";
+import { hasTrobSafeProvider, connectTrobSafe } from "@/lib/web3Wallet";
 import { WalletConnectModal } from "./WalletConnectModal";
-import joinedMembers from "@/lib/joinedMembers.json";
 
 export function WalletDropdown() {
   const router = useRouter();
@@ -21,7 +21,6 @@ export function WalletDropdown() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
-  const [showAccountList, setShowAccountList] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -62,29 +61,6 @@ export function WalletDropdown() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSwitchOperative = async (memberEvm: string, memberName: string) => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("equora_wallet_explicit_disconnect");
-      localStorage.setItem("equora_auth_address", memberEvm);
-      localStorage.setItem("equora_matrix_address", memberEvm);
-      localStorage.setItem("equora_user_address", memberEvm);
-      localStorage.setItem(`equora_matrix_registered_${memberEvm.toLowerCase()}`, "true");
-    }
-    setAddress(memberEvm);
-    setIsOpen(false);
-    toast.success("Switched Operative", `Viewing matrix board for ${memberName}`);
-
-    // Refresh all stores for new active account
-    const matrixStore = useMatrixStore.getState();
-    matrixStore.reset();
-    await Promise.all([
-      useUserStore.getState().fetchProfile(true),
-      matrixStore.fetchSlots(memberEvm, true),
-      matrixStore.fetchSlotDetails(1, undefined, memberEvm, true),
-      matrixStore.fetchDirectMembers(memberEvm, true),
-    ]).catch(() => {});
-  };
-
   const handleDisconnect = () => {
     setIsOpen(false);
     disconnectStore();
@@ -118,7 +94,18 @@ export function WalletDropdown() {
             if (typeof window !== "undefined") {
               localStorage.removeItem("equora_wallet_explicit_disconnect");
             }
-            setWalletModalOpen(true);
+            if (hasTrobSafeProvider()) {
+              connectTrobSafe()
+                .then((addr) => {
+                  setAddress(addr);
+                  toast.success("Connected", `Active: ${formatAddress(addr)}`);
+                })
+                .catch(() => {
+                  setWalletModalOpen(true);
+                });
+            } else {
+              setWalletModalOpen(true);
+            }
           }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11.5px] sm:text-[12px] font-bold shadow-xs transition-colors cursor-pointer"
         >
@@ -147,11 +134,6 @@ export function WalletDropdown() {
   const base58Display = toTrobBase58(address);
   const explorerUrl = `https://testnet.trobchain.com/#/address/${base58Display || address}`;
 
-  // Find active member meta if present in verified 14-node network
-  const activeMember = joinedMembers.find(
-    (m) => m.evm.toLowerCase() === address.toLowerCase() || m.base58 === base58Display
-  );
-
   const isFounder = address.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
   const matrixEarningsUsd =
     profile?.totalEarnings !== undefined
@@ -176,7 +158,7 @@ export function WalletDropdown() {
       >
         <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse shrink-0" />
         <span className="font-mono font-bold text-[#0f172a]">
-          {activeMember ? `#${activeMember.memberNumber} ${formatAddress(address)}` : formatAddress(address)}
+          {formatAddress(address)}
         </span>
         <svg
           width="12"
@@ -204,7 +186,7 @@ export function WalletDropdown() {
               </div>
               <div>
                 <div className="text-[12.5px] font-black text-[#0f172a]">
-                  {activeMember ? activeMember.name : "TrobSafe Wallet"}
+                  TrobSafe Wallet
                 </div>
                 <div className="text-[10.5px] text-[#64748b] font-medium">TrobChain L1 Network</div>
               </div>
@@ -219,11 +201,6 @@ export function WalletDropdown() {
           <div className="mt-3 p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
             <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1 flex items-center justify-between">
               <span>Wallet Address</span>
-              {activeMember?.classification && (
-                <span className="text-[9.5px] text-[#2563eb] font-semibold lowercase">
-                  {activeMember.classification}
-                </span>
-              )}
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-[11.5px] font-bold text-[#0f172a] truncate select-all">
@@ -247,7 +224,7 @@ export function WalletDropdown() {
             </div>
           </div>
 
-          {/* Matrix Earnings & Active Slots Row (Separated from DAO/Admin Balances) */}
+          {/* Matrix Earnings & Active Slots Row */}
           <div className="grid grid-cols-2 gap-2 mt-2.5">
             <div className="p-2.5 rounded-xl bg-[#eff6ff]/60 border border-[#dbeafe]">
               <div className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-wider flex items-center justify-between">
@@ -276,90 +253,8 @@ export function WalletDropdown() {
             </div>
           </div>
 
-          {/* ── Switch Operative Dashboard Section ────────────────── */}
-          <div className="mt-3 pt-2.5 border-t border-[#f1f5f9]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748b]">
-                Switch Operative Account
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAccountList((prev) => !prev)}
-                className="text-[10.5px] font-bold text-[#2563eb] hover:underline cursor-pointer"
-              >
-                {showAccountList ? "Hide List ↑" : "View All (15) ↓"}
-              </button>
-            </div>
-            <p className="text-[10px] text-[#94a3b8] mb-2 leading-tight">
-              Switch operative account to audit any network seat or team member's live matrix board, slots, and referrals.
-            </p>
-
-            {/* Quick 3 Buttons: Seat 1, Member 2, Member 3 */}
-            <div className="grid grid-cols-3 gap-1 mb-2">
-              {joinedMembers.slice(0, 3).map((m) => {
-                const isSelected = m.evm.toLowerCase() === address.toLowerCase();
-                return (
-                  <button
-                    key={m.memberNumber}
-                    type="button"
-                    onClick={() => handleSwitchOperative(m.evm, m.name)}
-                    className={`py-1.5 px-1 rounded-lg text-[10.5px] font-bold text-center truncate transition-all cursor-pointer border ${
-                      isSelected
-                        ? "bg-[#2563eb] text-white border-[#2563eb] shadow-xs"
-                        : "bg-[#f8fafc] text-[#334155] border-[#e2e8f0] hover:bg-[#eff6ff] hover:border-[#bfdbfe]"
-                    }`}
-                    title={`${m.name}: ${m.base58}`}
-                  >
-                    #{m.memberNumber} {m.memberNumber === 1 ? "Founder" : `M${m.memberNumber}`}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Expanded List of all 15 Operatives */}
-            {showAccountList && (
-              <div className="max-h-48 overflow-y-auto space-y-1 p-1 bg-[#f8fafc] rounded-xl border border-[#e2e8f0] mb-2">
-                {joinedMembers.map((m) => {
-                  const isSelected = m.evm.toLowerCase() === address.toLowerCase();
-                  return (
-                    <button
-                      key={m.memberNumber}
-                      type="button"
-                      onClick={() => handleSwitchOperative(m.evm, m.name)}
-                      className={`w-full flex items-center justify-between p-1.5 rounded-lg text-left text-[11px] transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-[#2563eb] text-white font-bold"
-                          : "hover:bg-white text-[#334155] font-medium"
-                      }`}
-                    >
-                      <div className="min-w-0 pr-1">
-                        <div className="truncate font-semibold">
-                          #{m.memberNumber} {m.name}
-                        </div>
-                        <div className={`font-mono text-[9.5px] truncate ${isSelected ? "text-blue-100" : "text-[#94a3b8]"}`}>
-                          {m.base58.slice(0, 6)}...{m.base58.slice(-4)}
-                        </div>
-                      </div>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                        isSelected
-                          ? "bg-white text-[#2563eb]"
-                          : m.memberNumber === 1
-                          ? "bg-amber-100 text-amber-800"
-                          : m.memberNumber <= 7
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-200 text-slate-700"
-                      }`}>
-                        {m.memberNumber === 1 ? "Founder" : m.memberNumber <= 3 ? "Direct" : "Team Downline"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
           {/* Quick Actions List */}
-          <div className="mt-2 space-y-1 pt-2 border-t border-[#f1f5f9]">
+          <div className="mt-3 space-y-1 pt-2.5 border-t border-[#f1f5f9]">
             <a
               href={explorerUrl}
               target="_blank"

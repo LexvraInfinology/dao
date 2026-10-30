@@ -103,28 +103,29 @@ export const CHAIN_ID = parseInt(
 // Backend API Host, Port & URLs with Docker and local dev fallbacks (Backend port 4000, Web port 3000)
 export const BACKEND_API_PORT = parseInt(process.env.API_PORT || process.env.BACKEND_API_PORT || '4000', 10);
 export const WEB_PORT = parseInt(process.env.WEB_PORT || process.env.PORT || '3000', 10);
-export const BACKEND_API_HOST = process.env.API_HOST || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'localhost:4000' : 'api.equorafidao.com');
+export const BACKEND_API_HOST = process.env.API_HOST || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'localhost:4000' : 'api.equorafidao.com');
 export const BACKEND_API_URL =
   process.env.BACKEND_API_URL ||
-  (process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:4000'
     : 'https://api.equorafidao.com');
 export const NEXT_PUBLIC_API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? ''
     : 'https://api.equorafidao.com');
 
 // External URLs (Port 3001: equorafimatrix.com, Port 3000: equorafidao.com)
 export const MATRIX_URL =
-  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-    ? 'http://localhost:3001'
-    : (process.env.NEXT_PUBLIC_MATRIX_URL || 'http://localhost:3001');
+  process.env.NEXT_PUBLIC_MATRIX_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? `${window.location.protocol}//${window.location.hostname}:3001`
+    : 'https://equorafimatrix.com');
 
 export const DAO_URL =
   process.env.NEXT_PUBLIC_DAO_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3000'
+  (typeof window !== 'undefined'
+    ? window.location.origin
     : 'https://equorafidao.com');
 
 // TrobSafe APK Download URL

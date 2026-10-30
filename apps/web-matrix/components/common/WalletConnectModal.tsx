@@ -43,7 +43,6 @@ import { useUserStore } from "@/lib/stores/useUserStore";
 import { AndroidIcon } from "./AndroidIcon";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
-import joinedMembers from "@/lib/joinedMembers.json";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
@@ -66,8 +65,6 @@ export function WalletConnectModal({
   const [step, setStep] = useState<ModalStep>("detect");
   const [localErr, setLocalErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [customAddress, setCustomAddress] = useState("");
-  const [showDirectInput, setShowDirectInput] = useState(false);
 
   // Live on-chain eligibility details
   const [eligibilityData, setEligibilityData] = useState<WalletEligibility | null>(null);
@@ -142,21 +139,6 @@ export function WalletConnectModal({
     setStep("detect");
     setEligibilityData(null);
     toast.info("Wallet Disconnected", "You have disconnected from the Matrix.");
-    onClose();
-  };
-
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = customAddress.trim();
-    if (!clean) return;
-    const normalized = normalizeTo0x(clean);
-    if (!normalized.startsWith("0x") || normalized.length !== 42) {
-      toast.error("Invalid Address", "Must be a valid 42-character 0x hex address or Tron Base58 address.");
-      return;
-    }
-    onSelectAddress(normalized);
-    toast.success("Account Loaded", `Active: ${formatAddress(normalized)}`);
-    setCustomAddress("");
     onClose();
   };
 
@@ -421,13 +403,66 @@ export function WalletConnectModal({
                 </div>
               )}
 
-              {/* Mobile Quick Launch Banner */}
+              {/* Primary 1-Click Connect Button Card */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-blue-200 hover:border-[#0E62E4] transition-all shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        {isMobile ? "TrobSafe Mobile Wallet" : "TrobSafe Browser Extension"}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {isMobile ? "Native APK / In-App Browser" : "Chrome, Edge & Brave"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {hasTrobSafe ? (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Ready
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      Official L1
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConnectExtension}
+                  className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_4px_14px_rgba(14,98,228,0.25)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99]"
+                >
+                  <Zap className="w-4 h-4 fill-white" />
+                  <span>Connect TrobSafe Wallet</span>
+                </button>
+
+                {!isMobile && (
+                  <div className="text-center pt-0.5">
+                    <a
+                      href={TROBSAFE_CHROME_STORE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-semibold text-[#0E62E4] hover:underline inline-flex items-center gap-1"
+                    >
+                      <span>Install or view in Chrome Web Store</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Quick Launch Card */}
               {isMobile && (
                 <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#0E62E4] via-[#1A6EF8] to-[#0B52C4] text-white shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                      <span className="text-xs font-bold">TrobSafe App Installed?</span>
+                      <span className="text-xs font-bold">Open Inside TrobSafe App?</span>
                     </div>
                     <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
                       Auto-Connect
@@ -438,7 +473,7 @@ export function WalletConnectModal({
                   </p>
                   <button
                     type="button"
-                    onClick={() => openInTrobSafeApp("/matrix")}
+                    onClick={() => openInTrobSafeApp()}
                     className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-blue-50 text-[#0E62E4] font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -447,52 +482,7 @@ export function WalletConnectModal({
                 </div>
               )}
 
-              {/* Option 1: Browser Extension (Recommended for PC/Laptop) */}
-              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-[#0E62E4]/40 transition-colors shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] border border-[#0E62E4]/20 flex items-center justify-center text-[#0E62E4] shrink-0">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">Browser Extension</div>
-                      <div className="text-[11px] text-slate-500">Chrome, Edge & Brave</div>
-                    </div>
-                  </div>
-
-                  {hasTrobSafe ? (
-                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Ready
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-semibold text-slate-400">Desktop</span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleConnectExtension}
-                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-[#0E62E4] hover:bg-[#0B52C4] shadow-[0_2px_10px_rgba(14,98,228,0.2)] flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>Connect Extension</span>
-                </button>
-
-                <div className="text-center pt-0.5">
-                  <a
-                    href={TROBSAFE_CHROME_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] font-semibold text-[#0E62E4] hover:underline inline-flex items-center gap-1"
-                  >
-                    <span>Install or view in Chrome Web Store</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Option 2: Android Application (.APK & App Launch) */}
+              {/* Android Application (.APK Package) */}
               <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-colors shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -530,7 +520,7 @@ export function WalletConnectModal({
                 </div>
               </div>
 
-              {/* Option 3: iOS Application (Apple App Store & TestFlight) */}
+              {/* iOS Application (Apple App Store & TestFlight) */}
               <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200 hover:border-slate-300 transition-colors shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -579,83 +569,6 @@ export function WalletConnectModal({
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-              </div>
-
-
-
-              {/* Quick Select Operative Account (Real On-Chain Network) */}
-              <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-200 shadow-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#0E62E4]" />
-                    Operative Accounts (14-Node Tree)
-                  </span>
-                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                    1-Click Load
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                  {joinedMembers.slice(0, 8).map((m) => (
-                    <button
-                      key={m.memberNumber}
-                      type="button"
-                      onClick={() => {
-                        if (typeof window !== "undefined") {
-                          localStorage.removeItem("equora_wallet_explicit_disconnect");
-                        }
-                        onSelectAddress(m.evm);
-                        toast.success("Account Loaded", `Connected as #${m.memberNumber} ${m.name}`);
-                        onClose();
-                      }}
-                      className="p-2 rounded-xl bg-white hover:bg-blue-50/80 border border-slate-200 hover:border-blue-300 text-left transition-all cursor-pointer group shadow-2xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-800 group-hover:text-[#0E62E4] truncate">
-                          #{m.memberNumber} {m.memberNumber === 1 ? "Founder" : `Member ${m.memberNumber}`}
-                        </span>
-                        <span className={`text-[9px] px-1 rounded font-bold ${
-                          m.memberNumber === 1 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-                        }`}>
-                          {m.memberNumber === 1 ? "Root" : "Qual"}
-                        </span>
-                      </div>
-                      <div className="text-[9.5px] font-mono text-slate-400 mt-0.5 truncate">
-                        {m.base58.slice(0, 5)}...{m.base58.slice(-4)}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Option 4: Manual address entry */}
-              <div className="pt-1">
-                {!showDirectInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowDirectInput(true)}
-                    className="w-full text-center text-xs font-semibold text-slate-500 hover:text-[#0E62E4] transition-colors cursor-pointer py-1"
-                  >
-                    Enter custom TrobSafe address manually ↓
-                  </button>
-                ) : (
-                  <form onSubmit={handleCustomSubmit} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="text-[11px] font-bold text-slate-700">Manual Address</div>
-                    <input
-                      type="text"
-                      placeholder="Enter Trobium (TX...) or 0x address"
-                      value={customAddress}
-                      onChange={(e) => setCustomAddress(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0E62E4] font-mono shadow-xs"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!customAddress.trim()}
-                      className="w-full py-2 rounded-xl bg-[#0E62E4] hover:bg-[#0B52C4] disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      Connect with Address
-                    </button>
-                  </form>
-                )}
               </div>
             </div>
           )}

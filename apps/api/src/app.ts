@@ -66,7 +66,10 @@ export function createApp(): Express {
           origin.startsWith("https://localhost:") ||
           configuredOrigins.includes(origin) ||
           /https?:\/\/([a-zA-Z0-9-]+\.)*equorafidao\.com(:\d+)?$/.test(origin) ||
-          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafi\.com(:\d+)?$/.test(origin)
+          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafimatrix\.com(:\d+)?$/.test(origin) ||
+          /https?:\/\/([a-zA-Z0-9-]+\.)*equorafi\.com(:\d+)?$/.test(origin) ||
+          /https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin) ||
+          /https?:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/.test(origin)
         ) {
           return callback(null, true);
         }

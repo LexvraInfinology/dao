@@ -106,10 +106,29 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       return (
         <div
           onClick={() => {
+            const recipient =
+              pos === 1
+                ? "Upline 1 (Sponsor)"
+                : pos === 2
+                ? "Upline 2 (Sponsor's Sponsor)"
+                : pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12
+                ? "YOU (100% Direct)"
+                : pos === 7
+                ? "Downline 1 Spillover"
+                : pos === 10
+                ? "Downline 2 Spillover"
+                : pos === 13
+                ? "Waterfall Downline"
+                : "4 Protocol Pools (Vault)";
+
             if (node?.placedUser) {
-              toast.copy(toTrobBase58(node.placedUser), `Position #${pos} Address`);
+              navigator.clipboard?.writeText(toTrobBase58(node.placedUser));
+              toast.success(
+                `Position #${pos} Settled ($${slotCost})`,
+                `Paid to: ${recipient} • Address copied!`
+              );
             } else {
-              toast.info(`Position #${pos}`, `Filled by operative #${node?.userId || "N/A"}`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
             }
           }}
           className={`${widthClass} ${bgClasses} rounded-xl p-2.5 sm:p-3 text-center transition-all cursor-pointer select-none`}
@@ -184,10 +203,25 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         <div
           key={pos}
           onClick={() => {
+            const recipient =
+              pos === 7
+                ? "Downline 1 Spillover"
+                : pos === 8 || pos === 9 || pos === 11 || pos === 12
+                ? "YOU (100% Direct)"
+                : pos === 10
+                ? "Downline 2 Spillover"
+                : pos === 13
+                ? "Waterfall Downline"
+                : "4 Protocol Pools (Vault)";
+
             if (node?.placedUser) {
-              toast.copy(toTrobBase58(node.placedUser), `Position #${pos} Address`);
+              navigator.clipboard?.writeText(toTrobBase58(node.placedUser));
+              toast.success(
+                `Position #${pos} Settled ($${slotCost})`,
+                `Paid to: ${recipient} • Address copied!`
+              );
             } else {
-              toast.info(`Position #${pos}`, `Filled node in cycle ${currentCycle} (${roleInfo.label})`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
             }
           }}
           className={`${bg} text-white rounded-lg py-1.5 px-1 text-center shadow-xs transition-all cursor-pointer select-none`}

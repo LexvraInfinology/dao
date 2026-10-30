@@ -34,7 +34,7 @@ export function ReferralLinkCard({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [origin, setOrigin] = useState(
-    process.env.NEXT_PUBLIC_MATRIX_URL || "http://localhost:3001"
+    process.env.NEXT_PUBLIC_MATRIX_URL || "https://equorafimatrix.com"
   );
 
   useEffect(() => {

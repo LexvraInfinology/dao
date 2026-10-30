@@ -29,10 +29,10 @@ export function getTrobSafeProvider(): any {
 
   // 1. Direct window properties (case variations and mobile app webview aliases)
   const direct =
+    w.trob ||
     w.trobSafe ||
     w.trobsafe ||
     w.TrobSafe ||
-    w.trob ||
     w.trobWeb ||
     w.trobLink ||
     w.troblink ||
@@ -237,10 +237,19 @@ export async function autoDetectAndConnectTrobSafe(): Promise<string | null> {
 }
 
 /**
- * Connect to TrobSafe specifically
+ * Connect to TrobSafe specifically.
+ * Directly prompts native TrobSafe authorization sheet on Mobile APK & Chrome extension,
+ * automatically resolving the active address without requiring manual typing.
  */
 export async function connectTrobSafe(): Promise<string> {
   if (typeof window === "undefined") throw new Error("Window not available");
+
+  // 0. Explicit connection intent: clear the explicit disconnect flag
+  try {
+    localStorage.removeItem("equora_wallet_explicit_disconnect");
+  } catch {}
+
+  // 1. Dispatch wakeup signals
   wakeUpExtension();
 
   const foreign = getIncompatibleForeignWallet();
@@ -250,50 +259,193 @@ export async function connectTrobSafe(): Promise<string> {
     );
   }
 
-  const tw = getTrobSafeProvider();
-
+  // If provider not immediately ready, poll briefly for injection
+  let tw = getTrobSafeProvider();
   if (!tw) {
+    for (let i = 0; i < 15; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      tw = getTrobSafeProvider();
+      if (tw) break;
+    }
+  }
+
+  const w = typeof window !== "undefined" ? (window as any) : null;
+  const hasBridge = Boolean(
+    w?.__trobsafeBridge ||
+    (typeof document !== "undefined" && document.documentElement?.hasAttribute("data-trobsafe-inpage"))
+  );
+
+  if (!tw && !hasBridge) {
+    const stored = getInjectedAuthorizedAccount();
+    if (stored && stored.startsWith("0x")) {
+      setStoredUserAddress(stored);
+      return stored;
+    }
     throw new Error(
       "TrobSafe wallet was not detected. Please install TrobSafe extension for Chrome/Brave/Edge or open this page inside the TrobSafe Mobile App (Android APK / iOS)."
     );
   }
 
   try {
-    if (tw.request) {
+    let resolvedBase58 = "";
+    let resolvedHex = "";
+
+    // Check defaultAddress on trob object first (if already authorized)
+    if (tw?.defaultAddress?.base58 || tw?.defaultAddress?.hex) {
+      resolvedBase58 = tw.defaultAddress.base58 || "";
+      resolvedHex = (tw.defaultAddress.hex || "").toLowerCase();
+    }
+
+    // Method 1: tw.getDetails() - official TrobSafe API (triggers native dialog in TrobSafe mobile app)
+    if (!resolvedBase58 && !resolvedHex && typeof tw?.getDetails === "function") {
       try {
-        await tw.request({ method: "tron_requestAccounts" });
+        const details: any = await tw.getDetails();
+        if (details) {
+          const addrObj = details.address || details;
+          resolvedBase58 = addrObj.base58 || (typeof addrObj === "string" && !addrObj.startsWith("0x") ? addrObj : "") || "";
+          resolvedHex = (addrObj.hex || (typeof addrObj === "string" && addrObj.startsWith("0x") ? addrObj : "") || "").toLowerCase();
+        }
       } catch (e: any) {
-        if (e?.code === 4001 || e?.message?.includes("User rejected")) {
+        const m = (e?.message || String(e)).toLowerCase();
+        if (e?.code === 4001 || m.includes("user rejected") || m.includes("rejected")) {
+          throw new Error("Connection request was rejected in TrobSafe.");
+        }
+        if (m.includes("locked")) {
+          throw new Error("Your TrobSafe Wallet is locked. Please unlock it to continue.");
+        }
+      }
+    }
+
+    // Method 2: tw.request({ method: 'trob_requestAccounts' }) - standard TrobSafe native prompt
+    if (!resolvedBase58 && !resolvedHex && typeof tw?.request === "function") {
+      try {
+        const reqRes: any = await tw.request({ method: "trob_requestAccounts" });
+        if (reqRes) {
+          const data = reqRes.data || reqRes;
+          if (typeof data === "string") {
+            if (data.startsWith("0x")) resolvedHex = data.toLowerCase();
+            else resolvedBase58 = data;
+          } else if (Array.isArray(data) && data[0]) {
+            if (data[0].startsWith("0x")) resolvedHex = data[0].toLowerCase();
+            else resolvedBase58 = data[0];
+          } else if (typeof data === "object") {
+            resolvedBase58 = data.base58 || data.address || "";
+            resolvedHex = (data.hex || "").toLowerCase();
+          }
+        }
+      } catch (e: any) {
+        const m = (e?.message || String(e)).toLowerCase();
+        if (e?.code === 4001 || m.includes("user rejected") || m.includes("rejected")) {
+          throw new Error("Connection request was rejected in TrobSafe.");
+        }
+        if (m.includes("locked")) {
+          throw new Error("Your TrobSafe Wallet is locked. Please unlock it to continue.");
+        }
+      }
+    }
+
+    // Method 3: tw.request({ method: 'eth_requestAccounts' })
+    if (!resolvedBase58 && !resolvedHex && typeof tw?.request === "function") {
+      try {
+        const ethRes: any = await tw.request({ method: "eth_requestAccounts" });
+        if (ethRes && Array.isArray(ethRes) && ethRes[0]) {
+          resolvedHex = ethRes[0].toLowerCase();
+        }
+      } catch (e: any) {
+        const m = (e?.message || String(e)).toLowerCase();
+        if (e?.code === 4001 || m.includes("user rejected") || m.includes("rejected")) {
           throw new Error("Connection request was rejected in TrobSafe.");
         }
       }
     }
 
-    if (typeof tw.enable === "function") {
+    // Method 4: tw.request({ method: 'tron_requestAccounts' })
+    if (!resolvedBase58 && !resolvedHex && typeof tw?.request === "function") {
       try {
-        const res = await tw.enable();
-        if (res && Array.isArray(res) && res[0]) {
-          const clean = normalizeTo0x(res[0]);
-          setStoredUserAddress(clean);
-          return clean;
+        const tronRes: any = await tw.request({ method: "tron_requestAccounts" });
+        if (tronRes) {
+          const d = tronRes.data || tronRes;
+          if (typeof d === "string") {
+            if (d.startsWith("0x")) resolvedHex = d.toLowerCase();
+            else resolvedBase58 = d;
+          } else if (Array.isArray(d) && d[0]) {
+            if (d[0].startsWith("0x")) resolvedHex = d[0].toLowerCase();
+            else resolvedBase58 = d[0];
+          }
         }
-      } catch {}
+      } catch (e: any) {
+        const m = (e?.message || String(e)).toLowerCase();
+        if (e?.code === 4001 || m.includes("user rejected") || m.includes("rejected")) {
+          throw new Error("Connection request was rejected in TrobSafe.");
+        }
+      }
     }
 
-    const rawAddr =
-      tw.defaultAddress?.base58 ||
-      tw.defaultAddress?.hex ||
-      tw.address ||
-      tw.selectedAddress;
+    // Method 5: tw.enable() (TronWeb/TronLink/TrobWeb standard)
+    if (!resolvedBase58 && !resolvedHex && typeof tw?.enable === "function") {
+      try {
+        const enableRes: any = await tw.enable();
+        if (enableRes) {
+          if (Array.isArray(enableRes) && enableRes[0]) {
+            if (enableRes[0].startsWith("0x")) resolvedHex = enableRes[0].toLowerCase();
+            else resolvedBase58 = enableRes[0];
+          } else if (typeof enableRes === "object") {
+            resolvedBase58 = enableRes.base58 || "";
+            resolvedHex = (enableRes.hex || "").toLowerCase();
+          }
+        }
+      } catch (e: any) {
+        const m = (e?.message || String(e)).toLowerCase();
+        if (e?.code === 4001 || m.includes("user rejected") || m.includes("rejected")) {
+          throw new Error("Connection request was rejected in TrobSafe.");
+        }
+      }
+    }
 
-    if (!rawAddr || rawAddr === "0" || rawAddr === "0x0") {
+    // Method 6: Check window.tronWeb, window.trobWeb, window.trobSafe defaultAddress
+    if (!resolvedBase58 && !resolvedHex && typeof window !== "undefined") {
+      const alt = w?.trob || w?.tronWeb || w?.trobWeb || w?.trobSafe || w?.trobsafe;
+      if (alt?.defaultAddress) {
+        resolvedBase58 = alt.defaultAddress.base58 || "";
+        resolvedHex = (alt.defaultAddress.hex || "").toLowerCase();
+      }
+    }
+
+    // Method 7: Fallback to stored address
+    if (!resolvedBase58 && !resolvedHex) {
+      const stored = getInjectedAuthorizedAccount();
+      if (stored && stored.startsWith("0x")) {
+        resolvedHex = stored;
+      }
+    }
+
+    if (!resolvedBase58 && !resolvedHex) {
       throw new Error("Please unlock your TrobSafe wallet or approve connection.");
     }
-    const clean = normalizeTo0x(rawAddr);
+
+    const clean = normalizeTo0x(resolvedHex || resolvedBase58);
+    if (!clean || !clean.startsWith("0x") || clean.length !== 42) {
+      throw new Error("Could not resolve valid TrobChain address from TrobSafe.");
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("equora_wallet_explicit_disconnect");
+      if (resolvedBase58 || resolvedHex) {
+        localStorage.setItem(
+          "trobsafe_address",
+          JSON.stringify({ base58: resolvedBase58 || "", hex: resolvedHex || clean })
+        );
+      }
+      localStorage.setItem("equora_auth_address", clean);
+      localStorage.setItem("equora_matrix_address", clean);
+      localStorage.setItem("equora_user_address", clean);
+      localStorage.setItem(`equora_matrix_registered_${clean.toLowerCase()}`, "true");
+    }
+
     setStoredUserAddress(clean);
     return clean;
   } catch (err: any) {
-    if (err?.code === 4001 || err?.message?.includes("User rejected")) {
+    if (err?.code === 4001 || err?.message?.includes("User rejected") || err?.message?.includes("rejected")) {
       throw new Error("Connection request was rejected in TrobSafe.");
     }
     throw new Error(err.message || "Failed to connect TrobSafe.");

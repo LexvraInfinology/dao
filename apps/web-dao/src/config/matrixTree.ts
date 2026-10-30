@@ -106,26 +106,20 @@ export const MATRIX_TOP7_NODES: Record<number, MatrixMemberNode> = {
  * Returns the base URL for the Matrix application
  */
 export function getMatrixBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_MATRIX_URL) {
+    return process.env.NEXT_PUBLIC_MATRIX_URL.replace(/\/+$/, '');
+  }
   // 1. Client-side browser inspection
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     // Local development or LAN access: point directly to local Matrix dev server (Port 3001)
     if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
-      return 'http://localhost:3001';
-    }
-    // Production domain
-    if (host.includes('equorafidao.com') || host.includes('equorafi.com')) {
-      return process.env.NEXT_PUBLIC_MATRIX_URL || 'https://equorafimatrix.com';
+      return `${window.location.protocol}//${host}:3001`;
     }
   }
 
-  // 2. Server-side environment fallback
-  if (process.env.NEXT_PUBLIC_MATRIX_URL && !process.env.NEXT_PUBLIC_MATRIX_URL.includes('equorafimatrix.com')) {
-    return process.env.NEXT_PUBLIC_MATRIX_URL.replace(/\/+$/, '');
-  }
-
-  // Default to local port 3001 during testnet / local development
-  return 'http://localhost:3001';
+  // Production default
+  return 'https://equorafimatrix.com';
 }
 
 import { resolveQuadrantParent, MATRIX_GATEWAYS, PROTOCOL_VAULT_ADDRESS } from './matrixGateways';

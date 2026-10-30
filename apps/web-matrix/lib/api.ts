@@ -512,14 +512,9 @@ export const matrixApi = {
   async getWalletEligibility(address: string): Promise<WalletEligibility | null> {
     if (!address) return null;
     let url = `/api/eligibility/${address}`;
-    if (process.env.NEXT_PUBLIC_API_URL) {
+    if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")) {
       const rootApi = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "");
       url = `${rootApi}/api/dao/eligibility/${address}`;
-    } else if (typeof window !== "undefined") {
-      const hostname = window.location.hostname;
-      if (hostname === "localhost" || hostname === "127.0.0.1") {
-        url = `http://localhost:4000/api/dao/eligibility/${address}`;
-      }
     }
     try {
       const res = await fetch(url);
@@ -528,6 +523,16 @@ export const matrixApi = {
         return json.data as WalletEligibility;
       }
     } catch (err) {
+      // Automatic fallback to internal Next.js route handler if external API is down or unconfigured
+      if (url !== `/api/eligibility/${address}`) {
+        try {
+          const fallbackRes = await fetch(`/api/eligibility/${address}`);
+          const fallbackJson = await fallbackRes.json();
+          if (fallbackJson.success && fallbackJson.data) {
+            return fallbackJson.data as WalletEligibility;
+          }
+        } catch {}
+      }
       console.warn("[MatrixApi] Failed to fetch eligibility details:", err);
     }
     return null;

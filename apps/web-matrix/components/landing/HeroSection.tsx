@@ -554,9 +554,9 @@ export function HeroSection() {
       </div>
 
       {/* ────────────── HERO SECTION ────────────── */}
-      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-14 sm:pt-16 lg:pt-18 min-h-[580px] sm:min-h-0">
+      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-[88px] sm:pt-24 lg:pt-26 min-h-[620px] sm:min-h-0">
         {/* Mobile Background Video: Boy with puppy animated in background on mobile (< md) */}
-        <div className="absolute top-14 sm:top-16 inset-x-0 bottom-0 pointer-events-none z-0 md:hidden overflow-hidden flex items-start justify-center">
+        <div className="absolute top-[76px] sm:top-20 inset-x-0 bottom-0 pointer-events-none z-0 md:hidden overflow-hidden flex items-start justify-center">
           <video
             src="/hero_section.mp4"
             poster="/hero-character-cropped.png"
@@ -584,12 +584,12 @@ export function HeroSection() {
         </div>
 
         {/* ────────────── HERO MAIN CONTENT ────────────── */}
-        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-4 lg:py-5">
+        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-5 sm:py-4 lg:py-5">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-10 xl:gap-12">
             {/* Left Content Column */}
             <div className="w-full md:w-auto md:max-w-[430px] lg:max-w-[480px] xl:max-w-[510px] flex flex-col items-start text-left shrink-0 z-10">
-              {/* Eyebrow - Plain text, wide tracking, no pill */}
-              <div className="text-xs sm:text-[12px] font-black tracking-[0.2em] text-[#0f172a] uppercase mb-1.5 sm:mb-2 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+              {/* Eyebrow - Plain text, wide tracking, clearly spaced from navbar */}
+              <div className="text-xs sm:text-[12px] font-black tracking-[0.2em] text-[#0f172a] uppercase mt-1 mb-2 sm:mb-2.5 drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]">
                 MATRIX PLATFORM
               </div>
 

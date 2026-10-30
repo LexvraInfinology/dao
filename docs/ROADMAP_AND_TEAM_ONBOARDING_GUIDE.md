@@ -146,9 +146,9 @@ PORT=3001
 NEXT_PUBLIC_APP_URL=http://localhost:3001
 NEXT_PUBLIC_API_URL=http://localhost:4000/api/matrix
 
-NEXT_PUBLIC_MATRIX_DOMAIN=equorafi.com
+NEXT_PUBLIC_MATRIX_DOMAIN=equorafimatrix.com
 NEXT_PUBLIC_DAO_DOMAIN=equorafidao.com
-NEXT_PUBLIC_MATRIX_URL=https://equorafi.com
+NEXT_PUBLIC_MATRIX_URL=https://equorafimatrix.com
 NEXT_PUBLIC_DAO_URL=https://equorafidao.com
 
 # Target Network
@@ -172,8 +172,13 @@ NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=7663d51173c43f7ad40158edb7e88859
 #### 🚀 For Mainnet:
 ```ini
 PORT=3001
-NEXT_PUBLIC_APP_URL=https://matrix.equora.fi
-NEXT_PUBLIC_API_URL=https://api.equora.fi/api/matrix
+NEXT_PUBLIC_APP_URL=https://equorafimatrix.com
+NEXT_PUBLIC_API_URL=https://api.equorafidao.com/api/matrix
+
+NEXT_PUBLIC_MATRIX_DOMAIN=equorafimatrix.com
+NEXT_PUBLIC_DAO_DOMAIN=equorafidao.com
+NEXT_PUBLIC_MATRIX_URL=https://equorafimatrix.com
+NEXT_PUBLIC_DAO_URL=https://equorafidao.com
 
 NEXT_PUBLIC_TARGET_NETWORK=mainnet
 NEXT_PUBLIC_CHAIN_ID=1000
@@ -233,6 +238,7 @@ PORT=4000
 WEB_PORT=3000
 API_PORT=4000
 
+# 1. Database Connection (Neon Cloud PostgreSQL)
 DATABASE_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 # 2. Redis Cache

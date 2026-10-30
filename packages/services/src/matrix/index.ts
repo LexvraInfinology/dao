@@ -387,47 +387,64 @@ export class MatrixService {
 
         const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
 
-        user = await prisma.user.create({
-          data: {
-            address: canonicalAddress,
-            userId: nextUserId,
-            sponsorAddress: normalizedSponsor,
-            registrationTimestamp: new Date(),
-            matrixProfile: {
-              create: {
-                username: `Operative #${nextUserId}`,
-                totalEarnings: 0,
-                availableBalance: 0,
-                withdrawnTotal: 0,
+        let createdNew = false;
+        try {
+          user = await prisma.user.create({
+            data: {
+              address: canonicalAddress,
+              userId: nextUserId,
+              sponsorAddress: normalizedSponsor,
+              registrationTimestamp: new Date(),
+              matrixProfile: {
+                create: {
+                  username: `Operative #${nextUserId}`,
+                  totalEarnings: 0,
+                  availableBalance: 0,
+                  withdrawnTotal: 0,
+                },
+              },
+              matrixSettings: {
+                create: {
+                  autoUpgrade: true,
+                  autoReinvest: true,
+                  soundEffects: true,
+                  theme: "dark",
+                },
+              },
+              matrixSlots: {
+                create: {
+                  slotNumber: 1,
+                  isUnlocked: false,
+                  unlockedAt: null,
+                  currentCycle: 1,
+                  filledNodes: 0,
+                },
               },
             },
-            matrixSettings: {
-              create: {
-                autoUpgrade: true,
-                autoReinvest: true,
-                soundEffects: true,
-                theme: "dark",
-              },
+            include: {
+              matrixProfile: true,
+              matrixSettings: true,
+              matrixSlots: true,
             },
-            matrixSlots: {
-              create: {
-                slotNumber: 1,
-                isUnlocked: false,
-                unlockedAt: null,
-                currentCycle: 1,
-                filledNodes: 0,
+          });
+          createdNew = true;
+        } catch (err: any) {
+          if (err?.code === "P2002") {
+            user = await prisma.user.findUnique({
+              where: { address: canonicalAddress },
+              include: {
+                matrixProfile: true,
+                matrixSettings: true,
+                matrixSlots: true,
               },
-            },
-          },
-          include: {
-            matrixProfile: true,
-            matrixSettings: true,
-            matrixSlots: true,
-          },
-        });
+            });
+          } else {
+            throw err;
+          }
+        }
 
         // Update sponsor direct referrals count (qualification requires $30 deposit)
-        if (normalizedSponsor) {
+        if (createdNew && normalizedSponsor) {
           const count = await prisma.user.count({ where: { sponsorAddress: normalizedSponsor } }).catch(() => 0);
           const depositedCount = await prisma.matrixSlot.count({
             where: {
@@ -446,15 +463,17 @@ export class MatrixService {
         }
 
         // Record welcome activity
-        await prisma.matrixActivity.create({
-          data: {
-            userAddress: canonicalAddress,
-            action: "MEMBER_JOINED",
-            title: "Account Activated",
-            description: `Joined EQUORA Matrix Network as Operative #${nextUserId}`,
-            slotNumber: 1,
-          },
-        }).catch(() => {});
+        if (createdNew) {
+          await prisma.matrixActivity.create({
+            data: {
+              userAddress: canonicalAddress,
+              action: "MEMBER_JOINED",
+              title: "Account Activated",
+              description: `Joined EQUORA Matrix Network as Operative #${nextUserId}`,
+              slotNumber: 1,
+            },
+          }).catch(() => {});
+        }
       } else {
         const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
         if (!user.sponsorAddress && normalizedSponsor && normalizedSponsor !== canonicalAddress) {

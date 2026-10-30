@@ -74,14 +74,16 @@ export const ACTIVE_DAO_CONTRACT_ADDRESS = IS_MAINNET
       (process.env.NEXT_PUBLIC_DAO_ADDRESS && process.env.NEXT_PUBLIC_DAO_ADDRESS !== 'TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr'
         ? process.env.NEXT_PUBLIC_DAO_ADDRESS
         : null) ||
+      process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
       'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto')
   : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS ||
       process.env.NEXT_PUBLIC_DAO_ADDRESS ||
+      process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
       'TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr');
 
 export const ACTIVE_DAO_CONTRACT_HEX = IS_MAINNET
-  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_HEX || '0x0a59d6a2dcd3b18687c1efe1625642ad85679377')
-  : (process.env.NEXT_PUBLIC_TESTNET_DAO_HEX || '0x9927344a18809582c7a97fb18be456fdd73171aa');
+  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_HEX || process.env.NEXT_PUBLIC_DAO_HEX || '0x0a59d6a2dcd3b18687c1efe1625642ad85679377')
+  : (process.env.NEXT_PUBLIC_TESTNET_DAO_HEX || process.env.NEXT_PUBLIC_DAO_HEX || '0x9927344a18809582c7a97fb18be456fdd73171aa');
 
 // Matrix Contract Address (Strictly Network Guarded)
 export const ACTIVE_MATRIX_CONTRACT_ADDRESS = IS_MAINNET

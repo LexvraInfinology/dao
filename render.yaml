@@ -3,8 +3,7 @@ services:
     name: equora-api
     runtime: node
     plan: free
-    region: ohio
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build:api
+    buildCommand: npm install -g pnpm@9.15.4 && pnpm install && pnpm run build:api
     startCommand: pnpm run start:api
     envVars:
       - key: NODE_VERSION

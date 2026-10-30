@@ -30,7 +30,11 @@ export function OverviewTab({
       (profile?.totalEarnings ?? (isFounder ? 1260.00 : 0)));
   const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (totalEarnedUsd / 0.056));
 
-  const directsCount = profile?.directReferralsCount ?? (isFounder ? 48 : 0);
+  const directsCount =
+    dashboard?.activeDirectsCount ??
+    profile?.activeDirectsCount ??
+    profile?.directReferralsCount ??
+    0;
   const isQualified = profile?.isQualified ?? directsCount >= 2;
 
   const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? (highestUnlockedSlot >= 4 ? 14 : 0);

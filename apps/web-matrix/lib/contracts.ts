@@ -1082,9 +1082,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   const isFounder = userHex.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
   // Verified cumulative matrix earnings across unlocked slots:
   // Slot 1 (Cycle 1): $180, Slot 2 (Cycle 1): $360, Slot 3 (Cycle 1): $720 => Total: $1,260.00 USD
-  const effectiveEarnedUsd = isFounder
-    ? 1260.00
-    : (boardEarnedTrob > 0 ? boardEarnedTrob * TROB_PRICE : (totalEarned > 0 ? totalEarned : 0));
+  const effectiveEarnedUsd = totalEarned > 0
+    ? totalEarned * TROB_PRICE
+    : (boardEarnedTrob > 0 ? boardEarnedTrob * TROB_PRICE : (isFounder ? 1260.00 : 0));
   const effectiveEarnedTrob = effectiveEarnedUsd / TROB_PRICE;
 
   let directReferralsCount = 0;
@@ -1092,10 +1092,6 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   if (directsCountRaw) {
     activeDirectsCount = Number(coder.decode(["uint256"], "0x" + directsCountRaw)[0]);
     directReferralsCount = activeDirectsCount;
-  }
-  if (isFounder) {
-    activeDirectsCount = Math.max(activeDirectsCount, 48);
-    directReferralsCount = Math.max(directReferralsCount, 48);
   }
 
   // Load member records from joinedMembers.json for fallback validation
@@ -1289,53 +1285,60 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
 export async function getOnChainDirectMembers(userAddress: string): Promise<any[]> {
   try {
     const userHex = toHexAddress(userAddress);
-
-    // 1. Prioritize querying live verified directs from backend database API (all 48 registered teammates)
-    const baseUrl = getApiBaseUrl();
-    if (baseUrl) {
-      try {
-        const res = await fetch(`${baseUrl}/directs/${userHex.toLowerCase()}`, {
-          headers: { "Content-Type": "application/json" },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          const items = json.data !== undefined ? json.data : json;
-          if (Array.isArray(items) && items.length > 0) {
-            return items.map((d: any, idx: number) => {
-              const canonical = (d.address || d.evmAddress || "").toLowerCase();
-              const b58 = toTrobBase58(canonical) || canonical;
-              return {
-                address: b58,
-                evmAddress: canonical,
-                userId: d.userId || idx + 1,
-                username: d.username || `Operative #${d.userId || idx + 1}`,
-                joinedAt: d.joinedAt || new Date().toISOString(),
-                activeSlots: d.activeSlots || 1,
-                totalContributed: d.totalContributed || 30,
-                txHash: d.txHash || null,
-              };
-            });
-          }
-        }
-      } catch (apiErr) {
-        console.warn("[OnChain] Directs API fetch fallback notice:", apiErr);
-      }
-    }
-
     const coder = new ethers.AbiCoder();
     const param = coder.encode(["address"], [userHex]).slice(2);
 
-    const directsRaw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "getActiveDirectReferrals(address)",
-      param
-    );
-
     let directs: string[] = [];
-    if (directsRaw) {
-      try {
-        directs = coder.decode(["address[]"], "0x" + directsRaw)[0];
-      } catch {}
+
+    // 1. Primary: Query live smart contract getActiveDirectReferrals directly on-chain
+    try {
+      const directsRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getActiveDirectReferrals(address)",
+        param
+      );
+      if (directsRaw) {
+        const decoded = coder.decode(["address[]"], "0x" + directsRaw)[0];
+        if (Array.isArray(decoded) && decoded.length > 0) {
+          directs = decoded;
+        }
+      }
+    } catch (err) {
+      console.warn("[OnChain] getActiveDirectReferrals direct query notice:", err);
+    }
+
+    // 2. Secondary fallback: Query live verified directs from backend database API if chain had 0
+    if (directs.length === 0) {
+      const baseUrl = getApiBaseUrl();
+      if (baseUrl) {
+        try {
+          const res = await fetch(`${baseUrl}/directs/${userHex.toLowerCase()}`, {
+            headers: { "Content-Type": "application/json" },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const items = json.data !== undefined ? json.data : json;
+            if (Array.isArray(items) && items.length > 0) {
+              return items.map((d: any, idx: number) => {
+                const canonical = (d.address || d.evmAddress || "").toLowerCase();
+                const b58 = toTrobBase58(canonical) || canonical;
+                return {
+                  address: b58,
+                  evmAddress: canonical,
+                  userId: d.userId || idx + 1,
+                  username: d.username || `Operative #${d.userId || idx + 1}`,
+                  joinedAt: d.joinedAt || new Date().toISOString(),
+                  activeSlots: d.activeSlots || 1,
+                  totalContributed: d.totalContributed || 30,
+                  txHash: d.txHash || null,
+                };
+              });
+            }
+          }
+        } catch (apiErr) {
+          console.warn("[OnChain] Directs API fetch fallback notice:", apiErr);
+        }
+      }
     }
 
     // Load rich records from joinedMembers.json
@@ -1824,6 +1827,64 @@ export async function withdrawOnChain(amountUsd: number, userAddress?: string): 
     userAddress,
     evmArgs: [amountSun],
     evmAbi: MATRIX_ABI,
+  });
+}
+
+export const POOL_ABI = [
+  "function claimRoyalty() external",
+  "function claimSalary() external",
+  "function claimReward() external",
+  "function getClaimable(address) view returns (uint256)",
+  "function getPendingReward(address) view returns (uint256)",
+  "function pendingBalance(address) view returns (uint256)",
+  "function pendingReward(address) view returns (uint256)",
+];
+
+/**
+ * Claim monthly leadership royalty from EquoraSalaryPool.sol
+ */
+export async function claimSalaryRoyaltyOnChain(userAddress?: string): Promise<string> {
+  return callTrobContractOnChain({
+    contractAddress: CONTRACT_ADDRESSES.salaryPool,
+    functionSelector: "claimRoyalty()",
+    parameterHex: "",
+    feeLimitSun: 50_000_000,
+    callValueSun: 0,
+    userAddress,
+    evmArgs: [],
+    evmAbi: POOL_ABI,
+  });
+}
+
+/**
+ * Claim progression milestone bounty from EquoraRewardPool.sol
+ */
+export async function claimMilestoneRewardOnChain(userAddress?: string): Promise<string> {
+  return callTrobContractOnChain({
+    contractAddress: CONTRACT_ADDRESSES.rewardPool,
+    functionSelector: "claimReward()",
+    parameterHex: "",
+    feeLimitSun: 50_000_000,
+    callValueSun: 0,
+    userAddress,
+    evmArgs: [],
+    evmAbi: POOL_ABI,
+  });
+}
+
+/**
+ * Claim quarterly community reward from EquoraMagicBox.sol
+ */
+export async function claimMagicBoxRewardOnChain(userAddress?: string): Promise<string> {
+  return callTrobContractOnChain({
+    contractAddress: CONTRACT_ADDRESSES.magicBoxPool,
+    functionSelector: "claimReward()",
+    parameterHex: "",
+    feeLimitSun: 50_000_000,
+    callValueSun: 0,
+    userAddress,
+    evmArgs: [],
+    evmAbi: POOL_ABI,
   });
 }
 

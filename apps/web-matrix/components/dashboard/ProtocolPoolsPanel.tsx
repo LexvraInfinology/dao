@@ -3,7 +3,17 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getOnChainProtocolPoolsStats, type ProtocolPoolsStats } from "@/lib/contracts";
+import {
+  getOnChainProtocolPoolsStats,
+  type ProtocolPoolsStats,
+  getUserClaimablePoolRewards,
+  type UserClaimablePoolRewards,
+  claimSalaryRoyaltyOnChain,
+  claimMilestoneRewardOnChain,
+  claimMagicBoxRewardOnChain,
+} from "@/lib/contracts";
+import { useUserStore } from "@/lib/stores";
+import { toast } from "@/lib/toast";
 
 interface ProtocolPoolsPanelProps {
   currentSlot?: number;
@@ -15,6 +25,17 @@ export function ProtocolPoolsPanel({
   isQualified = true,
 }: ProtocolPoolsPanelProps) {
   const [poolStats, setPoolStats] = useState<ProtocolPoolsStats | null>(null);
+  const userAddress = useUserStore((s) => s.address);
+  const [claimableRewards, setClaimableRewards] = useState<UserClaimablePoolRewards | null>(null);
+  const [claimingPool, setClaimingPool] = useState<string | null>(null);
+
+  const refreshClaimable = React.useCallback(async () => {
+    if (!userAddress) return;
+    try {
+      const c = await getUserClaimablePoolRewards(userAddress);
+      setClaimableRewards(c);
+    } catch {}
+  }, [userAddress]);
 
   useEffect(() => {
     getOnChainProtocolPoolsStats().then(setPoolStats).catch(() => {});
@@ -23,6 +44,38 @@ export function ProtocolPoolsPanel({
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    refreshClaimable();
+    const intv = setInterval(refreshClaimable, 15000);
+    return () => clearInterval(intv);
+  }, [refreshClaimable]);
+
+  const handleClaim = async (type: "salary" | "reward" | "magicbox") => {
+    if (!userAddress) {
+      toast.error("Wallet Required", "Please connect your wallet first.");
+      return;
+    }
+    setClaimingPool(type);
+    try {
+      let tx: string = "";
+      if (type === "salary") {
+        tx = await claimSalaryRoyaltyOnChain(userAddress);
+        toast.success("Leadership Royalty Claimed", `Transaction broadcasted: ${tx.slice(0, 10)}...`);
+      } else if (type === "reward") {
+        tx = await claimMilestoneRewardOnChain(userAddress);
+        toast.success("Milestone Bounty Claimed", `Transaction broadcasted: ${tx.slice(0, 10)}...`);
+      } else if (type === "magicbox") {
+        tx = await claimMagicBoxRewardOnChain(userAddress);
+        toast.success("Community Reward Claimed", `Transaction broadcasted: ${tx.slice(0, 10)}...`);
+      }
+      await refreshClaimable();
+    } catch (err: any) {
+      toast.error("Claim Failed", err?.message || "Contract transaction could not be executed.");
+    } finally {
+      setClaimingPool(null);
+    }
+  };
 
   // Monthly Royalty Countdown (11th of every month at 00:00 UTC)
   const [royaltyCountdown, setRoyaltyCountdown] = useState<{
@@ -199,6 +252,65 @@ export function ProtocolPoolsPanel({
           </div>
         </div>
 
+        {/* User On-Chain Claimable Yield & Status Strip */}
+        <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#f0f7ff] via-[#f8fbff] to-[#edf9f5] border border-[#d6e7fa] flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white border border-[#cbe1fb] flex items-center justify-center text-[#2563eb] shadow-2xs shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="7" />
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12.5px] font-extrabold text-[#0f172a]">
+                  Your Claimable Pool Rewards
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] text-[9.5px] font-black uppercase">
+                  Tier: {claimableRewards?.currentTierName || "ALPHA"}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="text-[18px] sm:text-[20px] font-black font-mono text-[#0f172a]">
+                  ${((claimableRewards?.totalClaimableTrob || 0) * 0.056).toFixed(2)} USD
+                </span>
+                <span className="text-[11px] font-bold text-[#64748b]">
+                  ({(claimableRewards?.totalClaimableTrob || 0).toFixed(2)} TROB)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+            {claimableRewards && claimableRewards.salaryClaimableTrob > 0 && (
+              <button
+                type="button"
+                onClick={() => handleClaim("salary")}
+                disabled={claimingPool !== null}
+                className="px-3.5 py-1.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11.5px] font-bold shadow-xs cursor-pointer transition-all disabled:opacity-50"
+              >
+                {claimingPool === "salary" ? "Claiming..." : "Claim Monthly Royalty"}
+              </button>
+            )}
+            {claimableRewards && claimableRewards.rewardClaimableTrob > 0 && (
+              <button
+                type="button"
+                onClick={() => handleClaim("reward")}
+                disabled={claimingPool !== null}
+                className="px-3.5 py-1.5 rounded-xl bg-[#0e9f79] hover:bg-[#0b8061] text-white text-[11.5px] font-bold shadow-xs cursor-pointer transition-all disabled:opacity-50"
+              >
+                {claimingPool === "reward" ? "Claiming..." : "Claim Milestone Bounty"}
+              </button>
+            )}
+            {(!claimableRewards || claimableRewards.totalClaimableTrob === 0) && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#e2e8f0] text-[11px] font-bold text-[#0e9f79]">
+                <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+                <span>Next Distribution Active • Accruing on-chain</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 4 Pools Grid - Compact, Light-Themed, Sky Blue Accents */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5 relative z-10">
           {/* Pool 1: DAO Instant Push (35%) */}
@@ -260,7 +372,18 @@ export function ProtocolPoolsPanel({
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Settlement:</span>
-              <span className="font-bold text-[#b97a17]">11th Monthly (Clean Rank)</span>
+              {claimableRewards && claimableRewards.salaryClaimableTrob > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => handleClaim("salary")}
+                  disabled={claimingPool !== null}
+                  className="px-2 py-0.5 rounded-md bg-[#2563eb] text-white font-bold hover:bg-[#1d4ed8] cursor-pointer text-[10px]"
+                >
+                  {claimingPool === "salary" ? "..." : "Claim Royalty"}
+                </button>
+              ) : (
+                <span className="font-bold text-[#b97a17]">11th Monthly (Clean Rank)</span>
+              )}
             </div>
           </div>
 
@@ -336,7 +459,18 @@ export function ProtocolPoolsPanel({
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Progression Bounty:</span>
-              <span className="font-bold text-[#0e9f79]">Instant Disbursed</span>
+              {claimableRewards && claimableRewards.rewardClaimableTrob > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => handleClaim("reward")}
+                  disabled={claimingPool !== null}
+                  className="px-2 py-0.5 rounded-md bg-[#0e9f79] text-white font-bold hover:bg-[#0b8061] cursor-pointer text-[10px]"
+                >
+                  {claimingPool === "reward" ? "..." : "Claim Bounty"}
+                </button>
+              ) : (
+                <span className="font-bold text-[#0e9f79]">Instant Disbursed</span>
+              )}
             </div>
           </div>
         </div>

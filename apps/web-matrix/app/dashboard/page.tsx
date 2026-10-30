@@ -379,10 +379,16 @@ export default function DashboardPage() {
 
               <ReferralLinkCard
                 address={address}
-                directsCount={profile?.directReferralsCount ?? 0}
+                directsCount={
+                  dashboard?.activeDirectsCount ??
+                  profile?.activeDirectsCount ??
+                  profile?.directReferralsCount ??
+                  0
+                }
                 sponsorAddress={profile?.sponsorAddress}
                 upline2Address={profile?.upline2Address}
                 isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
+                referralCode={profile?.sponsorCode}
               />
 
               <OverviewTab

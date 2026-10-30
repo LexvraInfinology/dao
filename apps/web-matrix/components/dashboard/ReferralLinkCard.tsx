@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Check, Copy, Share2, ShieldCheck } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { getOnChainCodeByUser } from "@/lib/contracts";
 
 export interface ReferralLinkCardProps {
   address?: string | null;
@@ -11,9 +12,10 @@ export interface ReferralLinkCardProps {
   sponsorAddress?: string | null;
   upline2Address?: string | null;
   isQualified?: boolean;
+  referralCode?: number | null;
 }
 
-// Generate a realistic non-sequential 5-digit code like 56321 from wallet address
+// Generate a fallback non-sequential 5-digit code like 56321 from wallet address
 function get5DigitCode(addr: string): number {
   if (!addr) return 56321;
   let hash = 0;
@@ -30,9 +32,11 @@ export function ReferralLinkCard({
   sponsorAddress,
   upline2Address,
   isQualified = false,
+  referralCode: propReferralCode,
 }: ReferralLinkCardProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [onChainCode, setOnChainCode] = useState<number | null>(propReferralCode || null);
   const [origin, setOrigin] = useState(
     process.env.NEXT_PUBLIC_MATRIX_URL || "https://equorafimatrix.com"
   );
@@ -43,8 +47,27 @@ export function ReferralLinkCard({
     }
   }, []);
 
+  useEffect(() => {
+    if (propReferralCode && propReferralCode >= 10000 && propReferralCode <= 99999) {
+      setOnChainCode(propReferralCode);
+      return;
+    }
+    if (!address) return;
+    let isMounted = true;
+    getOnChainCodeByUser(address)
+      .then((code) => {
+        if (isMounted && code && code >= 10000 && code <= 99999) {
+          setOnChainCode(code);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [address, propReferralCode]);
+
   const base58Addr = address ? toTrobBase58(address) : "";
-  const referralCode = address ? get5DigitCode(address) : 56321;
+  const referralCode = onChainCode || (address ? get5DigitCode(address) : 56321);
   const referralUrl = base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`;
 
   const handleCopyLink = () => {

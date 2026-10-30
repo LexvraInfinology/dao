@@ -495,16 +495,33 @@ export async function getOnChainSlotDetails(
   const userHex = toHexAddress(userAddress);
   const param = coder.encode(["address", "uint256"], [userHex, slotNumber]).slice(2);
 
-  const raw = await queryTrobConstant(
-    CONTRACT_ADDRESSES.matrix,
-    "getSlotData(address,uint256)",
-    param
-  );
+  let isUnlocked = slotNumber === 1;
+  let currentCycle = 1;
+  let filledNodes = 0;
+  let nodes: string[] = Array(14).fill("0x0000000000000000000000000000000000000000");
+  let slotEarned = BigInt(0);
 
-  const [isUnlocked, currentCycle, filledNodes, nodes, slotEarned] = coder.decode(
-    ["bool", "uint256", "uint256", "address[14]", "uint256"],
-    "0x" + raw
-  );
+  try {
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "getSlotData(address,uint256)",
+      param
+    );
+
+    if (raw) {
+      const decoded = coder.decode(
+        ["bool", "uint256", "uint256", "address[14]", "uint256"],
+        "0x" + raw
+      );
+      isUnlocked = Boolean(decoded[0]);
+      currentCycle = Number(decoded[1]) || 1;
+      filledNodes = Number(decoded[2]) || 0;
+      nodes = decoded[3] || nodes;
+      slotEarned = decoded[4] || BigInt(0);
+    }
+  } catch (err) {
+    console.warn("[OnChain] getSlotData fallback notice:", err);
+  }
 
   const totalCycles = Number(currentCycle) || (isUnlocked ? 1 : 0);
   const liveFilledNodes = Number(filledNodes);
@@ -546,7 +563,7 @@ export async function getOnChainSlotDetails(
 
   // Universal Hierarchical Downline Subtree Resolution for ANY Matrix Member (Seat 1, Member 2, Member 3, etc.)
   try {
-    const allMembers: any[] = require("./joinedMembers.json");
+    const allMembers: any[] = joinedMembersData as any[];
     if (Array.isArray(allMembers) && allMembers.length > 0 && slotNumber === 1) {
       const uCanon = userHex.toLowerCase();
       const getDirects = (sponsorEvm: string) =>
@@ -622,7 +639,7 @@ export async function getOnChainSlotDetails(
   // Build lookup map from joinedMembers.json for rich labels & Base58 addresses
   const memberMetaMap = new Map<string, any>();
   try {
-    const joinedList: any[] = require("./joinedMembers.json");
+    const joinedList: any[] = joinedMembersData as any[];
     for (const j of joinedList) {
       if (j.evm) memberMetaMap.set(j.evm.toLowerCase(), j);
       if (j.base58) memberMetaMap.set(j.base58, j);
@@ -749,12 +766,15 @@ export async function getOnChainSlotDetails(
 
 /** Check if user is qualified for matrix earnings directly on-chain */
 export async function getOnChainQualification(userAddress: string): Promise<{ isQualified: boolean; activeDirectsCount: number }> {
-  if (!userAddress || !userAddress.trim().startsWith("0x")) {
+  if (!userAddress) {
+    return { isQualified: false, activeDirectsCount: 0 };
+  }
+  const userHex = toHexAddress(userAddress);
+  if (!userHex || !userHex.startsWith("0x") || userHex === "0x0000000000000000000000000000000000000000") {
     return { isQualified: false, activeDirectsCount: 0 };
   }
   try {
     const coder = new ethers.AbiCoder();
-    const userHex = toHexAddress(userAddress);
     const param = coder.encode(["address"], [userHex]).slice(2);
 
     let isQualified = false;

@@ -247,33 +247,33 @@ export function MagicBlindBoxWidget({
   return (
     <>
       {/* ──────────────────────────────────────────────────────────────────────── */}
-      {/* 1. PROFESSIONAL TRANSPARENT FLOATING GIFT BOX (Prominent 3D Interactive) */}
+      {/* 1. PROFESSIONAL TRANSPARENT FLOATING GIFT BOX (Big 3D Interactive Artwork) */}
       {/* ──────────────────────────────────────────────────────────────────────── */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end select-none group pointer-events-auto">
         {isMinimized ? (
           <button
             type="button"
             onClick={() => setIsMinimized(false)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/95 hover:bg-slate-950 backdrop-blur-md border border-amber-500/40 shadow-xl text-white text-[11px] font-bold cursor-pointer transition-all active:scale-95"
-            title="Expand Magic Blind Box Timer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/95 hover:bg-slate-950 backdrop-blur-md border border-amber-500/50 shadow-xl text-white text-[11px] font-bold cursor-pointer transition-all active:scale-95"
+            title="Expand Magic Blind Box"
           >
             <div className="w-6 h-6 relative shrink-0 animate-bounce">
               <Image
                 src="/blindbox/blind-box-3d.png"
                 alt="Box"
-                width={24}
-                height={24}
+                width={28}
+                height={28}
                 className="w-full h-full object-contain"
               />
             </div>
-            <span className="font-mono text-amber-300 font-extrabold">
+            <span className="font-mono text-amber-300 font-extrabold text-[12px]">
               {timeLeft.days}d {timeLeft.hours}h
             </span>
-            <span className="text-slate-400 text-xs ml-0.5">▲</span>
+            <span className="text-amber-400 text-xs ml-0.5">▲</span>
           </button>
         ) : (
           <div className="relative flex flex-col items-center">
-            {/* Quick minimize button on mobile */}
+            {/* Quick minimize toggle button */}
             <button
               type="button"
               onClick={(e) => {
@@ -281,7 +281,7 @@ export function MagicBlindBoxWidget({
                 setIsMinimized(true);
               }}
               title="Minimize to Corner"
-              className="sm:hidden absolute -top-1 -right-1 z-20 w-5 h-5 rounded-full bg-slate-900/90 text-slate-300 hover:text-white text-[10px] flex items-center justify-center border border-slate-700 shadow-md cursor-pointer"
+              className="absolute -top-1 -right-1 z-20 w-6 h-6 rounded-full bg-slate-900/90 hover:bg-slate-950 text-slate-300 hover:text-white text-[11px] flex items-center justify-center border border-slate-700/80 shadow-md cursor-pointer transition-transform hover:scale-110 active:scale-95"
             >
               ✕
             </button>
@@ -289,35 +289,35 @@ export function MagicBlindBoxWidget({
             <button
               type="button"
               onClick={handleGiftBoxClick}
-              title={isTimeOver ? "Tap to Claim Magic Blind Box" : "Magic Blind Box Universal Countdown"}
+              title={isTimeOver ? "Tap to Claim Magic Blind Box" : "Magic Blind Box Universal Countdown — Tap to view Protocol Pool 3"}
               aria-label="Magic Blind Box"
-              className="relative flex flex-col items-center focus:outline-none transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer bg-transparent border-0 p-0 m-0 group/box"
+              className="relative flex flex-col items-center focus:outline-none transition-transform duration-300 hover:scale-105 active:scale-95 cursor-pointer bg-transparent border-0 p-0 m-0 group/box"
             >
-              {/* Glowing background aura */}
-              <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl group-hover/box:bg-indigo-500/35 transition-all duration-300 pointer-events-none" />
+              {/* Glowing golden & indigo background aura */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400/30 via-indigo-500/25 to-blue-500/30 blur-2xl group-hover/box:blur-3xl transition-all duration-300 pointer-events-none" />
 
-              {/* Large, High-Definition 3D Gift Box Image */}
-              <div className="relative w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 drop-shadow-[0_12px_24px_rgba(99,102,241,0.45)] animate-[bounce_3s_ease-in-out_infinite]">
+              {/* Big, High-Definition 3D Gift Box Image */}
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 drop-shadow-[0_16px_32px_rgba(99,102,241,0.5)] animate-[bounce_3.5s_ease-in-out_infinite]">
                 <Image
                   src="/blindbox/blind-box-3d.png"
                   alt="Magic Blind Box"
-                  width={112}
-                  height={112}
+                  width={160}
+                  height={160}
                   priority
-                  className="w-full h-full object-contain pointer-events-none filter drop-shadow(0 4px 8px rgba(0,0,0,0.15))"
+                  className="w-full h-full object-contain pointer-events-none filter drop-shadow(0 6px 14px rgba(0,0,0,0.25))"
                 />
               </div>
 
-              {/* Sleek Timer Pill or Tap to Claim Pill */}
-              <div className="-mt-1 sm:mt-0 relative z-10">
+              {/* High-Contrast Timer Pill or Tap to Claim Pill */}
+              <div className="-mt-2 sm:-mt-1 relative z-10">
                 {isTimeOver ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 text-[11px] font-black uppercase tracking-wider shadow-xl shadow-orange-500/50 animate-pulse">
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 text-[11.5px] font-black uppercase tracking-wider shadow-xl shadow-orange-500/50 animate-pulse">
                     <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
-                    Claim Box
+                    Claim Magic Box
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/90 backdrop-blur-md text-white text-[10px] sm:text-[11.5px] font-mono font-bold shadow-lg border border-slate-700/80 group-hover/box:border-amber-400/80 transition-colors">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/95 backdrop-blur-md text-white text-[11px] sm:text-[12.5px] font-mono font-bold shadow-xl border border-amber-500/40 group-hover/box:border-amber-400 transition-colors">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
                     <span className="text-amber-300 font-extrabold tracking-tight">
                       {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
                     </span>

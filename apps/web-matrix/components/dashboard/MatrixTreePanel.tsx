@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getOnChainSlotDetails, toHexAddress } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -173,15 +173,31 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
 export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const storeDashboard = useMatrixStore((s) => s.dashboard);
   const storeSlotDetails = useMatrixStore((s) => s.slotDetails);
+  const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
+  const selectSlotStore = useMatrixStore((s) => s.selectSlot);
   const profile = useUserStore((s) => s.profile);
   const address = useUserStore((s) => s.address);
 
-  const [selectedSlot, setSelectedSlot] = useState<number>(1);
+  const [selectedSlot, setSelectedSlot] = useState<number>(storeSelectedSlot || 1);
   const [selectedCycle, setSelectedCycle] = useState<number>(1);
   const [liveSlotData, setLiveSlotData] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"tree" | "table">("tree");
   const [selectedNodeModal, setSelectedNodeModal] = useState<SeatMeta | null>(null);
   const [copiedAddr, setCopiedAddr] = useState(false);
+
+  // Sync when store slot changes externally
+  useEffect(() => {
+    if (storeSelectedSlot && storeSelectedSlot !== selectedSlot) {
+      setSelectedSlot(storeSelectedSlot);
+    }
+  }, [storeSelectedSlot]);
+
+  const handleSelectSlot = (sNum: number) => {
+    setSelectedSlot(sNum);
+    const raw = address || data?.address;
+    const active = raw ? toHexAddress(raw) : undefined;
+    selectSlotStore(sNum, selectedCycle, active);
+  };
 
   const data = propData !== undefined ? propData : storeDashboard;
   const currentActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? 1;
@@ -190,8 +206,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   useEffect(() => {
     let isMounted = true;
     const fetchBoard = async () => {
-      const active = address || data?.address;
-      if (!active || !active.startsWith("0x")) return;
+      const raw = address || data?.address;
+      if (!raw) return;
+      const active = toHexAddress(raw);
+      if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
       try {
         const details = await getOnChainSlotDetails(active, selectedSlot, selectedCycle);
         if (isMounted && details) {
@@ -375,44 +393,87 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     }
   };
 
-  // Node Component Render (Exact Image 5 Binary Tree Style)
+  const nextUpcomingPos = filledCount < 14 ? filledCount + 1 : null;
+
+  // Node Component Render: Vibrant Blue & Green Active/Filled and Large Responsive Cards
   const renderTreeNode = (pos: number) => {
     const cfg = SEAT_METAS[pos];
     const node = getNodeInfo(pos);
     const filled = node.filled;
+    const isNextUp = !filled && pos === nextUpcomingPos;
 
-    // Node widths matching Image 5:
-    // Level 1: w-16
-    // Level 2: w-[58px]
-    // Level 3: w-[56px]
-    const widthClass = pos <= 2 ? "w-16" : pos <= 6 ? "w-[58px]" : "w-[56px]";
+    // Node widths
+    const widthClass = pos <= 2 ? "w-[92px] min-h-[74px]" : pos <= 6 ? "w-[82px] min-h-[70px]" : "w-[72px] min-h-[66px]";
+
+    let styleClass = "";
+    let roleBadge = "";
+    let statusText = "Open";
+    let statusDot = <span className="w-2 h-2 rounded-full border-2 border-slate-300" />;
+
+    if (filled) {
+      statusText = "Filled";
+      if (cfg.type === "income") {
+        styleClass =
+          "bg-gradient-to-b from-emerald-500/20 via-emerald-500/10 to-white border-2 border-emerald-500 shadow-md shadow-emerald-500/25 text-slate-900";
+        roleBadge = "bg-emerald-100/90 text-emerald-900 border-emerald-300 font-black";
+        statusDot = <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />;
+      } else if (cfg.type === "upline") {
+        styleClass =
+          "bg-gradient-to-b from-blue-500/20 via-blue-500/10 to-white border-2 border-blue-600 shadow-md shadow-blue-500/25 text-slate-900";
+        roleBadge = "bg-blue-100/90 text-blue-900 border-blue-300 font-black";
+        statusDot = <span className="w-2 h-2 rounded-full bg-blue-600 shadow-[0_0_8px_#2563eb]" />;
+      } else if (cfg.type === "pool") {
+        styleClass =
+          "bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-white border-2 border-amber-500 shadow-md shadow-amber-500/25 text-slate-900";
+        roleBadge = "bg-amber-100/90 text-amber-900 border-amber-300 font-black";
+        statusDot = <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />;
+      } else if (cfg.type === "recycle") {
+        styleClass =
+          "bg-gradient-to-b from-rose-500/20 via-rose-500/10 to-white border-2 border-rose-500 shadow-md shadow-rose-500/25 text-slate-900";
+        roleBadge = "bg-rose-100/90 text-rose-900 border-rose-300 font-black";
+        statusDot = <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]" />;
+      } else {
+        styleClass =
+          "bg-gradient-to-b from-purple-500/20 via-purple-500/10 to-white border-2 border-purple-500 shadow-md shadow-purple-500/25 text-slate-900";
+        roleBadge = "bg-purple-100/90 text-purple-900 border-purple-300 font-black";
+        statusDot = <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />;
+      }
+    } else if (isNextUp) {
+      styleClass =
+        "bg-gradient-to-b from-blue-500/15 via-sky-50 to-white border-2 border-blue-500 ring-4 ring-blue-500/30 shadow-lg shadow-blue-500/20 text-slate-900 animate-pulse";
+      roleBadge = "bg-blue-600 text-white font-black border-blue-600 shadow-xs";
+      statusText = "Next Up";
+      statusDot = <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />;
+    } else {
+      styleClass =
+        "bg-white border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-slate-50/70 text-slate-500";
+      roleBadge = "bg-slate-100 text-slate-600 border-slate-200";
+      statusText = "Open";
+    }
 
     return (
       <button
         key={pos}
         type="button"
         onClick={() => setSelectedNodeModal(cfg)}
-        className={`${widthClass} rounded-2xl py-2 flex flex-col items-center transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-2xs ${
-          filled
-            ? "bg-[#eff6ff] border border-blue-200/90 text-[#0b132b]"
-            : "bg-white border border-slate-200/90 text-slate-400 hover:border-slate-300"
-        }`}
-        title={`Position #${pos} (${cfg.fullRole}): ${filled ? `Filled by ${node.label || "Operative"}` : "Open"}`}
+        className={`${widthClass} rounded-2xl py-2 px-1 flex flex-col items-center justify-between transition-all hover:scale-105 active:scale-95 cursor-pointer ${styleClass}`}
+        title={`Position #${pos} (${cfg.fullRole}): ${filled ? `Filled by ${node.label || "Operative"}` : isNextUp ? "NEXT UP to be filled!" : "Open"}`}
       >
-        <span className="font-bold text-[#0b132b] text-xs sm:text-sm leading-none">
-          {pos}
+        <div className="flex items-center justify-between w-full px-1.5">
+          <span className="font-black text-xs sm:text-sm text-[#0b132b]">
+            #{pos}
+          </span>
+          <span className="flex items-center gap-0.5">
+            {statusDot}
+          </span>
+        </div>
+
+        <span className={`px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-black tracking-tight my-1 truncate max-w-full ${roleBadge}`}>
+          {isNextUp ? "⭐ NEXT" : cfg.role}
         </span>
-        <span
-          className={`flex items-center gap-1 mt-1 text-[10px] ${
-            filled ? "text-[#2563eb] font-semibold" : "text-slate-400 font-medium"
-          }`}
-        >
-          {filled ? (
-            <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
-          ) : (
-            <span className="w-1.5 h-1.5 rounded-full border border-blue-400" />
-          )}
-          {filled ? "Filled" : "Open"}
+
+        <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-500 truncate max-w-full px-0.5">
+          {filled ? (node.code || `Member #${pos + 1}`) : statusText}
         </span>
       </button>
     );
@@ -507,12 +568,12 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
           const isUnlocked = sNum <= currentActiveSlot;
-          const isCompleted = sNum <= 3;
+          const isCompleted = sNum === 1 ? filledCount >= 14 : false;
           return (
             <button
               key={sNum}
               type="button"
-              onClick={() => setSelectedSlot(sNum)}
+              onClick={() => handleSelectSlot(sNum)}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                 isActive
                   ? "bg-[#2563eb] text-white shadow-sm shadow-blue-500/25"
@@ -534,16 +595,20 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       <div className="py-2.5 px-1 flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-slate-600 border-b border-slate-100">
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#2563eb]" />
-            Filled Position
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+            <span className="font-semibold text-slate-700">+$30 Direct Income</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full border border-[#2563eb]" />
-            Open Position
+            <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_#2563eb]" />
+            <span className="font-semibold text-slate-700">Upline P2P</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full border border-slate-300" />
-            Upcoming Position
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+            <span className="font-semibold text-slate-700">Pool / Reserve</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-blue-500 animate-ping" />
+            <span className="font-semibold text-blue-600">Next Up Spot</span>
           </span>
         </div>
 
@@ -554,55 +619,45 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         )}
       </div>
 
-      {/* ───────────────── TREE VISUALIZER CONTAINER (Exact Image 5 Binary Tree Layout) ───────────────── */}
+      {/* ───────────────── TREE VISUALIZER CONTAINER (Large & Bold Binary Tree Layout) ───────────────── */}
       {viewMode === "tree" ? (
         <div className="mt-3 bg-gradient-to-b from-[#f8fbff] to-white border border-[#d8e6f8] rounded-2xl p-3 sm:p-5 w-full min-w-0">
-          <div className="py-2 sm:py-4 w-full flex justify-center overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200">
-            <div className="w-[560px] shrink-0 scale-[0.55] xs:scale-[0.68] sm:scale-[0.84] md:scale-100 origin-top flex flex-col items-center -mb-28 xs:-mb-20 sm:-mb-10 md:mb-0">
+          {/* Mobile Pan / Swipe Hint */}
+          <div className="flex sm:hidden items-center justify-between px-2.5 py-1.5 mb-2.5 bg-blue-50/90 rounded-xl border border-blue-200/80 text-[11px] text-blue-700 font-semibold">
+            <span>💡 Pan horizontally to explore all 14 tree positions</span>
+            <span className="font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">14 Seats</span>
+          </div>
+
+          <div className="py-2 sm:py-4 w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent pb-3">
+            <div className="w-[640px] mx-auto shrink-0 flex flex-col items-center">
               {/* Root Node: YOU */}
-              <div className="w-14 h-14 rounded-2xl bg-[#2563eb] text-white font-bold flex items-center justify-center shadow-md shadow-blue-500/20 text-xs sm:text-sm">
-                YOU
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white font-black flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 text-xs sm:text-sm">
+                <span>YOU</span>
+                <span className="text-[9px] font-bold opacity-90 text-blue-100">Root Node</span>
               </div>
 
               {/* Connector: Root to Level 1 */}
-              <svg
-                className="w-[560px] h-8 overflow-visible"
-                viewBox="0 0 560 32"
-                fill="none"
-              >
-                <path
-                  d="M 280 0 V 16 H 140 V 32 M 280 16 H 420 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
+              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                <path d="M 320 0 V 18 H 160 V 36" stroke={isNodeFilled(1) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(1) ? "none" : "3 3"} />
+                <path d="M 320 18 H 480 V 36" stroke={isNodeFilled(2) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(2) ? "none" : "3 3"} />
               </svg>
 
               {/* Level 1: 2 Nodes (1, 2) */}
-              <div className="w-[560px] flex justify-between px-[108px]">
+              <div className="w-[640px] flex justify-between px-[115px]">
                 {renderTreeNode(1)}
                 {renderTreeNode(2)}
               </div>
 
               {/* Connector: Level 1 to Level 2 */}
-              <svg
-                className="w-[560px] h-8 overflow-visible"
-                viewBox="0 0 560 32"
-                fill="none"
-              >
-                <path
-                  d="M 140 0 V 16 H 70 V 32 M 140 16 H 210 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M 420 0 V 16 H 350 V 32 M 420 16 H 490 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
+              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                <path d="M 160 0 V 18 H 80 V 36" stroke={isNodeFilled(3) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(3) ? "none" : "3 3"} />
+                <path d="M 160 18 H 240 V 36" stroke={isNodeFilled(4) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(4) ? "none" : "3 3"} />
+                <path d="M 480 0 V 18 H 400 V 36" stroke={isNodeFilled(5) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(5) ? "none" : "3 3"} />
+                <path d="M 480 18 H 560 V 36" stroke={isNodeFilled(6) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(6) ? "none" : "3 3"} />
               </svg>
 
               {/* Level 2: 4 Nodes (3, 4, 5, 6) */}
-              <div className="w-[560px] flex justify-between px-[41px]">
+              <div className="w-[640px] flex justify-between px-[40px]">
                 {renderTreeNode(3)}
                 {renderTreeNode(4)}
                 {renderTreeNode(5)}
@@ -610,35 +665,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               </div>
 
               {/* Connector: Level 2 to Level 3 */}
-              <svg
-                className="w-[560px] h-8 overflow-visible"
-                viewBox="0 0 560 32"
-                fill="none"
-              >
-                <path
-                  d="M 70 0 V 16 H 35 V 32 M 70 16 H 105 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M 210 0 V 16 H 175 V 32 M 210 16 H 245 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M 350 0 V 16 H 315 V 32 M 350 16 H 385 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M 490 0 V 16 H 455 V 32 M 490 16 H 525 V 32"
-                  stroke="#bfdbfe"
-                  strokeWidth="1.5"
-                />
+              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                <path d="M 80 0 V 18 H 40 V 36" stroke={isNodeFilled(7) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(7) ? "none" : "3 3"} />
+                <path d="M 80 18 H 120 V 36" stroke={isNodeFilled(8) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(8) ? "none" : "3 3"} />
+                <path d="M 240 0 V 18 H 200 V 36" stroke={isNodeFilled(9) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(9) ? "none" : "3 3"} />
+                <path d="M 240 18 H 280 V 36" stroke={isNodeFilled(10) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(10) ? "none" : "3 3"} />
+                <path d="M 400 0 V 18 H 360 V 36" stroke={isNodeFilled(11) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(11) ? "none" : "3 3"} />
+                <path d="M 400 18 H 440 V 36" stroke={isNodeFilled(12) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(12) ? "none" : "3 3"} />
+                <path d="M 560 0 V 18 H 520 V 36" stroke={isNodeFilled(13) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(13) ? "none" : "3 3"} />
+                <path d="M 560 18 H 600 V 36" stroke={isNodeFilled(14) ? "#f43f5e" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(14) ? "none" : "3 3"} />
               </svg>
 
               {/* Level 3: 8 Nodes (7 through 14) */}
-              <div className="w-[560px] flex justify-between px-[7px]">
+              <div className="w-[640px] flex justify-between px-[5px]">
                 {[7, 8, 9, 10, 11, 12, 13, 14].map((pos) => renderTreeNode(pos))}
               </div>
             </div>

@@ -465,40 +465,58 @@ export function getSlotCost(slotNumber: number): number {
  * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
  */
 export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
-  const coder = new ethers.AbiCoder();
-  const param = coder.encode(["uint256"], [slotNumber]).slice(2);
-
-  try {
-    const raw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "slotCosts(uint256)",
-      param
-    );
-    if (raw && raw.length >= 64) {
-      const [costSun] = coder.decode(["uint256"], "0x" + raw);
-      const val = Number(costSun);
-      // Ensure it respects the minimum safety floor (300 TROB = 300,000,000 SUN)
-      if (val >= 300_000_000) {
-        return val;
-      }
-    }
-  } catch (err) {
-    console.warn("[OnChain] Could not query slotCosts directly, using dynamic market price:", err);
-  }
-
-  // Dynamic fallback: calculate $30 USD in SUN from live market oracle (no hardcoded 535 TROB)
+  // 1. Fetch live market price from TrobChain market oracle first!
+  let liveSun = 0;
   try {
     const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
     if (res.ok) {
       const json = await res.json();
-      const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? 0.03174);
+      const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price ?? 0.03715);
       if (price > 0) {
-        return Math.max(300_000_000, Math.round((30 / price) * 1_000_000));
+        liveSun = Math.max(300_000_000, Math.round((30 / price) * 1_000_000));
       }
     }
-  } catch {}
+  } catch (err) {
+    console.warn("[MarketPrice] Live price fetch notice:", err);
+  }
 
-  return 945_179_584; // Dynamic $30 at current $0.03174 market rate
+  // 2. Query on-chain getRequiredTrobForSlot or slotCosts
+  const coder = new ethers.AbiCoder();
+  const param = coder.encode(["uint256"], [slotNumber]).slice(2);
+  let onChainSun = 0;
+  try {
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "getRequiredTrobForSlot(uint256)",
+      param
+    );
+    if (raw && raw.length >= 64) {
+      const [costSun] = coder.decode(["uint256"], "0x" + raw);
+      onChainSun = Number(costSun);
+    }
+  } catch (err) {
+    try {
+      const raw2 = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "slotCosts(uint256)",
+        param
+      );
+      if (raw2 && raw2.length >= 64) {
+        const [costSun2] = coder.decode(["uint256"], "0x" + raw2);
+        onChainSun = Number(costSun2);
+      }
+    } catch {}
+  }
+
+  if (liveSun > 0) {
+    // Return live market rate, ensuring it also satisfies on-chain requirements
+    return onChainSun > 0 ? Math.max(liveSun, onChainSun) : liveSun;
+  }
+  if (onChainSun >= 300_000_000) {
+    return onChainSun;
+  }
+
+  return 945_179_584; // Safe fallback ($30 at market rate)
 }
 
 // Fast cache for direct referrals

@@ -86,6 +86,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     uint256 public trobPriceUsd6                 = 56_000;       // Benchmark $0.056 USD (6 decimals, matches EquoraDAOv2)
     uint256 public baseSlotCost                  = 535_714_285;  // 535.714285 TROB in SUN ($30 USD at $0.056)
     uint256 public lastPriceUpdateTimestamp;
+    address public priceOracle;
 
     /// @dev Official Super Representative (SR) address for Equora_Fi protocol governance
     string public constant OFFICIAL_SR_BASE58      = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
@@ -278,6 +279,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     );
     event TrobPriceUpdated(uint256 priceUsd6, uint256 newBaseCost, uint256 timestamp);
     event BaseSlotCostUpdated(uint256 newBaseCost, uint256 priceUsd6, uint256 timestamp);
+    event PriceOracleSet(address indexed oracle);
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -307,21 +309,27 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     fallback() external payable {}
 
     // -------------------------------------------------------------------------
-    // Admin (only callable before renounceOwnership)
+    // Admin & Price Oracle (only callable before renounceOwnership)
     // -------------------------------------------------------------------------
+
+    function setPriceOracle(address _oracle) external onlyOwner {
+        priceOracle = _oracle;
+        emit PriceOracleSet(_oracle);
+    }
 
     /**
      * @dev Updates the live TROB market price and dynamically recalculates slot costs for $30 USD.
      *      Formula: baseSlotCost = ($30 USD / _trobPriceUsd6) * 1e6 (in SUN)
-     *      Example: At $0.056/TROB (_trobPriceUsd6 = 56000), baseSlotCost = 535.714285 TROB (535,714,285 SUN)
+     *      Callable by owner or authorized priceOracle.
      */
-    function setTrobPrice(uint256 _trobPriceUsd6) external onlyOwner {
+    function setTrobPrice(uint256 _trobPriceUsd6) public {
+        require(msg.sender == owner() || (priceOracle != address(0) && msg.sender == priceOracle), "EquoraMatrix: unauthorized");
         require(_trobPriceUsd6 > 0, "EquoraMatrix: price must be > 0");
         trobPriceUsd6 = _trobPriceUsd6;
         lastPriceUpdateTimestamp = block.timestamp;
 
         uint256 newBase = (ENTRY_FEE_USD * 1e6) / _trobPriceUsd6;
-        require(newBase >= MIN_SLOT1_FLOOR, "EquoraMatrix: cost below floor");
+        if (newBase < MIN_SLOT1_FLOOR) newBase = MIN_SLOT1_FLOOR;
         baseSlotCost = newBase;
 
         for (uint256 i = 1; i <= TOTAL_SLOTS; i++) {
@@ -351,6 +359,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function BASE_SLOT_COST() external view returns (uint256) {
         return baseSlotCost;
+    }
+
+    /**
+     * @dev Returns exact required TROB (in SUN) for a slot pegged to live TROB price.
+     */
+    function getRequiredTrobForSlot(uint256 slot) public view returns (uint256) {
+        require(slot >= 1 && slot <= TOTAL_SLOTS, "EquoraMatrix: invalid slot");
+        uint256 cost = (ENTRY_FEE_USD * 1e6) / trobPriceUsd6;
+        if (cost < MIN_SLOT1_FLOOR) cost = MIN_SLOT1_FLOOR;
+        return cost;
     }
 
     /**
@@ -499,14 +517,17 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         }
         require(!userSlots[msg.sender][slot].isUnlocked,  "EquoraMatrix: already unlocked");
 
-        uint256 cost = slotCosts[slot];
-        require(cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: slot cost below safety floor");
+        uint256 dynamicCost = (ENTRY_FEE_USD * 1e6) / trobPriceUsd6;
+        if (dynamicCost < MIN_SLOT1_FLOOR) dynamicCost = MIN_SLOT1_FLOOR;
+        uint256 minAllowed = (dynamicCost * 90) / 100;
+        if (minAllowed < MIN_SLOT1_FLOOR) minAllowed = MIN_SLOT1_FLOOR;
+
+        uint256 cost = dynamicCost;
         if (msg.value > 0) {
-            require(msg.value >= cost, "EquoraMatrix: insufficient TROB sent");
-            require(msg.value >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below safety floor (min 300 TROB)");
+            require(msg.value >= minAllowed, "EquoraMatrix: payment below live market rate");
             cost = msg.value;
         } else if (address(paymentToken) != address(0)) {
-            require(cost >= baseSlotCost && cost >= MIN_SLOT1_FLOOR, "EquoraMatrix: payment below minimum floor");
+            require(cost >= minAllowed, "EquoraMatrix: payment below minimum floor");
             bool ok = paymentToken.transferFrom(msg.sender, address(this), cost);
             require(ok, "EquoraMatrix: payment failed");
         } else {
@@ -933,17 +954,25 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         bool ok = false;
         if (address(this).balance >= amount) {
-            (bool sent, ) = payable(vaultContract).call{value: amount}("");
-            ok = sent;
+            try IEquoraVault(vaultContract).routePoolDeposit{value: amount, gas: 3000000}(amount) {
+                ok = true;
+            } catch {
+                (bool sent, ) = payable(vaultContract).call{value: amount, gas: 3000000}("");
+                ok = sent;
+            }
         }
         if (!ok && address(paymentToken) != address(0)) {
             try paymentToken.transfer(vaultContract, amount) returns (bool res) {
                 ok = res;
+                if (ok) {
+                    try IEquoraVault(vaultContract).routePoolDeposit(amount) {} catch {}
+                }
             } catch {}
         }
 
-        // Notify vault to route funds into the 4 pools
-        try IEquoraVault(vaultContract).routePoolDeposit(amount) {} catch {}
+        if (!ok) {
+            _pushMatrixPayment(matrixOwner, amount);
+        }
     }
 
     /**
@@ -1207,5 +1236,5 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 interface IEquoraVault {
     /// @dev Called by EquoraMatrix to route P4/P5/P14 funds into the 4 protocol pools.
     ///      Vault splits: 35% Ecosystem & DAO Pool | 40% Royalty Pool | 15% Level Rewards | 10% Magic Blind Box.
-    function routePoolDeposit(uint256 amount) external;
+    function routePoolDeposit(uint256 amount) external payable;
 }

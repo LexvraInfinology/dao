@@ -144,9 +144,17 @@ contract EquoraSalaryPool is ReentrancyGuard {
         vault        = _vault;
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (msg.value > 0) {
+            pendingPoolBalance += msg.value;
+        }
+    }
 
-    fallback() external payable {}
+    fallback() external payable {
+        if (msg.value > 0) {
+            pendingPoolBalance += msg.value;
+        }
+    }
 
     /**
      * @dev Set EquoraRewardPool address (called once after deployment wiring).
@@ -181,9 +189,10 @@ contract EquoraSalaryPool is ReentrancyGuard {
      * @dev Called by EquoraVault when routing matrix volume deposits (P4, P5, P14).
      *      Adds to pendingPoolBalance for monthly salary distribution.
      */
-    function receivePoolDeposit(uint256 amount) external {
+    function receivePoolDeposit(uint256 amount) external payable {
         if (msg.sender != vault) revert OnlyVault();
-        pendingPoolBalance += amount;
+        uint256 toAdd = msg.value > 0 ? msg.value : amount;
+        pendingPoolBalance += toAdd;
     }
 
     /**

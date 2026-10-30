@@ -153,23 +153,33 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.03174);
 
   useEffect(() => {
-    getOnChainSlotCostSun(1)
-      .then((sun) => {
-        if (sun > 0) setSlotCostSun(sun);
-      })
-      .catch(() => {});
-
-    fetch("https://backend.trobchain.com/v1/market/price")
-      .then((r) => r.json())
-      .then((res) => {
-        const p = res?.data?.priceUsd;
-        if (p && !isNaN(p) && p > 0) {
-          setTrobPriceUsd(p);
-          const computedSun = Math.round((30 / p) * 1e6);
-          setSlotCostSun(computedSun);
+    let mounted = true;
+    const updateLivePricing = async () => {
+      try {
+        const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
+        if (res.ok) {
+          const json = await res.json();
+          const p = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
+          if (p && !isNaN(p) && p > 0 && mounted) {
+            setTrobPriceUsd(p);
+          }
         }
-      })
-      .catch(() => {});
+      } catch {}
+
+      try {
+        const sun = await getOnChainSlotCostSun(1);
+        if (sun > 0 && mounted) {
+          setSlotCostSun(sun);
+        }
+      } catch {}
+    };
+
+    updateLivePricing();
+    const interval = setInterval(updateLivePricing, 20_000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const requiredTrob = Number((slotCostSun / 1_000_000).toFixed(2));

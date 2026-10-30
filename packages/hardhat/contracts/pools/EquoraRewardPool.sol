@@ -125,9 +125,19 @@ contract EquoraRewardPool is ReentrancyGuard {
         vault        = _vault;
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
-    fallback() external payable {}
+    fallback() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
     /**
      * @dev Set the authorized caller (EquoraSalaryPool) for creditMilestoneReward.
@@ -142,9 +152,10 @@ contract EquoraRewardPool is ReentrancyGuard {
 
     // ─── Fund Reception (from EquoraVault) ────────────────────────────────────
 
-    function receiveDeposit(uint256 amount) external {
-        poolBalance += amount;
-        emit PoolDeposit(amount, poolBalance, block.timestamp);
+    function receiveDeposit(uint256 amount) external payable {
+        uint256 toAdd = msg.value > 0 ? msg.value : amount;
+        poolBalance += toAdd;
+        emit PoolDeposit(toAdd, poolBalance, block.timestamp);
     }
 
     // ─── Milestone Registration (called by EquoraSalaryPool) ──────────────────

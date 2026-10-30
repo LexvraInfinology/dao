@@ -118,9 +118,19 @@ contract EquoraMagicBox is ReentrancyGuard {
         vault        = _vault;
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
-    fallback() external payable {}
+    fallback() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
     // ─── Called by EquoraVault ─────────────────────────────────────────────────
 
@@ -128,10 +138,11 @@ contract EquoraMagicBox is ReentrancyGuard {
      * @dev Add funds to the shared Magic Box pool.
      *      Called by EquoraVault whenever deposits are routed (10% slice).
      */
-    function addToPool(uint256 amount) external {
+    function addToPool(uint256 amount) external payable {
         if (msg.sender != vault) revert OnlyVault();
-        poolBalance += amount;
-        emit PoolDeposit(amount, poolBalance, block.timestamp);
+        uint256 toAdd = msg.value > 0 ? msg.value : amount;
+        poolBalance += toAdd;
+        emit PoolDeposit(toAdd, poolBalance, block.timestamp);
     }
 
     /**

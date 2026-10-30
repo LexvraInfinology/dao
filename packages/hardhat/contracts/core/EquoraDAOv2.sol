@@ -42,6 +42,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
     IERC20              public immutable paymentToken;
     IEquoraRegistry     public immutable registry;
     address             public vaultContract;
+    address             public priceOracle;
 
     // ─── Dynamic Price State ───────────────────────────────────────────────────
 
@@ -149,6 +150,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
     event EligibilityAttested(address indexed account, bool eligible, uint256 timestamp);
     event EligibilityEnforcementUpdated(bool enforced, uint256 timestamp);
     event AdminRenounced(address indexed previousAdmin, uint256 timestamp);
+    event PriceOracleSet(address indexed oracle);
     event GenuineMembersMigrated(uint256 count, uint256 timestamp);
     event UnderfundedReservationSet(address indexed wallet, uint256 indexed seat, uint256 previousDepositSun, uint256 unearnedDebtSun);
     event UnderfundedSeatCompleted(address indexed wallet, uint256 indexed seat, uint256 paidAmount, uint256 totalCost);
@@ -279,7 +281,32 @@ contract EquoraDAOv2 is ReentrancyGuard {
         migrationFinalized = true;
     }
 
-    // ─── Entry Fee Management ──────────────────────────────────────────────────
+    // ─── Entry Fee & Price Oracle Management ──────────────────────────────────
+
+    function setPriceOracle(address _oracle) external onlyAdmin {
+        priceOracle = _oracle;
+        emit PriceOracleSet(_oracle);
+    }
+
+    /**
+     * @dev Updates the live TROB market price and recalculates entry fee ($300 USD peg).
+     *      Callable by admin or authorized priceOracle.
+     */
+    function setTrobPrice(uint256 _trobPriceUsd6) external {
+        require(msg.sender == admin || (priceOracle != address(0) && msg.sender == priceOracle), "Unauthorized");
+        require(_trobPriceUsd6 > 0, "Price must be > 0");
+
+        lastTrobPriceUsd6 = _trobPriceUsd6;
+        lastPriceUpdateTimestamp = block.timestamp;
+
+        uint256 newEntry = (ENTRY_FEE_USD * 1e6) / _trobPriceUsd6;
+        if (newEntry < MIN_ENTRY_FEE_FLOOR) newEntry = MIN_ENTRY_FEE_FLOOR;
+
+        entryFee    = newEntry;
+        earningsCap = newEntry * 5;
+
+        emit EntryFeeUpdated(entryFee, earningsCap, _trobPriceUsd6, block.timestamp);
+    }
 
     function setEntryFee(uint256 _newEntryFee, uint256 _trobPriceUsd6) external onlyAdmin {
         require(_newEntryFee >= MIN_ENTRY_FEE_FLOOR, "Fee below minimum floor");
@@ -295,6 +322,11 @@ contract EquoraDAOv2 is ReentrancyGuard {
         lastPriceUpdateTimestamp = block.timestamp;
 
         emit EntryFeeUpdated(_newEntryFee, earningsCap, _trobPriceUsd6, block.timestamp);
+    }
+
+    function getRequiredTrobForSeat() external view returns (uint256) {
+        uint256 req = (ENTRY_FEE_USD * 1e6) / lastTrobPriceUsd6;
+        return req < MIN_ENTRY_FEE_FLOOR ? MIN_ENTRY_FEE_FLOOR : req;
     }
 
     function setEligibilityAttestation(address account, bool eligible) external onlyAdmin {
@@ -314,7 +346,21 @@ contract EquoraDAOv2 is ReentrancyGuard {
         emit AdminRenounced(previousAdmin, block.timestamp);
     }
 
-    receive() external payable {}
+    /**
+     * @dev Automatic push distribution upon receiving any native TROB.
+     *      Instantly splits the deposit and pushes equal shares to active DAO members.
+     */
+    receive() external payable {
+        if (msg.value > 0) {
+            _distributeIncomingPoolDeposit(msg.value);
+        }
+    }
+
+    fallback() external payable {
+        if (msg.value > 0) {
+            _distributeIncomingPoolDeposit(msg.value);
+        }
+    }
 
     // ─── Core Join Function (Patched with Hard Security Floor) ─────────────────
 
@@ -322,8 +368,13 @@ contract EquoraDAOv2 is ReentrancyGuard {
         if (isDaoMember[msg.sender]) revert AlreadyMember();
         if (eligibilityEnforced && !isEligibilityAttested[msg.sender]) revert NotQualified();
 
-        // STRICT SECURITY FLOOR: Must pay full entry fee and at least MIN_ENTRY_FEE_FLOOR
-        if (msg.value < entryFee || msg.value < MIN_ENTRY_FEE_FLOOR) {
+        // STRICT SECURITY FLOOR: Pegged to live market price (with 10% buffer) and minimum floor
+        uint256 dynamicFee = (ENTRY_FEE_USD * 1e6) / lastTrobPriceUsd6;
+        if (dynamicFee < MIN_ENTRY_FEE_FLOOR) dynamicFee = MIN_ENTRY_FEE_FLOOR;
+        uint256 minAllowed = (dynamicFee * 90) / 100;
+        if (minAllowed < MIN_ENTRY_FEE_FLOOR) minAllowed = MIN_ENTRY_FEE_FLOOR;
+
+        if (msg.value < minAllowed) {
             revert PaymentFailed();
         }
 
@@ -527,12 +578,23 @@ contract EquoraDAOv2 is ReentrancyGuard {
     // ─── 35% Matrix Volume Pool ────────────────────────────────────────────────
 
     /**
-     * @dev Called by EquoraVault when routing the 35% DAO pool share.
+     * @dev Called by EquoraVault when routing the 35% DAO pool share, or direct deposit.
      *      Instantly pushes equal shares directly to all active existing DAO members'
      *      wallets rather than letting funds sit idle in contract balance!
      */
-    function receivePoolDeposit(uint256 amount) external nonReentrant {
-        require(msg.sender == vaultContract || msg.sender == admin, "Only vault or admin");
+    function receivePoolDeposit(uint256 amount) external payable nonReentrant {
+        uint256 toDistribute = msg.value > 0 ? msg.value : amount;
+        if (toDistribute == 0) return;
+
+        if (msg.value == 0) {
+            uint256 avail = address(this).balance > totalPullFallback ? address(this).balance - totalPullFallback : 0;
+            if (toDistribute > avail) toDistribute = avail;
+        }
+
+        _distributeIncomingPoolDeposit(toDistribute);
+    }
+
+    function _distributeIncomingPoolDeposit(uint256 amount) internal {
         if (amount == 0) return;
 
         uint256 activeCount = 0;
@@ -801,7 +863,7 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
         bool ok = false;
         if (address(this).balance >= amount) {
-            (bool sent, ) = payable(recipient).call{value: amount, gas: 10000}("");
+            (bool sent, ) = payable(recipient).call{value: amount, gas: 50000}("");
             ok = sent;
         }
 

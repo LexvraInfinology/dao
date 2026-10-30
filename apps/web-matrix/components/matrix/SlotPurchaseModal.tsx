@@ -36,11 +36,13 @@ export function SlotPurchaseModal({
   const [step, setStep] = useState<"ready_to_join" | "joining" | "success">("ready_to_join");
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+  const [liveTrobCoins, setLiveTrobCoins] = useState<string>("807.54");
+  const [livePriceUsd, setLivePriceUsd] = useState<number>(0.03715);
 
   const costUsd = "30.00";
   const slotStr = String(slotNumber).padStart(2, "0");
 
-  // Fetch live on-chain TROB balance
+  // Fetch live on-chain TROB balance and live market rates
   useEffect(() => {
     if (!isOpen || !userAddress) return;
     let cancelled = false;
@@ -55,13 +57,26 @@ export function SlotPurchaseModal({
       } catch (err) {
         console.warn("[Modal] Failed to load on-chain state:", err);
       }
+
+      try {
+        const pRes = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
+        if (pRes.ok) {
+          const pJson = await pRes.json();
+          const p = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd ?? pJson?.price);
+          if (p > 0 && !cancelled) setLivePriceUsd(p);
+        }
+        const callValueSun = await getOnChainSlotCostSun(slotNumber);
+        if (!cancelled && callValueSun > 0) {
+          setLiveTrobCoins((callValueSun / 1_000_000).toFixed(2));
+        }
+      } catch {}
     }
 
     loadOnChainState();
     return () => {
       cancelled = true;
     };
-  }, [isOpen, userAddress]);
+  }, [isOpen, userAddress, slotNumber]);
 
   if (!isOpen) return null;
 
@@ -170,7 +185,7 @@ export function SlotPurchaseModal({
                 ${cost}.00 USD
               </span>
               <span className="text-[11px] text-[#16a34a] font-medium block mt-0.5">
-                Fixed On-Chain Valuation
+                ~{liveTrobCoins} TROB (Live Market: ${livePriceUsd.toFixed(5)}/TROB)
               </span>
             </div>
           </div>

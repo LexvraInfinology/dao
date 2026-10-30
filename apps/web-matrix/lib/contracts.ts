@@ -501,6 +501,61 @@ export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<num
   return 945_179_584; // Dynamic $30 at current $0.03174 market rate
 }
 
+// Fast cache for direct referrals
+const dynamicDirectsCache = new Map<string, { directs: string[]; timestamp: number }>();
+
+export async function getDynamicDirects(sponsorAddr: string): Promise<string[]> {
+  const canon = toHexAddress(sponsorAddr).toLowerCase();
+  if (!canon || canon === "0x0000000000000000000000000000000000000000") return [];
+
+  const hit = dynamicDirectsCache.get(canon);
+  if (hit && Date.now() - hit.timestamp < 30_000) {
+    return hit.directs;
+  }
+
+  // 1. Query live on-chain getActiveDirectReferrals(address)
+  try {
+    const coder = new ethers.AbiCoder();
+    const p = coder.encode(["address"], [canon]).slice(2);
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "getActiveDirectReferrals(address)",
+      p
+    );
+    if (raw) {
+      const decoded = coder.decode(["address[]"], "0x" + raw);
+      const list = (decoded[0] || [])
+        .map((a: string) => toHexAddress(a).toLowerCase())
+        .filter((a: string) => a && a !== "0x0000000000000000000000000000000000000000");
+      if (list.length > 0) {
+        dynamicDirectsCache.set(canon, { directs: list, timestamp: Date.now() });
+        return list;
+      }
+    }
+  } catch (err) {
+    console.warn("[OnChainDirects] Query notice for", canon, err);
+  }
+
+  // 2. Fallback to joinedMembers.json if on-chain returned 0 (e.g. offline mock testing)
+  try {
+    const allMembers: any[] = joinedMembersData as any[];
+    if (Array.isArray(allMembers)) {
+      const matched = allMembers
+        .filter((m) => m.sponsor && m.sponsor.toLowerCase() === canon)
+        .sort((a, b) => a.memberNumber - b.memberNumber)
+        .map((m) => m.evm?.toLowerCase())
+        .filter(Boolean);
+      if (matched.length > 0) {
+        dynamicDirectsCache.set(canon, { directs: matched, timestamp: Date.now() });
+        return matched;
+      }
+    }
+  } catch {}
+
+  dynamicDirectsCache.set(canon, { directs: [], timestamp: Date.now() });
+  return [];
+}
+
 /** Fetch full 14-node placement data directly on-chain with multi-cycle snapshot support */
 export async function getOnChainSlotDetails(
   userAddress: string,
@@ -577,62 +632,96 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  // Universal Hierarchical Downline Subtree Resolution for ANY Matrix Member (Seat 1, Member 2, Member 3, etc.)
+  // Universal Hierarchical Downline Subtree Resolution for ANY Matrix Member
   try {
-    const allMembers: any[] = joinedMembersData as any[];
-    if (Array.isArray(allMembers) && allMembers.length > 0 && slotNumber === 1) {
-      const uCanon = userHex.toLowerCase();
-      const getDirects = (sponsorEvm: string) =>
-        allMembers
-          .filter((m) => m.sponsor && m.sponsor.toLowerCase() === sponsorEvm.toLowerCase())
-          .sort((a, b) => a.memberNumber - b.memberNumber);
+    const uCanon = userHex.toLowerCase();
+    const updatedNodes = [...displayNodes];
+    const isNodeEmpty = (addr?: string | null) =>
+      !addr || addr === "0x0000000000000000000000000000000000000000" || addr === "0x0";
 
-      // Level 1 (Positions 1 & 2)
-      const userDirects = getDirects(uCanon);
-      const pos1Addr = userDirects[0]?.evm?.toLowerCase() || null;
-      const pos2Addr = userDirects[1]?.evm?.toLowerCase() || null;
+    const hasEmpty = updatedNodes.some(isNodeEmpty);
+    if (hasEmpty && isUnlocked && !isViewingSnapshot) {
+      const userDirects = await getDynamicDirects(uCanon);
 
-      // Level 2 (Positions 3, 4, 5, 6)
-      const pos1Directs = pos1Addr ? getDirects(pos1Addr) : [];
-      const pos3Addr = pos1Directs[0]?.evm?.toLowerCase() || null;
-      const pos4Addr = pos1Directs[1]?.evm?.toLowerCase() || null;
+      // Level 1: Node 1 & Node 2
+      let pos1 = !isNodeEmpty(updatedNodes[0]) ? updatedNodes[0].toLowerCase() : (userDirects[0] || null);
+      let pos2 = !isNodeEmpty(updatedNodes[1]) ? updatedNodes[1].toLowerCase() : (userDirects[1] || null);
 
-      const pos2Directs = pos2Addr ? getDirects(pos2Addr) : [];
-      const pos5Addr = pos2Directs[0]?.evm?.toLowerCase() || null;
-      const pos6Addr = pos2Directs[1]?.evm?.toLowerCase() || null;
+      if (isNodeEmpty(updatedNodes[0]) && pos1) updatedNodes[0] = pos1;
+      if (isNodeEmpty(updatedNodes[1]) && pos2) updatedNodes[1] = pos2;
 
-      // Level 3 (Positions 7 to 14)
-      const pos3Directs = pos3Addr ? getDirects(pos3Addr) : [];
-      const pos7Addr = pos3Directs[0]?.evm?.toLowerCase() || null;
-      const pos8Addr = pos3Directs[1]?.evm?.toLowerCase() || null;
+      // Level 2: Children under Pos 1 (Pos 3 & Pos 4)
+      const pos1Directs = pos1 ? await getDynamicDirects(pos1) : [];
+      let p1Idx = 0;
+      if (isNodeEmpty(updatedNodes[2])) {
+        if (pos1Directs[p1Idx]) updatedNodes[2] = pos1Directs[p1Idx++];
+        else if (userDirects[2]) updatedNodes[2] = userDirects[2];
+      }
+      if (isNodeEmpty(updatedNodes[3])) {
+        if (pos1Directs[p1Idx]) updatedNodes[3] = pos1Directs[p1Idx++];
+        else if (userDirects[3]) updatedNodes[3] = userDirects[3];
+      }
 
-      const pos4Directs = pos4Addr ? getDirects(pos4Addr) : [];
-      const pos9Addr = pos4Directs[0]?.evm?.toLowerCase() || null;
-      const pos10Addr = pos4Directs[1]?.evm?.toLowerCase() || null;
+      // Level 2: Children under Pos 2 (Pos 5 & Pos 6)
+      const pos2Directs = pos2 ? await getDynamicDirects(pos2) : [];
+      let p2Idx = 0;
+      if (isNodeEmpty(updatedNodes[4])) {
+        if (pos2Directs[p2Idx]) updatedNodes[4] = pos2Directs[p2Idx++];
+        else if (userDirects[4]) updatedNodes[4] = userDirects[4];
+      }
+      if (isNodeEmpty(updatedNodes[5])) {
+        if (pos2Directs[p2Idx]) updatedNodes[5] = pos2Directs[p2Idx++];
+        else if (userDirects[5]) updatedNodes[5] = userDirects[5];
+      }
 
-      const pos5Directs = pos5Addr ? getDirects(pos5Addr) : [];
-      const pos11Addr = pos5Directs[0]?.evm?.toLowerCase() || null;
-      const pos12Addr = pos5Directs[1]?.evm?.toLowerCase() || null;
+      // Level 3: Children under Pos 3 (Pos 7 & Pos 8)
+      const pos3 = !isNodeEmpty(updatedNodes[2]) ? updatedNodes[2].toLowerCase() : null;
+      if (pos3) {
+        const pos3Directs = await getDynamicDirects(pos3);
+        let p3Idx = 0;
+        if (isNodeEmpty(updatedNodes[6]) && pos3Directs[p3Idx]) updatedNodes[6] = pos3Directs[p3Idx++];
+        if (isNodeEmpty(updatedNodes[7]) && pos3Directs[p3Idx]) updatedNodes[7] = pos3Directs[p3Idx++];
+      }
 
-      const pos6Directs = pos6Addr ? getDirects(pos6Addr) : [];
-      const pos13Addr = pos6Directs[0]?.evm?.toLowerCase() || null;
-      const pos14Addr = pos6Directs[1]?.evm?.toLowerCase() || null;
-
-      const projectedTree = [
-        pos1Addr, pos2Addr,
-        pos3Addr, pos4Addr, pos5Addr, pos6Addr,
-        pos7Addr, pos8Addr, pos9Addr, pos10Addr, pos11Addr, pos12Addr, pos13Addr, pos14Addr
-      ];
-
-      // Overlay projected downlines wherever on-chain node is empty or zero
-      const updatedNodes = [...displayNodes];
-      for (let i = 0; i < 14; i++) {
-        const curr = updatedNodes[i];
-        const isCurrentEmpty = !curr || curr === "0x0000000000000000000000000000000000000000" || curr === "0x0";
-        if (isCurrentEmpty && projectedTree[i]) {
-          updatedNodes[i] = projectedTree[i];
+      // Level 3: Children under Pos 4 (Pos 9 & Pos 10)
+      const pos4 = !isNodeEmpty(updatedNodes[3]) ? updatedNodes[3].toLowerCase() : null;
+      if (pos4) {
+        const pos4Directs = await getDynamicDirects(pos4);
+        let p4Idx = 0;
+        if (isNodeEmpty(updatedNodes[8])) {
+          if (pos4Directs[p4Idx]) updatedNodes[8] = pos4Directs[p4Idx++];
+          else if (pos1Directs[p1Idx]) updatedNodes[8] = pos1Directs[p1Idx++];
+        }
+        if (isNodeEmpty(updatedNodes[9])) {
+          if (pos4Directs[p4Idx]) updatedNodes[9] = pos4Directs[p4Idx++];
+          else if (pos1Directs[p1Idx]) updatedNodes[9] = pos1Directs[p1Idx++];
         }
       }
+
+      // Level 3: Children under Pos 5 (Pos 11 & Pos 12)
+      const pos5 = !isNodeEmpty(updatedNodes[4]) ? updatedNodes[4].toLowerCase() : null;
+      if (pos5) {
+        const pos5Directs = await getDynamicDirects(pos5);
+        let p5Idx = 0;
+        if (isNodeEmpty(updatedNodes[10])) {
+          if (pos5Directs[p5Idx]) updatedNodes[10] = pos5Directs[p5Idx++];
+          else if (pos2Directs[p2Idx]) updatedNodes[10] = pos2Directs[p2Idx++];
+        }
+        if (isNodeEmpty(updatedNodes[11])) {
+          if (pos5Directs[p5Idx]) updatedNodes[11] = pos5Directs[p5Idx++];
+          else if (pos2Directs[p2Idx]) updatedNodes[11] = pos2Directs[p2Idx++];
+        }
+      }
+
+      // Level 3: Children under Pos 6 (Pos 13 & Pos 14)
+      const pos6 = !isNodeEmpty(updatedNodes[5]) ? updatedNodes[5].toLowerCase() : null;
+      if (pos6) {
+        const pos6Directs = await getDynamicDirects(pos6);
+        let p6Idx = 0;
+        if (isNodeEmpty(updatedNodes[12]) && pos6Directs[p6Idx]) updatedNodes[12] = pos6Directs[p6Idx++];
+        if (isNodeEmpty(updatedNodes[13]) && pos6Directs[p6Idx]) updatedNodes[13] = pos6Directs[p6Idx++];
+      }
+
       displayNodes = updatedNodes;
     }
   } catch (err) {

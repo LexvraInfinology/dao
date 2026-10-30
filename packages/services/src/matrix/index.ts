@@ -738,13 +738,287 @@ export class MatrixService {
         };
       });
 
+      // Dynamic Subtree Downline Overlay for Open Spots in Active Board
+      const pos1Addr = nodesArray[0]?.placedUser?.toLowerCase() || null;
+      const pos2Addr = nodesArray[1]?.placedUser?.toLowerCase() || null;
+
+      const getDownlineDirects = async (sponsor: string | null) => {
+        if (!sponsor) return [];
+        return await prisma.user.findMany({
+          where: { sponsorAddress: sponsor },
+          select: {
+            address: true,
+            userId: true,
+            registrationTimestamp: true,
+            matrixSlots: {
+              where: { slotNumber, isUnlocked: true },
+              select: { id: true, unlockedAt: true },
+            },
+          },
+          orderBy: { registrationTimestamp: "asc" },
+        }).catch(() => []);
+      };
+
+      if (pos1Addr) {
+        const p1Directs = await getDownlineDirects(pos1Addr);
+        let idx = 0;
+        if (!nodesArray[2].filled && p1Directs[idx]) {
+          const d = p1Directs[idx++];
+          nodesArray[2] = {
+            position: 3,
+            level: 2,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[3].filled && p1Directs[idx]) {
+          const d = p1Directs[idx++];
+          nodesArray[3] = {
+            position: 4,
+            level: 2,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "PROTOCOL_POOL",
+            recipientAddress: "0xProtocolPools_EquoraVault",
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      if (pos2Addr) {
+        const p2Directs = await getDownlineDirects(pos2Addr);
+        let idx = 0;
+        if (!nodesArray[4].filled && p2Directs[idx]) {
+          const d = p2Directs[idx++];
+          nodesArray[4] = {
+            position: 5,
+            level: 2,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "PROTOCOL_POOL",
+            recipientAddress: "0xProtocolPools_EquoraVault",
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[5].filled && p2Directs[idx]) {
+          const d = p2Directs[idx++];
+          nodesArray[5] = {
+            position: 6,
+            level: 2,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      // Level 3 (Pos 7 to 14)
+      const pos3Addr = nodesArray[2]?.placedUser?.toLowerCase() || null;
+      if (pos3Addr) {
+        const p3Directs = await getDownlineDirects(pos3Addr);
+        let idx = 0;
+        if (!nodesArray[6].filled && p3Directs[idx]) {
+          const d = p3Directs[idx++];
+          nodesArray[6] = {
+            position: 7,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "SPILLOVER_DOWNLINE1",
+            recipientAddress: pos1Addr || canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[7].filled && p3Directs[idx]) {
+          const d = p3Directs[idx++];
+          nodesArray[7] = {
+            position: 8,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      const pos4Addr = nodesArray[3]?.placedUser?.toLowerCase() || null;
+      if (pos4Addr) {
+        const p4Directs = await getDownlineDirects(pos4Addr);
+        let idx = 0;
+        if (!nodesArray[8].filled && p4Directs[idx]) {
+          const d = p4Directs[idx++];
+          nodesArray[8] = {
+            position: 9,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[9].filled && p4Directs[idx]) {
+          const d = p4Directs[idx++];
+          nodesArray[9] = {
+            position: 10,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "SPILLOVER_DOWNLINE2",
+            recipientAddress: pos2Addr || canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      const pos5Addr = nodesArray[4]?.placedUser?.toLowerCase() || null;
+      if (pos5Addr) {
+        const p5Directs = await getDownlineDirects(pos5Addr);
+        let idx = 0;
+        if (!nodesArray[10].filled && p5Directs[idx]) {
+          const d = p5Directs[idx++];
+          nodesArray[10] = {
+            position: 11,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[11].filled && p5Directs[idx]) {
+          const d = p5Directs[idx++];
+          nodesArray[11] = {
+            position: 12,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "OWNER_DIRECT",
+            recipientAddress: canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      const pos6Addr = nodesArray[5]?.placedUser?.toLowerCase() || null;
+      if (pos6Addr) {
+        const p6Directs = await getDownlineDirects(pos6Addr);
+        let idx = 0;
+        if (!nodesArray[12].filled && p6Directs[idx]) {
+          const d = p6Directs[idx++];
+          nodesArray[12] = {
+            position: 13,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "SPILLOVER_DOWNLINE2",
+            recipientAddress: pos2Addr || canonicalAddress,
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+        if (!nodesArray[13].filled && p6Directs[idx]) {
+          const d = p6Directs[idx++];
+          nodesArray[13] = {
+            position: 14,
+            level: 3,
+            filled: true,
+            placedUser: d.address,
+            userId: d.userId,
+            payoutType: "PROTOCOL_POOL",
+            recipientAddress: "0xProtocolPools_EquoraVault",
+            wasFallback: false,
+            amount: SLOT_COSTS[slotNumber] || 0,
+            timestamp: d.registrationTimestamp,
+            isDirect: false,
+            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
+            isSpillover: true,
+          };
+        }
+      }
+
+      const dynamicFilledCount = nodesArray.filter(n => n.filled).length;
+
       return {
         slotNumber,
         cost: SLOT_COSTS[slotNumber] || 0,
         isUnlocked: Boolean(slot?.isUnlocked),
         currentCycle: targetCycle,
         recyclesCount: slot?.recyclesCount ?? 0,
-        filledNodes: slot?.filledNodes ?? 0,
+        filledNodes: Math.max(slot?.filledNodes ?? 0, dynamicFilledCount),
         upgradeReserve: Number(slot?.upgradeReserve ?? 0),
         totalEarned: Number(slot?.totalEarned ?? 0),
         nodes: nodesArray,

@@ -185,12 +185,21 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const [selectedNodeModal, setSelectedNodeModal] = useState<SeatMeta | null>(null);
   const [copiedAddr, setCopiedAddr] = useState(false);
 
+  const storeSelectedCycle = useMatrixStore((s) => s.selectedCycle);
+
   // Sync when store slot changes externally
   useEffect(() => {
     if (storeSelectedSlot && storeSelectedSlot !== selectedSlot) {
       setSelectedSlot(storeSelectedSlot);
     }
   }, [storeSelectedSlot]);
+
+  // Sync when store cycle changes externally
+  useEffect(() => {
+    if (storeSelectedCycle && storeSelectedCycle !== selectedCycle) {
+      setSelectedCycle(storeSelectedCycle);
+    }
+  }, [storeSelectedCycle]);
 
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
@@ -199,6 +208,14 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
     selectSlotStore(sNum, 1, active);
+  };
+
+  const handleCycleChange = (cNum: number) => {
+    setSelectedCycle(cNum);
+    setLiveSlotData(null);
+    const raw = address || data?.address;
+    const active = raw ? toHexAddress(raw) : undefined;
+    selectSlotStore(selectedSlot, cNum, active);
   };
 
   const data = propData !== undefined ? propData : storeDashboard;
@@ -216,6 +233,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         const details = await getOnChainSlotDetails(active, selectedSlot, selectedCycle);
         if (isMounted && details) {
           setLiveSlotData(details);
+          useMatrixStore.setState({
+            slotDetails: details,
+            selectedSlotNumber: selectedSlot,
+            selectedCycle: details.currentCycle,
+          });
         }
       } catch (err) {
         console.warn("[MatrixTreePanel] On-chain board query notice:", err);
@@ -503,7 +525,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setSelectedCycle(1)}
+                  onClick={() => handleCycleChange(1)}
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                     selectedCycle === 1
                       ? "bg-emerald-600 text-white shadow-xs"
@@ -516,7 +538,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedCycle(2)}
+                  onClick={() => handleCycleChange(2)}
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                     selectedCycle === 2
                       ? "bg-blue-600 text-white shadow-xs"
@@ -524,7 +546,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   }`}
                 >
                   <span>Cycle 2</span>
-                  <span className="text-[9px] opacity-90">(Active: 0/14)</span>
+                  <span className="text-[9px] opacity-90">
+                    (Active{selectedCycle === 2 ? `: ${filledCount}/14` : ""})
+                  </span>
                 </button>
               </div>
             ) : (
@@ -580,7 +604,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           </div>
           <button
             type="button"
-            onClick={() => setSelectedCycle(1)}
+            onClick={() => handleCycleChange(1)}
             className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
           >
             View Completed Cycle 1 Board
@@ -597,7 +621,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           </div>
           <button
             type="button"
-            onClick={() => setSelectedCycle(2)}
+            onClick={() => handleCycleChange(2)}
             className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
           >
             Switch to Active Cycle 2

@@ -168,6 +168,7 @@ exports.Prisma.DaoMemberScalarFieldEnum = {
   retopupCount: 'retopupCount',
   lastRetopupAt: 'lastRetopupAt',
   retopupDeadline: 'retopupDeadline',
+  cappedAt: 'cappedAt',
   totalDepositsCount: 'totalDepositsCount',
   totalDepositsUsd: 'totalDepositsUsd',
   deviceFingerprint: 'deviceFingerprint',

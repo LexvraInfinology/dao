@@ -101,6 +101,7 @@ model DaoMember {
   retopupCount         Int       @default(0)
   lastRetopupAt        DateTime?
   retopupDeadline      DateTime?
+  cappedAt             DateTime?
   totalDepositsCount   Int       @default(1)
   totalDepositsUsd     Decimal   @default(0) @db.Decimal(36, 18)
   deviceFingerprint    String?

@@ -6685,6 +6685,7 @@ export namespace Prisma {
     retopupCount: number | null
     lastRetopupAt: Date | null
     retopupDeadline: Date | null
+    cappedAt: Date | null
     totalDepositsCount: number | null
     totalDepositsUsd: Decimal | null
     deviceFingerprint: string | null
@@ -6709,6 +6710,7 @@ export namespace Prisma {
     retopupCount: number | null
     lastRetopupAt: Date | null
     retopupDeadline: Date | null
+    cappedAt: Date | null
     totalDepositsCount: number | null
     totalDepositsUsd: Decimal | null
     deviceFingerprint: string | null
@@ -6733,6 +6735,7 @@ export namespace Prisma {
     retopupCount: number
     lastRetopupAt: number
     retopupDeadline: number
+    cappedAt: number
     totalDepositsCount: number
     totalDepositsUsd: number
     deviceFingerprint: number
@@ -6785,6 +6788,7 @@ export namespace Prisma {
     retopupCount?: true
     lastRetopupAt?: true
     retopupDeadline?: true
+    cappedAt?: true
     totalDepositsCount?: true
     totalDepositsUsd?: true
     deviceFingerprint?: true
@@ -6809,6 +6813,7 @@ export namespace Prisma {
     retopupCount?: true
     lastRetopupAt?: true
     retopupDeadline?: true
+    cappedAt?: true
     totalDepositsCount?: true
     totalDepositsUsd?: true
     deviceFingerprint?: true
@@ -6833,6 +6838,7 @@ export namespace Prisma {
     retopupCount?: true
     lastRetopupAt?: true
     retopupDeadline?: true
+    cappedAt?: true
     totalDepositsCount?: true
     totalDepositsUsd?: true
     deviceFingerprint?: true
@@ -6944,6 +6950,7 @@ export namespace Prisma {
     retopupCount: number
     lastRetopupAt: Date | null
     retopupDeadline: Date | null
+    cappedAt: Date | null
     totalDepositsCount: number
     totalDepositsUsd: Decimal
     deviceFingerprint: string | null
@@ -6987,6 +6994,7 @@ export namespace Prisma {
     retopupCount?: boolean
     lastRetopupAt?: boolean
     retopupDeadline?: boolean
+    cappedAt?: boolean
     totalDepositsCount?: boolean
     totalDepositsUsd?: boolean
     deviceFingerprint?: boolean
@@ -7014,6 +7022,7 @@ export namespace Prisma {
     retopupCount?: boolean
     lastRetopupAt?: boolean
     retopupDeadline?: boolean
+    cappedAt?: boolean
     totalDepositsCount?: boolean
     totalDepositsUsd?: boolean
     deviceFingerprint?: boolean
@@ -7039,6 +7048,7 @@ export namespace Prisma {
     retopupCount?: boolean
     lastRetopupAt?: boolean
     retopupDeadline?: boolean
+    cappedAt?: boolean
     totalDepositsCount?: boolean
     totalDepositsUsd?: boolean
     deviceFingerprint?: boolean
@@ -7078,6 +7088,7 @@ export namespace Prisma {
       retopupCount: number
       lastRetopupAt: Date | null
       retopupDeadline: Date | null
+      cappedAt: Date | null
       totalDepositsCount: number
       totalDepositsUsd: Prisma.Decimal
       deviceFingerprint: string | null
@@ -7494,6 +7505,7 @@ export namespace Prisma {
     readonly retopupCount: FieldRef<"DaoMember", 'Int'>
     readonly lastRetopupAt: FieldRef<"DaoMember", 'DateTime'>
     readonly retopupDeadline: FieldRef<"DaoMember", 'DateTime'>
+    readonly cappedAt: FieldRef<"DaoMember", 'DateTime'>
     readonly totalDepositsCount: FieldRef<"DaoMember", 'Int'>
     readonly totalDepositsUsd: FieldRef<"DaoMember", 'Decimal'>
     readonly deviceFingerprint: FieldRef<"DaoMember", 'String'>
@@ -32014,6 +32026,7 @@ export namespace Prisma {
     retopupCount: 'retopupCount',
     lastRetopupAt: 'lastRetopupAt',
     retopupDeadline: 'retopupDeadline',
+    cappedAt: 'cappedAt',
     totalDepositsCount: 'totalDepositsCount',
     totalDepositsUsd: 'totalDepositsUsd',
     deviceFingerprint: 'deviceFingerprint',
@@ -32794,6 +32807,7 @@ export namespace Prisma {
     retopupCount?: IntFilter<"DaoMember"> | number
     lastRetopupAt?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
     retopupDeadline?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
+    cappedAt?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
     totalDepositsCount?: IntFilter<"DaoMember"> | number
     totalDepositsUsd?: DecimalFilter<"DaoMember"> | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: StringNullableFilter<"DaoMember"> | string | null
@@ -32820,6 +32834,7 @@ export namespace Prisma {
     retopupCount?: SortOrder
     lastRetopupAt?: SortOrderInput | SortOrder
     retopupDeadline?: SortOrderInput | SortOrder
+    cappedAt?: SortOrderInput | SortOrder
     totalDepositsCount?: SortOrder
     totalDepositsUsd?: SortOrder
     deviceFingerprint?: SortOrderInput | SortOrder
@@ -32849,6 +32864,7 @@ export namespace Prisma {
     retopupCount?: IntFilter<"DaoMember"> | number
     lastRetopupAt?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
     retopupDeadline?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
+    cappedAt?: DateTimeNullableFilter<"DaoMember"> | Date | string | null
     totalDepositsCount?: IntFilter<"DaoMember"> | number
     totalDepositsUsd?: DecimalFilter<"DaoMember"> | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: StringNullableFilter<"DaoMember"> | string | null
@@ -32875,6 +32891,7 @@ export namespace Prisma {
     retopupCount?: SortOrder
     lastRetopupAt?: SortOrderInput | SortOrder
     retopupDeadline?: SortOrderInput | SortOrder
+    cappedAt?: SortOrderInput | SortOrder
     totalDepositsCount?: SortOrder
     totalDepositsUsd?: SortOrder
     deviceFingerprint?: SortOrderInput | SortOrder
@@ -32907,6 +32924,7 @@ export namespace Prisma {
     retopupCount?: IntWithAggregatesFilter<"DaoMember"> | number
     lastRetopupAt?: DateTimeNullableWithAggregatesFilter<"DaoMember"> | Date | string | null
     retopupDeadline?: DateTimeNullableWithAggregatesFilter<"DaoMember"> | Date | string | null
+    cappedAt?: DateTimeNullableWithAggregatesFilter<"DaoMember"> | Date | string | null
     totalDepositsCount?: IntWithAggregatesFilter<"DaoMember"> | number
     totalDepositsUsd?: DecimalWithAggregatesFilter<"DaoMember"> | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: StringNullableWithAggregatesFilter<"DaoMember"> | string | null
@@ -35117,6 +35135,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -35143,6 +35162,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -35167,6 +35187,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -35193,6 +35214,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -35218,6 +35240,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -35241,6 +35264,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -35265,6 +35289,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -37915,6 +37940,7 @@ export namespace Prisma {
     retopupCount?: SortOrder
     lastRetopupAt?: SortOrder
     retopupDeadline?: SortOrder
+    cappedAt?: SortOrder
     totalDepositsCount?: SortOrder
     totalDepositsUsd?: SortOrder
     deviceFingerprint?: SortOrder
@@ -37952,6 +37978,7 @@ export namespace Prisma {
     retopupCount?: SortOrder
     lastRetopupAt?: SortOrder
     retopupDeadline?: SortOrder
+    cappedAt?: SortOrder
     totalDepositsCount?: SortOrder
     totalDepositsUsd?: SortOrder
     deviceFingerprint?: SortOrder
@@ -37976,6 +38003,7 @@ export namespace Prisma {
     retopupCount?: SortOrder
     lastRetopupAt?: SortOrder
     retopupDeadline?: SortOrder
+    cappedAt?: SortOrder
     totalDepositsCount?: SortOrder
     totalDepositsUsd?: SortOrder
     deviceFingerprint?: SortOrder
@@ -40694,6 +40722,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -40718,6 +40747,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -41248,6 +41278,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -41272,6 +41303,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -41956,6 +41988,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -41981,6 +42014,7 @@ export namespace Prisma {
     retopupCount?: number
     lastRetopupAt?: Date | string | null
     retopupDeadline?: Date | string | null
+    cappedAt?: Date | string | null
     totalDepositsCount?: number
     totalDepositsUsd?: Decimal | DecimalJsLike | number | string
     deviceFingerprint?: string | null
@@ -42020,6 +42054,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -42045,6 +42080,7 @@ export namespace Prisma {
     retopupCount?: IntFieldUpdateOperationsInput | number
     lastRetopupAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     retopupDeadline?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cappedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     totalDepositsCount?: IntFieldUpdateOperationsInput | number
     totalDepositsUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deviceFingerprint?: NullableStringFieldUpdateOperationsInput | string | null

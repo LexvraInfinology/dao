@@ -223,6 +223,9 @@ importers:
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
     devDependencies:
       '@equora/tsconfig':
         specifier: workspace:*
@@ -230,9 +233,6 @@ importers:
       '@types/node':
         specifier: ^20.17.6
         version: 20.19.43
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

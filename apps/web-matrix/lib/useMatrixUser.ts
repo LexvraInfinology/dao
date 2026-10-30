@@ -100,7 +100,7 @@ export function useMatrixUser() {
     // Immediate initial sync
     refreshAll(true, true);
 
-    // 3-second live polling interval directly verifying against blockchain state
+    // 12-second live polling interval directly verifying against blockchain state smoothly
     const interval = setInterval(() => {
       Promise.all([
         fetchProfile(true),
@@ -109,9 +109,9 @@ export function useMatrixUser() {
         fetchEarnings(undefined, true),
         fetchSlotDetails(undefined, undefined, undefined, true),
       ]).catch((err) => {
-        console.warn("[3s-ChainSync] Live blockchain polling notice:", err?.message);
+        console.warn("[12s-ChainSync] Live blockchain polling notice:", err?.message);
       });
-    }, 3000);
+    }, 12000);
 
     return () => clearInterval(interval);
   }, [

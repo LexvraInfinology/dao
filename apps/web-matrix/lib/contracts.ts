@@ -839,15 +839,22 @@ export async function getOnChainSlotDetails(
 
   // Determine true direct matrix USD earnings from paying positions (P3, P6, P8, P9, P11, P12)
   const directPayingPositions = [3, 6, 8, 9, 11, 12];
-  const filledPayingCount = directPayingPositions.filter((p) => {
+  const displayedPayingCount = directPayingPositions.filter((p) => {
     const occ = displayNodes[p - 1];
     return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
   }).length;
 
+  const livePayingCount = directPayingPositions.filter((p) => {
+    const occ = nodes[p - 1];
+    return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
+  }).length;
+
   const slotCostUsd = getSlotCost(slotNumber);
-  const pastCyclesYield = Math.max(0, totalCycles - 1) * 6 * slotCostUsd;
-  const currentCycleYield = filledPayingCount * slotCostUsd;
-  const totalEarnedUsd = pastCyclesYield + currentCycleYield;
+  const completedCycles = Math.max(0, totalCycles - 1);
+  // Lifetime earned: completed cycles (6 * cost) + live active cycle paying count
+  const lifetimePayingCount = (completedCycles * 6) + livePayingCount;
+  const totalEarnedUsd = isUnlocked ? lifetimePayingCount * slotCostUsd : 0;
+  const cycleEarnedUsd = displayedPayingCount * slotCostUsd;
 
   return {
     slotNumber,
@@ -862,6 +869,7 @@ export async function getOnChainSlotDetails(
     recyclesCount: Math.max(0, totalCycles - 1),
     filledNodes: Math.max(Number(liveFilledNodes) || 0, computedFilledCount),
     upgradeReserve: 0,
+    cycleEarnedUsd,
     totalEarned: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
     totalEarnedUsd: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
     totalEarnedTrob: rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? Number((totalEarnedUsd / 0.03174).toFixed(2)) : 0),
@@ -1736,13 +1744,144 @@ export async function getOnChainUserByCode(code: number | string): Promise<strin
 }
 
 /**
+ * Resolves a 1-indexed member/operative ID to their wallet address via userList(id - 1).
+ */
+export async function getOnChainUserById(id: number | string): Promise<string | null> {
+  const numId = typeof id === "string" ? parseInt(id.replace(/^#/, ""), 10) : id;
+  if (!numId || isNaN(numId) || numId < 1) return null;
+  try {
+    const coder = new ethers.AbiCoder();
+    const param = coder.encode(["uint256"], [numId - 1]).slice(2);
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.registry,
+      "userList(uint256)",
+      param
+    );
+    if (raw && typeof raw === "string") {
+      const clean = raw.replace(/^0x/, "").toLowerCase();
+      if (clean.length >= 40) {
+        const addr40 = clean.slice(-40);
+        if (addr40 !== "0000000000000000000000000000000000000000") {
+          return toTrobBase58("41" + addr40);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[getOnChainUserById] id ${numId} query notice:`, err);
+  }
+  return null;
+}
+
+/**
+ * Robust On-Chain & Explorer Search Resolver:
+ * Resolves wallet addresses (Base58 / Hex), Transaction Hashes, Member IDs (#1, 97242), or 5-digit referral codes.
+ */
+export async function searchOperativeOnChain(input: string): Promise<{
+  found: boolean;
+  address?: string;
+  memberId?: number;
+  referralCode?: number;
+  type: "address" | "tx" | "id" | "code" | "unknown";
+  txUrl?: string;
+  message?: string;
+}> {
+  if (!input) return { found: false, type: "unknown" };
+  const trimmed = input.trim();
+
+  const formatShort = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}...${a.slice(-4)}` : a);
+
+  // 1. Transaction Hash check (64 hex characters or 0x + 64 hex characters)
+  const isTx =
+    (trimmed.startsWith("0x") && trimmed.length === 66) ||
+    (!trimmed.startsWith("0x") && trimmed.length === 64 && /^[0-9a-fA-F]+$/.test(trimmed));
+  if (isTx) {
+    const txHash = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+    return {
+      found: true,
+      type: "tx",
+      txUrl: `${EXPLORER_URL}/blockchain/transaction/${txHash}`,
+      message: `Transaction Hash: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
+    };
+  }
+
+  // 2. Wallet Address check (34 char Base58 'T...', 42 char Hex '0x...' or '41...')
+  const isAddress =
+    (trimmed.startsWith("T") && trimmed.length === 34) ||
+    (trimmed.startsWith("0x") && trimmed.length === 42) ||
+    (trimmed.startsWith("41") && trimmed.length === 42);
+  if (isAddress) {
+    const base58 = toTrobBase58(trimmed);
+    return {
+      found: true,
+      address: base58,
+      type: "address",
+      message: `Wallet Address: ${formatShort(base58)}`,
+    };
+  }
+
+  // 3. 5-Digit Referral Code check
+  const cleanNum = trimmed.replace(/^#/, "");
+  if (/^\d{5}$/.test(cleanNum)) {
+    const code = parseInt(cleanNum, 10);
+    const resolved = await getOnChainUserByCode(code);
+    if (resolved) {
+      return {
+        found: true,
+        address: resolved,
+        referralCode: code,
+        type: "code",
+        message: `Referral Code #${code} resolved to ${formatShort(resolved)}`,
+      };
+    }
+  }
+
+  // 4. Numeric Member ID check
+  if (/^\d+$/.test(cleanNum)) {
+    const id = parseInt(cleanNum, 10);
+    const resolved = await getOnChainUserById(id);
+    if (resolved) {
+      return {
+        found: true,
+        address: resolved,
+        memberId: id,
+        type: "id",
+        message: `Operative ID #${id} resolved to ${formatShort(resolved)}`,
+      };
+    }
+    // Fallback: Check as referral code
+    const codeResolved = await getOnChainUserByCode(id);
+    if (codeResolved) {
+      return {
+        found: true,
+        address: codeResolved,
+        referralCode: id,
+        type: "code",
+        message: `Operative #${id} resolved to ${formatShort(codeResolved)}`,
+      };
+    }
+  }
+
+  return {
+    found: false,
+    type: "unknown",
+    message: "No matching operative, wallet, or transaction found.",
+  };
+}
+
+const onChainCodeCache = new Map<string, number>();
+
+/**
  * Resolves a user's wallet address to their 5-digit referral code via EquoraRegistry.sol.
+ * Uses in-memory memoization cache to prevent unnecessary RPC spam and ensure stable UI IDs.
  */
 export async function getOnChainCodeByUser(userAddress: string): Promise<number | null> {
   if (!userAddress) return null;
+  const userHex = toHexAddress(userAddress).toLowerCase();
+  if (onChainCodeCache.has(userHex)) {
+    return onChainCodeCache.get(userHex)!;
+  }
   try {
     const coder = new ethers.AbiCoder();
-    const userHex = toHexAddress(userAddress);
     const param = coder.encode(["address"], [userHex]).slice(2);
     const raw = await queryTrobConstant(
       CONTRACT_ADDRESSES.registry,
@@ -1751,7 +1890,10 @@ export async function getOnChainCodeByUser(userAddress: string): Promise<number 
     );
     if (raw && typeof raw === "string") {
       const code = Number(coder.decode(["uint32"], "0x" + raw)[0]);
-      if (code >= 10000 && code <= 99999) return code;
+      if (code >= 10000 && code <= 99999) {
+        onChainCodeCache.set(userHex, code);
+        return code;
+      }
     }
   } catch (err) {
     console.warn(`[getOnChainCodeByUser] address ${userAddress} query notice:`, err);
@@ -1885,6 +2027,39 @@ export async function claimMagicBoxRewardOnChain(userAddress?: string): Promise<
     userAddress,
     evmArgs: [],
     evmAbi: POOL_ABI,
+  });
+}
+
+/**
+ * Flush and distribute accumulated native TROB balance from EquoraDAOv2.sol
+ * directly and instantly to all active Genesis DAO council members' wallets!
+ */
+export async function flushDaoPoolOnChain(userAddress?: string): Promise<string> {
+  return callTrobContractOnChain({
+    contractAddress: CONTRACT_ADDRESSES.dao,
+    functionSelector: "flushAndDistributeAccumulatedPool()",
+    parameterHex: "",
+    feeLimitSun: 100_000_000,
+    callValueSun: 0,
+    userAddress,
+    evmArgs: [],
+    evmAbi: ["function flushAndDistributeAccumulatedPool() external returns (uint256)"],
+  });
+}
+
+/**
+ * Trigger monthly rank rewards settlement on the 21st in EquoraRewardPool.sol
+ */
+export async function settleMonthlyRankRewardsOnChain(userAddress?: string): Promise<string> {
+  return callTrobContractOnChain({
+    contractAddress: CONTRACT_ADDRESSES.rewardPool,
+    functionSelector: "settleMonthlyRankRewards()",
+    parameterHex: "",
+    feeLimitSun: 100_000_000,
+    callValueSun: 0,
+    userAddress,
+    evmArgs: [],
+    evmAbi: ["function settleMonthlyRankRewards() external returns (uint256)"],
   });
 }
 

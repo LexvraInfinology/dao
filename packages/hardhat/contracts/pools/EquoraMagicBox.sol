@@ -70,10 +70,12 @@ contract EquoraMagicBox is ReentrancyGuard {
 
     address[] public eligibleUsers;
     mapping(address => bool) public isEligible;
+    mapping(address => bool) public hasReceivedMagicBox; // strictly one gift per wallet lifetime
     mapping(address => uint256) public pendingReward;
 
     uint256 public poolBalance;                  // total TROB ready for distribution
     uint256 public totalDistributed;
+    uint256 public totalRecipientsCount;         // total unique wallets that received a gift
     uint256 public distributionCount;
     uint256 public lastDistributionTimestamp;
 
@@ -86,6 +88,7 @@ contract EquoraMagicBox is ReentrancyGuard {
 
     event PoolDeposit(uint256 amount, uint256 newPoolBalance, uint256 timestamp);
     event EligibleUserAdded(address indexed user, uint256 totalEligible, uint256 timestamp);
+    event MagicBoxGiftAwarded(address indexed recipient, uint256 amount, uint256 indexed round, uint256 timestamp);
     event QuarterlyDistribution(
         uint256 indexed round,
         uint256 totalDistributed,
@@ -238,7 +241,9 @@ contract EquoraMagicBox is ReentrancyGuard {
     /**
      * @dev Select `count` random winners from `eligibleUsers` starting from a
      *      unique offset derived from entropy + offset, and award `prizePerWinner`.
-     *      Uses modular index selection (with de-duplication via offset).
+     *      STRICT RULE: Only users who have NEVER received a magic box before can win!
+     *      Once a wallet receives a prize, it is marked `hasReceivedMagicBox[user] = true`
+     *      and is permanently ineligible for all future quarterly distributions.
      */
     function _assignRewards(
         bytes32 entropy,
@@ -248,12 +253,42 @@ contract EquoraMagicBox is ReentrancyGuard {
     ) internal returns (uint256 distributed) {
         if (count == 0 || prizePerWinner == 0) return 0;
         uint256 n = eligibleUsers.length;
+        if (n == 0) return 0;
 
-        for (uint256 i = 0; i < count; i++) {
-            uint256 idx    = uint256(keccak256(abi.encodePacked(entropy, offset + i))) % n;
-            address winner = eligibleUsers[idx];
-            pendingReward[winner] += prizePerWinner;
-            distributed           += prizePerWinner;
+        uint256 awarded = 0;
+        uint256 attempts = 0;
+        uint256 maxAttempts = count * 6; // avoid infinite loop if eligible pool is saturated
+
+        while (awarded < count && attempts < maxAttempts && (offset + attempts) < n * 12) {
+            uint256 idx = uint256(keccak256(abi.encodePacked(entropy, offset + attempts))) % n;
+            address candidate = eligibleUsers[idx];
+            if (candidate != address(0) && !hasReceivedMagicBox[candidate]) {
+                hasReceivedMagicBox[candidate] = true;
+                pendingReward[candidate] += prizePerWinner;
+                distributed += prizePerWinner;
+                totalRecipientsCount++;
+                awarded++;
+                emit MagicBoxGiftAwarded(candidate, prizePerWinner, distributionCount, block.timestamp);
+            }
+            attempts++;
+        }
+    }
+
+    /**
+     * @dev Returns true if a user is eligible AND has not yet received a magic box gift.
+     */
+    function isEligibleForMagicBox(address user) external view returns (bool) {
+        return isEligible[user] && !hasReceivedMagicBox[user];
+    }
+
+    /**
+     * @dev Count total active eligible members who have not yet received a gift box.
+     */
+    function getUnrewardedCount() external view returns (uint256 unrewarded) {
+        for (uint256 i = 0; i < eligibleUsers.length; i++) {
+            if (!hasReceivedMagicBox[eligibleUsers[i]]) {
+                unrewarded++;
+            }
         }
     }
 

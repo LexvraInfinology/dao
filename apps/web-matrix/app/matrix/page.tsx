@@ -14,9 +14,13 @@ import {
   MatrixAccessGate,
 } from "@/components/matrix";
 import { ReferralLinkCard } from "@/components/dashboard";
-import { WalletConnectModal } from "@/components/common/WalletConnectModal";
-import { WalletDropdown } from "@/components/common/WalletDropdown";
-import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
+import {
+  WalletConnectModal,
+  WalletDropdown,
+  EquoraLogoLoader,
+  HeaderSearchBar,
+  ProtocolNotificationsModal,
+} from "@/components/common";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { getOnChainDirectMembers } from "@/lib/contracts";
@@ -28,6 +32,7 @@ export default function MatrixPage() {
   const [activeTab, setActiveTab] = useState<"matrix" | "list" | "level">("level");
   const [directMembers, setDirectMembers] = useState<any[]>([]);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
@@ -271,40 +276,8 @@ export default function MatrixPage() {
         {/* DESKTOP TOP HEADER (>= lg)                                     */}
         {/* ───────────────────────────────────────────────────────────── */}
         <header className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-[#e8ecf1] px-8 h-[64px] items-center justify-between">
-          {/* Search Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const input = (e.currentTarget.elements.namedItem("search") as HTMLInputElement)?.value;
-              if (input?.trim()) {
-                toast.info("Searching Ledger", `Querying operative/wallet: ${input.trim()}`);
-              }
-            }}
-            className="relative w-full max-w-[200px] xl:max-w-[360px]"
-          >
-            <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-            </svg>
-            <input
-              name="search"
-              type="text"
-              placeholder="Search member ID / wallet / transaction..."
-              className="w-full h-[38px] pl-10 pr-9 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] text-[12.5px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#2563eb] transition-all"
-            />
-            <button
-              type="submit"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center text-[11px] font-semibold text-[#94a3b8] hover:bg-[#e2e8f0] cursor-pointer"
-            >
-              /
-            </button>
-          </form>
+          {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
+          <HeaderSearchBar className="w-full max-w-[200px] xl:max-w-[360px]" />
 
           {/* Right Controls */}
           <div className="flex items-center gap-3">
@@ -323,7 +296,7 @@ export default function MatrixPage() {
             {/* Notification Bell */}
             <button
               type="button"
-              onClick={() => toast.info("Notifications", "You have no unread protocol alerts.")}
+              onClick={() => setNotificationsOpen(true)}
               className="relative w-[38px] h-[38px] rounded-xl bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-colors cursor-pointer"
               aria-label="Notifications"
             >
@@ -461,6 +434,12 @@ export default function MatrixPage() {
           currentAddress={address || undefined}
           onSelectAddress={changeAddress}
           onDisconnect={disconnect}
+        />
+
+        {/* Live Protocol Notifications Drawer / Modal */}
+        <ProtocolNotificationsModal
+          isOpen={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
         />
       </div>
     </div>

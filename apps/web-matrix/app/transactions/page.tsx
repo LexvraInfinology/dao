@@ -10,9 +10,13 @@ import {
   TimeframeTab,
 } from "@/components/transactions";
 import { MatrixAccessGate } from "@/components/matrix";
-import { WalletConnectModal } from "@/components/common/WalletConnectModal";
-import { WalletDropdown } from "@/components/common/WalletDropdown";
-import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
+import {
+  WalletConnectModal,
+  WalletDropdown,
+  EquoraLogoLoader,
+  HeaderSearchBar,
+  ProtocolNotificationsModal,
+} from "@/components/common";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -21,6 +25,7 @@ import { formatAddress, toTrobBase58 } from "@/lib/format";
 export default function TransactionsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [timeframe, setTimeframe] = useState<TimeframeTab>("All Time");
   const [mounted, setMounted] = useState(false);
 
@@ -214,16 +219,9 @@ export default function TransactionsPage() {
               </div>
             </Link>
           </div>
-          <div className="hidden lg:flex items-center flex-1 max-w-[200px] xl:max-w-[360px]">
-            <div className="relative w-full">
-              <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-              </svg>
-              <input type="text" placeholder="Search member ID / wallet / transaction..." className="w-full h-[40px] pl-10 pr-9 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] text-[13px] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] transition-all" />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-[#f1f5f9] border border-[#e2e8f0] text-[11px] font-semibold text-[#94a3b8] flex items-center justify-center select-none">/</div>
-            </div>
-          </div>
+          {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
+          <HeaderSearchBar className="hidden lg:flex items-center flex-1 max-w-[200px] xl:max-w-[360px]" />
+
           <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
             <div
               onClick={() => toast.info("Protocol Live", "Matrix smart contracts are operational and syncing blocks in real time.")}
@@ -237,7 +235,7 @@ export default function TransactionsPage() {
             </div>
             <button
               type="button"
-              onClick={() => toast.info("Notifications", "You have no unread protocol alerts.")}
+              onClick={() => setNotificationsOpen(true)}
               className="hidden lg:flex relative w-[38px] h-[38px] rounded-xl bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center hover:bg-[#f1f5f9] cursor-pointer transition-colors"
               aria-label="Notifications"
             >
@@ -277,6 +275,12 @@ export default function TransactionsPage() {
           changeAddress(addr);
           setWalletModalOpen(false);
         }}
+      />
+
+      {/* Live Protocol Notifications Drawer / Modal */}
+      <ProtocolNotificationsModal
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
       />
     </div>
     </MatrixAccessGate>

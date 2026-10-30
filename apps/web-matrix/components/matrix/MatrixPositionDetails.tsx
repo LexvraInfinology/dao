@@ -18,25 +18,36 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const storeAddress = useUserStore((s) => s.address);
   const profile = useUserStore((s) => s.profile);
   const storeBuySlot = useMatrixStore((s) => s.buySlot);
+  const storeSlots = useMatrixStore((s) => s.slots);
 
   const slotDetails = props.slotDetails !== undefined ? props.slotDetails : storeSlotDetails;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const address = props.address ?? storeAddress;
   const handleCopy = props.handleCopy ?? ((t: string) => navigator.clipboard?.writeText(t));
   const onBuySlot = props.onBuySlot;
+
   const slotNum = selectedSlotNumber || slotDetails?.slotNumber || 1;
+  const slotSummary = storeSlots?.find((s) => s.slotNumber === slotNum);
+  const isMatchesDetail = Boolean(slotDetails && slotDetails.slotNumber === slotNum);
+
   const displayAddress = formatAddress(address);
   const joinedDate = formatDateSafe(profile?.joinedAt, "On-Chain Active");
-  const filledNodes = slotDetails?.filledNodes ?? 0;
+  const filledNodes = isMatchesDetail
+    ? (slotDetails?.filledNodes ?? 0)
+    : (slotSummary?.filledNodes ?? (slotSummary?.recyclesCount ? 14 : 0));
   const percent = Math.min(Math.round((filledNodes / 14) * 100), 100);
   const remaining = Math.max(14 - filledNodes, 0);
   const nextSlotNum = Math.min(slotNum + 1, 12);
-  const isSlotUnlocked = slotDetails?.isUnlocked ?? (slotNum <= 4);
-  const calculatedSlotYield = slotNum === 1 ? 180 : slotNum === 2 ? 360 : slotNum === 3 ? 720 : 0;
-  const yieldUsd = slotDetails?.totalEarnedUsd !== undefined && slotDetails.totalEarnedUsd > 0
+  const isSlotUnlocked = slotSummary
+    ? slotSummary.isUnlocked
+    : (isMatchesDetail ? slotDetails!.isUnlocked : slotNum <= 4);
+
+  const yieldUsd = isMatchesDetail && slotDetails?.totalEarnedUsd !== undefined && slotDetails.totalEarnedUsd > 0
     ? slotDetails.totalEarnedUsd
-    : (slotDetails?.totalEarned && slotDetails.totalEarned > 0 ? slotDetails.totalEarned : (isSlotUnlocked ? calculatedSlotYield : 0));
-  const yieldTrob = slotDetails?.totalEarnedTrob !== undefined ? slotDetails.totalEarnedTrob : (yieldUsd / 0.056);
+    : (slotSummary?.totalEarnedUsd ?? slotSummary?.totalEarned ?? (slotNum === 1 ? 210 : slotNum === 2 ? 360 : slotNum === 3 ? 720 : 0));
+  const yieldTrob = isMatchesDetail && slotDetails?.totalEarnedTrob !== undefined
+    ? slotDetails.totalEarnedTrob
+    : (yieldUsd / 0.056);
 
   return (
     <div className="bg-white border border-[#e8ecf1] rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xs flex flex-col justify-between min-w-0">

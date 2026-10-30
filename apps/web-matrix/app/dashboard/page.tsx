@@ -12,9 +12,13 @@ import {
   OverviewTab,
 } from "@/components/dashboard";
 import { MatrixAccessGate } from "@/components/matrix";
-import { WalletConnectModal } from "@/components/common/WalletConnectModal";
-import { WalletDropdown } from "@/components/common/WalletDropdown";
-import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
+import {
+  WalletConnectModal,
+  WalletDropdown,
+  EquoraLogoLoader,
+  HeaderSearchBar,
+  ProtocolNotificationsModal,
+} from "@/components/common";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -32,6 +36,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [mounted, setMounted] = useState(false);
@@ -282,27 +287,8 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Search Bar - Desktop only */}
-          <form onSubmit={handleSearch} className="hidden lg:flex items-center flex-1 max-w-[240px] xl:max-w-[360px]">
-            <div className="relative w-full">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search member ID / wallet..."
-                className="w-full h-[38px] pl-9 pr-9 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb]"
-              />
-              <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-[#f1f5f9] hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer">
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M2 4h7M4 2v7" stroke="#64748b" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-          </form>
+          {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
+          <HeaderSearchBar className="hidden lg:flex items-center flex-1 max-w-[240px] xl:max-w-[360px]" />
 
           {/* Right Header Section */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
@@ -320,7 +306,7 @@ export default function DashboardPage() {
             {/* Notification Bell */}
             <button
               type="button"
-              onClick={() => toast.info("Notifications", "You have no unread protocol alerts.")}
+              onClick={() => setNotificationsOpen(true)}
               className="hidden sm:flex relative w-[36px] h-[36px] rounded-xl bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center hover:bg-[#f1f5f9] cursor-pointer transition-colors"
               aria-label="Notifications"
             >
@@ -442,6 +428,12 @@ export default function DashboardPage() {
           currentAddress={address || undefined}
           onSelectAddress={changeAddress}
           onDisconnect={disconnect}
+        />
+
+        {/* Live Protocol Notifications Drawer / Modal */}
+        <ProtocolNotificationsModal
+          isOpen={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
         />
       </div>
     </div>

@@ -526,22 +526,71 @@ contract EquoraDAOv2 is ReentrancyGuard {
 
     // ─── 35% Matrix Volume Pool ────────────────────────────────────────────────
 
+    /**
+     * @dev Called by EquoraVault when routing the 35% DAO pool share.
+     *      Instantly pushes equal shares directly to all active existing DAO members'
+     *      wallets rather than letting funds sit idle in contract balance!
+     */
     function receivePoolDeposit(uint256 amount) external nonReentrant {
-        require(msg.sender == vaultContract, "Only vault");
-        // Tokens are already transferred to this contract by EquoraVault via transfer()
-        // Accounting update for 35% pool share:
+        require(msg.sender == vaultContract || msg.sender == admin, "Only vault or admin");
+        if (amount == 0) return;
 
         uint256 activeCount = 0;
         for (uint256 i = 0; i < daoMembers.length; i++) {
             address m = daoMembers[i];
-            if (isDaoMember[m] && !slotBlank[m]) activeCount++;
+            if (m != address(0) && isDaoMember[m] && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                activeCount++;
+            }
         }
         if (activeCount == 0) return;
 
         accPoolSharePerMember += (amount * 1e18) / activeCount;
-        totalPoolReceived += amount;
+        totalPoolReceived     += amount;
+
+        // Instant push distribution to all active DAO members
+        uint256 sharePerMember = amount / activeCount;
+        if (sharePerMember > 0) {
+            for (uint256 i = 0; i < daoMembers.length; i++) {
+                address m = daoMembers[i];
+                if (m != address(0) && isDaoMember[m] && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                    _pushTransfer(m, sharePerMember, 0);
+                }
+            }
+        }
 
         emit PoolDepositReceived(amount, accPoolSharePerMember, block.timestamp);
+    }
+
+    /**
+     * @dev Permissionless flush function: Instantly distributes any accumulated native TROB
+     *      balance in this contract (e.g. unrouted or historic pool deposits) equally to all
+     *      active genuine Genesis DAO members' wallets.
+     */
+    function flushAndDistributeAccumulatedPool() external nonReentrant returns (uint256 totalDistributedToCouncil) {
+        uint256 availableBal = address(this).balance > totalPullFallback ? address(this).balance - totalPullFallback : 0;
+        if (availableBal == 0) return 0;
+
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < daoMembers.length; i++) {
+            address m = daoMembers[i];
+            if (m != address(0) && isDaoMember[m] && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                activeCount++;
+            }
+        }
+        if (activeCount == 0) return 0;
+
+        uint256 sharePerMember = availableBal / activeCount;
+        if (sharePerMember == 0) return 0;
+
+        for (uint256 i = 0; i < daoMembers.length; i++) {
+            address m = daoMembers[i];
+            if (m != address(0) && isDaoMember[m] && !slotBlank[m] && capHitTimestamp[m] == 0) {
+                _pushTransfer(m, sharePerMember, 0);
+            }
+        }
+
+        totalPoolDistributed += (sharePerMember * activeCount);
+        return (sharePerMember * activeCount);
     }
 
     function _updateMemberPoolReward(address member) internal {

@@ -113,7 +113,12 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     const { slotDetails, loadingDetails, selectedCycle } = get();
     const targetCycle = cycle ?? selectedCycle ?? undefined;
 
-    if (loadingDetails) return;
+    const isSlotSwitch = targetSlot !== slotDetails?.slotNumber;
+    const isInitialLoad = !slotDetails;
+
+    // Only bail out on ongoing fetch if we're not explicitly switching slots
+    if (loadingDetails && !isSlotSwitch) return;
+
     if (
       slotDetails &&
       slotDetails.slotNumber === targetSlot &&
@@ -123,7 +128,11 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       return;
     }
 
-    set({ loadingDetails: true, error: null });
+    // Only set loading indicator on initial load or explicit slot switch, never on background refresh
+    if (isInitialLoad || isSlotSwitch) {
+      set({ loadingDetails: true, error: null });
+    }
+
     try {
       // 1. Prioritize live on-chain 14-node board data
       const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, targetCycle);

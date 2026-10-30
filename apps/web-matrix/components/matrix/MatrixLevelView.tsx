@@ -44,12 +44,12 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
       ? slots.map((s) => {
           const isStandby = Boolean(s.isUnlocked && s.isLive === false);
           const cost = s.cost || (30 * Math.pow(2, s.slotNumber - 1));
-          const earned = s.totalEarned > 0
-            ? s.totalEarned
-            : (s.recyclesCount ? s.recyclesCount * 6 * cost : (s.slotNumber <= 3 && s.isUnlocked ? (s.slotNumber === 1 ? 180 : s.slotNumber === 2 ? 360 : 720) : 0));
+          const earned = (s.totalEarnedUsd !== undefined && s.totalEarnedUsd > 0)
+            ? s.totalEarnedUsd
+            : (s.totalEarned > 0 ? s.totalEarned : (s.recyclesCount ? s.recyclesCount * 6 * cost : 0));
           const filled = s.filledNodes > 0
             ? s.filledNodes
-            : (s.recyclesCount > 0 ? 14 : (s.slotNumber <= 3 && s.isUnlocked ? 14 : 0));
+            : (s.recyclesCount > 0 ? 14 : 0);
           return {
             level: s.slotNumber,
             num: String(s.slotNumber).padStart(2, "0"),

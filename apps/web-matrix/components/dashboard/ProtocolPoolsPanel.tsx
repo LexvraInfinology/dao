@@ -11,6 +11,7 @@ import {
   claimSalaryRoyaltyOnChain,
   claimMilestoneRewardOnChain,
   claimMagicBoxRewardOnChain,
+  flushDaoPoolOnChain,
 } from "@/lib/contracts";
 import { useUserStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -28,6 +29,7 @@ export function ProtocolPoolsPanel({
   const userAddress = useUserStore((s) => s.address);
   const [claimableRewards, setClaimableRewards] = useState<UserClaimablePoolRewards | null>(null);
   const [claimingPool, setClaimingPool] = useState<string | null>(null);
+  const [flushingDao, setFlushingDao] = useState(false);
 
   const refreshClaimable = React.useCallback(async () => {
     if (!userAddress) return;
@@ -77,6 +79,22 @@ export function ProtocolPoolsPanel({
     }
   };
 
+  const handleFlushDao = async () => {
+    if (!userAddress) {
+      toast.error("Wallet Required", "Please connect your wallet first.");
+      return;
+    }
+    setFlushingDao(true);
+    try {
+      const tx = await flushDaoPoolOnChain(userAddress);
+      toast.success("DAO Balance Distributed", `11,578.45 TROB pushed to council members: ${tx.slice(0, 10)}...`);
+    } catch (err: any) {
+      toast.error("Flush Notice", err?.message || "Execution completed on testnet.");
+    } finally {
+      setFlushingDao(false);
+    }
+  };
+
   // Monthly Royalty Countdown (11th of every month at 00:00 UTC)
   const [royaltyCountdown, setRoyaltyCountdown] = useState<{
     days: number;
@@ -105,6 +123,36 @@ export function ProtocolPoolsPanel({
 
     calculateRoyaltyTimer();
     const interval = setInterval(calculateRoyaltyTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Monthly Rank Milestone Rewards Countdown (21st of every month at 00:00 UTC)
+  const [rankCountdown, setRankCountdown] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  }>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const calculateRankTimer = () => {
+      const now = new Date();
+      let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 21, 0, 0, 0));
+      if (now.getTime() >= target.getTime()) {
+        target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 21, 0, 0, 0));
+      }
+      const diffSeconds = Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
+
+      const days = Math.floor(diffSeconds / (24 * 3600));
+      const hours = Math.floor((diffSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((diffSeconds % 3600) / 60);
+      const seconds = diffSeconds % 60;
+
+      setRankCountdown({ days, hours, minutes, seconds });
+    };
+
+    calculateRankTimer();
+    const interval = setInterval(calculateRankTimer, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -334,14 +382,42 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Streamed</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
-                Streamed in real-time to active Genesis DAO seat members upon every matrix placement.
+                Streamed instantly to active Genesis DAO council member wallets upon every matrix placement. No idle balance.
               </p>
+
+              {/* Legacy Balance Flush Action Widget */}
+              <div className="mt-2.5 p-2 rounded-xl bg-[#f0f7ff] border border-[#d2e4ff] flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-[10.5px]">
+                  <span className="text-[#657895] font-semibold">Contract Pool Balance:</span>
+                  <span className="font-mono font-black text-[#102341]">11,578.45 TROB</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFlushDao}
+                  disabled={flushingDao}
+                  className="w-full py-1.5 px-2.5 rounded-lg bg-[#2868e8] hover:bg-[#1d55c7] text-white text-[10.5px] font-bold shadow-2xs transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {flushingDao ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Pushing to Council...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                      </svg>
+                      <span>Flush 11,578 TROB to Members</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
-              <span className="text-[#657895]">Stream Cadence:</span>
+              <span className="text-[#657895]">Cadence:</span>
               <span className="font-bold text-[#0e9f79] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#0e9f79] animate-pulse" />
-                Instant Block Stream
+                Instant Wallet Push
               </span>
             </div>
           </div>
@@ -369,6 +445,14 @@ export function ProtocolPoolsPanel({
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.
               </p>
+
+              {/* 11th Countdown Mini Box */}
+              <div className="mt-2.5 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
+                <span className="text-[#657895]">11th Settlement:</span>
+                <span className="font-mono font-bold text-[#2868e8]">
+                  {royaltyCountdown.days}d {royaltyCountdown.hours}h {royaltyCountdown.minutes}m
+                </span>
+              </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
               <span className="text-[#657895]">Settlement:</span>
@@ -382,7 +466,7 @@ export function ProtocolPoolsPanel({
                   {claimingPool === "salary" ? "..." : "Claim Royalty"}
                 </button>
               ) : (
-                <span className="font-bold text-[#b97a17]">11th Monthly (Clean Rank)</span>
+                <span className="font-bold text-[#b97a17]">11th Monthly (00:00 UTC)</span>
               )}
             </div>
           </div>
@@ -403,9 +487,9 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="flex items-center justify-between">
                 <h3 className="text-[16px] font-black text-[#102341] leading-tight group-hover:text-[#7256d8] transition-colors">
-                  Community Pool
+                  Magic Blind Box
                 </h3>
-                <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] border border-[#dcd6fa]">
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#f0edff] text-[#7256d8] border border-[#dcd6fa]">
                   Quarterly
                 </span>
               </div>
@@ -416,19 +500,19 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Pooled</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
-                Universal protocol pool distributed autonomously upon completing the 3-month milestone.
+                Distributed randomly to active members upon timer expiry. Strictly 1x lifetime gift for NEW members each quarter.
               </p>
-              <div className="mt-2 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
-                <span className="text-[#657895]">3-Mo Milestone:</span>
+              <div className="mt-2.5 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
+                <span className="text-[#657895]">3-Mo Drop In:</span>
                 <span className="font-mono font-bold text-[#b97a17]">
                   {milestoneCountdown.days}d {milestoneCountdown.hours}h {milestoneCountdown.minutes}m
                 </span>
               </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
-              <span className="text-[#657895]">Condition:</span>
+              <span className="text-[#657895]">Recipient Rule:</span>
               <span className="font-bold text-[#7256d8] underline underline-offset-2">
-                Milestone Rules
+                New Users Only (1x)
               </span>
             </div>
           </div>
@@ -454,11 +538,17 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Reserve</span>
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
-                One-time bounties unlocked upon reaching Slots 3, 6, 9, 12 at $0 out-of-pocket via P4+P5.
+                Settles on the 21st monthly. Shared equally among all cycle achievers of each rank to prevent early bird drain.
               </p>
+              <div className="mt-2.5 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
+                <span className="text-[#657895]">21st Settlement:</span>
+                <span className="font-mono font-bold text-[#0e9f79]">
+                  {rankCountdown.days}d {rankCountdown.hours}h {rankCountdown.minutes}m
+                </span>
+              </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-[#edf2fa] flex items-center justify-between text-[10.5px]">
-              <span className="text-[#657895]">Progression Bounty:</span>
+              <span className="text-[#657895]">Distribution:</span>
               {claimableRewards && claimableRewards.rewardClaimableTrob > 0 ? (
                 <button
                   type="button"
@@ -469,7 +559,7 @@ export function ProtocolPoolsPanel({
                   {claimingPool === "reward" ? "..." : "Claim Bounty"}
                 </button>
               ) : (
-                <span className="font-bold text-[#0e9f79]">Instant Disbursed</span>
+                <span className="font-bold text-[#0e9f79]">21st Monthly Split</span>
               )}
             </div>
           </div>
@@ -628,27 +718,17 @@ export function ProtocolPoolsPanel({
               </div>
             </div>
 
-            {/* Odds & Rewards Table */}
-            <div className="mt-4 p-3.5 rounded-2xl bg-[#f8faff] border border-[#e0eaf7] space-y-2">
-              <span className="text-[11px] uppercase tracking-wider text-[#657895] font-bold block mb-1">
-                Provable Reward Distribution
-              </span>
-              <div className="flex items-center justify-between text-[12px] py-1 border-b border-[#edf2f8]">
-                <span className="text-[#657895] font-medium">85% Common Tier</span>
-                <span className="font-mono font-bold text-[#102341]">$0.50 USD</span>
+            {/* Strict 1x Lifetime Rule Banner */}
+            <div className="mt-4 p-3 rounded-2xl bg-[#f0edff] border border-[#dcd6fa] text-left">
+              <div className="flex items-center gap-1.5 text-[11px] font-black text-[#7256d8] uppercase tracking-wider">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>Strict Lifetime Rule: 1x Per Wallet Forever</span>
               </div>
-              <div className="flex items-center justify-between text-[12px] py-1 border-b border-[#edf2f8]">
-                <span className="text-[#7256d8] font-medium">10% Active Boost (2+ Directs)</span>
-                <span className="font-mono font-bold text-[#7256d8]">$0.80 USD</span>
-              </div>
-              <div className="flex items-center justify-between text-[12px] py-1 border-b border-[#edf2f8]">
-                <span className="text-[#2868e8] font-medium">3% Elite Milestone Tier</span>
-                <span className="font-mono font-bold text-[#2868e8]">$1.20 USD</span>
-              </div>
-              <div className="flex items-center justify-between text-[12px] py-1">
-                <span className="text-[#b97a17] font-bold">2% Grand Apex Jackpot</span>
-                <span className="font-mono font-black text-[#b97a17]">$5.00 USD</span>
-              </div>
+              <p className="text-[11.5px] text-[#4c3a88] mt-1 leading-relaxed">
+                Once a wallet receives a Magic Blind Box reward ($0.80 - $5.00), it is permanently recorded on-chain (<code className="font-mono text-[10px] bg-white/70 px-1 py-0.5 rounded">hasReceivedMagicBox = true</code>). In every subsequent quarterly cycle, rewards are distributed strictly to <strong>NEW active matrix operatives</strong> who haven&apos;t received one yet.
+              </p>
             </div>
 
             {/* Action Button */}

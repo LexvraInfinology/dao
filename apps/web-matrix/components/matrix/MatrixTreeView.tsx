@@ -45,7 +45,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     if (address && address.startsWith("0x")) {
       getOnChainQualification(address).then(setQualification).catch(() => {});
     }
-  }, [address, slotDetails]);
+  }, [address]);
 
   const getNode = (pos: number) => {
     return nodes.find((n) => n.position === pos);

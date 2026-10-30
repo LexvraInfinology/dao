@@ -13,15 +13,21 @@ export function BlindBoxSection() {
   useEffect(() => {
     setMounted(true);
     let active = true;
-    getOnChainProtocolPoolsStats()
-      .then((data) => {
-        if (active) setStats(data);
-      })
-      .catch((err) => {
+
+    const fetchPoolStats = async () => {
+      try {
+        const data = await getOnChainProtocolPoolsStats();
+        if (active && data) setStats(data);
+      } catch (err) {
         console.warn("[BlindBoxSection] Pool stats notice:", err);
-      });
+      }
+    };
+
+    fetchPoolStats();
+    const interval = setInterval(fetchPoolStats, 4000);
     return () => {
       active = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -99,8 +105,8 @@ export function BlindBoxSection() {
                     <path d="M6 12h.01" />
                   </svg>
                 </div>
-                <span className="text-[11px] font-extrabold text-slate-500 tracking-[0.08em] uppercase">
-                  CURRENT POOL
+                <span className="text-[11px] font-extrabold text-slate-700 tracking-[0.08em] uppercase">
+                  MAGIC BLIND BOX POOL
                 </span>
               </div>
 
@@ -110,7 +116,7 @@ export function BlindBoxSection() {
               </span>
             </div>
 
-            {/* Big Value - Smooth Fixed Height, Zero Layout Shift */}
+            {/* Big Value - Smooth Fixed Height, Zero Layout Shift, strictly in $ USD */}
             <div className="flex items-baseline min-h-[42px]">
               <span className="text-[32px] sm:text-[36px] font-black text-[#0b132b] tracking-tight leading-none font-mono tabular-nums">
                 {mounted ? `$${effectivePoolUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"}
@@ -120,40 +126,40 @@ export function BlindBoxSection() {
               </span>
             </div>
 
-            {/* Subtext */}
-            <p className="text-[12px] sm:text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug font-mono truncate">
-              {mounted ? `${effectivePoolTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB` : "0.00 TROB"} • 10% Protocol Allocation
+            {/* Subtext: 10% Protocol Allocation with NO confusing TROB text */}
+            <p className="text-[11.5px] sm:text-[12.5px] font-bold text-[#2563eb] mt-1.5 leading-snug truncate">
+              10% Automated Protocol Allocation
             </p>
 
             {/* Progress Bar */}
             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-4">
               <div
                 className="bg-[#2563eb] h-full rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: "100%" }}
               />
             </div>
 
-            {/* Progress Status Row */}
+            {/* Progress Status Row - Clear needful status instead of arbitrary 28% */}
             <div className="flex items-center justify-between mt-2.5">
               <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[11px] text-slate-400 font-medium">
-                  Updates in real-time
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Accumulating from live positions
                 </span>
               </div>
-              <span className="text-[11px] font-black text-[#0b132b] font-mono tabular-nums">
-                {progressPercent}% of Target
+              <span className="text-[11px] font-bold text-[#2563eb]">
+                Quarterly Draw
               </span>
             </div>
 
-            {/* Bottom: Avatars & Eligible Count */}
+            {/* Bottom: Avatars & Qualified Members (simple terminology) */}
             <div className="flex items-center justify-between mt-6 pt-1 border-t border-slate-100">
               <div className="flex items-center">
                 <div className="flex items-center -space-x-2 shrink-0">
                   <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
                     <Image
                       src="/blindbox/avatar-redhead.jpg"
-                      alt="Eligible member"
+                      alt="Qualified member"
                       fill
                       sizes="28px"
                       className="object-cover"
@@ -162,7 +168,7 @@ export function BlindBoxSection() {
                   <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
                     <Image
                       src="/blindbox/avatar-striped.jpg"
-                      alt="Eligible member"
+                      alt="Qualified member"
                       fill
                       sizes="28px"
                       className="object-cover"
@@ -171,15 +177,15 @@ export function BlindBoxSection() {
                   <div className="relative w-7 h-7 rounded-full overflow-hidden ring-2 ring-white shadow-xs">
                     <Image
                       src="/blindbox/avatar-glasses.jpg"
-                      alt="Eligible member"
+                      alt="Qualified member"
                       fill
                       sizes="28px"
                       className="object-cover"
                     />
                   </div>
                 </div>
-                <span className="text-[12px] sm:text-[12.5px] font-bold text-slate-700 ml-2.5 font-mono">
-                  {eligibleCount} Eligible Operatives
+                <span className="text-[12px] sm:text-[12.5px] font-bold text-slate-700 ml-2.5">
+                  {eligibleCount} Qualified Members
                 </span>
               </div>
 

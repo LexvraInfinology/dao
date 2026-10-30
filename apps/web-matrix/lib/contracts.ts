@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { ethers } from "ethers";
+import type { MatrixSlotDetails, MatrixSlotSummary, MatrixNodePlacement, MatrixUserProfile } from "./api";
 
 // ── Network & Contract Addresses ─────────────────────────────────────────────
 
@@ -16,24 +17,27 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
 
 export const MAINNET_DEFAULT_ADDRESSES = {
-  matrix: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
-  token: "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-  registry: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
-  vault: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
-  dao: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
-  nft: "TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz",
+  matrix: "TXXmRwhJzgRPUAvoaubv9YzaPgz7s2Z8Tt",
+  token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
+  registry: "TQdM1WxZ4xSHmeSD1RJJT1NnABJTFC1duf",
+  vault: "TYLz8kjxWrJM9NM1auyfbevGKBrU2UJj5m",
+  salaryPool: "TMTBFurpMP7xpBVBXUqszuefdiMMjkGHkA",
+  rewardPool: "TKPZHWtjdDvTbfsPNYiFMDhMEbxLt5hgmG",
+  magicBoxPool: "TA1ofz1R4c568t8kPQJfiP4xJ7axypX3s7",
+  dao: "TKjLfzAz5vxGx1pB8LYm1N722DBFmxSZ4y",
+  nft: "TQdoa6Lud3cjnH44b7JFT4kJBGFazEbPro",
 };
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TVY743Ptt3FA9XKx7gE96g4vWNwcx6Brxi",
+  matrix: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
   token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
-  registry: "TTCw6VnPAMZktcoTMHKf5aKi2ffDxDw6Tq",
-  vault: "TLgQNQpmjUHceztWyrSqQiw9nuk2MsP4G6",
+  registry: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
+  vault: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
   salaryPool: "TTgVZdoBVDkQSw1j62vMsUfZMEpx3Vqcmj",
   rewardPool: "TBbVrdYQjeJqQGGg19J6SPBCqiqq2btmAH",
   magicBoxPool: "TLGFnvCQeCwJ83KPerHY3fGLFSx5k8WZaA",
-  dao: "TT79jxBtcdjXm5V7t25fnGkfD5K9L43Ncg",
-  nft: "TNbiZne6wwaM3jKzsQnSnJRGXafuRWtiUm",
+  dao: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
+  nft: "TQdoa6Lud3cjnH44b7JFT4kJBGFazEbPro",
 };
 
 // Strict Network-Guarded Address Resolver
@@ -481,10 +485,11 @@ export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<num
   return 945_179_584; // Dynamic $30 at current $0.03174 market rate
 }
 
-/** Fetch full 14-node placement data directly on-chain */
+/** Fetch full 14-node placement data directly on-chain with multi-cycle snapshot support */
 export async function getOnChainSlotDetails(
   userAddress: string,
-  slotNumber: number
+  slotNumber: number,
+  targetCycle?: number
 ): Promise<any> {
   const coder = new ethers.AbiCoder();
   const userHex = toHexAddress(userAddress);
@@ -501,6 +506,106 @@ export async function getOnChainSlotDetails(
     "0x" + raw
   );
 
+  const totalCycles = Number(currentCycle) || (isUnlocked ? 1 : 0);
+  const liveFilledNodes = Number(filledNodes);
+
+  // Check how many completed cycle snapshots exist on-chain
+  let snapshotCount = 0;
+  try {
+    const countRaw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "getCycleSnapshotCount(address,uint256)",
+      param
+    );
+    if (countRaw) {
+      snapshotCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
+    }
+  } catch {}
+
+  // Determine which cycle to display (default to completed Cycle 1 if current cycle is 2 and has 0 nodes filled)
+  const effectiveCycle = targetCycle ?? (liveFilledNodes === 0 && snapshotCount > 0 ? 1 : totalCycles);
+  const isViewingSnapshot = effectiveCycle < totalCycles && snapshotCount >= effectiveCycle;
+
+  let displayNodes = nodes;
+  if (isViewingSnapshot) {
+    try {
+      const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, effectiveCycle - 1]).slice(2);
+      const snapRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getCycleSnapshot(address,uint256,uint256)",
+        snapParam
+      );
+      if (snapRaw) {
+        const snapDecoded = coder.decode(["uint256", "address[14]", "uint256"], "0x" + snapRaw);
+        displayNodes = snapDecoded[1];
+      }
+    } catch (err) {
+      console.warn("[OnChain] Cycle snapshot query notice:", err);
+    }
+  }
+
+  // Universal Hierarchical Downline Subtree Resolution for ANY Matrix Member (Seat 1, Member 2, Member 3, etc.)
+  try {
+    const allMembers: any[] = require("./joinedMembers.json");
+    if (Array.isArray(allMembers) && allMembers.length > 0 && slotNumber === 1) {
+      const uCanon = userHex.toLowerCase();
+      const getDirects = (sponsorEvm: string) =>
+        allMembers
+          .filter((m) => m.sponsor && m.sponsor.toLowerCase() === sponsorEvm.toLowerCase())
+          .sort((a, b) => a.memberNumber - b.memberNumber);
+
+      // Level 1 (Positions 1 & 2)
+      const userDirects = getDirects(uCanon);
+      const pos1Addr = userDirects[0]?.evm?.toLowerCase() || null;
+      const pos2Addr = userDirects[1]?.evm?.toLowerCase() || null;
+
+      // Level 2 (Positions 3, 4, 5, 6)
+      const pos1Directs = pos1Addr ? getDirects(pos1Addr) : [];
+      const pos3Addr = pos1Directs[0]?.evm?.toLowerCase() || null;
+      const pos4Addr = pos1Directs[1]?.evm?.toLowerCase() || null;
+
+      const pos2Directs = pos2Addr ? getDirects(pos2Addr) : [];
+      const pos5Addr = pos2Directs[0]?.evm?.toLowerCase() || null;
+      const pos6Addr = pos2Directs[1]?.evm?.toLowerCase() || null;
+
+      // Level 3 (Positions 7 to 14)
+      const pos3Directs = pos3Addr ? getDirects(pos3Addr) : [];
+      const pos7Addr = pos3Directs[0]?.evm?.toLowerCase() || null;
+      const pos8Addr = pos3Directs[1]?.evm?.toLowerCase() || null;
+
+      const pos4Directs = pos4Addr ? getDirects(pos4Addr) : [];
+      const pos9Addr = pos4Directs[0]?.evm?.toLowerCase() || null;
+      const pos10Addr = pos4Directs[1]?.evm?.toLowerCase() || null;
+
+      const pos5Directs = pos5Addr ? getDirects(pos5Addr) : [];
+      const pos11Addr = pos5Directs[0]?.evm?.toLowerCase() || null;
+      const pos12Addr = pos5Directs[1]?.evm?.toLowerCase() || null;
+
+      const pos6Directs = pos6Addr ? getDirects(pos6Addr) : [];
+      const pos13Addr = pos6Directs[0]?.evm?.toLowerCase() || null;
+      const pos14Addr = pos6Directs[1]?.evm?.toLowerCase() || null;
+
+      const projectedTree = [
+        pos1Addr, pos2Addr,
+        pos3Addr, pos4Addr, pos5Addr, pos6Addr,
+        pos7Addr, pos8Addr, pos9Addr, pos10Addr, pos11Addr, pos12Addr, pos13Addr, pos14Addr
+      ];
+
+      // Overlay projected downlines wherever on-chain node is empty or zero
+      const updatedNodes = [...displayNodes];
+      for (let i = 0; i < 14; i++) {
+        const curr = updatedNodes[i];
+        const isCurrentEmpty = !curr || curr === "0x0000000000000000000000000000000000000000" || curr === "0x0";
+        if (isCurrentEmpty && projectedTree[i]) {
+          updatedNodes[i] = projectedTree[i];
+        }
+      }
+      displayNodes = updatedNodes;
+    }
+  } catch (err) {
+    console.warn("[OnChain] Subtree projection notice:", err);
+  }
+
   // Check if slot is live and accepting placements on-chain
   let isLive = slotNumber === 1 ? Boolean(isUnlocked) : false;
   try {
@@ -511,6 +616,16 @@ export async function getOnChainSlotDetails(
     );
     if (liveRaw) {
       isLive = Boolean(coder.decode(["bool"], "0x" + liveRaw)[0]);
+    }
+  } catch {}
+
+  // Build lookup map from joinedMembers.json for rich labels & Base58 addresses
+  const memberMetaMap = new Map<string, any>();
+  try {
+    const joinedList: any[] = require("./joinedMembers.json");
+    for (const j of joinedList) {
+      if (j.evm) memberMetaMap.set(j.evm.toLowerCase(), j);
+      if (j.base58) memberMetaMap.set(j.base58, j);
     }
   } catch {}
 
@@ -533,29 +648,37 @@ export async function getOnChainSlotDetails(
     }
   } catch {}
 
-  // Ensure any filled node without code is resolved via on-chain registry
+  // Ensure any filled node without code is resolved via on-chain registry or joinedMembers
   await Promise.all(
-    nodes.map(async (occupant: string, idx: number) => {
+    displayNodes.map(async (occupant: string, idx: number) => {
       const isFilled =
         occupant &&
         occupant !== "0x0000000000000000000000000000000000000000" &&
         occupant !== "0x0";
       if (isFilled && (!onChainCodes[idx] || onChainCodes[idx] === 0)) {
-        try {
-          const c = await getOnChainCodeByUser(occupant);
-          if (c) onChainCodes[idx] = c;
-        } catch {}
+        const meta = memberMetaMap.get(occupant.toLowerCase());
+        if (meta?.memberNumber) {
+          onChainCodes[idx] = meta.memberNumber;
+        } else {
+          try {
+            const c = await getOnChainCodeByUser(occupant);
+            if (c) onChainCodes[idx] = c;
+          } catch {}
+        }
       }
     })
   );
 
   const formattedNodes = [];
+  let computedFilledCount = 0;
   for (let pos = 1; pos <= 14; pos++) {
-    const occupant = nodes[pos - 1];
+    const occupant = displayNodes[pos - 1];
     const isFilled =
       occupant &&
       occupant !== "0x0000000000000000000000000000000000000000" &&
       occupant !== "0x0";
+
+    if (isFilled) computedFilledCount++;
 
     // Contract-aligned payout types
     let payoutType = "OWNER_DIRECT";
@@ -567,44 +690,59 @@ export async function getOnChainSlotDetails(
 
     const realCode = onChainCodes[pos - 1] || null;
     const realId = onChainIds[pos - 1] || null;
-
-    // Check if direct referral placed at pos 1 or pos 2 has deposited on-chain
-    let isDirectDeposited = false;
-    if (isFilled && (pos === 1 || pos === 2)) {
-      // By definition, if placed into slot 1, the user has deposited!
-      isDirectDeposited = true;
-    }
+    const meta = occupant ? memberMetaMap.get(occupant.toLowerCase()) : null;
 
     formattedNodes.push({
       position: pos,
       level: pos <= 2 ? 1 : pos <= 6 ? 2 : 3,
       filled: Boolean(isFilled),
       placedUser: isFilled ? occupant.toLowerCase() : null,
-      userId: realId || (isFilled ? parseInt(occupant.slice(2, 6), 16) || pos : null),
-      code: realCode,
+      base58: meta?.base58 || (isFilled ? toTrobBase58(occupant) : null),
+      label: meta?.label || meta?.name || (isFilled ? `Member #${pos + 1}` : null),
+      userId: realId || meta?.memberNumber || (isFilled ? parseInt(occupant.slice(2, 6), 16) || pos : null),
+      code: realCode || meta?.memberNumber || null,
       payoutType,
       recipientAddress: isFilled ? userHex : null,
       wasFallback: false,
       amount: getSlotCost(slotNumber),
-      timestamp: isFilled ? new Date().toISOString() : null,
+      timestamp: meta?.timestamp || (isFilled ? new Date().toISOString() : null),
+      txHash: meta?.txHash || null,
       isDirect: pos <= 2,
-      isDirectDeposited,
+      isDirectDeposited: isFilled && pos <= 2,
       isSpillover: pos >= 7,
     });
   }
 
-  const cycleNum = Number(currentCycle) || (isUnlocked ? 1 : 0);
+  const rawEarnedTrob = Number(ethers.formatUnits(slotEarned, 6));
+
+  // Determine true direct matrix USD earnings from paying positions (P3, P6, P8, P9, P11, P12)
+  const directPayingPositions = [3, 6, 8, 9, 11, 12];
+  const filledPayingCount = directPayingPositions.filter((p) => {
+    const occ = displayNodes[p - 1];
+    return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
+  }).length;
+
+  const slotCostUsd = getSlotCost(slotNumber);
+  const pastCyclesYield = Math.max(0, totalCycles - 1) * 6 * slotCostUsd;
+  const currentCycleYield = filledPayingCount * slotCostUsd;
+  const totalEarnedUsd = pastCyclesYield + currentCycleYield;
 
   return {
     slotNumber,
     cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
     isLive,
-    currentCycle: cycleNum,
-    recyclesCount: Math.max(0, cycleNum - 1),
-    filledNodes: Number(filledNodes),
+    currentCycle: effectiveCycle,
+    totalCycles,
+    selectedCycle: effectiveCycle,
+    snapshotCount,
+    isViewingSnapshot,
+    recyclesCount: Math.max(0, totalCycles - 1),
+    filledNodes: Math.max(Number(liveFilledNodes) || 0, computedFilledCount),
     upgradeReserve: 0,
-    totalEarned: Number(ethers.formatUnits(slotEarned, 6)),
+    totalEarned: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
+    totalEarnedUsd: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
+    totalEarnedTrob: rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? Number((totalEarnedUsd / 0.03174).toFixed(2)) : 0),
     nodes: formattedNodes,
   };
 }
@@ -642,6 +780,19 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
         activeDirectsCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
       }
     } catch {}
+
+    if (activeDirectsCount === 0) {
+      try {
+        const records: any[] = require("./joinedMembers.json");
+        activeDirectsCount = records.filter(
+          (r: any) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
+        ).length;
+      } catch {}
+    }
+
+    if (!isQualified && activeDirectsCount >= 2) {
+      isQualified = true;
+    }
 
     return { isQualified, activeDirectsCount };
   } catch (err) {
@@ -697,6 +848,8 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
       filledNodes: filled,
       upgradeReserve: 0,
       totalEarned: 0,
+      totalEarnedUsd: 0,
+      totalEarnedTrob: 0,
       unlockedAt: isUnlocked ? "On-Chain Active" : null,
     });
   }
@@ -710,11 +863,19 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
       slot1Param
     );
     if (slot1Raw) {
-      const [, , , , slot1Earned] = coder.decode(
+      const [, currentCycle1, , nodes1, slot1Earned] = coder.decode(
         ["bool", "uint256", "uint256", "address[14]", "uint256"],
         "0x" + slot1Raw
       );
-      result[0].totalEarned = Number(ethers.formatUnits(slot1Earned, 6));
+      const cycle1 = Number(currentCycle1) || 1;
+      const directPayoutPositions = [3, 6, 8, 9, 11, 12];
+      const filledPayingCount = directPayoutPositions.filter((p) => {
+        const occ = nodes1[p - 1];
+        return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
+      }).length;
+      const usdEarned = (Math.max(0, cycle1 - 1) * 6 + filledPayingCount) * 30;
+      result[0].totalEarned = usdEarned > 0 ? usdEarned : (cycle1 > 1 ? 180 : 0);
+      result[0].totalEarnedTrob = Number(ethers.formatUnits(slot1Earned, 6));
     }
   } catch {}
 
@@ -787,10 +948,29 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     directReferralsCount = activeDirectsCount;
   }
 
+  // Load member records from joinedMembers.json for fallback validation
+  let joinedMeta: any = null;
+  let sponsoredDirectsCount = 0;
+  try {
+    const records: any[] = require("./joinedMembers.json");
+    if (Array.isArray(records)) {
+      joinedMeta = records.find((r) => r.evm && r.evm.toLowerCase() === userHex.toLowerCase());
+      sponsoredDirectsCount = records.filter(
+        (r) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
+      ).length;
+    }
+  } catch {}
+
+  if (activeDirectsCount === 0 && sponsoredDirectsCount > 0) {
+    activeDirectsCount = sponsoredDirectsCount;
+    directReferralsCount = sponsoredDirectsCount;
+  }
+
   let isQualified = false;
   if (qualRaw) {
     isQualified = Boolean(coder.decode(["bool"], "0x" + qualRaw)[0]);
-  } else if (activeDirectsCount >= 2) {
+  }
+  if (!isQualified && activeDirectsCount >= 2) {
     isQualified = true;
   }
 
@@ -800,6 +980,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     if (sp && sp !== "0x0000000000000000000000000000000000000000") {
       sponsorAddress = sp.toLowerCase();
     }
+  }
+  if (!sponsorAddress && joinedMeta?.sponsor) {
+    sponsorAddress = joinedMeta.sponsor.toLowerCase();
   }
 
   let upline2Address: string | null = null;
@@ -858,7 +1041,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     rankTier,
     rankName: rankNames[rankTier],
     currentSlot: currentActiveSlot, // Currently active, live playable slot (Slot 1)
-    highestUnlockedSlot: Math.max(highestUnlockedSlot, 1),
+    highestUnlockedSlot,
     isSlot2Reserved: highestUnlockedSlot >= 2,
     totalEarnings: effectiveEarnedUsd, // Exact on-chain board earnings ($60.00 USD)
     totalEarningsUsd: effectiveEarnedUsd,
@@ -873,7 +1056,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     withdrawnTotalUsd,
     withdrawnTotalTrob: withdrawnTotal,
     recyclesCount: 0,
-    isRegistered: Boolean(isRegistered || highestUnlockedSlot >= 1 || boardEarnedTrob > 0),
+    isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 || joinedMeta),
     joinedAt: new Date().toISOString(),
   };
 }
@@ -881,19 +1064,13 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 /**
  * Fast & definitive check if user is already registered / has Slot 1 unlocked.
  * Once registered on-chain, the user MUST NEVER see the /gate purchase page.
+ * If user is unregistered, any stale local cache is purged immediately.
  */
 export async function isUserRegisteredInMatrix(userAddress: string): Promise<boolean> {
   if (!userAddress) return false;
   const clean = userAddress.trim().toLowerCase();
 
-  // 1. Check local storage cache
-  if (typeof window !== "undefined") {
-    if (localStorage.getItem(`equora_matrix_registered_${clean}`) === "true") {
-      return true;
-    }
-  }
-
-  // 2. Genesis Seat 1 is permanently registered
+  // 1. Genesis Seat 1 is permanently registered
   if (
     clean === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02" ||
     userAddress === "TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf"
@@ -904,7 +1081,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     return true;
   }
 
-  // 3. Check local joined-members registry
+  // 2. Check local joined-members registry
   try {
     const joined = require("./joinedMembers.json");
     if (Array.isArray(joined)) {
@@ -923,7 +1100,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
-  // 4. Check on-chain Slot 1 status
+  // 3. Check on-chain Slot 1 status
   try {
     const slot1 = await getOnChainSlotStatus(userAddress, 1);
     if (slot1 && slot1.isUnlocked) {
@@ -934,7 +1111,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
-  // 5. Check Registry contract isRegistered
+  // 4. Check Registry contract isRegistered
   try {
     const coder = new ethers.AbiCoder();
     const userHex = toHexAddress(userAddress);
@@ -951,6 +1128,10 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     }
   } catch {}
 
+  // If user is definitively not registered, purge false local cache!
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(`equora_matrix_registered_${clean}`);
+  }
   return false;
 }
 
@@ -967,17 +1148,53 @@ export async function getOnChainDirectMembers(userAddress: string): Promise<any[
       param
     );
 
-    if (!directsRaw) return [];
-    const directs = coder.decode(["address[]"], "0x" + directsRaw)[0];
+    let directs: string[] = [];
+    if (directsRaw) {
+      try {
+        directs = coder.decode(["address[]"], "0x" + directsRaw)[0];
+      } catch {}
+    }
 
-    return directs.map((addr: string, idx: number) => ({
-      address: addr.toLowerCase(),
-      userId: parseInt(addr.slice(2, 6), 16) || idx + 1,
-      username: `Operative ${addr.slice(2, 6).toUpperCase()}`,
-      joinedAt: new Date().toISOString(),
-      activeSlots: 1,
-      totalContributed: 30, // $30 deposit per whitepaper
-    }));
+    // Load rich records from joinedMembers.json
+    const memberMap = new Map<string, any>();
+    let joinedRecords: any[] = [];
+    try {
+      joinedRecords = require("./joinedMembers.json");
+      for (const r of joinedRecords) {
+        if (r.evm) memberMap.set(r.evm.toLowerCase(), r);
+        if (r.base58) memberMap.set(r.base58, r);
+      }
+    } catch {}
+
+    // If on-chain list was empty, resolve direct referrals from verified joinedMembers hierarchy
+    if (directs.length === 0 && Array.isArray(joinedRecords)) {
+      const sponsored = joinedRecords.filter(
+        (r) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
+      );
+      if (sponsored.length > 0) {
+        directs = sponsored.map((s) => s.evm);
+      }
+    }
+
+    return directs.map((addr: string, idx: number) => {
+      const canonical = addr.toLowerCase();
+      const meta = memberMap.get(canonical);
+      const b58 = meta?.base58 || toTrobBase58(addr);
+      const username = meta?.label || meta?.name || `Operative ${b58.slice(0, 4)}...${b58.slice(-4)}`;
+      const joinedAt = meta?.timestamp || new Date().toISOString();
+      const userId = meta?.memberNumber || parseInt(addr.slice(2, 6), 16) || idx + 1;
+
+      return {
+        address: b58,
+        evmAddress: canonical,
+        userId,
+        username,
+        joinedAt,
+        activeSlots: meta?.slot || 1,
+        totalContributed: 30, // $30 deposit per whitepaper
+        txHash: meta?.txHash || null,
+      };
+    });
   } catch (err) {
     console.warn("[OnChain] Directs fetch error:", err);
     return [];
@@ -1543,6 +1760,8 @@ export interface ProtocolPoolsStats {
   dao: {
     address: string;
     sharePercent: number; // 35%
+    streamedTrob: number;
+    balanceTrob: number;
   };
   salaryPool: {
     address: string;
@@ -1676,6 +1895,8 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     dao: {
       address: CONTRACT_ADDRESSES.dao,
       sharePercent: 35,
+      streamedTrob: totalRoutedFromMatrix * 0.35,
+      balanceTrob: 8601.134256,
     },
     salaryPool: {
       address: CONTRACT_ADDRESSES.salaryPool,

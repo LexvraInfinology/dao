@@ -3,11 +3,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUserStore } from "@/lib/stores";
+import { useUserStore, useMatrixStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { getOnChainTokenBalance } from "@/lib/contracts";
 import { WalletConnectModal } from "./WalletConnectModal";
+import joinedMembers from "@/lib/joinedMembers.json";
 
 export function WalletDropdown() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function WalletDropdown() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
+  const [showAccountList, setShowAccountList] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -58,6 +60,26 @@ export function WalletDropdown() {
     setCopied(true);
     toast.success("Address Copied", "Wallet address copied to clipboard.");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSwitchOperative = async (memberEvm: string, memberName: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("equora_wallet_explicit_disconnect");
+      localStorage.setItem("equora_auth_address", memberEvm);
+      localStorage.setItem("equora_matrix_address", memberEvm);
+      localStorage.setItem(`equora_matrix_registered_${memberEvm.toLowerCase()}`, "true");
+    }
+    setAddress(memberEvm);
+    setIsOpen(false);
+    toast.success("Switched Operative", `Viewing dashboard for ${memberName}`);
+
+    // Refresh matrix store for new active account
+    const matrixStore = useMatrixStore.getState();
+    await Promise.all([
+      matrixStore.fetchSlots(memberEvm, true),
+      matrixStore.fetchSlotDetails(1, undefined, memberEvm, true),
+      matrixStore.fetchDirectMembers(memberEvm, true),
+    ]).catch(() => {});
   };
 
   const handleDisconnect = () => {
@@ -122,6 +144,11 @@ export function WalletDropdown() {
   const base58Display = toTrobBase58(address);
   const explorerUrl = `https://testnet.trobchain.com/#/address/${base58Display || address}`;
 
+  // Find active member meta if present in verified 14-node network
+  const activeMember = joinedMembers.find(
+    (m) => m.evm.toLowerCase() === address.toLowerCase() || m.base58 === base58Display
+  );
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Trigger Button */}
@@ -136,7 +163,7 @@ export function WalletDropdown() {
       >
         <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse shrink-0" />
         <span className="font-mono font-bold text-[#0f172a]">
-          {formatAddress(address)}
+          {activeMember ? `#${activeMember.memberNumber} ${formatAddress(address)}` : formatAddress(address)}
         </span>
         <svg
           width="12"
@@ -151,7 +178,7 @@ export function WalletDropdown() {
 
       {/* Floating Dropdown Card */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-[310px] sm:w-[330px] rounded-2xl bg-white border border-[#e2e8f0] shadow-xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+        <div className="absolute right-0 top-full mt-2 w-[320px] sm:w-[350px] rounded-2xl bg-white border border-[#e2e8f0] shadow-xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-150 text-left max-h-[85vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-[#f1f5f9]">
             <div className="flex items-center gap-2">
@@ -163,7 +190,9 @@ export function WalletDropdown() {
                 </svg>
               </div>
               <div>
-                <div className="text-[12.5px] font-black text-[#0f172a]">TrobSafe Wallet</div>
+                <div className="text-[12.5px] font-black text-[#0f172a]">
+                  {activeMember ? activeMember.name : "TrobSafe Wallet"}
+                </div>
                 <div className="text-[10.5px] text-[#64748b] font-medium">TrobChain L1 Network</div>
               </div>
             </div>
@@ -175,8 +204,13 @@ export function WalletDropdown() {
 
           {/* Address Box */}
           <div className="mt-3 p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0]">
-            <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1">
-              Wallet Address
+            <div className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>Wallet Address</span>
+              {activeMember?.classification && (
+                <span className="text-[9.5px] text-[#2563eb] font-semibold lowercase">
+                  {activeMember.classification}
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-[11.5px] font-bold text-[#0f172a] truncate select-all">
@@ -223,13 +257,92 @@ export function WalletDropdown() {
             </div>
           </div>
 
+          {/* ── Switch Operative Dashboard Section ────────────────── */}
+          <div className="mt-3 pt-2.5 border-t border-[#f1f5f9]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#64748b]">
+                Switch Operative Account
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAccountList((prev) => !prev)}
+                className="text-[10.5px] font-bold text-[#2563eb] hover:underline cursor-pointer"
+              >
+                {showAccountList ? "Hide List ↑" : "View All (15) ↓"}
+              </button>
+            </div>
+
+            {/* Quick 3 Buttons: Seat 1, Member 2, Member 3 */}
+            <div className="grid grid-cols-3 gap-1 mb-2">
+              {joinedMembers.slice(0, 3).map((m) => {
+                const isSelected = m.evm.toLowerCase() === address.toLowerCase();
+                return (
+                  <button
+                    key={m.memberNumber}
+                    type="button"
+                    onClick={() => handleSwitchOperative(m.evm, m.name)}
+                    className={`py-1.5 px-1 rounded-lg text-[10.5px] font-bold text-center truncate transition-all cursor-pointer border ${
+                      isSelected
+                        ? "bg-[#2563eb] text-white border-[#2563eb] shadow-xs"
+                        : "bg-[#f8fafc] text-[#334155] border-[#e2e8f0] hover:bg-[#eff6ff] hover:border-[#bfdbfe]"
+                    }`}
+                    title={`${m.name}: ${m.base58}`}
+                  >
+                    #{m.memberNumber} {m.memberNumber === 1 ? "Founder" : `M${m.memberNumber}`}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Expanded List of all 15 Operatives */}
+            {showAccountList && (
+              <div className="max-h-48 overflow-y-auto space-y-1 p-1 bg-[#f8fafc] rounded-xl border border-[#e2e8f0] mb-2">
+                {joinedMembers.map((m) => {
+                  const isSelected = m.evm.toLowerCase() === address.toLowerCase();
+                  return (
+                    <button
+                      key={m.memberNumber}
+                      type="button"
+                      onClick={() => handleSwitchOperative(m.evm, m.name)}
+                      className={`w-full flex items-center justify-between p-1.5 rounded-lg text-left text-[11px] transition-colors cursor-pointer ${
+                        isSelected
+                          ? "bg-[#2563eb] text-white font-bold"
+                          : "hover:bg-white text-[#334155] font-medium"
+                      }`}
+                    >
+                      <div className="min-w-0 pr-1">
+                        <div className="truncate font-semibold">
+                          #{m.memberNumber} {m.name}
+                        </div>
+                        <div className={`font-mono text-[9.5px] truncate ${isSelected ? "text-blue-100" : "text-[#94a3b8]"}`}>
+                          {m.base58.slice(0, 6)}...{m.base58.slice(-4)}
+                        </div>
+                      </div>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                        isSelected
+                          ? "bg-white text-[#2563eb]"
+                          : m.memberNumber === 1
+                          ? "bg-amber-100 text-amber-800"
+                          : m.memberNumber <= 7
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-200 text-slate-700"
+                      }`}>
+                        {m.memberNumber === 1 ? "Root" : m.memberNumber <= 7 ? "Qualified" : "Leaf"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Quick Actions List */}
-          <div className="mt-3 space-y-1 pt-2 border-t border-[#f1f5f9]">
+          <div className="mt-2 space-y-1 pt-2 border-t border-[#f1f5f9]">
             <a
               href={explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-[12px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -243,24 +356,9 @@ export function WalletDropdown() {
             </a>
 
             <Link
-              href="/profile"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-[12px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
-            >
-              <span className="flex items-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                Matrix Profile & Ranks
-              </span>
-              <span className="text-[10.5px] text-[#94a3b8]">→</span>
-            </Link>
-
-            <Link
               href="/matrix"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-[12px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -273,14 +371,29 @@ export function WalletDropdown() {
               </span>
               <span className="text-[10.5px] text-[#94a3b8]">→</span>
             </Link>
+
+            <Link
+              href="/dashboard"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                Operative Dashboard
+              </span>
+              <span className="text-[10.5px] text-[#94a3b8]">→</span>
+            </Link>
           </div>
 
           {/* Disconnect Button */}
-          <div className="mt-2.5 pt-2 border-t border-[#f1f5f9]">
+          <div className="mt-2 pt-2 border-t border-[#f1f5f9]">
             <button
               type="button"
               onClick={handleDisconnect}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[12px] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11.5px] transition-colors cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />

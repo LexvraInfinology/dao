@@ -6,6 +6,8 @@
     "dev": "next start -p 3001",
     "dev:watch": "next dev -p 3001 --webpack",
     "build": "next build --webpack",
+    "build:matrix": "next build --webpack",
+    "build:dao": "next build --webpack",
     "start": "next start -p 3001",
     "lint": "eslint"
   },

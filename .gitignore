@@ -90,7 +90,6 @@ docs/Equora_Matrix_UI_UX_Designer_Guide.pdf
 docs/Equora_Matrix_UI_UX_Designer_Guide.html
 packages/hardhat/scripts/fund-user.ts
 *.apk
-!apps/web-dao/public/downloads/trobsafe.apk
 equorafidocs/
 equorafidocs
 utho_deploy_key*
@@ -99,4 +98,8 @@ __pycache__/
 scratch_*.png
 *.zip
 *.node
+*.mov
+*.mp4
+*.pdf
 packages/database/src/generated/
+apps/web-dao/figma_reference/

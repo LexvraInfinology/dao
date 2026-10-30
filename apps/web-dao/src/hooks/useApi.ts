@@ -489,6 +489,8 @@ export interface DaoMemberListItem {
   status: string;
   joinedAt?: string;
   retopupCount?: number;
+  isActive?: boolean;
+  referralCode?: string | number;
 }
 
 export interface DaoMembersData {

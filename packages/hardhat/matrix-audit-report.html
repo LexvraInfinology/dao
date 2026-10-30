@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EQUORA PROTOCOL • HIERARCHICAL DOWNLINE MATRIX & FINANCIAL AUDIT REPORT</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 8mm 8mm 8mm 8mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .page {
+      padding: 4px;
+      page-break-after: always;
+    }
+    .page:last-child {
+      page-break-after: avoid;
+    }
+    .header-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 900;
+      font-size: 14pt;
+    }
+    .brand-title {
+      font-size: 13pt;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+    }
+    .brand-subtitle {
+      font-size: 7.5pt;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 7.5pt;
+      color: #475569;
+    }
+    .meta-box strong {
+      color: #0284c7;
+    }
+    .badge-network {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .kpi-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .kpi-label {
+      font-size: 6.8pt;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+    .kpi-val {
+      font-size: 12pt;
+      font-weight: 900;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+    .kpi-sub {
+      font-size: 6.8pt;
+      color: #16a34a;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .section-title {
+      font-size: 9.5pt;
+      font-weight: 800;
+      color: #0369a1;
+      background: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      padding: 5px 8px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-sub {
+      font-size: 7pt;
+      color: #64748b;
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.2pt;
+      margin-bottom: 8px;
+    }
+    th {
+      background: #0f172a;
+      color: #f8fafc;
+      font-weight: 700;
+      padding: 5px 6px;
+      text-align: left;
+      font-size: 6.8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    td {
+      padding: 4.5px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .mono {
+      font-family: "SF Mono", "Consolas", "Courier New", monospace;
+      font-size: 6.6pt;
+    }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: 700; }
+    .text-success { color: #16a34a; }
+    .member-name { font-weight: 800; color: #0f172a; font-size: 7.5pt; }
+    .member-addr { color: #0284c7; }
+    .sub-addr { color: #94a3b8; font-size: 6.2pt; }
+    .seat-badge {
+      display: inline-block;
+      background: #0284c7;
+      color: white;
+      font-weight: 900;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 7pt;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 6.6pt;
+    }
+    .badge-founder { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-qual { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-reserve { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .badge-recycle { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
+    .badge-general { background: #f1f5f9; color: #475569; }
+    .badge-status {
+      background: #16a34a;
+      color: white;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 6.2pt;
+    }
+    .dest-box {
+      font-size: 6.8pt;
+      line-height: 1.25;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+    .dest-founder { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-weight: 700; }
+    .dest-pool { background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; }
+    .tx-link { color: #0284c7; text-decoration: none; font-weight: 600; }
+    .sponsor-tag { font-weight: 700; color: #0f172a; font-size: 7pt; }
+    .footer {
+      position: fixed;
+      bottom: 4mm;
+      left: 8mm;
+      right: 8mm;
+      display: flex;
+      justify-content: space-between;
+      font-size: 6.8pt;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 4px;
+    }
+    .contracts-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .contract-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 5px 8px;
+    }
+    .contract-title {
+      font-size: 6.8pt;
+      font-weight: 800;
+      color: #0369a1;
+      text-transform: uppercase;
+    }
+    .contract-b58 {
+      font-family: "SF Mono", "Consolas", monospace;
+      font-size: 6.6pt;
+      color: #0f172a;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+    .contract-hex {
+      font-family: "SF Mono", "Consolas", monospace;
+      font-size: 5.8pt;
+      color: #64748b;
+    }
+    .recon-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .recon-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .recon-card h3 {
+      font-size: 8pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .tree-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: EXECUTIVE SUMMARY & ON-CHAIN CONTRACT REGISTRY -->
+  <div class="page">
+    <div class="header-banner">
+      <div class="brand">
+        <div class="brand-logo">E</div>
+        <div>
+          <div class="brand-title">EQUORA PROTOCOL • HIERARCHICAL DOWNLINE AUDIT REPORT</div>
+          <div class="brand-subtitle">Decentralized 14-Node Personal Matrix &amp; Multi-Level Referral Verification</div>
+        </div>
+      </div>
+      <div class="meta-box">
+        <div><strong>Network:</strong> TrobChain Main Testnet <span class="badge-network">Chain ID 999</span></div>
+        <div><strong>Protocol Version:</strong> Equora Matrix v3.2.0 • Zero Admin Lock</div>
+        <div><strong>Audit Scope:</strong> Slot 1 Complete Board Fulfillment (14 Downline Nodes)</div>
+      </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Slot 1 Nodes Filled</div>
+        <div class="kpi-val">14 / 14</div>
+        <div class="kpi-sub">100% Board Complete</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Hierarchical Tree Structure</div>
+        <div class="kpi-val">Multi-Level</div>
+        <div class="kpi-sub">Each Downline Refers 2 Directs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Qualified Operatives</div>
+        <div class="kpi-val">7 Members</div>
+        <div class="kpi-sub">Directs &ge; 2 On-Chain Qualified</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Seat 1 Direct P2P Yield</div>
+        <div class="kpi-val">$180.00 USD</div>
+        <div class="kpi-sub">5,671.08 TROB (6 × $30 Payouts)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Protocol Solvency &amp; Safety</div>
+        <div class="kpi-val">0.0000 TROB</div>
+        <div class="kpi-sub">Zero Funds Trapped In Contracts</div>
+      </div>
+    </div>
+
+    <!-- ON-CHAIN CONTRACT ECOSYSTEM REGISTRY -->
+    <div class="section-title">
+      <span>ON-CHAIN VERIFIED CONTRACT ECOSYSTEM REGISTRY</span>
+      <span class="section-sub">Deployed and Fully Wired on TrobChain Testnet</span>
+    </div>
+
+    <div class="contracts-grid">
+      <div class="contract-box">
+        <div class="contract-title">EquoraMatrix (Engine)</div>
+        <div class="contract-b58">TXXmRwhJzgRPUAvoaubv9YzaPgz7s2Z8Tt</div>
+        <div class="contract-hex">41ec8305cbf404eaf96e41c8936d03509136dd17ba</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraRegistry (Genealogy)</div>
+        <div class="contract-b58">TQdM1WxZ4xSHmeSD1RJJT1NnABJTFC1duf</div>
+        <div class="contract-hex">41a0c8408eeff344b048934f7f4a96b285715d7b6f</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraVault (4-Stream Treasury)</div>
+        <div class="contract-b58">TYLz8kjxWrJM9NM1auyfbevGKBrU2UJj5m</div>
+        <div class="contract-hex">41f5712d645589149d07fcc67dcd0d26a080d0ffe9</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraDAOv2 (35% Pool Push)</div>
+        <div class="contract-b58">TKjLfzAz5vxGx1pB8LYm1N722DBFmxSZ4y</div>
+        <div class="contract-hex">416b11d68321b5d0567f5ae0ad0cad875db0f83555</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraSalaryPool (40% Royalty)</div>
+        <div class="contract-b58">TMTBFurpMP7xpBVBXUqszuefdiMMjkGHkA</div>
+        <div class="contract-hex">417df39326a2c921300ec0663306491a1daeda3eb0</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraRewardPool (15% Rank)</div>
+        <div class="contract-b58">TKPZHWtjdDvTbfsPNYiFMDhMEbxLt5hgmG</div>
+        <div class="contract-hex">4167540c124f3239ae9d28071a61ce9e7d86096cbb</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraMagicBox (10% Blind Box)</div>
+        <div class="contract-b58">TA1ofz1R4c568t8kPQJfiP4xJ7axypX3s7</div>
+        <div class="contract-hex">41007dc61f2e7968eafa7f42676dd470fc69672a7a</div>
+      </div>
+      <div class="contract-box">
+        <div class="contract-title">EquoraNFT (Council &amp; Pass)</div>
+        <div class="contract-b58">TDVvmKaBY6WdQ6EzNkDvG3RBVr3PKEQaxc</div>
+        <div class="contract-hex">4126b7b7e3a43b06306b92b257d8b8a2be0f261086</div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: TREE ARCHITECTURE & QUALIFICATION SUMMARY -->
+    <div class="section-title">
+      <span>HIERARCHICAL DOWNLINE TREE STRUCTURE &amp; QUALIFICATION MATRIX</span>
+      <span class="section-sub">True Multi-Level Referral Mechanics — No Centralized Referral Bottleneck</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tier / Level</th>
+          <th>Operative</th>
+          <th>Base58 Address</th>
+          <th>Direct Sponsor</th>
+          <th class="text-center">Direct Referrals</th>
+          <th class="text-center">On-Chain Qualified?</th>
+          <th>Dashboard Downline Visibility</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Genesis Root</strong></td>
+          <td><strong>Seat 1 (Founder)</strong></td>
+          <td class="mono">TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf</td>
+          <td>Protocol Vault (Genesis)</td>
+          <td class="text-center font-bold text-success">2 Directs (M2, M3)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>14-Node Personal Board (Full Cycle 1 Complete)</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 1 (Left)</strong></td>
+          <td><strong>Member 2 (Direct 1)</strong></td>
+          <td class="mono">TXGLUP8PTp6HczndKaPpctfepSzyGttRdJ</td>
+          <td>Seat 1 (Founder)</td>
+          <td class="text-center font-bold text-success">2 Directs (M4, M5)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 4 (P1) &amp; Member 5 (P2) placed under M2</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 1 (Right)</strong></td>
+          <td><strong>Member 3 (Direct 2)</strong></td>
+          <td class="mono">TWcYsR6Vfg2uLKhepmtX6yd7iKvWED59sJ</td>
+          <td>Seat 1 (Founder)</td>
+          <td class="text-center font-bold text-success">2 Directs (M6, M7)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 6 (P1) &amp; Member 7 (P2) placed under M3</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 2 (Left-Left)</strong></td>
+          <td><strong>Member 4 (M2 Direct 1)</strong></td>
+          <td class="mono">TMr4hpyv7XoXJ7iSzjahmDk19oVrbg6Nr8</td>
+          <td>Member 2 (Direct 1)</td>
+          <td class="text-center font-bold text-success">2 Directs (M8, M9)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 8 (P1) &amp; Member 9 (P2) placed under M4</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 2 (Left-Right)</strong></td>
+          <td><strong>Member 5 (M2 Direct 2)</strong></td>
+          <td class="mono">TEoEXjADrs6S5Fu8xGmE1YTGxV3qeJqC4x</td>
+          <td>Member 2 (Direct 1)</td>
+          <td class="text-center font-bold text-success">2 Directs (M10, M11)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 10 (P1) &amp; Member 11 (P2) placed under M5</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 2 (Right-Left)</strong></td>
+          <td><strong>Member 6 (M3 Direct 1)</strong></td>
+          <td class="mono">TJX4M2AFU71F9jXmjkBdp2i2ESskZx3rtZ</td>
+          <td>Member 3 (Direct 2)</td>
+          <td class="text-center font-bold text-success">2 Directs (M12, M13)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 12 (P1) &amp; Member 13 (P2) placed under M6</td>
+        </tr>
+        <tr>
+          <td><strong>Tier 2 (Right-Right)</strong></td>
+          <td><strong>Member 7 (M3 Direct 2)</strong></td>
+          <td class="mono">TH9DoWr9syFsXtr5pS9uoXtPhh6n4XbEA6</td>
+          <td>Member 3 (Direct 2)</td>
+          <td class="text-center font-bold text-success">2 Directs (M14, M15)</td>
+          <td class="text-center"><span class="badge badge-founder">QUALIFIED</span></td>
+          <td>Shows Member 14 (P1) &amp; Member 15 (P2) placed under M7</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div>Equora Protocol Matrix Engine V3 • 100% On-Chain Mathematical Settlement</div>
+      <div>Page 1 of 2</div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: SLOT 1 ON-CHAIN TRANSACTION AUDIT & FINANCIAL LEDGER -->
+  <div class="page">
+    <div class="header-banner">
+      <div class="brand">
+        <div class="brand-logo">E</div>
+        <div>
+          <div class="brand-title">SECTION 2: SLOT 1 FULFILLMENT AUDIT (NODES 1 TO 14)</div>
+          <div class="brand-subtitle">Individual Ledger Confirmations • Sponsor Attribution • Where Deposit Went (Payout Routing)</div>
+        </div>
+      </div>
+      <div class="meta-box">
+        <div><strong>Total Deposit:</strong> $420.00 USD (13,232.51 TROB)</div>
+        <div><strong>Seat 1 Founder P2P:</strong> $180.00 USD (5,671.08 TROB)</div>
+        <div><strong>Recycle Status:</strong> Board Reset to Cycle 2</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="text-center" style="width: 28px;">Node</th>
+          <th class="text-center" style="width: 28px;">Seat</th>
+          <th>Member Details (Base58 &amp; EVM)</th>
+          <th>Referral / Sponsor Used</th>
+          <th>Referral Classification</th>
+          <th class="text-right">Deposit Amount</th>
+          <th>Where Deposit Went (Payout Routing)</th>
+          <th>Tx Hash</th>
+          <th class="text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+      <tr>
+        <td class="text-center font-bold">#1</td>
+        <td class="text-center"><span class="seat-badge">P1</span></td>
+        <td>
+          <div class="member-name">Member 2 (Direct 1)</div>
+          <div class="member-addr mono">TXGLUP8PTp6HczndKaPpctfepSzyGttRdJ</div>
+          <div class="sub-addr mono">0xe997f30975ca188ed702cd11b46c35c4fd8102f7</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Seat 1 (Founder)</div>
+          <div class="sub-addr mono">TKRWSwmKSp...PzNf</div>
+        </td>
+        <td>
+          <span class="badge badge-general">Direct Referral #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (Upline 1 fallback: Genesis root)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x04fbcfb251dc7ad2be0db0b071c92dec764c754e9496b29ff2483a5ced212bd9">0x04fbcfb2...ed212bd9</a>
+          <div class="sub-addr">7:02:33 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#2</td>
+        <td class="text-center"><span class="seat-badge">P2</span></td>
+        <td>
+          <div class="member-name">Member 3 (Direct 2)</div>
+          <div class="member-addr mono">TWcYsR6Vfg2uLKhepmtX6yd7iKvWED59sJ</div>
+          <div class="sub-addr mono">0xe2727dcdef0839d7c90e7a6343e05764b2cdd6c8</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Seat 1 (Founder)</div>
+          <div class="sub-addr mono">TKRWSwmKSp...PzNf</div>
+        </td>
+        <td>
+          <span class="badge badge-qual">Direct Referral #2 (Founder Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (Upline 2 fallback: Genesis root)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x8d08ec684211755b14c6051ee3e8ec7607a4d99548e7d15264fb5dfca9106d7b">0x8d08ec68...a9106d7b</a>
+          <div class="sub-addr">7:03:00 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#3</td>
+        <td class="text-center"><span class="seat-badge">P3</span></td>
+        <td>
+          <div class="member-name">Member 4 (M2 Direct 1)</div>
+          <div class="member-addr mono">TMr4hpyv7XoXJ7iSzjahmDk19oVrbg6Nr8</div>
+          <div class="sub-addr mono">0x8247abeef953f2fd4680ec08e0dacbf6b9af7130</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 2 (Direct 1)</div>
+          <div class="sub-addr mono">TXGLUP8PTp...tRdJ</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 2 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xb3f9e22dd7537f9f89b56db276d0d7fa78d58c714162090a544b62d7183804ae">0xb3f9e22d...183804ae</a>
+          <div class="sub-addr">7:03:40 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#4</td>
+        <td class="text-center"><span class="seat-badge">P4</span></td>
+        <td>
+          <div class="member-name">Member 5 (M2 Direct 2)</div>
+          <div class="member-addr mono">TEoEXjADrs6S5Fu8xGmE1YTGxV3qeJqC4x</div>
+          <div class="sub-addr mono">0x34f5bed61a532ec1cabf30c7985f7d0a2db1197a</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 2 (Direct 1)</div>
+          <div class="sub-addr mono">TXGLUP8PTp...tRdJ</div>
+        </td>
+        <td>
+          <span class="badge badge-general">Member 2 Direct #2 (M2 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (DAO 35%, Royalty 40%, Reward 15%, Magic 10%)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x276b07f83e76d651f00738e62073b1d6af90c348c2b41ded4cf41d45a36d0e79">0x276b07f8...a36d0e79</a>
+          <div class="sub-addr">7:04:09 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#5</td>
+        <td class="text-center"><span class="seat-badge">P5</span></td>
+        <td>
+          <div class="member-name">Member 6 (M3 Direct 1)</div>
+          <div class="member-addr mono">TJX4M2AFU71F9jXmjkBdp2i2ESskZx3rtZ</div>
+          <div class="sub-addr mono">0x5dc7176e1942e1f287cbf0cfa1b3733c923f8bd3</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 3 (Direct 2)</div>
+          <div class="sub-addr mono">TWcYsR6Vfg...59sJ</div>
+        </td>
+        <td>
+          <span class="badge badge-reserve">Member 3 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools • Auto-Upgrade Reserve (Unlocks Slot in Standby)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x08f924c495485b983cc787a3e8d652be9661352bd9e0816e7656809e0616922d">0x08f924c4...0616922d</a>
+          <div class="sub-addr">7:04:33 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#6</td>
+        <td class="text-center"><span class="seat-badge">P6</span></td>
+        <td>
+          <div class="member-name">Member 7 (M3 Direct 2)</div>
+          <div class="member-addr mono">TH9DoWr9syFsXtr5pS9uoXtPhh6n4XbEA6</div>
+          <div class="sub-addr mono">0x4eadb56edc550e3eab7fd3afa2cb833ffb21379f</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 3 (Direct 2)</div>
+          <div class="sub-addr mono">TWcYsR6Vfg...59sJ</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 3 Direct #2 (M3 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xc3424ad6ef8c11a75c8bcb29d30ba8b3ccda22141ff7f8a6bb5b4154a3474a91">0xc3424ad6...a3474a91</a>
+          <div class="sub-addr">7:05:26 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#7</td>
+        <td class="text-center"><span class="seat-badge">P7</span></td>
+        <td>
+          <div class="member-name">Member 8 (M4 Direct 1)</div>
+          <div class="member-addr mono">TE1ukKHno5P61fZao2zPm2zzUvqCzznF86</div>
+          <div class="sub-addr mono">0x2c6359134888d2d614ed79f47e7d0832e68015c9</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 4 (M2 Direct 1)</div>
+          <div class="sub-addr mono">TMr4hpyv7X...6Nr8</div>
+        </td>
+        <td>
+          <span class="badge badge-general">Member 4 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (Downline 1 fallback: Unqualified route)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x723c2e8e71ed5dc80c38cd143452785cd3a5c5ea738f5fec3e917cb571a6352f">0x723c2e8e...71a6352f</a>
+          <div class="sub-addr">7:05:50 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#8</td>
+        <td class="text-center"><span class="seat-badge">P8</span></td>
+        <td>
+          <div class="member-name">Member 9 (M4 Direct 2)</div>
+          <div class="member-addr mono">TYBJwmVGA2TZWuka2BDQ95HBqmBMxhviua</div>
+          <div class="sub-addr mono">0xf39cb84f9b8bb39961c78cda57030838d4bedbae</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 4 (M2 Direct 1)</div>
+          <div class="sub-addr mono">TMr4hpyv7X...6Nr8</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 4 Direct #2 (M4 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x0704803682b14c5f82fb5c995e8a4f8462516e36dd46adcdd929ba9ce11a4401">0x07048036...e11a4401</a>
+          <div class="sub-addr">7:06:58 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#9</td>
+        <td class="text-center"><span class="seat-badge">P9</span></td>
+        <td>
+          <div class="member-name">Member 10 (M5 Direct 1)</div>
+          <div class="member-addr mono">TDyip19YA5ZriyAUzBr9Lvp9sSkFgBE4e2</div>
+          <div class="sub-addr mono">0x2bf9630280b3ff7eb9d920f1665e5fb9d2af9edc</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 5 (M2 Direct 2)</div>
+          <div class="sub-addr mono">TEoEXjADrs...qC4x</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 5 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xa7d8b6653210f9d650abd98d109dafeaa64d538823568797f40442b1483c677f">0xa7d8b665...483c677f</a>
+          <div class="sub-addr">7:07:33 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#10</td>
+        <td class="text-center"><span class="seat-badge">P10</span></td>
+        <td>
+          <div class="member-name">Member 11 (M5 Direct 2)</div>
+          <div class="member-addr mono">TDgZD5bCtzZiqaGcHiGnrGZ8fvsgdwAXnC</div>
+          <div class="sub-addr mono">0x28ba4cc9c92521e1ac2f8ce99145c3bdddcec803</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 5 (M2 Direct 2)</div>
+          <div class="sub-addr mono">TEoEXjADrs...qC4x</div>
+        </td>
+        <td>
+          <span class="badge badge-general">Member 5 Direct #2 (M5 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (Downline 2 fallback: Unqualified route)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xfaf858546d72639414a9c54bcfe009dcf75dfc3c181e617cef752273b5fdca1b">0xfaf85854...b5fdca1b</a>
+          <div class="sub-addr">7:08:18 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#11</td>
+        <td class="text-center"><span class="seat-badge">P11</span></td>
+        <td>
+          <div class="member-name">Member 12 (M6 Direct 1)</div>
+          <div class="member-addr mono">TQSdb14BnvUey15EUoeVxp3rYH7s19bZyd</div>
+          <div class="sub-addr mono">0x9ec183c010239cbfc84b27f041bf552b7bda2354</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 6 (M3 Direct 1)</div>
+          <div class="sub-addr mono">TJX4M2AFU7...3rtZ</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 6 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xfec520c55242a4708df85053c1a0a76b95eddfe78fff2b696b333ed7ca94a03b">0xfec520c5...ca94a03b</a>
+          <div class="sub-addr">7:08:42 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#12</td>
+        <td class="text-center"><span class="seat-badge">P12</span></td>
+        <td>
+          <div class="member-name">Member 13 (M6 Direct 2)</div>
+          <div class="member-addr mono">TKjoSkn4XnScZepuFFTzjH7SAkQqnzZN2i</div>
+          <div class="sub-addr mono">0x6b282f9c4994ce9b3afdd2f79bd6b4786483914e</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 6 (M3 Direct 1)</div>
+          <div class="sub-addr mono">TJX4M2AFU7...3rtZ</div>
+        </td>
+        <td>
+          <span class="badge badge-founder">Member 6 Direct #2 (M6 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-founder">
+            Seat 1 (Founder) • 100% P2P Yield ($30 / 945.18 TROB)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x65faea53485595921a2159470f5cb17b8ab8d95dbe10f595e13a4dcd9372a160">0x65faea53...9372a160</a>
+          <div class="sub-addr">7:09:15 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#13</td>
+        <td class="text-center"><span class="seat-badge">P13</span></td>
+        <td>
+          <div class="member-name">Member 14 (M7 Direct 1)</div>
+          <div class="member-addr mono">TXZFe7GjfbLRyJEP25rtyDnzg7qAgA95XC</div>
+          <div class="sub-addr mono">0xeccafca652e6efdcfabe9f2920cf0f946094e33a</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 7 (M3 Direct 2)</div>
+          <div class="sub-addr mono">TH9DoWr9sy...bEA6</div>
+        </td>
+        <td>
+          <span class="badge badge-general">Member 7 Direct #1</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools via Vault (Tier 2 Waterfall Protocol Pools)
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0x6aea7cef0a2162069120463eb60eacf6178f9eaa943a7ea0851439d7963f7eaf">0x6aea7cef...963f7eaf</a>
+          <div class="sub-addr">7:10:16 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      <tr>
+        <td class="text-center font-bold">#14</td>
+        <td class="text-center"><span class="seat-badge">P14</span></td>
+        <td>
+          <div class="member-name">Member 15 (M7 Direct 2)</div>
+          <div class="member-addr mono">TKt5pvZ3FMMXqZAewdSoRPST11AZvfHenX</div>
+          <div class="sub-addr mono">0x6cb930590409a77bce77f894ae18551855953c17</div>
+        </td>
+        <td class="mono sponsor-col">
+          <div class="sponsor-tag">Member 7 (M3 Direct 2)</div>
+          <div class="sub-addr mono">TH9DoWr9sy...bEA6</div>
+        </td>
+        <td>
+          <span class="badge badge-recycle">Member 7 Direct #2 (M7 Qualified)</span>
+        </td>
+        <td class="text-right">
+          <div class="font-bold text-success">$30.00 USD</div>
+          <div class="sub-addr mono">945.18 TROB</div>
+        </td>
+        <td>
+          <div class="dest-box dest-pool">
+            4 Protocol Pools • Cycle 1 Recycled to Cycle 2; Board Reset
+          </div>
+        </td>
+        <td class="mono tx-col">
+          <a class="tx-link" title="0xb146db754cf5ee21e817884fc7845a83984de82419592a74c30ac08d087c712a">0xb146db75...087c712a</a>
+          <div class="sub-addr">7:11:14 pm</div>
+        </td>
+        <td class="text-center">
+          <span class="badge-status">SUCCESS</span>
+        </td>
+      </tr>
+    
+      </tbody>
+    </table>
+
+    <!-- FINANCIAL RECONCILIATION & SOLVENCY PROOF -->
+    <div class="recon-grid">
+      <div class="recon-card">
+        <h3>🏛️ PROTOCOL INVARIANTS &amp; INSTANT DAO PUSH</h3>
+        <table>
+          <tbody>
+            <tr>
+              <td><strong>EquoraMatrix Balance</strong></td>
+              <td class="text-right font-bold mono">0.0000 TROB</td>
+              <td class="text-center"><span class="badge-status">PASS</span></td>
+            </tr>
+            <tr>
+              <td><strong>EquoraVault Balance</strong></td>
+              <td class="text-right font-bold mono">0.0000 TROB</td>
+              <td class="text-center"><span class="badge-status">PASS</span></td>
+            </tr>
+            <tr>
+              <td><strong>DAO Pool (35% Matrix Push)</strong></td>
+              <td class="text-right font-bold mono">Distributed Instantly to Active DAO Members</td>
+              <td class="text-center"><span class="badge-status">PASS</span></td>
+            </tr>
+            <tr>
+              <td><strong>Royalty Salary Pool (40%)</strong></td>
+              <td class="text-right font-bold mono">Funded On-Chain per Protocol Invariant</td>
+              <td class="text-center"><span class="badge-status">PASS</span></td>
+            </tr>
+            <tr>
+              <td><strong>Rewards Pool (15%) &amp; Magic Box (10%)</strong></td>
+              <td class="text-right font-bold mono">Funded On-Chain per Protocol Invariant</td>
+              <td class="text-center"><span class="badge-status">PASS</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="recon-card">
+        <h3>👑 SEAT 1 FOUNDER SETTLEMENT AUDIT</h3>
+        <table>
+          <tbody>
+            <tr>
+              <td><strong>Direct P2P Payout Positions</strong></td>
+              <td class="text-right font-bold">Positions 3, 6, 8, 9, 11, 12 (6 Seats)</td>
+            </tr>
+            <tr>
+              <td><strong>Direct P2P Earned</strong></td>
+              <td class="text-right font-bold text-success">$180.00 USD (5,671.08 TROB)</td>
+            </tr>
+            <tr>
+              <td><strong>Auto-Upgrade Reserve (P5)</strong></td>
+              <td class="text-right font-bold">$30.00 USD (945.18 TROB Reserved)</td>
+            </tr>
+            <tr>
+              <td><strong>Cycle 1 Completion</strong></td>
+              <td class="text-right font-bold">14 / 14 Nodes Filled &bull; Recycled to Cycle 2</td>
+            </tr>
+            <tr>
+              <td><strong>Downline Qualification State</strong></td>
+              <td class="text-right"><span class="badge-status">100% QUALIFIED &amp; VERIFIED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Equora Protocol Matrix Engine V3 • 100% On-Chain Mathematical Settlement</div>
+      <div>Page 2 of 2</div>
+    </div>
+  </div>
+
+</body>
+</html>

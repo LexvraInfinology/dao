@@ -89,44 +89,44 @@ export const HeroVideo = React.memo(function HeroVideo({ className = "" }: HeroV
   }, []);
 
   return (
-    <div className={`relative flex items-center justify-center select-none ${className}`}>
+    <div className={`relative w-full flex items-center justify-center select-none ${className}`}>
       {/* Ambient Lighting Glow */}
-      <div className="absolute -inset-4 sm:-inset-6 rounded-full bg-gradient-to-tr from-blue-400/20 via-sky-300/20 to-amber-200/20 blur-2xl pointer-events-none" />
+      <div className="absolute -inset-4 sm:-inset-8 rounded-full bg-gradient-to-tr from-blue-400/25 via-sky-300/20 to-amber-200/20 blur-3xl pointer-events-none" />
 
-      {/* Clean Framed Video Card with Seamless Dual-Buffer Stack */}
-      <div className="relative rounded-3xl overflow-hidden bg-white/70 backdrop-blur-md p-1.5 sm:p-2 border border-white/90 shadow-[0_20px_45px_rgba(15,23,42,0.10),0_4px_16px_rgba(15,23,42,0.05)] transition-transform duration-300 hover:scale-[1.01]">
-        {/* Inner viewport container maintaining exact 9:16 aspect ratio */}
-        <div className="relative aspect-[9/16] h-[350px] sm:h-[390px] md:h-[400px] lg:h-[450px] xl:h-[480px] max-h-[68vh] rounded-[20px] sm:rounded-[22px] overflow-hidden bg-slate-100">
-          {/* Primary Video Element (Track A) */}
-          <video
-            ref={videoRefA}
-            src="/hero_section.mp4"
-            poster="/hero-character-cropped.png"
-            muted
-            playsInline
-            preload="metadata"
-            disablePictureInPicture
-            disableRemotePlayback
-            className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ease-in-out ${
-              activeVideo === "A" ? "opacity-100 z-10" : "opacity-0 z-0"
-            }`}
-          />
+      {/* Transparent Borderless Video Display - Wide & Immersive (No Corners / No Border Frame) */}
+      <div className="relative w-full max-w-full sm:max-w-[460px] md:max-w-[510px] lg:max-w-[570px] xl:max-w-[620px] aspect-[4/5] flex items-center justify-center overflow-hidden">
+        {/* Primary Video Element (Track A) */}
+        <video
+          ref={videoRefA}
+          src="/hero_section.mp4"
+          poster="/hero-character-cropped.png"
+          muted
+          playsInline
+          preload="metadata"
+          disablePictureInPicture
+          disableRemotePlayback
+          className={`absolute inset-0 w-full h-full object-cover object-top pointer-events-none drop-shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-opacity duration-300 ease-in-out ${
+            activeVideo === "A" ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
+        />
 
-          {/* Secondary Video Element (Track B - Pre-buffers & seamless crossfade) */}
-          <video
-            ref={videoRefB}
-            src="/hero_section.mp4"
-            poster="/hero-character-cropped.png"
-            muted
-            playsInline
-            preload="none"
-            disablePictureInPicture
-            disableRemotePlayback
-            className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ease-in-out ${
-              activeVideo === "B" ? "opacity-100 z-10" : "opacity-0 z-0"
-            }`}
-          />
-        </div>
+        {/* Secondary Video Element (Track B - Pre-buffers & seamless crossfade) */}
+        <video
+          ref={videoRefB}
+          src="/hero_section.mp4"
+          poster="/hero-character-cropped.png"
+          muted
+          playsInline
+          preload="none"
+          disablePictureInPicture
+          disableRemotePlayback
+          className={`absolute inset-0 w-full h-full object-cover object-top pointer-events-none drop-shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-opacity duration-300 ease-in-out ${
+            activeVideo === "B" ? "opacity-100 z-10" : "opacity-0 z-0"
+          }`}
+        />
+
+        {/* Seamless Soft Fade at the very bottom into the mountain landscape */}
+        <div className="absolute inset-x-0 bottom-0 h-10 sm:h-16 bg-gradient-to-t from-[#f1f5f9]/80 via-[#f1f5f9]/25 to-transparent pointer-events-none z-20" />
       </div>
     </div>
   );

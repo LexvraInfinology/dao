@@ -34,6 +34,7 @@ export function useMatrixUser() {
   const selectSlot = useMatrixStore((s) => s.selectSlot);
   const buySlotStore = useMatrixStore((s) => s.buySlot);
   const fetchDashboard = useMatrixStore((s) => s.fetchDashboard);
+  const fetchDirectMembers = useMatrixStore((s) => s.fetchDirectMembers);
 
   const earnings = useFinanceStore((s) => s.earnings);
   const loadingEarnings = useFinanceStore((s) => s.loadingEarnings);
@@ -65,6 +66,7 @@ export function useMatrixUser() {
         fetchEarnings(undefined, force),
         fetchSettings(force),
         fetchSlotDetails(undefined, undefined, undefined, force),
+        fetchDirectMembers(undefined, force),
       ]);
 
       if (followUp) {
@@ -75,6 +77,7 @@ export function useMatrixUser() {
             fetchSlots(undefined, true),
             fetchEarnings(undefined, true),
             fetchSlotDetails(undefined, undefined, undefined, true),
+            fetchDirectMembers(undefined, true),
           ]).catch(() => {});
         }, 3500);
       }
@@ -86,15 +89,40 @@ export function useMatrixUser() {
       fetchEarnings,
       fetchSettings,
       fetchSlotDetails,
+      fetchDirectMembers,
     ]
   );
 
-  // Refresh when address changes
+  // Refresh when address changes & maintain 3-second live on-chain sync
   useEffect(() => {
-    if (address) {
-      refreshAll(true, true);
-    }
-  }, [address, refreshAll]);
+    if (!address) return;
+
+    // Immediate initial sync
+    refreshAll(true, true);
+
+    // 3-second live polling interval directly verifying against blockchain state
+    const interval = setInterval(() => {
+      Promise.all([
+        fetchProfile(true),
+        fetchDashboard(undefined, true),
+        fetchSlots(undefined, true),
+        fetchEarnings(undefined, true),
+        fetchSlotDetails(undefined, undefined, undefined, true),
+      ]).catch((err) => {
+        console.warn("[3s-ChainSync] Live blockchain polling notice:", err?.message);
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [
+    address,
+    refreshAll,
+    fetchProfile,
+    fetchDashboard,
+    fetchSlots,
+    fetchEarnings,
+    fetchSlotDetails,
+  ]);
 
   const changeAddress = useCallback(
     (newAddress: string) => {

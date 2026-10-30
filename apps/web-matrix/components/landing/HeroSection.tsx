@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Check, LogOut, ShieldCheck, Wallet } from "lucide-react";
+import { Copy, Check, LogOut, ShieldCheck, Wallet, LayoutDashboard } from "lucide-react";
 import { HeroVideo } from "./HeroVideo";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useUserStore } from "@/lib/stores";
@@ -17,6 +17,7 @@ import { wakeUpExtension } from "@/lib/walletConnect";
 import { getStoredUserAddress } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { isUserRegisteredInMatrix } from "@/lib/contracts";
 
 export function HeroSection() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export function HeroSection() {
   const setAddress = useUserStore((s) => s.setAddress);
   const disconnect = useUserStore((s) => s.disconnect);
   const [mounted, setMounted] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -59,12 +61,40 @@ export function HeroSection() {
     }
   }, [setAddress]);
 
-  // Navigate directly to Matrix Access Gate
-  const handleEnterMatrix = () => {
+  // Check on-chain if current address is already a registered member
+  useEffect(() => {
+    let isCurrent = true;
+    if (!address) {
+      setIsRegistered(false);
+      return;
+    }
+    isUserRegisteredInMatrix(address)
+      .then((reg) => {
+        if (isCurrent) setIsRegistered(reg);
+      })
+      .catch(() => {
+        if (isCurrent) setIsRegistered(false);
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [address]);
+
+  // Navigate to Dashboard if active, else Matrix Access Gate
+  const handleEnterMatrix = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("equora_wallet_explicit_disconnect");
     }
-    router.push("/gate");
+    if (address) {
+      const isReg = await isUserRegisteredInMatrix(address);
+      if (isReg) {
+        router.push("/dashboard");
+      } else {
+        router.push("/gate");
+      }
+      return;
+    }
+    handleConnectClick();
   };
 
   const handleConnectClick = async () => {
@@ -78,7 +108,12 @@ export function HeroSection() {
         if (connected && connected.startsWith("0x")) {
           setAddress(connected);
           toast.success("Wallet Connected", `Active: ${formatAddress(connected)}`);
-          router.push("/gate");
+          const isReg = await isUserRegisteredInMatrix(connected);
+          if (isReg) {
+            router.push("/dashboard");
+          } else {
+            router.push("/gate");
+          }
           return;
         }
       } catch (err: any) {
@@ -110,6 +145,7 @@ export function HeroSection() {
       }
     }
     setAddress("");
+    setIsRegistered(false);
     disconnect();
     setWalletDropdownOpen(false);
     setMobileMenuOpen(false);
@@ -208,18 +244,29 @@ export function HeroSection() {
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Connect / Active Wallet Dropdown Button - Visible on ALL screens including mobile */}
               <div className="relative" ref={walletDropdownRef}>
-                {mounted && address ? (
+                {mounted && address && isRegistered ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-[#1d69f0] to-[#0279e3] hover:from-blue-700 hover:to-blue-600 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-500/25 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+                    id="header-dashboard-link"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    <span>Dashboard</span>
+                    <span className="text-[11px] font-bold">→</span>
+                  </Link>
+                ) : mounted && address ? (
                   <>
                     <button
                       type="button"
                       onClick={() => setWalletDropdownOpen((prev) => !prev)}
-                      className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer border border-slate-700/60"
+                      className="inline-flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3.5 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer border border-slate-700/60 max-w-[130px] sm:max-w-none"
                       title="Manage Wallet"
                     >
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                      <span className="font-mono text-xs">{formatAddress(address)}</span>
+                      <span className="font-mono text-xs hidden sm:inline">{formatAddress(address)}</span>
+                      <span className="font-mono text-[11px] font-bold sm:hidden truncate">{toTrobBase58(address).slice(0, 4)}…{toTrobBase58(address).slice(-3)}</span>
                       <svg
-                        className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${walletDropdownOpen ? "rotate-180" : ""}`}
+                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${walletDropdownOpen ? "rotate-180" : ""}`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -267,19 +314,29 @@ export function HeroSection() {
                           </div>
                         </div>
 
-                        {/* Action Links */}
+                        {/* Action Link: Direct to Dashboard */}
                         <div className="space-y-1.5 mb-2">
-                          <Link
-                            href="/gate"
-                            onClick={() => setWalletDropdownOpen(false)}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setWalletDropdownOpen(false);
+                              if (address) {
+                                const isReg = await isUserRegisteredInMatrix(address);
+                                if (isReg) {
+                                  router.push("/dashboard");
+                                } else {
+                                  router.push("/gate");
+                                }
+                              }
+                            }}
                             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50/80 hover:bg-blue-100/80 text-blue-700 text-xs font-semibold transition-colors group cursor-pointer"
                           >
                             <span className="flex items-center gap-2">
                               <ShieldCheck className="w-4 h-4 text-blue-600" />
-                              Matrix Access Gate
+                              Go to Matrix Dashboard
                             </span>
                             <span className="text-[11px] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                          </Link>
+                          </button>
                         </div>
 
                         {/* Disconnect Button */}
@@ -301,7 +358,8 @@ export function HeroSection() {
                     className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#0b132b] hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#38bdf8]" />
-                    <span>Connect Wallet</span>
+                    <span className="hidden sm:inline">Connect Wallet</span>
+                    <span className="sm:hidden text-xs">Connect</span>
                   </button>
                 )}
               </div>
@@ -453,12 +511,21 @@ export function HeroSection() {
               </div>
 
               <Link
-                href="/gate"
+                href={isRegistered ? "/dashboard" : "/gate"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3 px-4 rounded-xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all cursor-pointer text-center"
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Matrix Access Gate</span>
+                {isRegistered ? (
+                  <>
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Go to Dashboard</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Matrix Access Gate</span>
+                  </>
+                )}
               </Link>
 
               <button
@@ -487,9 +554,24 @@ export function HeroSection() {
       </div>
 
       {/* ────────────── HERO SECTION ────────────── */}
-      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-18 sm:pt-22 lg:pt-24">
-        {/* Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
-        <div className="absolute inset-0 pointer-events-none z-0">
+      <section className="relative w-full overflow-hidden bg-[#eef4fb] pt-[88px] sm:pt-24 lg:pt-26 min-h-[620px] sm:min-h-0">
+        {/* Mobile Background Video: Boy with puppy animated in background on mobile (< md) */}
+        <div className="absolute top-[76px] sm:top-20 inset-x-0 bottom-0 pointer-events-none z-0 md:hidden overflow-hidden flex items-start justify-center">
+          <video
+            src="/hero_section.mp4"
+            poster="/hero-character-cropped.png"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover object-top opacity-85"
+          />
+          {/* Gentle, balanced overlay: vivid character visibility with crisp text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/45 via-transparent to-[#eef4fb]/90" />
+        </div>
+
+        {/* Desktop Background Image: High-res snowy peaks + sunrise clouds matching Figma */}
+        <div className="absolute inset-0 pointer-events-none z-0 hidden md:block">
           <Image
             src="/e6a310ebbc2aa55ae6bf2a597fa3630383efedbb.png"
             alt="Equora Hero Background"
@@ -498,43 +580,43 @@ export function HeroSection() {
             className="object-cover object-center"
           />
           {/* Subtle bottom fade to seamlessly blend into section 2 */}
-          <div className="absolute inset-x-0 bottom-0 h-16 sm:h-20 bg-gradient-to-b from-transparent to-[#f1f5f9]/90" />
+          <div className="absolute inset-x-0 bottom-0 h-14 sm:h-16 bg-gradient-to-b from-transparent to-[#f1f5f9]/90" />
         </div>
 
         {/* ────────────── HERO MAIN CONTENT ────────────── */}
-        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 lg:py-6">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-10 lg:gap-12 xl:gap-16">
+        <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-5 sm:py-4 lg:py-5">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-10 xl:gap-12">
             {/* Left Content Column */}
             <div className="w-full md:w-auto md:max-w-[430px] lg:max-w-[480px] xl:max-w-[510px] flex flex-col items-start text-left shrink-0 z-10">
-              {/* Eyebrow - Plain text, wide tracking, no pill */}
-              <div className="text-xs sm:text-[13px] font-bold tracking-[0.2em] text-[#0f172a] uppercase mb-2 sm:mb-2.5">
+              {/* Eyebrow - Plain text, wide tracking, clearly spaced from navbar */}
+              <div className="text-xs sm:text-[12px] font-black tracking-[0.2em] text-[#0f172a] uppercase mt-1 mb-2 sm:mb-2.5 drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]">
                 MATRIX PLATFORM
               </div>
 
               {/* Title - Exact typography and period */}
-              <h1 className="text-3xl sm:text-4xl md:text-[36px] lg:text-[44px] xl:text-[50px] font-black text-[#0b132b] leading-[1.08] tracking-tight mb-3 sm:mb-3.5">
+              <h1 className="text-2xl sm:text-3xl md:text-[32px] lg:text-[38px] xl:text-[42px] font-black text-[#0b132b] leading-[1.12] tracking-tight mb-2.5 sm:mb-3 drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]">
                 The Matrix <br />
                 <span className="text-[#2563eb]">Built to Move.</span>
               </h1>
 
               {/* Subtitle - Exact copy from Figma */}
-              <p className="text-sm sm:text-base text-slate-700 max-w-[420px] lg:max-w-[450px] leading-relaxed mb-5 sm:mb-6">
+              <p className="text-xs sm:text-[14px] text-slate-800 font-medium max-w-[420px] lg:max-w-[450px] leading-relaxed mb-4 sm:mb-5 drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)]">
                 Start with just $30 USD and step into a 12-slot progression
                 system. Grow your network, unlock higher tiers automatically, and
                 earn real rewards on-chain.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3.5 sm:gap-4.5 mb-5 sm:mb-6">
+              <div className="flex items-center gap-2.5 sm:gap-4.5 mb-5 sm:mb-6 w-full flex-nowrap">
                 {/* Primary: Start Now → Direct Matrix Buy Gate */}
                 <button
                   type="button"
                   onClick={handleEnterMatrix}
-                  className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-sm sm:text-base inline-flex items-center gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95 cursor-pointer"
+                  className="px-4 py-2.5 sm:px-6 sm:py-3 rounded-full bg-[#2563eb] hover:bg-blue-600 text-white font-semibold text-xs sm:text-base inline-flex items-center gap-1.5 sm:gap-2 shadow-md shadow-blue-500/25 transition-all hover:gap-3 active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
                 >
-                  <span>Start Now</span>
+                  <span>{isRegistered ? "Enter Dashboard" : "Start Now"}</span>
                   <svg
-                    className="w-4 h-4"
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"
@@ -548,64 +630,65 @@ export function HeroSection() {
                   </svg>
                 </button>
 
-                {/* Secondary: Watch Our Story */}
+                {/* Secondary: Watch Our Story (displays 'Watch' on mobile to stay on one single row) */}
                 <button
                   type="button"
                   onClick={() => {
                     const el = document.getElementById("about");
                     if (el) el.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="inline-flex items-center group cursor-pointer"
+                  className="inline-flex items-center group cursor-pointer shrink-0 whitespace-nowrap"
                   suppressHydrationWarning
                 >
-                  <span className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-full bg-white shadow-md flex items-center justify-center text-[#0b132b] group-hover:scale-105 transition-transform">
-                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+                  <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white shadow-md flex items-center justify-center text-[#0b132b] group-hover:scale-105 transition-transform shrink-0">
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </span>
-                  <span className="ml-2.5 sm:ml-3 text-sm sm:text-base font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
-                    Watch Our Story
+                  <span className="ml-2 sm:ml-3 text-xs sm:text-base font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    <span className="sm:hidden">Watch</span>
+                    <span className="hidden sm:inline">Watch Our Story</span>
                   </span>
                 </button>
               </div>
 
               {/* Hero Stats Row - Exact Figma copy and numbers */}
-              <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 lg:gap-7 pt-4 sm:pt-5 border-t border-slate-200/70 w-full max-w-md">
+              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-6 lg:gap-7 p-3 sm:p-0 sm:pt-5 rounded-2xl bg-white/75 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border border-white/60 sm:border-0 sm:border-t sm:border-slate-200/70 w-full max-w-md shadow-sm sm:shadow-none">
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     600%
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Return on Slot 1
                   </div>
                 </div>
 
-                <div className="w-px h-9 bg-slate-300/80" />
+                <div className="w-px h-8 sm:h-9 bg-slate-300/80" />
 
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     12
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Progressive Slots
                   </div>
                 </div>
 
-                <div className="w-px h-9 bg-slate-300/80" />
+                <div className="w-px h-8 sm:h-9 bg-slate-300/80" />
 
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
+                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-[#0b132b] tracking-tight">
                     14
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-0.5">
+                  <div className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 whitespace-nowrap">
                     Node Matrix
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Visual Column - Hero Video */}
-            <div className="w-full md:w-auto flex items-center justify-center shrink-0">
+            {/* Right Visual Column - Hero Video on Desktop (hidden on mobile since video is the background) */}
+            <div className="hidden md:flex md:w-auto md:mx-0 items-center justify-center shrink-0 mt-3 md:mt-0">
               <HeroVideo />
             </div>
           </div>
@@ -617,13 +700,18 @@ export function HeroSection() {
         isOpen={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
         currentAddress={address || undefined}
-        onSelectAddress={(newAddr) => {
+        onSelectAddress={async (newAddr) => {
           if (typeof window !== "undefined") {
             localStorage.removeItem("equora_wallet_explicit_disconnect");
           }
           setAddress(newAddr);
           setWalletModalOpen(false);
-          router.push("/gate");
+          const isReg = await isUserRegisteredInMatrix(newAddr);
+          if (isReg) {
+            router.push("/dashboard");
+          } else {
+            router.push("/gate");
+          }
         }}
         onDisconnect={handleDisconnectWallet}
       />

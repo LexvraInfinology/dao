@@ -9,6 +9,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "prebuild": "prisma generate",
     "build": "tsc && node -e \"const fs=require('fs'); if(fs.existsSync('src/generated')) fs.cpSync('src/generated','dist/generated',{recursive:true});\"",
     "clean": "rimraf dist"
   },

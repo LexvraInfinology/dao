@@ -9,9 +9,9 @@ export function EarningsBreakdownChart() {
   const earnings = useFinanceStore((s) => s.earnings);
   const profile = useUserStore((s) => s.profile);
 
-  const directAmount = Number(earnings?.breakdown?.directBonus ?? earnings?.breakdown?.directMatrixBonus ?? profile?.totalEarnings ?? 0);
-  const levelAmount = Number(earnings?.breakdown?.matrixPlacements ?? earnings?.breakdown?.levelOverrides ?? 0);
-  const referralAmount = Number(earnings?.breakdown?.poolShares ?? earnings?.breakdown?.leadershipPool ?? 0);
+  const directAmount = Number(earnings?.breakdown?.directBonus ?? earnings?.breakdown?.directMatrixBonus ?? profile?.directEarnings ?? 0);
+  const levelAmount = Number(earnings?.breakdown?.matrixPlacements ?? earnings?.breakdown?.levelOverrides ?? profile?.matrixEarnings ?? 0);
+  const referralAmount = Number(earnings?.breakdown?.poolShares ?? earnings?.breakdown?.leadershipPool ?? profile?.poolEarnings ?? 0);
   const totalAmount = directAmount + levelAmount + referralAmount;
 
   const directPct = totalAmount > 0 ? (directAmount / totalAmount) * 100 : 0;

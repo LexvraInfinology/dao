@@ -18,6 +18,8 @@ export default function NotFound() {
               alt="404 – page not found"
               width={1000}
               height={560}
+              loading="lazy"
+              decoding="async"
               src="/not-found-illustration.jpg"
             />
           </div>

@@ -44,6 +44,7 @@ import { useUserStore } from "@/lib/stores/useUserStore";
 import { AndroidIcon } from "./AndroidIcon";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
+import joinedMembers from "@/lib/joinedMembers.json";
 
 export interface WalletConnectModalProps {
   isOpen: boolean;
@@ -130,9 +131,6 @@ export function WalletConnectModal({
         `Active: ${formatAddress(address)}`
       );
       onClose();
-      if (typeof window !== "undefined" && window.location.pathname !== "/matrix") {
-        window.location.href = "/matrix";
-      }
     } catch (err: any) {
       setStep("error");
       setLocalErr(err.message || "Failed to connect TrobSafe wallet.");
@@ -586,6 +584,50 @@ export function WalletConnectModal({
 
 
 
+              {/* Quick Select Operative Account (Real On-Chain Network) */}
+              <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-200 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#0E62E4]" />
+                    Operative Accounts (14-Node Tree)
+                  </span>
+                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                    1-Click Load
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {joinedMembers.slice(0, 8).map((m) => (
+                    <button
+                      key={m.memberNumber}
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined") {
+                          localStorage.removeItem("equora_wallet_explicit_disconnect");
+                        }
+                        onSelectAddress(m.evm);
+                        toast.success("Account Loaded", `Connected as #${m.memberNumber} ${m.name}`);
+                        onClose();
+                      }}
+                      className="p-2 rounded-xl bg-white hover:bg-blue-50/80 border border-slate-200 hover:border-blue-300 text-left transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-800 group-hover:text-[#0E62E4] truncate">
+                          #{m.memberNumber} {m.memberNumber === 1 ? "Founder" : `Member ${m.memberNumber}`}
+                        </span>
+                        <span className={`text-[9px] px-1 rounded font-bold ${
+                          m.memberNumber === 1 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                        }`}>
+                          {m.memberNumber === 1 ? "Root" : "Qual"}
+                        </span>
+                      </div>
+                      <div className="text-[9.5px] font-mono text-slate-400 mt-0.5 truncate">
+                        {m.base58.slice(0, 5)}...{m.base58.slice(-4)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Option 4: Manual address entry */}
               <div className="pt-1">
                 {!showDirectInput ? (
@@ -594,7 +636,7 @@ export function WalletConnectModal({
                     onClick={() => setShowDirectInput(true)}
                     className="w-full text-center text-xs font-semibold text-slate-500 hover:text-[#0E62E4] transition-colors cursor-pointer py-1"
                   >
-                    Enter TrobSafe address manually ↓
+                    Enter custom TrobSafe address manually ↓
                   </button>
                 ) : (
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-3">

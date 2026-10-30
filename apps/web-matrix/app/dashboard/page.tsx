@@ -5,26 +5,35 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   WelcomeBanner,
-  DashboardStats,
   MatrixTreePanel,
   NextPositionPanel,
-  RecentActivityPanel,
-  DashboardMobileCard,
+  ReferralLinkCard,
   ProtocolPoolsPanel,
+  OverviewTab,
 } from "@/components/dashboard";
-import { ReferralLinkCard } from "@/components/dashboard/ReferralLinkCard";
-import { MatrixAccessGate, MatrixQualificationAlert } from "@/components/matrix";
+import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
+import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { LayoutDashboard, Network, Layers } from "lucide-react";
+
+type TabId = "overview" | "matrix" | "pools";
+
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+  { id: "matrix", label: "Matrix Board", icon: <Network className="w-3.5 h-3.5" /> },
+  { id: "pools", label: "Protocol Pools", icon: <Layers className="w-3.5 h-3.5" /> },
+];
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
@@ -32,6 +41,17 @@ export default function DashboardPage() {
   }, []);
 
   const { address, changeAddress, disconnect, dashboard, profile, refreshAll, loading } = useMatrixUser();
+
+  if (!mounted || (loading && !dashboard)) {
+    return (
+      <MatrixAccessGate>
+        <EquoraLogoLoader
+          message="Loading On-Chain Matrix..."
+          submessage="Connecting to TrobChain contracts and synchronizing positions..."
+        />
+      </MatrixAccessGate>
+    );
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,50 +342,91 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* ═══════════ DASHBOARD MAIN CONTENT ═══════════ */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto space-y-5">
-          {/* Welcome Banner */}
-          <WelcomeBanner />
-
-          {/* Qualification Status & Direct Referrals Progress Alert */}
-          <MatrixQualificationAlert
-            isQualified={profile?.isQualified ?? false}
-            activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
-            referralUrl={address ? `${typeof window !== "undefined" ? window.location.origin : "https://equorafi.com"}/?ref=${toTrobBase58(address)}` : undefined}
-          />
-
-          {/* Referral & Affiliate Link Card */}
-          <ReferralLinkCard
-            address={address}
-            directsCount={profile?.directReferralsCount ?? 0}
-            sponsorAddress={profile?.sponsorAddress}
-            upline2Address={profile?.upline2Address}
-          />
-
-          {/* Stat Cards Row (Desktop + Mobile) */}
-          <DashboardStats data={dashboard} />
-
-          {/* MAIN DASHBOARD GRID: Matrix + Right Panel */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_295px] xl:grid-cols-[1fr_320px] gap-4 lg:gap-5 mb-6">
-            <div className="min-w-0">
-              <MatrixTreePanel data={dashboard} />
-            </div>
-            <div className="min-w-0">
-              <NextPositionPanel data={dashboard} />
-            </div>
+        {/* ═══════════ SUB-NAV TAB SWITCHER (Exact HTML Simulator Styling) ═══════════ */}
+        <div className="bg-white/95 backdrop-blur-md border-b border-[#e0eaf7] px-3 sm:px-4 lg:px-6 py-2 sticky top-[60px] z-20 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-[12px] sm:text-[13px] font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "bg-[#e7f1ff] text-[#1758cc] shadow-2xs"
+                    : "text-[#61738e] hover:bg-[#f2f6fc] hover:text-[#102341]"
+                }`}
+              >
+                <span className="text-[12px] opacity-80">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* 4 CLOSED-LOOP PROTOCOL POOLS & GAMIFIED APEX LEVEL REWARDS */}
-          <ProtocolPoolsPanel
-            currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
-            isQualified={profile?.isQualified ?? false}
-          />
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-bold text-[#657895] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#0e9f79] animate-pulse" />
+              Live Blockchain Sync
+            </span>
+          </div>
+        </div>
 
-          {/* RECENT ACTIVITY */}
-          <RecentActivityPanel activities={dashboard?.recentActivity} />
+        {/* ═══════════ DASHBOARD MAIN CONTENT ═══════════ */}
+        <main className="flex-1 p-3 sm:p-4 lg:p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-[#f7fbff] via-[#f3f8ff] to-[#f7faff]">
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === "overview" && (
+            <div className="space-y-4 animate-fade-in">
+              <WelcomeBanner />
 
-          {/* MOBILE BOTTOM CARD */}
-          <DashboardMobileCard />
+              <ReferralLinkCard
+                address={address}
+                directsCount={profile?.directReferralsCount ?? 0}
+                sponsorAddress={profile?.sponsorAddress}
+                upline2Address={profile?.upline2Address}
+                isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
+              />
+
+              <OverviewTab
+                address={address}
+                profile={profile}
+                dashboard={dashboard}
+                onSwitchTab={setActiveTab}
+              />
+            </div>
+          )}
+
+          {/* TAB 2: MATRIX TREE */}
+          {activeTab === "matrix" && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-[#e0eaf7] gap-2">
+                <div>
+                  <h2 className="text-[18px] sm:text-[20px] font-black text-[#102341]">Matrix Position &amp; Level Flow</h2>
+                  <p className="text-[12px] text-[#657895]">Interactive 14-node personal tree with automated P4+P5 escalation.</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-[#e8f1ff] text-[#2868e8] font-bold text-[11px] border border-[#cde0ff] self-start sm:self-auto">
+                  14 Seats / Slot
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_295px] xl:grid-cols-[1fr_320px] gap-4 lg:gap-5">
+                <div className="min-w-0">
+                  <MatrixTreePanel data={dashboard} />
+                </div>
+                <div className="min-w-0">
+                  <NextPositionPanel data={dashboard} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: POOLS & APEX CARDS */}
+          {activeTab === "pools" && (
+            <div className="space-y-4 animate-fade-in">
+              <ProtocolPoolsPanel
+                currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
+                isQualified={profile?.isQualified ?? false}
+              />
+            </div>
+          )}
         </main>
 
         {/* Safe Read-Only Wallet Connection & Test Account Modal */}

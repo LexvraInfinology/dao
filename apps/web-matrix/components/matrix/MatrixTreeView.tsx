@@ -4,7 +4,7 @@ import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { getOnChainQualification } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress as formatB58Address, toTrobBase58 } from "@/lib/format";
-import { ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, AlertCircle, CheckCircle2, Check } from "lucide-react";
 
 export interface MatrixTreeViewProps {
   slotDetails?: MatrixSlotDetails | null;
@@ -195,8 +195,12 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             {roleInfo.role === "POOL" ? "Pool" : roleInfo.role === "SPILLOVER" ? "Spill" : "YOU"}
           </div>
-          <div className="text-[9px] text-white/80 font-mono leading-none mt-0.5 truncate">
-            {node?.placedUser ? `${toTrobBase58(node.placedUser).slice(0, 4)}` : "✓"}
+          <div className="text-[9px] text-white/80 font-mono leading-none mt-0.5 truncate flex items-center justify-center">
+            {node?.placedUser ? (
+              `${toTrobBase58(node.placedUser).slice(0, 4)}`
+            ) : (
+              <Check className="w-2.5 h-2.5 text-white/90" />
+            )}
           </div>
         </div>
       );

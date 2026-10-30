@@ -2,10 +2,22 @@
 // EQUORA MATRIX PROTOCOL — FRONTEND API CLIENT (apps/web-matrix/lib/api.ts)
 // ==============================================================================
 
-const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/matrix";
-export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "").endsWith("/api/matrix")
-  ? rawBaseUrl.replace(/\/+$/, "")
-  : `${rawBaseUrl.replace(/\/+$/, "")}/api/matrix`;
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+    return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
+  }
+  // In the browser, only default to localhost:4000 if we are genuinely on localhost
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      return ""; // No remote API URL provided; frontend gracefully falls back to direct on-chain RPC reads
+    }
+  }
+  return "http://localhost:4000/api/matrix";
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export const DEFAULT_USER_ADDRESS = "";
 
@@ -150,6 +162,8 @@ export interface MatrixSlotSummary {
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;
+  totalEarnedUsd?: number;
+  totalEarnedTrob?: number;
   unlockedAt: string | null;
 }
 
@@ -179,6 +193,8 @@ export interface MatrixSlotDetails {
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;
+  totalEarnedUsd?: number;
+  totalEarnedTrob?: number;
   nodes: MatrixNodePlacement[];
 }
 
@@ -267,15 +283,24 @@ export { MatrixApiError };
 // ── Generic Fetch Helper ────────────────────────────────────────────────────
 
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new MatrixApiError(0, "Backend API not configured", "Using direct on-chain synchronization.");
+  }
+  const url = `${baseUrl}${endpoint}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
   try {
     const res = await fetch(url, {
       ...options,
+      signal: options.signal || controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
       },
     });
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -287,6 +312,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     const data = await res.json();
     return data.data !== undefined ? data.data : data;
   } catch (error) {
+    clearTimeout(timeoutId);
     if (error instanceof MatrixApiError) {
       throw error;
     }
@@ -483,11 +509,18 @@ export const matrixApi = {
    */
   async getWalletEligibility(address: string): Promise<WalletEligibility | null> {
     if (!address) return null;
-    const rootApi = process.env.NEXT_PUBLIC_API_URL
-      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "")
-      : "http://localhost:4000";
+    let url = `/api/eligibility/${address}`;
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      const rootApi = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/matrix\/?$/, "").replace(/\/+$/, "");
+      url = `${rootApi}/api/dao/eligibility/${address}`;
+    } else if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        url = `http://localhost:4000/api/dao/eligibility/${address}`;
+      }
+    }
     try {
-      const res = await fetch(`${rootApi}/api/dao/eligibility/${address}`);
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success && json.data) {
         return json.data as WalletEligibility;

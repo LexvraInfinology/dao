@@ -14,6 +14,7 @@ import {
 import { MatrixAccessGate } from "@/components/matrix";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { WalletDropdown } from "@/components/common/WalletDropdown";
+import { EquoraLogoLoader } from "@/components/common/EquoraLogoLoader";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useFinanceStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -32,11 +33,23 @@ export default function EarningsPage() {
 
   const { address, changeAddress, refreshAll } = useMatrixUser();
   const earnings = useFinanceStore((s) => s.earnings);
+  const loadingEarnings = useFinanceStore((s) => s.loadingEarnings);
   const fetchEarnings = useFinanceStore((s) => s.fetchEarnings);
 
   React.useEffect(() => {
     fetchEarnings();
   }, [fetchEarnings, address]);
+
+  if (!mounted || (loadingEarnings && !earnings)) {
+    return (
+      <MatrixAccessGate>
+        <EquoraLogoLoader
+          message="Loading Ledger & Yield..."
+          submessage="Fetching real-time on-chain commission payouts and balance..."
+        />
+      </MatrixAccessGate>
+    );
+  }
 
   const handleCopyWallet = () => {
     if (address) {

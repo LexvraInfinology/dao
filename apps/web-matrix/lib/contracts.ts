@@ -41,7 +41,7 @@ export const TESTNET_DEFAULT_ADDRESSES = {
 };
 
 // Strict Network-Guarded Address Resolver
-// Prevents accidental leak of testnet contract addresses into mainnet production
+// Prevents accidental leak of testnet contract addresses into mainnet production, and vice versa
 export const CONTRACT_ADDRESSES = {
   matrix: IS_MAINNET
     ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS ||
@@ -51,7 +51,10 @@ export const CONTRACT_ADDRESSES = {
           : null) ||
         MAINNET_DEFAULT_ADDRESSES.matrix)
     : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS ||
-        process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
+        (process.env.NEXT_PUBLIC_MATRIX_ADDRESS &&
+        process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.matrix
+          ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
+          : null) ||
         TESTNET_DEFAULT_ADDRESSES.matrix),
 
   token: IS_MAINNET
@@ -73,7 +76,10 @@ export const CONTRACT_ADDRESSES = {
           : null) ||
         MAINNET_DEFAULT_ADDRESSES.registry)
     : (process.env.NEXT_PUBLIC_TESTNET_REGISTRY_ADDRESS ||
-        process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
+        (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS &&
+        process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.registry
+          ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
+          : null) ||
         TESTNET_DEFAULT_ADDRESSES.registry),
 
   vault: IS_MAINNET
@@ -84,7 +90,10 @@ export const CONTRACT_ADDRESSES = {
           : null) ||
         MAINNET_DEFAULT_ADDRESSES.vault)
     : (process.env.NEXT_PUBLIC_TESTNET_VAULT_ADDRESS ||
-        process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+        (process.env.NEXT_PUBLIC_VAULT_ADDRESS &&
+        process.env.NEXT_PUBLIC_VAULT_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.vault
+          ? process.env.NEXT_PUBLIC_VAULT_ADDRESS
+          : null) ||
         TESTNET_DEFAULT_ADDRESSES.vault),
 
   salaryPool: IS_MAINNET
@@ -107,7 +116,10 @@ export const CONTRACT_ADDRESSES = {
           : null) ||
         MAINNET_DEFAULT_ADDRESSES.dao)
     : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS ||
-        process.env.NEXT_PUBLIC_DAO_ADDRESS ||
+        (process.env.NEXT_PUBLIC_DAO_ADDRESS &&
+        process.env.NEXT_PUBLIC_DAO_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.dao
+          ? process.env.NEXT_PUBLIC_DAO_ADDRESS
+          : null) ||
         TESTNET_DEFAULT_ADDRESSES.dao),
 
   nft: IS_MAINNET
@@ -118,7 +130,10 @@ export const CONTRACT_ADDRESSES = {
           : null) ||
         MAINNET_DEFAULT_ADDRESSES.nft)
     : (process.env.NEXT_PUBLIC_TESTNET_NFT_ADDRESS ||
-        process.env.NEXT_PUBLIC_NFT_ADDRESS ||
+        (process.env.NEXT_PUBLIC_NFT_ADDRESS &&
+        process.env.NEXT_PUBLIC_NFT_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.nft
+          ? process.env.NEXT_PUBLIC_NFT_ADDRESS
+          : null) ||
         TESTNET_DEFAULT_ADDRESSES.nft),
 };
 

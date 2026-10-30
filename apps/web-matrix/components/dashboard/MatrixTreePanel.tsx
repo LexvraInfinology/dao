@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails, toHexAddress } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getOnChainSlotDetails, toHexAddress, getSlotCost } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -194,9 +194,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
+    setSelectedCycle(1);
+    setLiveSlotData(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    selectSlotStore(sNum, selectedCycle, active);
+    selectSlotStore(sNum, 1, active);
   };
 
   const data = propData !== undefined ? propData : storeDashboard;
@@ -498,7 +500,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 <button
                   type="button"
                   onClick={() => setSelectedCycle(1)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                     selectedCycle === 1
                       ? "bg-emerald-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
@@ -511,14 +513,14 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 <button
                   type="button"
                   onClick={() => setSelectedCycle(2)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                     selectedCycle === 2
                       ? "bg-blue-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   <span>Cycle 2</span>
-                  <span className="text-[9px] opacity-90">(Current Active)</span>
+                  <span className="text-[9px] opacity-90">(Active: 0/14)</span>
                 </button>
               </div>
             ) : (
@@ -531,9 +533,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled •{" "}
             {isViewingSnapshot ? (
-              <strong className="text-emerald-600">Cycle 1 Completed Board (14/14)</strong>
+              <strong className="text-emerald-600">Cycle #{selectedCycle} Fulfilled Board (14/14 All Settled 🎉)</strong>
             ) : (
-              <span>$30 P2P Settlement</span>
+              <span>${getSlotCost(selectedSlot).toFixed(2)} P2P Settlement</span>
             )}
           </p>
         </div>
@@ -563,12 +565,48 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
       </div>
 
+      {/* Informative Cycle Progress Banners */}
+      {totalCycles > 1 && selectedCycle === 2 && (
+        <div className="my-2.5 px-3 py-2 rounded-xl bg-blue-50/90 border border-blue-200 text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+            <span>
+              <strong>Cycle 1 Completed (14/14 Fulfilled & Paid Out)!</strong> Slot #{selectedSlot} has recycled into Cycle 2 and is open for new team placements.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedCycle(1)}
+            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
+          >
+            View Completed Cycle 1 Board
+          </button>
+        </div>
+      )}
+      {totalCycles > 1 && selectedCycle === 1 && (
+        <div className="my-2.5 px-3 py-2 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+            <span>
+              <strong>🏆 Viewing Cycle 1 Snapshot:</strong> All 14 seats are 100% completed & on-chain payouts fulfilled.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedCycle(2)}
+            className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
+          >
+            Switch to Active Cycle 2
+          </button>
+        </div>
+      )}
+
       {/* ───────────────── HORIZONTAL SLOT PICKER BAR ───────────────── */}
       <div className="py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
           const isUnlocked = sNum <= currentActiveSlot;
-          const isCompleted = sNum === 1 ? filledCount >= 14 : false;
+          const isCompleted = sNum <= 3;
           return (
             <button
               key={sNum}
@@ -596,7 +634,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-            <span className="font-semibold text-slate-700">+$30 Direct Income</span>
+            <span className="font-semibold text-slate-700">+${getSlotCost(selectedSlot)} Direct Income</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_#2563eb]" />

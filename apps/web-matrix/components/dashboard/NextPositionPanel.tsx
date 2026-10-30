@@ -92,7 +92,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             <span className="text-[11px] font-bold text-slate-500">
               {showSlot2Prompt
                 ? "$60.00 Tier • Ready for Placements"
-                : `$${activeSlotNumber === 1 ? "30.00" : activeSlotNumber === 2 ? "60.00" : "120.00"} P2P Matrix Tier`}
+                : `$${(30 * Math.pow(2, activeSlotNumber - 1)).toFixed(2)} P2P Matrix Tier`}
             </span>
           </div>
 
@@ -140,7 +140,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             ) : (
               <span>
                 <strong>Position {nextUpcomingSeat} ({nextSeatMeta?.role || "Next Operative"}):</strong>{" "}
-                {nextSeatMeta?.desc || "Next eligible team member placement."}
+                {nextSeatMeta?.desc || "Next eligible team member placement."} (${(30 * Math.pow(2, activeSlotNumber - 1)).toFixed(2)}).
               </span>
             )}
           </p>

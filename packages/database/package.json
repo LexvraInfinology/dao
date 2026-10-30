@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "prebuild": "prisma generate",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-client.js",
+    "postbuild": "node scripts/copy-client.js",
     "clean": "rimraf dist"
   },
   "dependencies": {

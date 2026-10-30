@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: equora-api
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build:api
+    startCommand: pnpm run start:api
+    envVars:
+      - key: NODE_VERSION
+        value: 20.17.0
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: TARGET_NETWORK
+        value: testnet
+      - key: CHAIN_ID
+        value: "1000"
+      - key: RPC_URL
+        value: https://fullnode-one-testnet.trobchain.com
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

@@ -1,25 +1,67 @@
 {
   "network": "trobchain-mainnet",
   "deployer": "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8",
-  "deployedAt": "2026-10-03T14:05:14.883Z",
+  "deployedAt": "2026-10-31T02:48:00.000Z",
   "contracts": {
-    "EquoraRegistry": {
-      "contractName": "EquoraRegistry",
-      "contractAddressBase58": "TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy",
-      "contractAddressHex": "41e182ad0c2aaec48202cd7b897820e5b058c502dd",
-      "txHash": "0x2d856fc4d2bae6ba6aae80ef43c5d2442e115cd8dd88ce78d2689fb76e2b5b6f"
+    "EquoraCoin": {
+      "addressBase58": "TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt",
+      "addressHex": "41b0e42d3a38e37f2be412b06af572fea20d9c5216",
+      "evmAddress": "0xb0e42d3a38e37f2be412b06af572fea20d9c5216",
+      "totalSupply": "210,000,000 EQC (21 Crore)"
     },
     "EquoraToken": {
-      "contractName": "EquoraToken",
-      "contractAddressBase58": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-      "contractAddressHex": "4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9",
-      "txHash": "0x49cf3932bf061aac727d36b655dac1c0066596a1b460c2dd812101cb3e82e150"
+      "addressBase58": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
+      "addressHex": "4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9",
+      "evmAddress": "0x90b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9"
     },
-    "EquoraDAO": {
-      "contractName": "EquoraDAO",
-      "contractAddressBase58": "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
-      "contractAddressHex": "410a59d6a2dcd3b18687c1efe1625642ad85679377",
-      "txHash": "0x09504a612e6640982b475b0a455a05669f5804c6e094cc4061b6faee5f7ce6f5"
+    "EquoraNFT": {
+      "addressBase58": "TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9",
+      "addressHex": "41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d",
+      "evmAddress": "0xb19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d",
+      "txHash": "a041cda62a9bbe342706a5a0b4ada7017a1efe0475c82c8df17866a47e074321"
+    },
+    "EquoraRegistry": {
+      "addressBase58": "TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB",
+      "addressHex": "41d045ad50706313f76b4acbaa370258f6a0da1697",
+      "evmAddress": "0xd045ad50706313f76b4acbaa370258f6a0da1697",
+      "txHash": "e38cec9b3008fec09079d2e672f25fb65d632b385340527e2cfca563a3906614"
+    },
+    "EquoraDAOv2": {
+      "addressBase58": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
+      "addressHex": "4151114b92df6041f5a0e7ebc13e6ed68298fd28b0",
+      "evmAddress": "0x51114b92df6041f5a0e7ebc13e6ed68298fd28b0",
+      "txHash": "a63769660b7e5c5309e2024601e9749b6235dbc8766e20b1a45e77735bfb81df"
+    },
+    "EquoraVault": {
+      "addressBase58": "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw",
+      "addressHex": "4155f1f42bc35374f5eefda01a4cfa083c21f34f12",
+      "evmAddress": "0x55f1f42bc35374f5eefda01a4cfa083c21f34f12",
+      "txHash": "d4c66bf2c59d27ef94fcafdd73d3054cd9fedf91530728bd0cd1199b90a4d512",
+      "initialized": true
+    },
+    "EquoraSalaryPool": {
+      "addressBase58": "TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9",
+      "addressHex": "412e4d82014f04221a30ebabbd40afb0ea00083216",
+      "evmAddress": "0x2e4d82014f04221a30ebabbd40afb0ea00083216",
+      "txHash": "ec26b44e5917d3d401703cbc4858710ff29a22858333e72ae0f61cdf5b699c85"
+    },
+    "EquoraRewardPool": {
+      "addressBase58": "TF6dsLSRY1G9idqpTEM9Xowvdyp7EgFJWh",
+      "addressHex": "4138404c670f1d63a059277c71d51781c8e95aa25a",
+      "evmAddress": "0x38404c670f1d63a059277c71d51781c8e95aa25a",
+      "txHash": "7378ca4d7bc396dc7d6213b3cb8aee3711e42183b438137a30507d4332bf9ddb"
+    },
+    "EquoraMagicBox": {
+      "addressBase58": "TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg",
+      "addressHex": "41b988ec2cd42c59af8bf358bee611f432e354513d",
+      "evmAddress": "0xb988ec2cd42c59af8bf358bee611f432e354513d",
+      "txHash": "ad27ff5f424500cd47a3bb0f52dd6182ede87b94346cafe87eed81da64092589"
+    },
+    "EquoraMatrix": {
+      "addressBase58": "TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi",
+      "addressHex": "418c05990021d332e01a68c42ce6a7e783a1752d06",
+      "evmAddress": "0x8c05990021d332e01a68c42ce6a7e783a1752d06",
+      "txHash": "a78f8b18d30005b8d3b5c7da85ad69c3d908c5b8ed589a2ea1b8704a7b46ea39"
     }
   }
 }

@@ -75,14 +75,14 @@ export const ACTIVE_DAO_CONTRACT_ADDRESS = IS_MAINNET
         ? process.env.NEXT_PUBLIC_DAO_ADDRESS
         : null) ||
       process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
-      'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto')
+      'THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V')
   : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS ||
       process.env.NEXT_PUBLIC_DAO_ADDRESS ||
       process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS ||
       'THMpusD2dp3icewyNQRWF64k4r2rJypE57');
 
 export const ACTIVE_DAO_CONTRACT_HEX = IS_MAINNET
-  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_HEX || process.env.NEXT_PUBLIC_DAO_HEX || '0x0a59d6a2dcd3b18687c1efe1625642ad85679377')
+  ? (process.env.NEXT_PUBLIC_MAINNET_DAO_HEX || process.env.NEXT_PUBLIC_DAO_HEX || '0x51114b92df6041f5a0e7ebc13e6ed68298fd28b0')
   : (process.env.NEXT_PUBLIC_TESTNET_DAO_HEX || process.env.NEXT_PUBLIC_DAO_HEX || '0x511002195c1808843d3e45899cc53977dcc01c50');
 
 // Matrix Contract Address (Strictly Network Guarded)
@@ -91,7 +91,7 @@ export const ACTIVE_MATRIX_CONTRACT_ADDRESS = IS_MAINNET
       (process.env.NEXT_PUBLIC_MATRIX_ADDRESS && process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL'
         ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
         : null) ||
-      'TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE')
+      'TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi')
   : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS ||
       process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
       'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL');

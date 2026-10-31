@@ -16,3 +16,5 @@ SELECT 'CREATE DATABASE equora_db OWNER neondb_owner'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'equora_db')\gexec
 
 GRANT ALL PRIVILEGES ON DATABASE neondb TO neondb_owner;
+GRANT ALL PRIVILEGES ON DATABASE equora_db TO neondb_owner;
+ALTER ROLE neondb_owner WITH SUPERUSER CREATEDB CREATEROLE REPLICATION;

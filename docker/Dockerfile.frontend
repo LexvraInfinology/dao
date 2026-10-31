@@ -123,7 +123,8 @@ COPY --from=production-dependencies --chown=node:node /app/ ./
 
 RUN set -eux; \
     mkdir -p /app/apps/web-dao/.next/cache/images /app/apps/web-dao/.next/cache/fetch-cache; \
-    chown -R node:node /app/apps/web-dao/.next
+    chown -R node:node /app; \
+    chmod -R 777 /app/apps/web-dao/.next
 
 USER node
 EXPOSE 3000

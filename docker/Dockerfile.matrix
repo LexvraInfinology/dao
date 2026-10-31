@@ -105,11 +105,12 @@ COPY --from=production-dependencies --chown=node:node /app/ ./
 
 RUN set -eux; \
     mkdir -p /app/apps/web-matrix/.next/cache/images /app/apps/web-matrix/.next/cache/fetch-cache; \
-    chown -R node:node /app/apps/web-matrix/.next
+    chown -R node:node /app; \
+    chmod -R 777 /app/apps/web-matrix/.next
 
 USER node
 EXPOSE 3001
-HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 CMD node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 CMD node -e "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 WORKDIR /app/apps/web-matrix
 CMD ["npx", "next", "start", "-p", "3001"]

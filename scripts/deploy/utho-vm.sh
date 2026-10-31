@@ -75,7 +75,7 @@ wait_for_health() {
     if [ "$all_ready" = true ]; then
       if compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
          compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
-         compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+         compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
         return 0
       fi
     fi
@@ -154,12 +154,13 @@ if ! compose build; then
   rollback "$previous_commit"
 fi
 
-if ! compose up -d; then
-  echo 'Deployment failed: Docker Compose could not start the stack.'
+# Start database and cache infrastructure first
+if ! compose up -d postgres redis; then
+  echo 'Deployment failed: Docker Compose could not start postgres/redis.'
   rollback "$previous_commit"
 fi
 
-# Reconcile PostgreSQL roles and databases in case persistent volume already existed
+# Reconcile PostgreSQL roles and databases before application containers connect
 echo 'Reconciling PostgreSQL roles and databases...'
 PG_CONTAINER="$(compose ps -q postgres | head -n 1)"
 if [ -n "$PG_CONTAINER" ]; then
@@ -184,6 +185,12 @@ if [ -n "$PG_CONTAINER" ]; then
       fi
     done
   ' 2>/dev/null || true
+fi
+
+# Now bring up the full application stack
+if ! compose up -d; then
+  echo 'Deployment failed: Docker Compose could not start the application stack.'
+  rollback "$previous_commit"
 fi
 
 if ! wait_for_health; then

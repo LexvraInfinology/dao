@@ -73,10 +73,11 @@ wait_for_health() {
     done
 
     if [ "$all_ready" = true ]; then
-      compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-      compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-      compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-      return 0
+      if compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
+         compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
+         compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+        return 0
+      fi
     fi
 
     sleep 5
@@ -156,6 +157,33 @@ fi
 if ! compose up -d; then
   echo 'Deployment failed: Docker Compose could not start the stack.'
   rollback "$previous_commit"
+fi
+
+# Reconcile PostgreSQL roles and databases in case persistent volume already existed
+echo 'Reconciling PostgreSQL roles and databases...'
+PG_CONTAINER="$(compose ps -q postgres | head -n 1)"
+if [ -n "$PG_CONTAINER" ]; then
+  for i in $(seq 1 30); do
+    if docker exec "$PG_CONTAINER" pg_isready -h localhost >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+  docker exec "$PG_CONTAINER" sh -c '
+    for user_role in "${POSTGRES_USER}" "neondb_owner" "postgres"; do
+      if [ -n "$user_role" ]; then
+        psql -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname = '\''$user_role'\''" 2>/dev/null | grep -q 1 || \
+        psql -U postgres -c "CREATE ROLE \"$user_role\" WITH LOGIN SUPERUSER PASSWORD '\''${POSTGRES_PASSWORD:-npg_1fOkpFHAZx2e}'\'';" 2>/dev/null || true
+      fi
+    done
+    for db_name in "${POSTGRES_DB}" "neondb" "equora_db"; do
+      if [ -n "$db_name" ]; then
+        psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '\''$db_name'\''" 2>/dev/null | grep -q 1 || \
+        psql -U postgres -c "CREATE DATABASE \"$db_name\" OWNER \"${POSTGRES_USER:-neondb_owner}\";" 2>/dev/null || true
+        psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"$db_name\" TO \"${POSTGRES_USER:-neondb_owner}\";" 2>/dev/null || true
+      fi
+    done
+  ' 2>/dev/null || true
 fi
 
 if ! wait_for_health; then

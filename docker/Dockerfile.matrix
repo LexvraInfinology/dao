@@ -101,7 +101,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
-COPY --from=production-dependencies /app/ ./
+COPY --from=production-dependencies --chown=node:node /app/ ./
+
+RUN set -eux; \
+    mkdir -p /app/apps/web-matrix/.next/cache/images /app/apps/web-matrix/.next/cache/fetch-cache; \
+    chown -R node:node /app/apps/web-matrix/.next
 
 USER node
 EXPOSE 3001

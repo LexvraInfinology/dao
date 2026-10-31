@@ -207,7 +207,13 @@ export async function queryTrobConstant(
   functionSelector: string,
   parameterHex = ""
 ): Promise<string> {
+  if (!contractAddress || contractAddress === "0x0000000000000000000000000000000000000000") {
+    return "";
+  }
   const contractHex = toTronHex(contractAddress);
+  if (!contractHex || contractHex === "410000000000000000000000000000000000000000") {
+    return "";
+  }
   const payload = {
     owner_address: contractHex,
     contract_address: contractHex,
@@ -321,15 +327,24 @@ export async function getOnChainSlotStatus(
   userAddress: string,
   slotNumber: number
 ): Promise<{ isUnlocked: boolean; currentCycle: number; filledNodes: number; slotEarned: number }> {
+  if (!userAddress || userAddress === "0x0000000000000000000000000000000000000000") {
+    return { isUnlocked: false, currentCycle: 1, filledNodes: 0, slotEarned: 0 };
+  }
   try {
     const coder = new ethers.AbiCoder();
     const userHex = toHexAddress(userAddress);
+    if (!userHex || userHex === "0x0000000000000000000000000000000000000000") {
+      return { isUnlocked: false, currentCycle: 1, filledNodes: 0, slotEarned: 0 };
+    }
     const param = coder.encode(["address", "uint256"], [userHex, slotNumber]).slice(2);
     const raw = await queryTrobConstant(
       CONTRACT_ADDRESSES.matrix,
       "getSlotData(address,uint256)",
       param
     );
+    if (!raw) {
+      return { isUnlocked: false, currentCycle: 1, filledNodes: 0, slotEarned: 0 };
+    }
     const [isUnlocked, currentCycle, filledNodes, , slotEarned] = coder.decode(
       ["bool", "uint256", "uint256", "address[14]", "uint256"],
       "0x" + raw
@@ -346,6 +361,27 @@ export async function getOnChainSlotStatus(
   }
 }
 
+/**
+ * Queries total members registered in EquoraMatrix.sol.
+ * If 0, the very first entrant is the Genesis Apex node whose sponsor routes to Protocol Pools.
+ */
+export async function getOnChainTotalMembers(): Promise<number> {
+  try {
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "totalMembers()",
+      ""
+    );
+    if (raw && typeof raw === "string") {
+      const coder = new ethers.AbiCoder();
+      const decoded = coder.decode(["uint256"], "0x" + raw)[0];
+      return Number(decoded);
+    }
+  } catch (err) {
+    console.warn("[getOnChainTotalMembers] query notice:", err);
+  }
+  return 0;
+}
 export function getSlotCost(slotNumber: number): number {
   const n = Math.max(1, Math.min(12, Number(slotNumber) || 1));
   return 30 * Math.pow(2, n - 1);
@@ -491,26 +527,28 @@ export async function getOnChainSlotDetails(
   let nodes: string[] = Array(14).fill("0x0000000000000000000000000000000000000000");
   let slotEarned = BigInt(0);
 
-  try {
-    const raw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "getSlotData(address,uint256)",
-      param
-    );
-
-    if (raw) {
-      const decoded = coder.decode(
-        ["bool", "uint256", "uint256", "address[14]", "uint256"],
-        "0x" + raw
+  if (userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const raw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getSlotData(address,uint256)",
+        param
       );
-      isUnlocked = Boolean(decoded[0]);
-      currentCycle = Number(decoded[1]) || 1;
-      filledNodes = Number(decoded[2]) || 0;
-      nodes = decoded[3] || nodes;
-      slotEarned = decoded[4] || BigInt(0);
+
+      if (raw) {
+        const decoded = coder.decode(
+          ["bool", "uint256", "uint256", "address[14]", "uint256"],
+          "0x" + raw
+        );
+        isUnlocked = Boolean(decoded[0]);
+        currentCycle = Number(decoded[1]) || 1;
+        filledNodes = Number(decoded[2]) || 0;
+        nodes = decoded[3] || nodes;
+        slotEarned = decoded[4] || BigInt(0);
+      }
+    } catch (err) {
+      console.warn("[OnChain] getSlotData fallback notice:", err);
     }
-  } catch (err) {
-    console.warn("[OnChain] getSlotData fallback notice:", err);
   }
 
   const totalCycles = Number(currentCycle) || (isUnlocked ? 1 : 0);
@@ -953,6 +991,9 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
 
 /** Fetch user financials and rank details directly from on-chain smart contract */
 export async function getOnChainUserProfile(userAddress: string): Promise<any> {
+  if (!userAddress || userAddress === "0x0000000000000000000000000000000000000000") {
+    return null;
+  }
   const coder = new ethers.AbiCoder();
   const userHex = toHexAddress(userAddress);
   const param = coder.encode(["address"], [userHex]).slice(2);
@@ -1896,8 +1937,20 @@ export async function joinSlotOnChain(
     }
   }
 
+  // Check total members on chain to see if this is 1st member
+  let isFirstMember = false;
+  try {
+    const count = await getOnChainTotalMembers();
+    if (count === 0) isFirstMember = true;
+  } catch {}
+
+  const hexCheck = toHexAddress(targetSponsor);
+  const isValidAddress = ethers.isAddress(hexCheck) && hexCheck !== "0x0000000000000000000000000000000000000000";
+
   if (
+    isFirstMember ||
     !targetSponsor ||
+    !isValidAddress ||
     targetSponsor === "0x0000000000000000000000000000000000000000" ||
     targetSponsor === "410000000000000000000000000000000000000000" ||
     targetSponsor === MAINNET_DEPLOYER_BASE58 ||

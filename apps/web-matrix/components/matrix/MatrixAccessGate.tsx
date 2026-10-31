@@ -48,6 +48,7 @@ import {
   toTrobBase58,
   toTronHex,
   isUserRegisteredInMatrix,
+  getOnChainTotalMembers,
 } from "@/lib/contracts";
 import { formatAddress } from "@/lib/format";
 import {
@@ -141,6 +142,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     error?: string;
   }>({ isValid: true, isCustom: false, isGenesis: true });
   const [resolvingSponsor, setResolvingSponsor] = useState(false);
+  const [totalMembers, setTotalMembers] = useState<number | null>(null);
 
   // Eligibility Verification State (Deposit Logics PDF)
   const [eligibility, setEligibility] = useState<EligibilityData | null>(null);
@@ -180,6 +182,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           setSlotCostSun(sun);
         }
       } catch {}
+
+      try {
+        const members = await getOnChainTotalMembers();
+        if (mounted) {
+          setTotalMembers(members);
+        }
+      } catch {}
     };
 
     updateLivePricing();
@@ -214,9 +223,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
+    const isFirstId = totalMembers === 0 || daoSeat === 1;
 
     if (!cleaned) {
-      if (daoSeat === 1) {
+      if (isFirstId) {
         setSponsorAddress(CONTRACT_ADDRESSES.vault);
         setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
       } else {
@@ -283,19 +293,47 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         });
         return;
       }
-      setSponsorAddress(cleaned);
-      setSponsorStatus({
-        isValid: true,
-        isCustom: true,
-        isGenesis: false,
-      });
-      localStorage.setItem("equora_sponsor", cleaned);
-
+      setResolvingSponsor(true);
       // Asynchronously resolve on-chain to sponsor wallet address
       getOnChainUserByCode(codeNum).then((resolvedAddr) => {
+        setResolvingSponsor(false);
         if (resolvedAddr) {
           setSponsorAddress(resolvedAddr);
+          setSponsorStatus({
+            isValid: true,
+            isCustom: true,
+            isGenesis: false,
+          });
           localStorage.setItem("equora_sponsor", resolvedAddr);
+        } else if (isFirstId) {
+          setSponsorAddress(CONTRACT_ADDRESSES.vault);
+          setSponsorStatus({
+            isValid: true,
+            isCustom: false,
+            isGenesis: true,
+          });
+        } else {
+          setSponsorAddress("");
+          setSponsorStatus({
+            isValid: false,
+            isCustom: true,
+            isGenesis: false,
+            error: `Referral code #${codeNum} is not registered on-chain yet.`,
+          });
+        }
+      }).catch(() => {
+        setResolvingSponsor(false);
+        if (isFirstId) {
+          setSponsorAddress(CONTRACT_ADDRESSES.vault);
+          setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
+        } else {
+          setSponsorAddress("");
+          setSponsorStatus({
+            isValid: false,
+            isCustom: true,
+            isGenesis: false,
+            error: `Failed to verify referral code #${codeNum}.`,
+          });
         }
       });
       return;
@@ -312,7 +350,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         (cleaned.toLowerCase() === genesisRoot.toLowerCase() ||
           (cleaned.startsWith("T") && genesisRoot.startsWith("0x") && toTrobBase58(genesisRoot) === cleaned)));
 
-    if (isGen && daoSeat !== 1) {
+    if (isGen && !isFirstId) {
       setSponsorStatus({
         isValid: false,
         isCustom: false,
@@ -375,14 +413,14 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
         });
       }
-    } else if (daoSeat === 1) {
+    } else if (totalMembers === 0 || daoSeat === 1) {
       const vaultAddr = CONTRACT_ADDRESSES.vault;
       setSponsorAddress(vaultAddr);
       const b58 = vaultAddr.startsWith("T") ? vaultAddr : toTrobBase58(vaultAddr);
       setSponsorInput(b58);
       setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
       localStorage.removeItem("equora_sponsor");
-      toast.info("Assigned to Protocol Vault", "Apex node funds route to 4 protocol streams.");
+      toast.info("Assigned to Protocol Pools", "1st ID uplink routes to Protocol Pools.");
     } else {
       setSponsorAddress("");
       setSponsorInput("");
@@ -413,6 +451,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           setGenesisRoot(onChainRoot);
         }
 
+        // Query total on-chain members to detect 1st ID
+        const membersCount = await getOnChainTotalMembers().catch(() => 0);
+        if (isMounted) setTotalMembers(membersCount);
+        const isFirstId = membersCount === 0;
+
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           const ref = params.get("ref") || params.get("sponsor") || params.get("code");
@@ -427,8 +470,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             }
           }
 
-          // Case A: Apex Founding Member (#0001) -> Routes directly to Protocol Vault (4 Streams)
-          if (parsedSeat === 1) {
+          // Case A: 1st ID on Mainnet or Apex Founding Member (#0001) -> Routes directly to Protocol Pools
+          if (isFirstId || parsedSeat === 1) {
             resolved = CONTRACT_ADDRESSES.vault;
             isRootAllowed = true;
           }
@@ -496,17 +539,44 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
         }
 
+        // If still unresolved and it is the 1st ID on Mainnet, default to Protocol Pools
+        if (!resolved && (isFirstId || daoSeat === 1)) {
+          resolved = CONTRACT_ADDRESSES.vault;
+          isRootAllowed = true;
+        }
+
         if (resolved && isMounted) {
           setSponsorAddress(resolved);
-          const displayVal = resolved.startsWith("T") || /^\d{5}$/.test(resolved) ? resolved : toTrobBase58(resolved);
+          const isCode = /^\d{5}$/.test(resolved);
+          const displayVal = resolved.startsWith("T") || isCode ? resolved : toTrobBase58(resolved);
           setSponsorInput(displayVal);
-          setSponsorStatus({
-            isValid: true,
-            isCustom: isCustomFound,
-            isGenesis: isRootAllowed,
-          });
+
+          if (isCode) {
+            const resolvedAddr = await getOnChainUserByCode(resolved);
+            if (resolvedAddr) {
+              setSponsorAddress(resolvedAddr);
+              setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
+            } else if (isFirstId) {
+              setSponsorAddress(CONTRACT_ADDRESSES.vault);
+              setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
+            } else {
+              setSponsorAddress("");
+              setSponsorStatus({
+                isValid: false,
+                isCustom: true,
+                isGenesis: false,
+                error: `Referral code #${resolved} is not registered on-chain yet.`,
+              });
+            }
+          } else {
+            setSponsorStatus({
+              isValid: true,
+              isCustom: isCustomFound,
+              isGenesis: isRootAllowed,
+            });
+          }
         } else if (isMounted) {
-          // Mandatory referral: direct entry without sponsor is not permitted
+          // Mandatory referral: direct entry without sponsor is not permitted (when totalMembers > 0)
           setSponsorAddress("");
           setSponsorInput("");
           setSponsorStatus({
@@ -991,6 +1061,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     );
   }
 
+  const isFirstMember = totalMembers === 0 || daoSeat === 1;
   const displayAddress = address ? toTrobBase58(address) : "";
   const displaySponsor = sponsorAddress ? toTrobBase58(sponsorAddress) : "";
   const isVaultSponsor = Boolean(
@@ -998,7 +1069,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
       toTrobBase58(sponsorAddress) === toTrobBase58(CONTRACT_ADDRESSES.vault)
     )) ||
-    daoSeat === 1 ||
+    isFirstMember ||
     sponsorStatus.isGenesis
   );
   const hasEnoughBalance = tokenBalance !== null && tokenBalance >= requiredTrob;
@@ -1130,7 +1201,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 : "bg-rose-50 text-rose-700 border border-rose-200"
             }`}>
-              {isVaultSponsor ? "Protocol Vault (Apex Root)" : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
+              {isVaultSponsor ? "Protocol Pools (Apex Root)" : resolvingSponsor ? "Verifying..." : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
             </span>
           </div>
 
@@ -1164,7 +1235,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               )}
             </div>
           </div>
-          {sponsorStatus.error && (
+          {isFirstMember && isVaultSponsor && (
+            <p className="text-[11px] text-[#2868e8] font-medium flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#2868e8]" />
+              <span>Genesis Matrix 1st ID — Uplink automatically routes to Protocol Pools.</span>
+            </p>
+          )}
+          {sponsorStatus.error && !isFirstMember && (
             <p className="text-[11px] text-rose-600 font-medium">{sponsorStatus.error}</p>
           )}
         </div>
@@ -1290,7 +1367,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               <AlertTriangle className="w-4 h-4" />
               <span>Insufficient Balance (~{requiredTrob.toFixed(2)} TROB Required)</span>
             </button>
-          ) : !sponsorStatus.isValid || !sponsorAddress ? (
+          ) : (!sponsorStatus.isValid || !sponsorAddress) && !isFirstMember ? (
             <button
               type="button"
               disabled

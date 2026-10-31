@@ -27,6 +27,10 @@ fi
 sanitize_env() {
   if [ -f .env ]; then
     cp .env .env.pre-deploy.bak 2>/dev/null || true
+    # Pre-clean any corrupt host ports before Python processing
+    sed -i -E 's/^WEB_PORT=.*/WEB_PORT=3000/' .env 2>/dev/null || true
+    sed -i -E 's/^MATRIX_WEB_PORT=.*/MATRIX_WEB_PORT=3001/' .env 2>/dev/null || true
+    sed -i -E 's/^API_PORT=.*/API_PORT=4000/' .env 2>/dev/null || true
     echo "=== [sanitize_env] Processing $APP_DIR/.env ==="
     python3 -c '
 import sys, os, re
@@ -34,7 +38,7 @@ import sys, os, re
 KNOWN_VARS = [
     "NODE_ENV", "WEB_PORT", "MATRIX_WEB_PORT", "API_PORT",
     "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB", "DATABASE_URL",
-    "REDIS_PASSWORD", "REDIS_URL",
+    "REDIS_PASSWORD", "REDIS_URL", "REDIS_PORT", "PORT",
     "JWT_SECRET", "JWT_EXPIRES_IN", "SIWE_NONCE_TTL_SECONDS",
     "CORS_ORIGIN", "CHAIN_ID", "RPC_URL", "FULLNODE_URL",
     "INDEXER_POLL_INTERVAL_MS", "INDEXER_START_BLOCK",
@@ -86,7 +90,7 @@ def find_canonical_var(key):
         if v == key:
             return v
     for v in KNOWN_VARS:
-        if v.endswith(key) and len(v) >= len(key):
+        if len(key) >= 6 and (len(v) - len(key)) <= 3 and v.endswith(key):
             return v
     return None
 
@@ -181,7 +185,10 @@ critical_defaults = {
     "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require",
     "REDIS_PASSWORD": "EquoraRedis2026Secure",
     "JWT_SECRET": "equora_jwt_secret_production_key_32_characters_minimum",
-    "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V"
+    "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
+    "WEB_PORT": "3000",
+    "MATRIX_WEB_PORT": "3001",
+    "API_PORT": "4000"
 }
 
 for crit_key, def_val in critical_defaults.items():
@@ -193,6 +200,11 @@ for crit_key, def_val in critical_defaults.items():
 
 if "DATABASE_URL" in key_map and "@postgres:5432" in key_map["DATABASE_URL"]:
     key_map["DATABASE_URL"] = "postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
+
+# Strictly enforce host ports matching Nginx reverse proxy architecture (DAO: 3000, Matrix: 3001, API: 4000)
+key_map["WEB_PORT"] = "3000"
+key_map["MATRIX_WEB_PORT"] = "3001"
+key_map["API_PORT"] = "4000"
 
 key_map["CORS_ORIGIN"] = ",".join(CORS_ORIGINS)
 
@@ -298,7 +310,14 @@ wait_for_health() {
       if compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
          compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" && \
          compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
-        return 0
+        # Verify host-level port reachability (ensures Nginx reverse proxy succeeds)
+        if (curl -fsS -m 5 http://127.0.0.1:3000/ >/dev/null 2>&1 || wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1) && \
+           (curl -fsS -m 5 http://127.0.0.1:3001/ >/dev/null 2>&1 || wget -q -O - http://127.0.0.1:3001/ >/dev/null 2>&1) && \
+           (curl -fsS -m 5 http://127.0.0.1:4000/health >/dev/null 2>&1 || wget -q -O - http://127.0.0.1:4000/health >/dev/null 2>&1); then
+          return 0
+        else
+          echo "[healthcheck] Waiting for host ports 3000, 3001, 4000 to accept connections..."
+        fi
       fi
     fi
 

@@ -155,7 +155,14 @@ export const useUserStore = create<UserState>((set, get) => ({
           return null;
         }),
         matrixApi.getProfile(effectiveAddress, sponsor || undefined).catch((err) => {
-          console.warn("[UserStore] API profile query failed:", err?.message);
+          const isAbort =
+            err?.name === "AbortError" ||
+            err?.message?.toLowerCase().includes("aborted") ||
+            err?.message?.toLowerCase().includes("cancelled") ||
+            err?.message?.toLowerCase().includes("timed out");
+          if (!isAbort) {
+            console.warn("[UserStore] API profile query notice:", err?.message || err);
+          }
           return null;
         }),
       ]);

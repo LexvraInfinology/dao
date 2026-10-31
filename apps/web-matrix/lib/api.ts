@@ -293,12 +293,32 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
   const url = `${baseUrl}${endpoint}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutMs = 15000;
+  const timeoutId = setTimeout(() => {
+    try {
+      controller.abort(new Error(`Matrix API timeout after ${timeoutMs}ms on ${endpoint}`));
+    } catch {
+      controller.abort();
+    }
+  }, timeoutMs);
+
+  // Propagate caller signal abort if provided
+  if (options.signal) {
+    if (options.signal.aborted) {
+      clearTimeout(timeoutId);
+      controller.abort(options.signal.reason);
+    } else {
+      options.signal.addEventListener("abort", () => {
+        clearTimeout(timeoutId);
+        controller.abort(options.signal?.reason);
+      });
+    }
+  }
 
   try {
     const res = await fetch(url, {
       ...options,
-      signal: options.signal || controller.signal,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
@@ -320,12 +340,24 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     if (error instanceof MatrixApiError) {
       throw error;
     }
-    const technical = error instanceof Error ? error.message : String(error);
+    const isAborted =
+      (error instanceof Error && error.name === "AbortError") ||
+      controller.signal.aborted ||
+      Boolean(options.signal?.aborted);
+
+    const technical = isAborted
+      ? "Request was cancelled or timed out"
+      : error instanceof Error
+      ? error.message
+      : String(error);
+
     const friendlyMessage = formatUserErrorMessage(
       error,
       "Unable to connect to the server. Please check your internet connection."
     );
-    console.warn(`[Matrix API] Network error on ${url}:`, technical);
+    if (!isAborted) {
+      console.warn(`[Matrix API] Network error on ${url}:`, technical);
+    }
     throw new MatrixApiError(0, technical, friendlyMessage);
   }
 }

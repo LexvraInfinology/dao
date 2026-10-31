@@ -284,15 +284,20 @@ const TROB_RPC_ENDPOINT =
   "https://fullnode-one.trobchain.com";
 const TROB_TESTNET_RPC = TROB_RPC_ENDPOINT;
 const userLastSyncTime = new Map<string, number>();
+const registryCodeCache = new Map<string, number>();
 
 export async function queryRegistryCodeOnChain(address: string): Promise<number | null> {
   const canonical = toCanonicalAddress(address);
   if (!canonical || canonical === "0x0000000000000000000000000000000000000000") return null;
+  if (registryCodeCache.has(canonical)) {
+    return registryCodeCache.get(canonical)!;
+  }
   try {
     const userHexParam = canonical.slice(2).padStart(64, "0");
     const res = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggersmartcontract`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined,
       body: JSON.stringify({
         owner_address: REGISTRY_CONTRACT_HEX,
         contract_address: REGISTRY_CONTRACT_HEX,
@@ -305,11 +310,12 @@ export async function queryRegistryCodeOnChain(address: string): Promise<number 
     if (data && data.constant_result && data.constant_result.length > 0) {
       const code = parseInt(data.constant_result[0].slice(-8), 16);
       if (code >= 10000 && code <= 99999) {
+        registryCodeCache.set(canonical, code);
         return code;
       }
     }
   } catch (err) {
-    console.warn(`[MatrixService] queryRegistryCodeOnChain(${canonical}) error:`, err);
+    console.warn(`[MatrixService] queryRegistryCodeOnChain(${canonical}) notice:`, err);
   }
   return null;
 }
@@ -430,7 +436,19 @@ export class MatrixService {
         });
         const nextUserId = (highestUser?.userId ?? 0) + 1;
 
-        const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
+        let normalizedSponsor: string | null = null;
+        if (sponsorAddress) {
+          const canon = toCanonicalAddress(sponsorAddress);
+          if (canon && canon.startsWith("0x") && canon !== "0x0000000000000000000000000000000000000000") {
+            const exists = await prisma.user.findUnique({
+              where: { address: canon },
+              select: { address: true },
+            });
+            if (exists) {
+              normalizedSponsor = canon;
+            }
+          }
+        }
 
         let createdNew = false;
         try {
@@ -520,7 +538,19 @@ export class MatrixService {
           }).catch(() => {});
         }
       } else {
-        const normalizedSponsor = sponsorAddress ? sponsorAddress.toLowerCase() : null;
+        let normalizedSponsor: string | null = null;
+        if (sponsorAddress) {
+          const canon = toCanonicalAddress(sponsorAddress);
+          if (canon && canon.startsWith("0x") && canon !== "0x0000000000000000000000000000000000000000") {
+            const exists = await prisma.user.findUnique({
+              where: { address: canon },
+              select: { address: true },
+            });
+            if (exists) {
+              normalizedSponsor = canon;
+            }
+          }
+        }
         if (!user.sponsorAddress && normalizedSponsor && normalizedSponsor !== canonicalAddress) {
           await prisma.user.update({
             where: { address: canonicalAddress },
@@ -574,18 +604,19 @@ export class MatrixService {
       const profile = user.matrixProfile;
       const highestSlot = user.matrixSlots[0]?.slotNumber ?? 0;
 
-      // Team count and active qualification calculation
-      const directTeamCount = await prisma.user.count({
-        where: { sponsorAddress: canonicalAddress },
-      }).catch(() => 0);
-
-      const activeDirectsCount = await prisma.matrixSlot.count({
-        where: {
-          slotNumber: 1,
-          isUnlocked: true,
-          user: { sponsorAddress: canonicalAddress },
-        },
-      }).catch(() => 0);
+      // Team count and active qualification calculation (parallelized)
+      const [directTeamCount, activeDirectsCount] = await Promise.all([
+        prisma.user.count({
+          where: { sponsorAddress: canonicalAddress },
+        }).catch(() => 0),
+        prisma.matrixSlot.count({
+          where: {
+            slotNumber: 1,
+            isUnlocked: true,
+            user: { sponsorAddress: canonicalAddress },
+          },
+        }).catch(() => 0),
+      ]);
 
       const isRoot = user.userId === 1 || !user.sponsorAddress;
       const isQualified = isRoot || activeDirectsCount >= 2;

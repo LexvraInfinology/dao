@@ -177,6 +177,8 @@ export const useUserStore = create<UserState>((set, get) => ({
           rankTier: onChainProf.rankTier,
           username: dbProf.username || onChainProf.username,
           avatarUrl: dbProf.avatarUrl || onChainProf.avatarUrl,
+          referralCode: onChainProf.referralCode || dbProf.referralCode || null,
+          sponsorCode: onChainProf.sponsorCode || dbProf.sponsorCode || null,
           bio: dbProf.bio || onChainProf.bio,
           telegram: dbProf.telegram || onChainProf.telegram,
           twitter: dbProf.twitter || onChainProf.twitter,

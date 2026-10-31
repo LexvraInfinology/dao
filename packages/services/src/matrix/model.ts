@@ -114,6 +114,8 @@ export interface MatrixUserProfileDTO {
   withdrawnTotal: number;
   recyclesCount: number;
   highestUnlockedSlot: number;
+  referralCode?: number | null;
+  sponsorCode?: number | null;
   joinedAt: Date;
 }
 

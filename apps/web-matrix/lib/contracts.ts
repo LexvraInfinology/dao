@@ -1119,6 +1119,11 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     } catch {}
   }
 
+  let userReferralCode: number | null = null;
+  try {
+    userReferralCode = await getOnChainCodeByUser(userHex);
+  } catch {}
+
   const isRegistered = isRegRaw ? Boolean(coder.decode(["bool"], "0x" + isRegRaw)[0]) : false;
 
   const rankTier =
@@ -1148,6 +1153,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     sponsorAddress,
     sponsorUserId: sponsorCode,
     sponsorCode,
+    referralCode: userReferralCode,
     upline2Address,
     directReferralsCount,
     activeDirectsCount,

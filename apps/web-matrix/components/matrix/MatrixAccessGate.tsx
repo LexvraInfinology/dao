@@ -407,7 +407,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
-          const ref = params.get("ref") || params.get("sponsor");
+          const ref = params.get("ref") || params.get("sponsor") || params.get("code");
           const seatParam = params.get("seat") || params.get("daoSeat");
 
           let parsedSeat: number | null = null;

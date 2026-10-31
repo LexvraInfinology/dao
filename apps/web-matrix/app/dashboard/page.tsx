@@ -374,7 +374,7 @@ export default function DashboardPage() {
                 sponsorAddress={profile?.sponsorAddress}
                 upline2Address={profile?.upline2Address}
                 isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
-                referralCode={profile?.sponsorCode}
+                referralCode={profile?.referralCode}
               />
 
               <OverviewTab

@@ -29,6 +29,7 @@ const PAGE_SIZE = 10;
 export function MatrixDirectMembers(props: MatrixDirectMembersProps = {}) {
   const storeMembers = useMatrixStore((s) => s.directMembers);
   const address = useUserStore((s) => s.address);
+  const profile = useUserStore((s) => s.profile);
   const [liveDirects, setLiveDirects] = useState<DirectMemberItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -93,7 +94,7 @@ export function MatrixDirectMembers(props: MatrixDirectMembersProps = {}) {
 
   const referralUrl =
     typeof window !== "undefined" && address
-      ? `${window.location.origin}/?ref=${toTrobBase58(address)}`
+      ? `${window.location.origin}/?ref=${profile?.referralCode || toTrobBase58(address)}`
       : "";
 
   const handleCopyText = (text: string, label = "Text") => {

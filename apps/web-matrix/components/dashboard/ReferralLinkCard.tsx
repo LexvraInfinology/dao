@@ -68,7 +68,9 @@ export function ReferralLinkCard({
 
   const base58Addr = address ? toTrobBase58(address) : "";
   const referralCode = onChainCode || (address ? get5DigitCode(address) : 56321);
-  const referralUrl = base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`;
+  const referralUrl = onChainCode
+    ? `${origin}/?ref=${onChainCode}`
+    : (base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`);
 
   const handleCopyLink = () => {
     if (!address) {

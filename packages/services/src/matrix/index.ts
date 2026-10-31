@@ -113,6 +113,8 @@ function getFallbackProfile(canonicalAddress: string): MatrixUserProfileDTO {
     withdrawnTotal: 0,
     recyclesCount: 0,
     highestUnlockedSlot: 0,
+    referralCode: null,
+    sponsorCode: null,
     joinedAt: new Date(),
   };
 }
@@ -265,9 +267,45 @@ export function toCanonicalAddress(input?: string | null): string {
   return str.toLowerCase();
 }
 
-const MATRIX_CONTRACT_HEX = "413171872223e0e482bb6bbc2cd837d5b1c9f95f78";
+const MATRIX_CONTRACT_HEX =
+  process.env.NEXT_PUBLIC_MATRIX_HEX ||
+  process.env.MATRIX_HEX ||
+  "415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2";
+const REGISTRY_CONTRACT_HEX =
+  process.env.NEXT_PUBLIC_REGISTRY_HEX ||
+  process.env.REGISTRY_HEX ||
+  "416a193b520670f2f2c633ce62d90a816f70bfdef1";
 const TROB_TESTNET_RPC = process.env.TROB_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one-testnet.trobchain.com";
 const userLastSyncTime = new Map<string, number>();
+
+export async function queryRegistryCodeOnChain(address: string): Promise<number | null> {
+  const canonical = toCanonicalAddress(address);
+  if (!canonical || canonical === "0x0000000000000000000000000000000000000000") return null;
+  try {
+    const userHexParam = canonical.slice(2).padStart(64, "0");
+    const res = await fetch(`${TROB_TESTNET_RPC}/wallet/triggersmartcontract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner_address: REGISTRY_CONTRACT_HEX,
+        contract_address: REGISTRY_CONTRACT_HEX,
+        function_selector: "getCodeByUser(address)",
+        parameter: userHexParam,
+        visible: false,
+      }),
+    });
+    const data: any = await res.json();
+    if (data && data.constant_result && data.constant_result.length > 0) {
+      const code = parseInt(data.constant_result[0].slice(-8), 16);
+      if (code >= 10000 && code <= 99999) {
+        return code;
+      }
+    }
+  } catch (err) {
+    console.warn(`[MatrixService] queryRegistryCodeOnChain(${canonical}) error:`, err);
+  }
+  return null;
+}
 
 export async function syncUserFromChain(userAddress: string, force = false): Promise<void> {
   const canonical = toCanonicalAddress(userAddress);
@@ -545,6 +583,18 @@ export class MatrixService {
       const isRoot = user.userId === 1 || !user.sponsorAddress;
       const isQualified = isRoot || activeDirectsCount >= 2;
 
+      // Query real on-chain 5-digit referral code directly from EquoraRegistry.sol
+      let referralCode: number | null = null;
+      let sponsorCode: number | null = null;
+      try {
+        const [uCode, spCode] = await Promise.all([
+          queryRegistryCodeOnChain(canonicalAddress),
+          user.sponsorAddress ? queryRegistryCodeOnChain(user.sponsorAddress) : null,
+        ]);
+        if (uCode) referralCode = uCode;
+        if (spCode) sponsorCode = spCode;
+      } catch {}
+
       return {
         address: canonicalAddress,
         userId: user.userId,
@@ -555,6 +605,8 @@ export class MatrixService {
         twitter: profile?.twitter || null,
         sponsorAddress: user.sponsorAddress,
         sponsorUserId: user.sponsor?.userId || null,
+        sponsorCode,
+        referralCode,
         directReferralsCount: user.directReferralsCount || directTeamCount,
         activeDirectsCount,
         isQualified,

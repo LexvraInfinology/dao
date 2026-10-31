@@ -448,7 +448,7 @@ async function main() {
     "EquoraNFT.setMinter(EquoraMatrix, true)"
   );
 
-  // J. Set Dynamic Trob Price on Matrix: $0.03174/TROB (31740)
+  // J1. Set Dynamic Trob Price on Matrix: $0.03174/TROB (31740)
   const setTrobPriceParam = coder.encode(["uint256"], [31740]);
   await triggerContractMethod(
     deployer,
@@ -456,6 +456,15 @@ async function main() {
     "setTrobPrice(uint256)",
     setTrobPriceParam,
     "EquoraMatrix.setTrobPrice(31740 -> $0.03174 USD)"
+  );
+
+  // J2. Set Dynamic Trob Price on DAOv2: $0.03174/TROB (31740)
+  await triggerContractMethod(
+    deployer,
+    dao.addressHex,
+    "setTrobPrice(uint256)",
+    setTrobPriceParam,
+    "EquoraDAOv2.setTrobPrice(31740 -> $0.03174 USD)"
   );
 
   // K. Register 2 DAO IDs on EquoraDAOv2 (Seat 1 Founder + Seat 2 Member)
@@ -517,7 +526,29 @@ async function main() {
   deployed.updatedAt = new Date().toISOString();
   fs.writeFileSync(deployedSummaryPath, JSON.stringify(deployed, null, 2));
 
-  // Update apps/web-matrix/.env.local
+  // 1. Update Root .env
+  const rootEnvPath = path.resolve(__dirname, "../../../.env");
+  if (fs.existsSync(rootEnvPath)) {
+    let c = fs.readFileSync(rootEnvPath, "utf8");
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS="[^"]*"/, `NEXT_PUBLIC_REGISTRY_ADDRESS="${registry.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_HEX="[^"]*"/, `NEXT_PUBLIC_REGISTRY_HEX="${registry.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_NFT_ADDRESS="[^"]*"/, `NEXT_PUBLIC_NFT_ADDRESS="${nft.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_NFT_HEX="[^"]*"/, `NEXT_PUBLIC_NFT_HEX="${nft.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS="[^"]*"/, `NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS="${nft.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS="[^"]*"/, `NEXT_PUBLIC_DAO_ADDRESS="${dao.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_HEX="[^"]*"/, `NEXT_PUBLIC_DAO_HEX="${dao.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS="[^"]*"/, `NEXT_PUBLIC_VAULT_ADDRESS="${vault.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_HEX="[^"]*"/, `NEXT_PUBLIC_VAULT_HEX="${vault.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_MATRIX_ADDRESS="[^"]*"/, `NEXT_PUBLIC_MATRIX_ADDRESS="${matrix.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_MATRIX_HEX="[^"]*"/, `NEXT_PUBLIC_MATRIX_HEX="${matrix.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_SALARY_POOL_ADDRESS="[^"]*"/, `NEXT_PUBLIC_SALARY_POOL_ADDRESS="${salaryPool.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_REWARD_POOL_ADDRESS="[^"]*"/, `NEXT_PUBLIC_REWARD_POOL_ADDRESS="${rewardPool.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_MAGIC_BOX_ADDRESS="[^"]*"/, `NEXT_PUBLIC_MAGIC_BOX_ADDRESS="${magicBox.addressBase58}"`);
+    fs.writeFileSync(rootEnvPath, c, "utf8");
+    console.log(`💾 Updated root .env`);
+  }
+
+  // 2. Update apps/web-matrix/.env.local
   const matrixEnvPath = path.resolve(__dirname, "../../../apps/web-matrix/.env.local");
   if (fs.existsSync(matrixEnvPath)) {
     let c = fs.readFileSync(matrixEnvPath, "utf8");
@@ -525,11 +556,30 @@ async function main() {
     c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_DAO_ADDRESS=${dao.addressBase58}`);
     c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_VAULT_ADDRESS=${vault.addressBase58}`);
     c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_REGISTRY_ADDRESS=${registry.addressBase58}`);
+    c = c.replace(/NEXT_PUBLIC_NFT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_NFT_ADDRESS=${nft.addressBase58}`);
     fs.writeFileSync(matrixEnvPath, c, "utf8");
     console.log(`💾 Updated web-matrix/.env.local`);
   }
 
-  // Update apps/web-matrix/lib/contracts.ts
+  // 3. Update apps/web-dao/.env.local
+  const daoEnvPath = path.resolve(__dirname, "../../../apps/web-dao/.env.local");
+  if (fs.existsSync(daoEnvPath)) {
+    let c = fs.readFileSync(daoEnvPath, "utf8");
+    c = c.replace(/NEXT_PUBLIC_MATRIX_ADDRESS="[^"]*"/, `NEXT_PUBLIC_MATRIX_ADDRESS="${matrix.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_MATRIX_HEX="[^"]*"/, `NEXT_PUBLIC_MATRIX_HEX="${matrix.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS="[^"]*"/, `NEXT_PUBLIC_DAO_ADDRESS="${dao.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_HEX="[^"]*"/, `NEXT_PUBLIC_DAO_HEX="${dao.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS="[^"]*"/, `NEXT_PUBLIC_VAULT_ADDRESS="${vault.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_HEX="[^"]*"/, `NEXT_PUBLIC_VAULT_HEX="${vault.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS="[^"]*"/, `NEXT_PUBLIC_REGISTRY_ADDRESS="${registry.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_HEX="[^"]*"/, `NEXT_PUBLIC_REGISTRY_HEX="${registry.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_NFT_ADDRESS="[^"]*"/, `NEXT_PUBLIC_NFT_ADDRESS="${nft.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS="[^"]*"/, `NEXT_PUBLIC_DAO_MEMBERSHIP_ADDRESS="${nft.addressBase58}"`);
+    fs.writeFileSync(daoEnvPath, c, "utf8");
+    console.log(`💾 Updated web-dao/.env.local`);
+  }
+
+  // 4. Update apps/web-matrix/lib/contracts.ts
   const contractsTsPath = path.resolve(__dirname, "../../../apps/web-matrix/lib/contracts.ts");
   if (fs.existsSync(contractsTsPath)) {
     let c = fs.readFileSync(contractsTsPath, "utf8");
@@ -540,20 +590,51 @@ async function main() {
     c = c.replace(/salaryPool:\s*["'][^"']+["']/, `salaryPool: "${salaryPool.addressBase58}"`);
     c = c.replace(/rewardPool:\s*["'][^"']+["']/, `rewardPool: "${rewardPool.addressBase58}"`);
     c = c.replace(/magicBoxPool:\s*["'][^"']+["']/, `magicBoxPool: "${magicBox.addressBase58}"`);
+    c = c.replace(/nft:\s*["'][^"']+["']/, `nft: "${nft.addressBase58}"`);
     fs.writeFileSync(contractsTsPath, c, "utf8");
     console.log(`💾 Updated web-matrix/lib/contracts.ts`);
   }
 
-  // Update apps/web-dao/.env.local
-  const daoEnvPath = path.resolve(__dirname, "../../../apps/web-dao/.env.local");
-  if (fs.existsSync(daoEnvPath)) {
-    let c = fs.readFileSync(daoEnvPath, "utf8");
-    c = c.replace(/NEXT_PUBLIC_MATRIX_ADDRESS="[^"]*"/, `NEXT_PUBLIC_MATRIX_ADDRESS="${matrix.addressBase58}"`);
-    c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS="[^"]*"/, `NEXT_PUBLIC_DAO_ADDRESS="${dao.addressBase58}"`);
-    c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS="[^"]*"/, `NEXT_PUBLIC_VAULT_ADDRESS="${vault.addressBase58}"`);
-    c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS="[^"]*"/, `NEXT_PUBLIC_REGISTRY_ADDRESS="${registry.addressBase58}"`);
-    fs.writeFileSync(daoEnvPath, c, "utf8");
-    console.log(`💾 Updated web-dao/.env.local`);
+  // 5. Update apps/web-dao/src/config/env.ts default testnet fallbacks
+  const daoEnvTsPath = path.resolve(__dirname, "../../../apps/web-dao/src/config/env.ts");
+  if (fs.existsSync(daoEnvTsPath)) {
+    let c = fs.readFileSync(daoEnvTsPath, "utf8");
+    c = c.replace(/'TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr'/g, `'${dao.addressBase58}'`);
+    c = c.replace(/'0x9927344a18809582c7a97fb18be456fdd73171aa'/g, `'0x${dao.addressHex.slice(2)}'`);
+    c = c.replace(/'TEbnspqeni1LSvBcnk1XGj3p3DE8J65JV1'/g, `'${matrix.addressBase58}'`);
+    fs.writeFileSync(daoEnvTsPath, c, "utf8");
+    console.log(`💾 Updated web-dao/src/config/env.ts fallbacks`);
+  }
+
+  // 6. Update apps/indexer/src/config.ts default testnet fallbacks
+  const indexerConfigPath = path.resolve(__dirname, "../../../apps/indexer/src/config.ts");
+  if (fs.existsSync(indexerConfigPath)) {
+    let c = fs.readFileSync(indexerConfigPath, "utf8");
+    c = c.replace(/registry:\s*"[^"]*",\s*\/\/\s*testnet/, `registry: "${registry.addressBase58}",`);
+    c = c.replace(/"TCcHDFibnBsSwZhCRyvevXQfoAQ6NMyYWN"/, `"${registry.addressBase58}"`);
+    c = c.replace(/"TQDJwbuFQEXDsSaeGVcU1iRF3WPjRfeLdi"/g, `"${nft.addressBase58}"`);
+    c = c.replace(/"TPw1MNKr2QcU3CizievsskdSRtuY18Zvvr"/, `"${dao.addressBase58}"`);
+    c = c.replace(/"TWZZ1ZvU2WmiEYzoXkeKjeKY66nyww2GbY"/, `"${matrix.addressBase58}"`);
+    c = c.replace(/"TPQyyruMPLn1S7szNTGWBtB1Yv1Noc1BRX"/, `"${vault.addressBase58}"`);
+    c = c.replace(/"TLecfvBRdFetBn3c4uMguAKEmqdJdggqvx"/, `"${salaryPool.addressBase58}"`);
+    c = c.replace(/"TUTGW96GTQN84LPaS8iki15B6R9LBqM1LE"/, `"${rewardPool.addressBase58}"`);
+    c = c.replace(/"TMskpNoL2qUUArzo2ECHjCKVeYCnnU5W1C"/, `"${magicBox.addressBase58}"`);
+    fs.writeFileSync(indexerConfigPath, c, "utf8");
+    console.log(`💾 Updated indexer/src/config.ts fallbacks`);
+  }
+
+  // 7. Update apps/web-dao/src/utils/trobAddress.ts default testnet fallbacks
+  const daoTrobAddrPath = path.resolve(__dirname, "../../../apps/web-dao/src/utils/trobAddress.ts");
+  if (fs.existsSync(daoTrobAddrPath)) {
+    let c = fs.readFileSync(daoTrobAddrPath, "utf8");
+    c = c.replace(/base58:\s*process\.env\.NEXT_PUBLIC_REGISTRY_ADDRESS\s*\|\|\s*'[^']*'/, `base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || '${registry.addressBase58}'`);
+    c = c.replace(/hex:\s*process\.env\.NEXT_PUBLIC_REGISTRY_HEX\s*\|\|\s*'[^']*'/, `hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '${registry.addressHex}'`);
+    c = c.replace(/base58:\s*process\.env\.NEXT_PUBLIC_VAULT_ADDRESS\s*\|\|\s*'[^']*'/, `base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || '${vault.addressBase58}'`);
+    c = c.replace(/hex:\s*process\.env\.NEXT_PUBLIC_VAULT_HEX\s*\|\|\s*'[^']*'/, `hex: process.env.NEXT_PUBLIC_VAULT_HEX || '${vault.addressHex}'`);
+    c = c.replace(/base58:\s*process\.env\.NEXT_PUBLIC_MATRIX_ADDRESS\s*\|\|\s*'[^']*'/, `base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || '${matrix.addressBase58}'`);
+    c = c.replace(/hex:\s*process\.env\.NEXT_PUBLIC_MATRIX_HEX\s*\|\|\s*'[^']*'/, `hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '${matrix.addressHex}'`);
+    fs.writeFileSync(daoTrobAddrPath, c, "utf8");
+    console.log(`💾 Updated web-dao/src/utils/trobAddress.ts fallbacks`);
   }
 
   // Reset joined-members.json for fresh start

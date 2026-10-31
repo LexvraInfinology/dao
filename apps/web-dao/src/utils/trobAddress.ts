@@ -64,16 +64,16 @@ export const DEPLOYED_CONTRACTS = {
     hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '41b0e42d3a38e37f2be412b06af572fea20d9c5216',
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TCcHDFibnBsSwZhCRyvevXQfoAQ6NMyYWN',
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '411cf3281e10bf86c32d5d257066b95e82e43725e5',
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y',
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '416a193b520670f2f2c633ce62d90a816f70bfdef1',
   },
   EquoraVault: {
-    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THQBFEJsH2dBAuXQQT8LErqsjsD7hCPLfa',
-    hex: process.env.NEXT_PUBLIC_VAULT_HEX || '415181d06090f16c9bffef71e2ccd7ed17f676aad9',
+    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TPVc8M9XNea33qmTybYRZXYJL4axQscyHx',
+    hex: process.env.NEXT_PUBLIC_VAULT_HEX || '4194596b1b3f9f67baf6a1759b427bca6f1b647562',
   },
   EquoraMatrix: {
-    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TEbnspqeni1LSvBcnk1XGj3p3DE8J65JV1',
-    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '4132cbc163842f5691960b7bee60682ce5bf18ed83',
+    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL',
+    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2',
   },
 } as const;
 

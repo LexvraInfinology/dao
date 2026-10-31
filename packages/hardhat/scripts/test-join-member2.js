@@ -120,6 +120,21 @@ async function triggerJoinSlot(userSigner, matrixHex, sponsorEvmAddr, slotCostSu
   return data.transaction.txID;
 }
 
+async function callConstant(contractHex, functionSelector, parameterHex = "") {
+  const res = await fetch(`${FULLNODE_URL}/wallet/triggersmartcontract`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner_address: contractHex,
+      contract_address: contractHex,
+      function_selector: functionSelector,
+      parameter: parameterHex.replace(/^0x/, ""),
+    }),
+  });
+  const data = await res.json();
+  return data.constant_result?.[0] || "";
+}
+
 async function main() {
   const privKey = process.env.DEPLOYER_PRIVATE_KEY;
   if (!privKey) throw new Error("DEPLOYER_PRIVATE_KEY is missing");
@@ -130,13 +145,16 @@ async function main() {
   const matrixHex = deployed.contracts.EquoraMatrix.addressHex;
 
   const seat1EvmAddr = "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02"; // Seat 1
-  const slotCostSun = 535714285; // $30 USD at current TROB price
+  const coder = new ethers.AbiCoder();
+  const mCostHex = await callConstant(matrixHex, "slotCosts(uint256)", coder.encode(["uint256"], [1]).slice(2));
+  const slotCostSun = mCostHex ? Number(coder.decode(["uint256"], "0x" + mCostHex)[0]) : 945179584;
 
   console.log(`======================================================`);
   console.log(`👥 JOINING MEMBER 2 UNDER SEAT 1`);
   console.log(`   Deployer: ${deployer.tronBase58}`);
   console.log(`   Matrix Contract: ${deployed.contracts.EquoraMatrix.addressBase58}`);
-  console.log(`   Seat 1 Sponsor:  ${seat1EvmAddr} (Code: 25948)`);
+  console.log(`   Seat 1 Sponsor:  ${seat1EvmAddr}`);
+  console.log(`   Slot 1 Dynamic Cost: ${slotCostSun / 1e6} TROB (${slotCostSun} SUN)`);
   console.log(`======================================================\n`);
 
   // Create Member 2 wallet
@@ -146,8 +164,9 @@ async function main() {
   console.log(`   Base58: ${m2Signer.tronBase58}`);
   console.log(`   Hex:    ${m2Signer.tronHex}`);
 
-  // Fund Member 2 with 580 TROB (535.71 for slot + gas)
-  await transferTrob(deployer, m2Signer.tronHex, 580_000_000);
+  // Fund Member 2 with exact slot cost + 30 TROB for gas
+  const fundSun = slotCostSun + 30_000_000;
+  await transferTrob(deployer, m2Signer.tronHex, fundSun);
 
   // Call joinSlot(1, seat1EvmAddr)
   const txHash = await triggerJoinSlot(m2Signer, matrixHex, seat1EvmAddr, slotCostSun);

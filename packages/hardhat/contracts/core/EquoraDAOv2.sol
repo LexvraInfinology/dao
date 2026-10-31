@@ -182,11 +182,15 @@ contract EquoraDAOv2 is ReentrancyGuard {
         lastJoinTimestamp  = block.timestamp;
     }
 
-    function setVaultContract(address _vault) external onlyAdmin {
+    function setVaultContract(address _vault) public onlyAdmin {
         require(vaultContract == address(0), "EquoraDAO: vault already set");
         require(_vault != address(0), "EquoraDAO: invalid vault");
         vaultContract = _vault;
         emit VaultContractSet(_vault);
+    }
+
+    function setTreasuryVault(address _vault) external onlyAdmin {
+        setVaultContract(_vault);
     }
 
     // ─── Migration Setup ───────────────────────────────────────────────────────

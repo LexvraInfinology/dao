@@ -221,8 +221,11 @@ export class BlockchainIndexer {
     }
 
     // 2. Query DAO contract members
-    const rawDao = process.env.NEXT_PUBLIC_DAO_HEX || process.env.NEXT_PUBLIC_DAO_ADDRESS || "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4";
-    const daoHex = (rawDao.startsWith("0x") ? "41" + rawDao.slice(2) : rawDao).toLowerCase();
+    const daoHex = (
+      process.env.NEXT_PUBLIC_DAO_HEX
+        ? (process.env.NEXT_PUBLIC_DAO_HEX.startsWith("0x") ? "41" + process.env.NEXT_PUBLIC_DAO_HEX.slice(2) : process.env.NEXT_PUBLIC_DAO_HEX)
+        : ("41" + config.contracts.dao.slice(2))
+    ).toLowerCase();
 
     const contractRes = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
       method: "POST",

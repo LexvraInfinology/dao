@@ -1,5 +1,4 @@
 import React from 'react';
-import { Poppins } from 'next/font/google';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { LandingMovement } from '@/components/landing/LandingMovement';
@@ -12,12 +11,9 @@ import { LandingFaq } from '@/components/landing/LandingFaq';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const poppins = {
   variable: '--font-poppins',
-  display: 'swap',
-});
+};
 
 export default function HomePage() {
   return (

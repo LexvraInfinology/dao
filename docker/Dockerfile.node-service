@@ -60,12 +60,22 @@ RUN set -eux; \
         cp -R "${package_dir}/dist" "/out/${package_dir}/dist"; \
       fi; \
     done; \
+    if [ -d "packages/database/src/generated" ]; then \
+      mkdir -p /out/packages/database/src; \
+      cp -R packages/database/src/generated /out/packages/database/src/generated; \
+    fi; \
     mkdir -p /out/packages/database; \
     cp -R packages/database/prisma /out/packages/database/prisma; \
-    prisma_client_dir="$(find node_modules -type d -path '*/.prisma/client' -print -quit)"; \
-    test -n "${prisma_client_dir}"; \
+    prisma_client_dir="$(find node_modules -type d -path '*/.prisma/client' -print -quit 2>/dev/null || true)"; \
+    if [ -z "${prisma_client_dir}" ] && [ -d "packages/database/dist/generated/client" ]; then \
+      prisma_client_dir="packages/database/dist/generated/client"; \
+    elif [ -z "${prisma_client_dir}" ] && [ -d "packages/database/src/generated/client" ]; then \
+      prisma_client_dir="packages/database/src/generated/client"; \
+    fi; \
     mkdir -p /out/prisma-client; \
-    cp -R "${prisma_client_dir}/." /out/prisma-client/
+    if [ -n "${prisma_client_dir}" ] && [ -d "${prisma_client_dir}" ]; then \
+      cp -R "${prisma_client_dir}/." /out/prisma-client/; \
+    fi
 
 FROM base AS production-dependencies
 
@@ -77,17 +87,20 @@ COPY --from=builder /out/prisma-client /tmp/prisma-client
 RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
     CI=true pnpm install --prod --filter="${SERVICE_PACKAGE}..." --frozen-lockfile --ignore-scripts
 # Restore the generated Prisma client that was built in the builder stage.
-# Place .prisma/client inside the same node_modules that contains @prisma/client
-# so Node's module resolution finds it immediately.
 RUN set -eux; \
-    prisma_client_dir="$(find /app/node_modules -type d -path '*/@prisma/client' -print -quit)"; \
-    test -n "${prisma_client_dir}" || { echo "ERROR: @prisma/client not found"; exit 1; }; \
-    target_node_modules="$(dirname "$(dirname "${prisma_client_dir}")")"; \
-    mkdir -p "${target_node_modules}/.prisma/client"; \
-    cp -R /tmp/prisma-client/. "${target_node_modules}/.prisma/client/"; \
-    rm -rf /tmp/prisma-client; \
-    echo "Prisma client installed at ${target_node_modules}/.prisma/client"; \
-    ls "${target_node_modules}/.prisma/client/"
+    if [ -d /tmp/prisma-client ] && [ "$(ls -A /tmp/prisma-client 2>/dev/null)" ]; then \
+      for client_dir in $(find /app/node_modules -type d -path '*/@prisma/client' 2>/dev/null || true); do \
+        target_dir="$(dirname "$client_dir")/.prisma/client"; \
+        mkdir -p "$target_dir"; \
+        cp -R /tmp/prisma-client/. "$target_dir/"; \
+        echo "Prisma client installed at $target_dir"; \
+      done; \
+      rm -rf /tmp/prisma-client; \
+    fi; \
+    if [ -d /app/packages/database/dist/generated/client ] && [ ! -d /app/packages/database/src/generated/client ]; then \
+      mkdir -p /app/packages/database/src/generated; \
+      cp -R /app/packages/database/dist/generated/. /app/packages/database/src/generated/; \
+    fi
 
 FROM base AS runtime
 
@@ -98,7 +111,7 @@ ARG SERVICE_PACKAGE
 ARG SERVICE_DIR
 ENV SERVICE_DIR=$SERVICE_DIR
 
-COPY --from=production-dependencies /app/ ./
+COPY --from=production-dependencies --chown=node:node /app/ ./
 
 USER node
 

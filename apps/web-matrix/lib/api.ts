@@ -14,7 +14,7 @@ export function getApiBaseUrl(): string {
       return "http://localhost:4000/api/matrix";
     }
   }
-  return "https://equora-api-rh9d.onrender.com/api/matrix";
+  return "https://api.equorafidao.com/api/matrix";
 }
 
 export const API_BASE_URL = getApiBaseUrl();

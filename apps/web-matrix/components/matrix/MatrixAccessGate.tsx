@@ -469,7 +469,14 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         // Query total on-chain members to detect 1st ID
         const membersCount = await getOnChainTotalMembers().catch(() => 0);
         if (isMounted) setTotalMembers(membersCount);
-        const isFirstId = isRootWallet || membersCount === 0 || daoSeat === 1;
+        // Compute isFirstId using fresh address value from closure
+        const currentAddress = useUserStore.getState().address;
+        const isCurrentRootWallet = Boolean(
+          currentAddress &&
+          (toTrobBase58(currentAddress) === GENESIS_ROOT_MEMBER_BASE58 ||
+            currentAddress.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
+        );
+        const isFirstId = isCurrentRootWallet || membersCount === 0 || daoSeat === 1;
 
         // Purge any testnet or invalid cached sponsor from localStorage
         if (typeof window !== "undefined") {
@@ -631,7 +638,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [address]);
 
   // Auto-Assign Protocol Pools to Genesis Root Member
   useEffect(() => {
@@ -998,7 +1005,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Join Slot 1 On-Chain ($30 USD in native TROB coin)
   const handleActivateSlot1 = async () => {
-    if (!sponsorStatus.isValid || !sponsorAddress) {
+    // For the genesis/1st member, always route to Protocol Vault — bypass sponsor validation
+    const effectiveSponsor = isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress;
+
+    if (!isFirstMember && (!sponsorStatus.isValid || !effectiveSponsor)) {
       toast.error(
         "Invalid Sponsor",
         sponsorStatus.error || "Please provide a valid sponsor referral link or address."
@@ -1016,10 +1026,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         `Confirm $30.00 USD (${trobCoinsRequired} TROB) in TrobSafe wallet...`
       );
 
-      const txHash = await joinSlotOnChain(1, sponsorAddress, address, callValueSun);
+      const txHash = await joinSlotOnChain(1, effectiveSponsor, address, callValueSun);
 
       try {
-        await matrixApi.buySlot(address, 1, txHash, sponsorAddress);
+        await matrixApi.buySlot(address, 1, txHash, effectiveSponsor);
       } catch (apiErr) {
         console.warn("[MatrixGate] Backend sync notice:", apiErr);
       }

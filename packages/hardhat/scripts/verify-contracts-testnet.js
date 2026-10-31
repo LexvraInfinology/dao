@@ -5,14 +5,14 @@ const { execSync } = require("child_process");
 const TESTNET_BACKEND_URL = process.env.TROB_TESTNET_BACKEND || "https://testnet-backend.trobchain.com";
 const OPTIMIZER_RUNS = 200;
 
+const deployedPath = path.resolve(__dirname, "../deployed-trobchain.json");
+const deployed = JSON.parse(fs.readFileSync(deployedPath, "utf8"));
+
 function cleanFlattenedCode(raw) {
-  // Normalize line breaks
   let code = raw.replace(/\r\n/g, "\n");
-  // Remove BOM if any
   if (code.charCodeAt(0) === 0xFEFF) {
     code = code.slice(1);
   }
-  // Keep only the first SPDX license identifier
   let spdxFound = false;
   code = code.replace(/\/\/ SPDX-License-Identifier:[^\n]+/g, (match) => {
     if (!spdxFound) {
@@ -27,42 +27,42 @@ function cleanFlattenedCode(raw) {
 const contractsToVerify = [
   {
     name: "EquoraMatrix",
-    address: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
+    address: deployed.contracts.EquoraMatrix.addressBase58,
     relPath: "contracts/core/EquoraMatrix.sol",
   },
   {
     name: "EquoraRegistry",
-    address: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
+    address: deployed.contracts.EquoraRegistry.addressBase58,
     relPath: "contracts/core/EquoraRegistry.sol",
   },
   {
     name: "EquoraVault",
-    address: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+    address: deployed.contracts.EquoraVault.addressBase58,
     relPath: "contracts/core/EquoraVault.sol",
   },
   {
     name: "EquoraDAOv2",
-    address: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
+    address: deployed.contracts.EquoraDAOv2.addressBase58,
     relPath: "contracts/core/EquoraDAOv2.sol",
   },
   {
     name: "EquoraNFT",
-    address: "TQdoa6Lud3cjnH44b7JFT4kJBGFazEbPro",
+    address: deployed.contracts.EquoraNFT.addressBase58,
     relPath: "contracts/rewards/EquoraNFT.sol",
   },
   {
     name: "EquoraSalaryPool",
-    address: "TTgVZdoBVDkQSw1j62vMsUfZMEpx3Vqcmj",
+    address: deployed.contracts.EquoraSalaryPool.addressBase58,
     relPath: "contracts/pools/EquoraSalaryPool.sol",
   },
   {
     name: "EquoraRewardPool",
-    address: "TBbVrdYQjeJqQGGg19J6SPBCqiqq2btmAH",
+    address: deployed.contracts.EquoraRewardPool.addressBase58,
     relPath: "contracts/pools/EquoraRewardPool.sol",
   },
   {
     name: "EquoraMagicBox",
-    address: "TLGFnvCQeCwJ83KPerHY3fGLFSx5k8WZaA",
+    address: deployed.contracts.EquoraMagicBox.addressBase58,
     relPath: "contracts/pools/EquoraMagicBox.sol",
   },
 ];
@@ -87,7 +87,11 @@ async function verifyContract(item) {
       maxBuffer: 50 * 1024 * 1024,
     });
     flattenedCode = cleanFlattenedCode(raw);
-    const savePath = path.resolve(__dirname, "../contracts-flattened", `${item.name}.sol`);
+    const flattenedDir = path.resolve(__dirname, "../contracts-flattened");
+    if (!fs.existsSync(flattenedDir)) {
+      fs.mkdirSync(flattenedDir, { recursive: true });
+    }
+    const savePath = path.resolve(flattenedDir, `${item.name}.sol`);
     fs.writeFileSync(savePath, flattenedCode, "utf8");
     console.log(`   Saved clean UTF-8 flattened file to ${savePath} (${flattenedCode.length} chars)`);
   } catch (err) {
@@ -128,6 +132,8 @@ async function verifyContract(item) {
 
 async function main() {
   console.log("=== TROBCHAIN TESTNET CONTRACT VERIFICATION ===");
+  console.log(`Deployer: ${deployed.deployer}`);
+  console.log(`Target backend: ${TESTNET_BACKEND_URL}\n`);
   for (const item of contractsToVerify) {
     await verifyContract(item);
   }

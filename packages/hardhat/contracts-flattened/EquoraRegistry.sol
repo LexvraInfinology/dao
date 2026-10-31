@@ -166,8 +166,6 @@ interface IEquoraRegistry {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
-
 /**
  * @title EquoraRegistry
  * @dev Central user registry for Equora.Fi platform.

@@ -203,9 +203,6 @@ interface IEquoraRegistry {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
-
-
 /**
  * @title EquoraVault
  * @dev Central deposit router for the Equora.Fi platform.
@@ -359,8 +356,19 @@ contract EquoraVault is ReentrancyGuard {
         return salaryPool;
     }
 
-    receive() external payable {}
-    fallback() external payable {}
+    receive() external payable {
+        if (msg.value > 0) {
+            _routePoolDepositInternal(msg.value);
+            totalRoutedFromUsers += msg.value;
+        }
+    }
+
+    fallback() external payable {
+        if (msg.value > 0) {
+            _routePoolDepositInternal(msg.value);
+            totalRoutedFromUsers += msg.value;
+        }
+    }
 
     // ─── Primary Entry Point: User Registration ────────────────────────────────
 
@@ -398,43 +406,23 @@ contract EquoraVault is ReentrancyGuard {
     // ─── Matrix Pool Route (P4 / P5 / P14) ────────────────────────────────────
 
     /**
-     * @dev Called by EquoraMatrix when P4, P5, or P14 positions are filled.
-     *      The matrix contract can transfer native TROB (or token) to this vault,
-     *      then this function routes it to the 4 protocol pools.
-     *
-     *      Only callable by the authorized matrixContract address.
+     * @dev Called by EquoraMatrix when P4, P5, or P14 positions are filled, or direct protocol deposit.
+     *      Automatically partitions deposit into 4 pools:
+     *      35% DAO & Ecosystem (instant push to council members)
+     *      40% Leadership Royalty
+     *      10% Magic Blind Box
+     *      15% Level Rewards
      *
      * @param amount  Amount of TROB transferred to this vault by the matrix
      */
     function routePoolDeposit(uint256 amount) external payable nonReentrant {
         if (!initialized) revert NotInitialized();
-        if (msg.sender != matrixContract) revert Unauthorized();
-        require(amount > 0, "EquoraVault: Zero amount");
+        if (msg.sender != matrixContract && matrixContract != address(0)) revert Unauthorized();
+        uint256 totalToRoute = msg.value > 0 ? msg.value : amount;
+        require(totalToRoute > 0, "EquoraVault: Zero amount");
 
-        // TROB is already in this contract (transferred by EquoraMatrix via transfer())
-        _routeToAllPools(amount);
-
-        totalRoutedFromMatrix += amount;
-
-        // Notify MagicBox to add to shared pool
-        try IEquoraMagicBox(magicBoxPool).addToPool((amount * MAGICBOX_BPS) / BPS_BASE) {} catch {}
-        // Notify DAO of 35% pool share deposit
-        uint256 sAmt = (amount * SALARY_BPS)   / BPS_BASE;
-        uint256 mAmt = (amount * MAGICBOX_BPS) / BPS_BASE;
-        uint256 rAmt = (amount * REWARDS_BPS)  / BPS_BASE;
-        uint256 dAmt = amount - sAmt - mAmt - rAmt;
-        try IEquoraDAO(daoPool).receivePoolDeposit(dAmt) {} catch {}
-        try IEquoraRewardPool(rewardsPool).receiveDeposit(rAmt) {} catch {}
-        try IEquoraSalaryPool(salaryPool).receivePoolDeposit(sAmt) {} catch {}
-
-        emit PoolDepositRouted(
-            amount,
-            dAmt,
-            sAmt,
-            mAmt,
-            rAmt,
-            block.timestamp
-        );
+        _routePoolDepositInternal(totalToRoute);
+        totalRoutedFromMatrix += totalToRoute;
     }
 
     // ─── Internal Routing ──────────────────────────────────────────────────────
@@ -455,7 +443,7 @@ contract EquoraVault is ReentrancyGuard {
         _sendToPool(magicBoxPool, magicBoxAmount, "EquoraVault: MagicBox transfer failed");
         _sendToPool(rewardsPool,  rewardsAmount,  "EquoraVault: Rewards transfer failed");
 
-        // Notify DAO of 35% pool share deposit
+        // Notify DAO of 35% pool share deposit (instant push)
         try IEquoraDAO(daoPool).receivePoolDeposit(daoAmount) {} catch {}
         // Notify RewardPool to sync pool balance
         try IEquoraRewardPool(rewardsPool).receiveDeposit(rewardsAmount) {} catch {}
@@ -470,10 +458,13 @@ contract EquoraVault is ReentrancyGuard {
     }
 
     /**
-     * @dev Route pool deposit (from matrix P4/P5/P14) into 4 buckets.
-     *      No user-specific notifications (salary credit, eligibility).
+     * @dev Route pool deposit (from matrix P4/P5/P14 or direct funding) into 4 buckets.
+     *      35% DAO (instant push to active members)
+     *      40% Salary / Royalty
+     *      10% Magic Blind Box
+     *      15% Rank Rewards
      */
-    function _routeToAllPools(uint256 amount) internal {
+    function _routePoolDepositInternal(uint256 amount) internal {
         uint256 salaryAmount   = (amount * SALARY_BPS)   / BPS_BASE;
         uint256 magicBoxAmount = (amount * MAGICBOX_BPS) / BPS_BASE;
         uint256 rewardsAmount  = (amount * REWARDS_BPS)  / BPS_BASE;
@@ -483,12 +474,28 @@ contract EquoraVault is ReentrancyGuard {
         _sendToPool(salaryPool,   salaryAmount,   "EquoraVault: Salary transfer failed");
         _sendToPool(magicBoxPool, magicBoxAmount, "EquoraVault: MagicBox transfer failed");
         _sendToPool(rewardsPool,  rewardsAmount,  "EquoraVault: Rewards transfer failed");
+
+        // Notify pools to sync accounting
+        try IEquoraMagicBox(magicBoxPool).addToPool(magicBoxAmount) {} catch {}
+        try IEquoraDAO(daoPool).receivePoolDeposit(daoAmount) {} catch {}
+        try IEquoraRewardPool(rewardsPool).receiveDeposit(rewardsAmount) {} catch {}
+        try IEquoraSalaryPool(salaryPool).receivePoolDeposit(salaryAmount) {} catch {}
+
+        emit PoolDepositRouted(
+            amount,
+            daoAmount,
+            salaryAmount,
+            magicBoxAmount,
+            rewardsAmount,
+            block.timestamp
+        );
     }
 
     function _sendToPool(address pool, uint256 amount, string memory errMsg) internal {
+        if (amount == 0 || pool == address(0)) return;
         bool ok = false;
         if (address(this).balance >= amount) {
-            (bool sent, ) = payable(pool).call{value: amount}("");
+            (bool sent, ) = payable(pool).call{value: amount, gas: 2500000}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {

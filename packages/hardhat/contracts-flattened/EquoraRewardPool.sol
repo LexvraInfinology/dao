@@ -177,8 +177,6 @@ abstract contract ReentrancyGuard {
 
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
-
-
 /**
  * @title EquoraRewardPool
  * @dev Instant One-Time Level Rewards — triggered on milestone rank achievement.
@@ -234,6 +232,11 @@ contract EquoraRewardPool is ReentrancyGuard {
     uint256 public constant CROWN_REWARD_BPS = 5000;  // 50%
     uint256 public constant BPS_BASE         = 10000;
 
+    // Monthly settlement on the 21st of each month
+    uint256 public constant SETTLEMENT_DAY  = 21;
+    uint256 public constant SECONDS_PER_DAY = 86400;
+    uint256 public constant MIN_INTERVAL    = 28 days;
+
     // ─── State ─────────────────────────────────────────────────────────────────
 
     IERC20  public immutable paymentToken;
@@ -243,20 +246,33 @@ contract EquoraRewardPool is ReentrancyGuard {
 
     uint256 public poolBalance;             // TROB available for milestone rewards
     uint256 public totalDistributed;
+    uint256 public lastSettlementTimestamp;
+    uint256 public settlementRound;
 
     // Per-user milestone reward tracking
     mapping(address => mapping(uint8 => bool))    public rankRewarded;   // user => rank => paid?
     mapping(address => uint256)                   public pendingReward;   // claimable TROB
     mapping(address => uint256)                   public totalRewarded;   // lifetime claimed
 
+    // Monthly cycle achievers arrays (Alpha, Prime, Elite, Crown)
+    address[] public alphaAchievers;
+    address[] public primeAchievers;
+    address[] public eliteAchievers;
+    address[] public crownAchievers;
+
+    mapping(address => mapping(uint8 => bool)) public hasAchievedInCycle;
+
     // ─── Events ────────────────────────────────────────────────────────────────
 
     event PoolDeposit(uint256 amount, uint256 newPoolBalance, uint256 timestamp);
-    event MilestoneRewarded(
-        address indexed user,
-        uint8   indexed rank,
-        uint256 rewardAmount,
-        uint256 poolBalanceBefore,
+    event MilestoneAchieved(address indexed user, uint8 indexed rank, uint256 timestamp);
+    event MonthlyRankRewardsSettled(
+        uint256 indexed round,
+        uint256 totalDistributed,
+        uint256 alphaWinners,
+        uint256 primeWinners,
+        uint256 eliteWinners,
+        uint256 crownWinners,
         uint256 timestamp
     );
     event RewardClaimed(address indexed user, uint256 amount, uint256 timestamp);
@@ -270,6 +286,8 @@ contract EquoraRewardPool is ReentrancyGuard {
     error TransferFailed();
     error InvalidRank();
     error AlreadyRewarded();
+    error TooSoon();
+    error NotSettlementDay();
 
     // ─── Constructor ───────────────────────────────────────────────────────────
 
@@ -280,9 +298,19 @@ contract EquoraRewardPool is ReentrancyGuard {
         vault        = _vault;
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
-    fallback() external payable {}
+    fallback() external payable {
+        if (msg.value > 0) {
+            poolBalance += msg.value;
+            emit PoolDeposit(msg.value, poolBalance, block.timestamp);
+        }
+    }
 
     /**
      * @dev Set the authorized caller (EquoraSalaryPool) for creditMilestoneReward.
@@ -297,62 +325,151 @@ contract EquoraRewardPool is ReentrancyGuard {
 
     // ─── Fund Reception (from EquoraVault) ────────────────────────────────────
 
-    /**
-     * @dev Called implicitly — TROB is transferred to this contract by EquoraVault.
-     *      The poolBalance must be manually synced OR we use a receive/deposit pattern.
-     *      Since vault uses transfer() directly, we track via receiveDeposit().
-     */
-    function receiveDeposit(uint256 amount) external {
-        // Anyone can call this to sync the pool balance, but TROB must already
-        // be transferred to this contract. Vault calls this after each transfer.
-        // In practice, poolBalance is tracked by reading token balance.
-        // For simplicity: vault transfers, then calls this to update accounting.
-        poolBalance += amount;
-        emit PoolDeposit(amount, poolBalance, block.timestamp);
+    function receiveDeposit(uint256 amount) external payable {
+        uint256 toAdd = msg.value > 0 ? msg.value : amount;
+        poolBalance += toAdd;
+        emit PoolDeposit(toAdd, poolBalance, block.timestamp);
     }
 
-    // ─── Milestone Reward (called by EquoraSalaryPool) ────────────────────────
+    // ─── Milestone Registration (called by EquoraSalaryPool) ──────────────────
 
     /**
-     * @dev Credit a one-time milestone reward to a user when they achieve a new rank.
-     *      Called by EquoraSalaryPool when a user crosses a rank threshold.
-     *
-     *      Reward amounts (% of current pool balance at time of achievement):
-     *        Alpha → 10%  of poolBalance
-     *        Prime → 15%  of poolBalance
-     *        Elite → 25%  of poolBalance
-     *        Crown → 50%  of poolBalance
-     *
-     * @param user  The user who achieved the rank
-     * @param rank  The rank achieved (1=Alpha, 2=Prime, 3=Elite, 4=Crown)
+     * @dev Registers a user who achieved a new rank into the current monthly cycle.
+     *      Instead of draining the pool immediately for the first achiever, all achievers
+     *      who hit the rank in the cycle are pooled together to receive an equal, fair
+     *      distribution on the 21st of the month!
      */
     function creditMilestoneReward(address user, uint8 rank) external {
         if (msg.sender != authorizedCaller) revert OnlyAuthorized();
         if (rank < RANK_ALPHA || rank > RANK_CROWN) revert InvalidRank();
-        if (rankRewarded[user][rank]) return; // Silently skip if already rewarded (no revert)
+        if (rankRewarded[user][rank] || hasAchievedInCycle[user][rank]) return;
 
-        // Mark as rewarded before calculating (prevent reentrancy edge case)
-        rankRewarded[user][rank] = true;
+        hasAchievedInCycle[user][rank] = true;
+        if      (rank == RANK_ALPHA) alphaAchievers.push(user);
+        else if (rank == RANK_PRIME) primeAchievers.push(user);
+        else if (rank == RANK_ELITE) eliteAchievers.push(user);
+        else if (rank == RANK_CROWN) crownAchievers.push(user);
 
-        if (poolBalance == 0) return; // Pool empty — no reward this time
+        emit MilestoneAchieved(user, rank, block.timestamp);
+    }
 
-        uint256 rewardBps;
-        if      (rank == RANK_ALPHA) rewardBps = ALPHA_REWARD_BPS;
-        else if (rank == RANK_PRIME) rewardBps = PRIME_REWARD_BPS;
-        else if (rank == RANK_ELITE) rewardBps = ELITE_REWARD_BPS;
-        else if (rank == RANK_CROWN) rewardBps = CROWN_REWARD_BPS;
+    // ─── Monthly 21st Settlement ───────────────────────────────────────────────
 
-        uint256 balanceBefore = poolBalance;
-        uint256 reward        = (poolBalance * rewardBps) / BPS_BASE;
+    /**
+     * @dev Settle rank rewards on or after the 21st of every month.
+     *      Distributes 10% Alpha, 15% Prime, 25% Elite, 50% Crown equally among
+     *      all achievers of that rank. Any tier with 0 achievers rolls over safely.
+     */
+    function settleMonthlyRankRewards() external nonReentrant returns (uint256 totalRoundDistributed) {
+        if (lastSettlementTimestamp > 0) {
+            if (block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) revert TooSoon();
+        }
+        uint256 day = _getDayOfMonth(block.timestamp);
+        if (day < SETTLEMENT_DAY) revert NotSettlementDay();
 
-        if (reward > poolBalance) reward = poolBalance; // safety cap
-        if (reward == 0) return;
+        uint256 currentBal = poolBalance;
+        if (address(this).balance > currentBal) {
+            currentBal = address(this).balance;
+            poolBalance = currentBal;
+        }
+        if (currentBal == 0) return 0;
 
-        poolBalance      -= reward;
-        totalDistributed += reward;
-        pendingReward[user] += reward;
+        uint256 distributed = 0;
 
-        emit MilestoneRewarded(user, rank, reward, balanceBefore, block.timestamp);
+        // Alpha (10%)
+        if (alphaAchievers.length > 0) {
+            uint256 alphaPool = (currentBal * ALPHA_REWARD_BPS) / BPS_BASE;
+            uint256 perWinner = alphaPool / alphaAchievers.length;
+            if (perWinner > 0) {
+                for (uint256 i = 0; i < alphaAchievers.length; i++) {
+                    address w = alphaAchievers[i];
+                    rankRewarded[w][RANK_ALPHA] = true;
+                    pendingReward[w] += perWinner;
+                    distributed += perWinner;
+                }
+            }
+        }
+
+        // Prime (15%)
+        if (primeAchievers.length > 0) {
+            uint256 primePool = (currentBal * PRIME_REWARD_BPS) / BPS_BASE;
+            uint256 perWinner = primePool / primeAchievers.length;
+            if (perWinner > 0) {
+                for (uint256 i = 0; i < primeAchievers.length; i++) {
+                    address w = primeAchievers[i];
+                    rankRewarded[w][RANK_PRIME] = true;
+                    pendingReward[w] += perWinner;
+                    distributed += perWinner;
+                }
+            }
+        }
+
+        // Elite (25%)
+        if (eliteAchievers.length > 0) {
+            uint256 elitePool = (currentBal * ELITE_REWARD_BPS) / BPS_BASE;
+            uint256 perWinner = elitePool / eliteAchievers.length;
+            if (perWinner > 0) {
+                for (uint256 i = 0; i < eliteAchievers.length; i++) {
+                    address w = eliteAchievers[i];
+                    rankRewarded[w][RANK_ELITE] = true;
+                    pendingReward[w] += perWinner;
+                    distributed += perWinner;
+                }
+            }
+        }
+
+        // Crown (50%)
+        if (crownAchievers.length > 0) {
+            uint256 crownPool = (currentBal * CROWN_REWARD_BPS) / BPS_BASE;
+            uint256 perWinner = crownPool / crownAchievers.length;
+            if (perWinner > 0) {
+                for (uint256 i = 0; i < crownAchievers.length; i++) {
+                    address w = crownAchievers[i];
+                    rankRewarded[w][RANK_CROWN] = true;
+                    pendingReward[w] += perWinner;
+                    distributed += perWinner;
+                }
+            }
+        }
+
+        if (distributed > poolBalance) poolBalance = 0;
+        else poolBalance -= distributed;
+
+        totalDistributed += distributed;
+        settlementRound++;
+        lastSettlementTimestamp = block.timestamp;
+
+        emit MonthlyRankRewardsSettled(
+            settlementRound,
+            distributed,
+            alphaAchievers.length,
+            primeAchievers.length,
+            eliteAchievers.length,
+            crownAchievers.length,
+            block.timestamp
+        );
+
+        // Clear achiever lists for next month
+        delete alphaAchievers;
+        delete primeAchievers;
+        delete eliteAchievers;
+        delete crownAchievers;
+
+        return distributed;
+    }
+
+    /**
+     * @dev Calculate UTC day-of-month from Unix timestamp (Gregorian calendar).
+     */
+    function _getDayOfMonth(uint256 timestamp) internal pure returns (uint256) {
+        uint256 z   = timestamp / SECONDS_PER_DAY + 719468;
+        uint256 era = z / 146097;
+        uint256 doe = z - era * 146097;
+        uint256 yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        uint256 doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        uint256 mp  = (5 * doy + 2) / 153;
+        uint256 d   = doy - (153 * mp + 2) / 5 + 1;
+        return d;
     }
 
     // ─── User Claim ────────────────────────────────────────────────────────────
@@ -388,24 +505,29 @@ contract EquoraRewardPool is ReentrancyGuard {
         return pendingReward[user];
     }
 
-    /**
-     * @dev Preview how much a user would receive if they hit a rank right now.
-     */
-    function previewMilestoneReward(uint8 rank) external view returns (uint256 reward) {
-        if (rank < RANK_ALPHA || rank > RANK_CROWN || poolBalance == 0) return 0;
-
-        uint256 rewardBps;
-        if      (rank == RANK_ALPHA) rewardBps = ALPHA_REWARD_BPS;
-        else if (rank == RANK_PRIME) rewardBps = PRIME_REWARD_BPS;
-        else if (rank == RANK_ELITE) rewardBps = ELITE_REWARD_BPS;
-        else if (rank == RANK_CROWN) rewardBps = CROWN_REWARD_BPS;
-
-        return (poolBalance * rewardBps) / BPS_BASE;
+    function isSettlementOpen() external view returns (bool) {
+        if (lastSettlementTimestamp > 0 && block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) {
+            return false;
+        }
+        return _getDayOfMonth(block.timestamp) >= SETTLEMENT_DAY;
     }
 
-    /**
-     * @dev Returns a user's reward claim status for all 4 ranks.
-     */
+    function getAchieversCount(uint8 rank) external view returns (uint256) {
+        if      (rank == RANK_ALPHA) return alphaAchievers.length;
+        else if (rank == RANK_PRIME) return primeAchievers.length;
+        else if (rank == RANK_ELITE) return eliteAchievers.length;
+        else if (rank == RANK_CROWN) return crownAchievers.length;
+        return 0;
+    }
+
+    function getCurrentCycleAchievers(uint8 rank) external view returns (address[] memory) {
+        if      (rank == RANK_ALPHA) return alphaAchievers;
+        else if (rank == RANK_PRIME) return primeAchievers;
+        else if (rank == RANK_ELITE) return eliteAchievers;
+        else if (rank == RANK_CROWN) return crownAchievers;
+        return new address[](0);
+    }
+
     function getUserRewardStatus(address user) external view returns (
         bool alphaRewarded,
         bool primeRewarded,

@@ -1461,10 +1461,34 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
       }
     }
 
-    // Method 4: TronWeb transactionBuilder fallback
+    // Method 4: TronWeb contract().at() fallback
     const tw = trob.trx ? trob : (w.tronWeb || w.trobWeb || trob);
+    if (tw && typeof tw.contract === "function") {
+      try {
+        const funcName = opts.functionSelector.replace(/\(.*$/, "");
+        const contractInstance = await tw.contract().at(contractBase58);
+        if (typeof contractInstance[funcName] === "function") {
+          const args = opts.evmArgs || [];
+          const sendRes = await contractInstance[funcName](...args).send({
+            feeLimit: feeLimitSun,
+            callValue: callValueSun,
+          });
+          const txid = typeof sendRes === "string" ? sendRes : (sendRes?.txid || sendRes?.transaction?.txID);
+          if (txid) return String(txid);
+        }
+      } catch (err: any) {
+        console.warn("[contracts] contract().at() error:", err);
+      }
+    }
+
+    // Method 5: TronWeb transactionBuilder fallback
     if (tw?.transactionBuilder && typeof tw.transactionBuilder.triggerSmartContract === "function") {
       try {
+        const types = (opts.functionSelector.match(/\((.*)\)/)?.[1] || "").split(",").filter(Boolean);
+        const parameters = (opts.evmArgs || []).map((val: any, idx: number) => ({
+          type: types[idx] || (typeof val === "number" ? "uint256" : "address"),
+          value: val,
+        }));
         const tx = await tw.transactionBuilder.triggerSmartContract(
           contractBase58,
           opts.functionSelector,
@@ -1472,7 +1496,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
             feeLimit: feeLimitSun,
             callValue: callValueSun,
           },
-          [],
+          parameters,
           ownerBase58
         );
         if (tx && tx.result && tx.transaction) {
@@ -1483,24 +1507,6 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
         }
       } catch (err: any) {
         console.warn("[contracts] transactionBuilder error:", err);
-      }
-    }
-
-    // Method 5: TronWeb contract().at() fallback
-    if (tw && typeof tw.contract === "function") {
-      try {
-        const funcName = opts.functionSelector.replace(/\(.*$/, "");
-        const contractInstance = await tw.contract().at(contractBase58);
-        if (typeof contractInstance[funcName] === "function" && opts.evmArgs) {
-          const sendRes = await contractInstance[funcName](...opts.evmArgs).send({
-            feeLimit: feeLimitSun,
-            callValue: callValueSun,
-          });
-          const txid = typeof sendRes === "string" ? sendRes : (sendRes?.txid || sendRes?.transaction?.txID);
-          if (txid) return String(txid);
-        }
-      } catch (err: any) {
-        console.warn("[contracts] contract().at() error:", err);
       }
     }
   }
@@ -1585,12 +1591,20 @@ export async function approveTokenOnChain(
  * sponsorship or recipient role and is strictly excluded.
  */
 export async function getOnChainGenesisSponsor(): Promise<string> {
-  const DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
+  const MAINNET_DEPLOYER_BASE58 = "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8";
+  const MAINNET_DEPLOYER_HEX = "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202";
+  const TESTNET_DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
+  const TESTNET_DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
 
   // Check custom env sponsor if defined and not deployer
   const configured = (process.env.NEXT_PUBLIC_GENESIS_ROOT_SPONSOR || "").trim();
-  if (configured && configured !== DEPLOYER_BASE58 && configured.toLowerCase() !== DEPLOYER_HEX) {
+  if (
+    configured &&
+    configured !== MAINNET_DEPLOYER_BASE58 &&
+    configured.toLowerCase() !== MAINNET_DEPLOYER_HEX &&
+    configured !== TESTNET_DEPLOYER_BASE58 &&
+    configured.toLowerCase() !== TESTNET_DEPLOYER_HEX
+  ) {
     return configured;
   }
 
@@ -1856,8 +1870,10 @@ export async function joinSlotOnChain(
   userAddress?: string,
   callValueSun?: number
 ): Promise<string> {
-  const DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
+  const MAINNET_DEPLOYER_BASE58 = "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8";
+  const MAINNET_DEPLOYER_HEX = "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202";
+  const TESTNET_DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
+  const TESTNET_DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
 
   let targetSponsor = (sponsorAddress || "").trim();
 
@@ -1873,8 +1889,10 @@ export async function joinSlotOnChain(
     !targetSponsor ||
     targetSponsor === "0x0000000000000000000000000000000000000000" ||
     targetSponsor === "410000000000000000000000000000000000000000" ||
-    targetSponsor === DEPLOYER_BASE58 ||
-    targetSponsor.toLowerCase() === DEPLOYER_HEX
+    targetSponsor === MAINNET_DEPLOYER_BASE58 ||
+    targetSponsor.toLowerCase() === MAINNET_DEPLOYER_HEX ||
+    targetSponsor === TESTNET_DEPLOYER_BASE58 ||
+    targetSponsor.toLowerCase() === TESTNET_DEPLOYER_HEX
   ) {
     targetSponsor = await getOnChainGenesisSponsor();
   }

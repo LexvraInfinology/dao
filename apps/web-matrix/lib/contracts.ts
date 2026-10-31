@@ -17,6 +17,18 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
 
 export const MAINNET_DEFAULT_ADDRESSES = {
+  matrix: "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
+  token: "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
+  registry: "TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy",
+  vault: "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
+  salaryPool: "TXXmRwhJzgRPUAvoaubv9YzaPgz7s2Z8Tt",
+  rewardPool: "TKPZHWtjdDvTbfsPNYiFMDhMEbxLt5hgmG",
+  magicBoxPool: "TA1ofz1R4c568t8kPQJfiP4xJ7axypX3s7",
+  dao: "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
+  nft: "TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz",
+};
+
+export const TESTNET_DEFAULT_ADDRESSES = {
   matrix: "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
   token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
   registry: "TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y",
@@ -28,113 +40,44 @@ export const MAINNET_DEFAULT_ADDRESSES = {
   nft: "TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm",
 };
 
-export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
-  token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
-  registry: "THKuZfqxFFWiur116fDJfU4goDiSFA2Nkk",
-  vault: "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
-  salaryPool: "TTgVZdoBVDkQSw1j62vMsUfZMEpx3Vqcmj",
-  rewardPool: "TBbVrdYQjeJqQGGg19J6SPBCqiqq2btmAH",
-  magicBoxPool: "TLGFnvCQeCwJ83KPerHY3fGLFSx5k8WZaA",
-  dao: "TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp",
-  nft: "TQdoa6Lud3cjnH44b7JFT4kJBGFazEbPro",
-};
-
 // Strict Network-Guarded Address Resolver
 // Prevents accidental leak of testnet contract addresses into mainnet production, and vice versa
 export const CONTRACT_ADDRESSES = {
   matrix: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS ||
-        (process.env.NEXT_PUBLIC_MATRIX_ADDRESS &&
-        process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.matrix
-          ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.matrix)
-    : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS ||
-        (process.env.NEXT_PUBLIC_MATRIX_ADDRESS &&
-        process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.matrix
-          ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
-          : null) ||
-        TESTNET_DEFAULT_ADDRESSES.matrix),
+    ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix)
+    : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.matrix),
 
   token: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS ||
-        (process.env.NEXT_PUBLIC_TOKEN_ADDRESS &&
-        process.env.NEXT_PUBLIC_TOKEN_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.token
-          ? process.env.NEXT_PUBLIC_TOKEN_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.token)
-    : (process.env.NEXT_PUBLIC_TESTNET_TOKEN_ADDRESS ||
-        process.env.NEXT_PUBLIC_TOKEN_ADDRESS ||
-        TESTNET_DEFAULT_ADDRESSES.token),
+    ? (process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token)
+    : (process.env.NEXT_PUBLIC_TESTNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || TESTNET_DEFAULT_ADDRESSES.token),
 
   registry: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS ||
-        (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS &&
-        process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.registry
-          ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.registry)
-    : (process.env.NEXT_PUBLIC_TESTNET_REGISTRY_ADDRESS ||
-        (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS &&
-        process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.registry
-          ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
-          : null) ||
-        TESTNET_DEFAULT_ADDRESSES.registry),
+    ? (process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry)
+    : (process.env.NEXT_PUBLIC_TESTNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || TESTNET_DEFAULT_ADDRESSES.registry),
 
   vault: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS ||
-        (process.env.NEXT_PUBLIC_VAULT_ADDRESS &&
-        process.env.NEXT_PUBLIC_VAULT_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.vault
-          ? process.env.NEXT_PUBLIC_VAULT_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.vault)
-    : (process.env.NEXT_PUBLIC_TESTNET_VAULT_ADDRESS ||
-        (process.env.NEXT_PUBLIC_VAULT_ADDRESS &&
-        process.env.NEXT_PUBLIC_VAULT_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.vault
-          ? process.env.NEXT_PUBLIC_VAULT_ADDRESS
-          : null) ||
-        TESTNET_DEFAULT_ADDRESSES.vault),
+    ? (process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault)
+    : (process.env.NEXT_PUBLIC_TESTNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || TESTNET_DEFAULT_ADDRESSES.vault),
 
   salaryPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.salaryPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_SALARY_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.salaryPool),
+    ? (process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool)
+    : (process.env.NEXT_PUBLIC_TESTNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.salaryPool),
 
   rewardPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.rewardPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_REWARD_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.rewardPool),
+    ? (process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool)
+    : (process.env.NEXT_PUBLIC_TESTNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.rewardPool),
 
   magicBoxPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.magicBoxPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_MAGIC_BOX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.magicBoxPool),
+    ? (process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool)
+    : (process.env.NEXT_PUBLIC_TESTNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.magicBoxPool),
 
   dao: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS ||
-        (process.env.NEXT_PUBLIC_DAO_ADDRESS &&
-        process.env.NEXT_PUBLIC_DAO_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.dao
-          ? process.env.NEXT_PUBLIC_DAO_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.dao)
-    : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS ||
-        (process.env.NEXT_PUBLIC_DAO_ADDRESS &&
-        process.env.NEXT_PUBLIC_DAO_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.dao
-          ? process.env.NEXT_PUBLIC_DAO_ADDRESS
-          : null) ||
-        TESTNET_DEFAULT_ADDRESSES.dao),
+    ? (process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao)
+    : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || TESTNET_DEFAULT_ADDRESSES.dao),
 
   nft: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS ||
-        (process.env.NEXT_PUBLIC_NFT_ADDRESS &&
-        process.env.NEXT_PUBLIC_NFT_ADDRESS !== TESTNET_DEFAULT_ADDRESSES.nft
-          ? process.env.NEXT_PUBLIC_NFT_ADDRESS
-          : null) ||
-        MAINNET_DEFAULT_ADDRESSES.nft)
-    : (process.env.NEXT_PUBLIC_TESTNET_NFT_ADDRESS ||
-        (process.env.NEXT_PUBLIC_NFT_ADDRESS &&
-        process.env.NEXT_PUBLIC_NFT_ADDRESS !== MAINNET_DEFAULT_ADDRESSES.nft
-          ? process.env.NEXT_PUBLIC_NFT_ADDRESS
-          : null) ||
-        TESTNET_DEFAULT_ADDRESSES.nft),
+    ? (process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft)
+    : (process.env.NEXT_PUBLIC_TESTNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || TESTNET_DEFAULT_ADDRESSES.nft),
 };
 
 // ── Domain & Routing Configuration ──────────────────────────────────────────

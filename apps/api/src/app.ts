@@ -112,7 +112,20 @@ export function createApp(): Express {
       host,
       port: config.port || 4000,
       baseUrl: `${proto}://${host}`,
+      platforms: {
+        dao: {
+          name: "EQUORA Genesis DAO",
+          baseUrl: `${proto}://${host}/api/dao`,
+          status: "operational",
+        },
+        matrix: {
+          name: "EQUORA Matrix Protocol",
+          baseUrl: `${proto}://${host}/api/matrix`,
+          status: "operational",
+        },
+      },
       endpoints: {
+        // DAO Platform
         dao: `${proto}://${host}/api/dao`,
         stats: `${proto}://${host}/api/dao/stats`,
         members: `${proto}://${host}/api/dao/members`,
@@ -137,6 +150,24 @@ export function createApp(): Express {
         authNonce: `${proto}://${host}/api/auth/nonce`,
         authVerify: `${proto}://${host}/api/auth/verify`,
         authSession: `${proto}://${host}/api/auth/session`,
+
+        // Matrix Platform
+        matrix: `${proto}://${host}/api/matrix`,
+        matrixProfile: `${proto}://${host}/api/matrix/profile/:address`,
+        matrixDashboard: `${proto}://${host}/api/matrix/dashboard/:address`,
+        matrixSlots: `${proto}://${host}/api/matrix/slots/:address`,
+        matrixSlotDetails: `${proto}://${host}/api/matrix/slots/:address/:slotNumber`,
+        matrixBuySlot: `${proto}://${host}/api/matrix/slots/buy`,
+        matrixDirects: `${proto}://${host}/api/matrix/directs/:address`,
+        matrixLeaderboard: `${proto}://${host}/api/matrix/leaderboard`,
+        matrixUserRank: `${proto}://${host}/api/matrix/leaderboard/rank/:address`,
+        matrixTransactions: `${proto}://${host}/api/matrix/transactions/:address`,
+        matrixEarnings: `${proto}://${host}/api/matrix/earnings/:address`,
+        matrixWithdraw: `${proto}://${host}/api/matrix/withdraw`,
+        matrixSettings: `${proto}://${host}/api/matrix/settings/:address`,
+        matrixStats: `${proto}://${host}/api/matrix/stats`,
+        matrixRegister: `${proto}://${host}/api/matrix/user/register`,
+
         health: `${proto}://${host}/health`,
         trpc: `${proto}://${host}/trpc`,
       },
@@ -152,6 +183,10 @@ export function createApp(): Express {
       protocol: proto,
       httpsAvailable: true,
       timestamp: new Date().toISOString(),
+      platforms: {
+        dao: "operational",
+        matrix: "operational",
+      },
       chainId: config.blockchain.chainId,
     });
   });

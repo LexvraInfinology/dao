@@ -3,6 +3,52 @@ import { matrixService } from "@equora/services";
 
 export const matrixRouter = Router();
 
+// ── ROOT DISCOVERY & STATS ──────────────────────────────────────────────────
+
+/**
+ * GET /api/matrix
+ * Root status and discovery of Matrix protocol endpoints
+ */
+matrixRouter.get("/", (req: Request, res: Response) => {
+  const proto = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
+  const host = req.get("host") || "api.equorafidao.com";
+  res.json({
+    success: true,
+    message: "EQUORA Matrix Protocol API is up and running...",
+    platform: "Equora Matrix (12-Slot Binary/Ternary Forced Matrix)",
+    status: "operational",
+    endpoints: {
+      profile: `${proto}://${host}/api/matrix/profile/:address`,
+      dashboard: `${proto}://${host}/api/matrix/dashboard/:address`,
+      slots: `${proto}://${host}/api/matrix/slots/:address`,
+      slotDetails: `${proto}://${host}/api/matrix/slots/:address/:slotNumber`,
+      buySlot: `${proto}://${host}/api/matrix/slots/buy`,
+      directs: `${proto}://${host}/api/matrix/directs/:address`,
+      leaderboard: `${proto}://${host}/api/matrix/leaderboard`,
+      userRank: `${proto}://${host}/api/matrix/leaderboard/rank/:address`,
+      transactions: `${proto}://${host}/api/matrix/transactions/:address`,
+      earnings: `${proto}://${host}/api/matrix/earnings/:address`,
+      withdraw: `${proto}://${host}/api/matrix/withdraw`,
+      settings: `${proto}://${host}/api/matrix/settings/:address`,
+      stats: `${proto}://${host}/api/matrix/stats`,
+      register: `${proto}://${host}/api/matrix/user/register`,
+    },
+  });
+});
+
+/**
+ * GET /api/matrix/stats
+ * Global Matrix statistics (total members, total placements, total recycled, protocol pools)
+ */
+matrixRouter.get("/stats", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await matrixService.getMatrixStats();
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── USER & PROFILE ──────────────────────────────────────────────────────────
 
 /**

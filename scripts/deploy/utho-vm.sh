@@ -19,6 +19,30 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+# Auto-heal .env formatting on VM: fix any wrapped comma lines or malformed CORS_ORIGIN
+cp .env .env.pre-deploy.bak
+sed -i 's/\r$//' .env 2>/dev/null || true
+sed -i ':a;N;$!ba;s/\n[[:space:]]*,/,/g' .env 2>/dev/null || true
+sed -i -E 's/^CORS_ORIGIN=([^"].*)$/CORS_ORIGIN="\1"/' .env 2>/dev/null || true
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c "
+import re
+with open('.env', 'r', encoding='utf-8', errors='ignore') as f:
+    text = f.read().replace('\r', '')
+text = re.sub(r'\n\s*,', ',', text)
+lines = []
+for line in text.split('\n'):
+    m = re.match(r'^(CORS_ORIGIN)=(.*)$', line)
+    if m:
+        val = m.group(2).strip().strip('\"').strip('\'')
+        lines.append(f'{m.group(1)}=\"{val}\"')
+    else:
+        lines.append(line)
+with open('.env', 'w', encoding='utf-8') as f:
+    f.write('\n'.join(lines))
+" 2>/dev/null || true
+fi
+
 command -v git >/dev/null 2>&1 || { echo 'Deployment failed: git is not installed.'; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo 'Deployment failed: docker is not installed.'; exit 1; }
 docker info >/dev/null 2>&1 || {

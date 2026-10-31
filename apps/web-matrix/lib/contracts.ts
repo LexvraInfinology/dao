@@ -30,11 +30,24 @@ export const MAINNET_DEFAULT_ADDRESSES = {
 // Genesis Root Matrix Member (#0001) on TrobChain Mainnet
 export const GENESIS_ROOT_MEMBER_BASE58 = "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa";
 export const GENESIS_ROOT_MEMBER_HEX = "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
+const rawMatrixEnv = process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS;
+const rawVaultEnv = process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS;
+
+const OUTDATED_DISCARD_ADDRESSES = [
+  "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
+  "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
+  "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
+  "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
+  "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
+  "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
+  "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+];
+
 export const CONTRACT_ADDRESSES = {
-  matrix: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
+  matrix: (rawMatrixEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawMatrixEnv)) ? rawMatrixEnv : MAINNET_DEFAULT_ADDRESSES.matrix,
   token: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
   registry: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
-  vault: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault,
+  vault: (rawVaultEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawVaultEnv)) ? rawVaultEnv : MAINNET_DEFAULT_ADDRESSES.vault,
   salaryPool: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
   rewardPool: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
   magicBoxPool: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
@@ -251,7 +264,7 @@ export async function queryTrobConstant(
   };
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
+  const timer = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(`${ACTIVE_RPC_URL}/wallet/triggersmartcontract`, {
@@ -265,11 +278,18 @@ export async function queryTrobConstant(
     if (data.result && data.result.result && data.constant_result?.length > 0) {
       return data.constant_result[0];
     }
-    throw new Error(
-      data.result?.message
-        ? Buffer.from(data.result.message, "hex").toString()
-        : "Failed to read contract"
-    );
+    const errText = data.result?.message
+      ? Buffer.from(data.result.message, "hex").toString()
+      : "Failed to read contract";
+    if (errText.includes("No contract") || errText.includes("REVERT")) {
+      return "";
+    }
+    throw new Error(errText);
+  } catch (err: any) {
+    if (err.name === "AbortError" || err.message?.includes("aborted")) {
+      return "";
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -1241,12 +1261,30 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     return false;
   }
 
+  // Genesis Root Member is always registered by definition
+  const b58 = toTrobBase58(userAddress);
+  const hex = toHexAddress(userAddress).toLowerCase();
+  const isRoot =
+    b58 === GENESIS_ROOT_MEMBER_BASE58 ||
+    hex === GENESIS_ROOT_MEMBER_HEX.toLowerCase();
+
+  if (isRoot) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
+      localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
+      localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
+    }
+    return true;
+  }
+
   // Authoritative on-chain Slot 1 status in EquoraMatrix contract
   try {
     const slot1 = await getOnChainSlotStatus(userAddress, 1);
     if (slot1 && slot1.isUnlocked) {
       if (typeof window !== "undefined") {
         localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
+        localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
+        localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
       }
       return true;
     }
@@ -1254,10 +1292,17 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     console.warn("[isUserRegisteredInMatrix] Slot 1 check notice:", err);
   }
 
-  // If user does not have Slot 1 unlocked on-chain, purge false local cache!
+  // Fallback: check localStorage cache
   if (typeof window !== "undefined") {
-    localStorage.removeItem(`equora_matrix_registered_${clean}`);
+    const cached =
+      localStorage.getItem(`equora_matrix_registered_${clean}`) === "true" ||
+      localStorage.getItem(`equora_matrix_registered_${b58.toLowerCase()}`) === "true" ||
+      localStorage.getItem(`equora_matrix_registered_${hex}`) === "true";
+    if (cached) {
+      return true;
+    }
   }
+
   return false;
 }
 

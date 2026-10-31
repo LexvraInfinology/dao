@@ -223,6 +223,24 @@ for crit_key, def_val in critical_defaults.items():
 if "DATABASE_URL" in key_map and "@postgres:5432" in key_map["DATABASE_URL"]:
     key_map["DATABASE_URL"] = "postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
+# Strictly overwrite any outdated legacy or testnet addresses in production .env
+outdated_matrix_addrs = [
+    "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
+    "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
+    "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
+    "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
+]
+if key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS") in outdated_matrix_addrs or not key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS"):
+    key_map["NEXT_PUBLIC_MATRIX_ADDRESS"] = "TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi"
+
+outdated_vault_addrs = [
+    "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
+    "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
+    "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+]
+if key_map.get("NEXT_PUBLIC_VAULT_ADDRESS") in outdated_vault_addrs or not key_map.get("NEXT_PUBLIC_VAULT_ADDRESS"):
+    key_map["NEXT_PUBLIC_VAULT_ADDRESS"] = "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw"
+
 # Strictly enforce host ports matching Nginx reverse proxy architecture (DAO: 3000, Matrix: 3001, API: 4000)
 key_map["WEB_PORT"] = "3000"
 key_map["MATRIX_WEB_PORT"] = "3001"

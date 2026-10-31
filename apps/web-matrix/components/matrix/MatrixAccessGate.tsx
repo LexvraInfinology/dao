@@ -696,12 +696,21 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       tryAutoConnect();
     };
 
-    // Direct inpage bridge broadcast listener
+    // Direct inpage bridge broadcast listener (ignoring self-dispatched wakeups to avoid message echo storms)
     const handleInpageMessage = (event: MessageEvent) => {
       if (typeof window === "undefined" || event.source !== window) return;
       const data = event.data;
       if (!data) return;
-      if (data.__trobsafe || data.type?.includes("TROBSAFE")) {
+      if (
+        data.type === "TROBSAFE_CONNECT" ||
+        data.type === "TROBSAFE_REQUEST_ACCOUNTS" ||
+        data.target === "trobsafe-inpage" ||
+        data.target === "trobsafe-contentscript" ||
+        data.target === "trobsafe"
+      ) {
+        return;
+      }
+      if (data.__trobsafeResponse || data.type === "TROBSAFE_READY" || data.type === "TROBSAFE_PROVIDER_INJECTED") {
         onProviderReady();
       }
     };
@@ -757,8 +766,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     setCheckingStatus(true);
     setActionError(null);
 
-    // Fast path: if wallet is already known to be registered, unlock Slot 1 immediately
-    const knownRegistered = await isUserRegisteredInMatrix(address);
+    // Fast path: if wallet is already known to be registered or is root member
+    const knownRegistered = isRootWallet || (await isUserRegisteredInMatrix(address));
     if (knownRegistered) {
       setIsSlot1Unlocked(true);
       setCheckingStatus(false);
@@ -781,6 +790,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 setIsSlot1Unlocked(true);
                 if (typeof window !== "undefined") {
                   localStorage.setItem(`equora_matrix_registered_${address.toLowerCase()}`, "true");
+                }
+                if (isStandaloneGate) {
+                  router.replace("/dashboard");
                 }
               }
             })
@@ -1051,13 +1063,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Redirect handling for standalone gate vs protected route wrapper
   useEffect(() => {
-    if (!checkingStatus) {
-      if (isStandaloneGate && isSlot1Unlocked) {
-        router.replace("/dashboard");
-      } else if (!isStandaloneGate && !isSlot1Unlocked) {
-        const search = typeof window !== "undefined" ? window.location.search : "";
-        router.replace(`/gate${search}`);
-      }
+    if (isStandaloneGate && isSlot1Unlocked) {
+      router.replace("/dashboard");
+    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked) {
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/gate${search}`);
     }
   }, [checkingStatus, isSlot1Unlocked, isStandaloneGate, router]);
 

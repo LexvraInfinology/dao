@@ -19,36 +19,124 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# Robust POSIX awk-based .env sanitization function:
+# Robust environment file sanitization:
 # 1. Joins wrapped lines that begin with a comma (e.g. multiline CORS_ORIGIN)
-# 2. Strips any Windows carriage returns (\r)
-# 3. Comments out any orphaned lines that lack '=' so Docker Compose parser never crashes
+# 2. Strips carriage returns (\r)
+# 3. Ensures CORS_ORIGIN includes port 3000 (equorafidao) and port 3001 (equorafimatrix)
+# 4. Comments out any orphaned lines lacking '='
 sanitize_env() {
   if [ -f .env ]; then
-    cp .env .env.pre-deploy.bak
-    awk '
-    {
-      sub(/\r$/, "");
-      if (/^[ \t]*,/) {
-        prev = prev $0
-      } else {
-        if (NR > 1) print prev;
-        prev = $0
-      }
+    cp .env .env.pre-deploy.bak 2>/dev/null || true
+    echo "=== [sanitize_env] Processing $APP_DIR/.env ==="
+    python3 -c '
+import sys, os, re
+env_file = ".env"
+try:
+    with open(env_file, "r", encoding="utf-8", errors="ignore") as f:
+        raw_text = f.read()
+except Exception as e:
+    print(f"[sanitize_env] Error reading {env_file}: {e}", file=sys.stderr)
+    sys.exit(0)
+
+raw_text = raw_text.replace("\r", "")
+raw_lines = raw_text.split("\n")
+
+merged_lines = []
+for line in raw_lines:
+    stripped = line.strip()
+    if stripped.startswith(",") and merged_lines:
+        prev = merged_lines[-1].rstrip()
+        if prev.endswith(",") or prev.endswith("\\") or (prev.count("\"") % 2 != 0) or (prev.count("\x27") % 2 != 0) or "CORS_ORIGIN" in prev:
+            if prev.endswith("\\"):
+                prev = prev[:-1].rstrip()
+            merged_lines[-1] = prev + stripped
+        else:
+            merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
+    elif (stripped.startswith("\"") or stripped.startswith("\x27")) and stripped.endswith(stripped[0]) and len(stripped) > 1 and "=" not in stripped and merged_lines:
+        if merged_lines[-1].count("\"") % 2 != 0 or merged_lines[-1].count("\x27") % 2 != 0:
+            merged_lines[-1] = merged_lines[-1].rstrip() + stripped
+        else:
+            merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
+    else:
+        merged_lines.append(line)
+
+final_lines = []
+i = 0
+while i < len(merged_lines):
+    line = merged_lines[i]
+    if "=" in line and not line.strip().startswith("#"):
+        k, v = line.split("=", 1)
+        v_strip = v.strip()
+        if (v_strip.startswith("\"") and v_strip.count("\"") % 2 != 0) or (v_strip.startswith("\x27") and v_strip.count("\x27") % 2 != 0):
+            quote_char = v_strip[0]
+            accumulated = [line]
+            i += 1
+            while i < len(merged_lines):
+                next_line = merged_lines[i]
+                accumulated.append(next_line.strip())
+                if quote_char in next_line:
+                    break
+                i += 1
+            line = "".join(accumulated)
+    final_lines.append(line)
+    i += 1
+
+sanitized_lines = []
+for line in final_lines:
+    trimmed = line.strip()
+    if not trimmed or trimmed.startswith("#") or "=" in trimmed:
+        sanitized_lines.append(line)
+    else:
+        sanitized_lines.append("# [FIXED_BY_DEPLOY]: " + line)
+
+required_cors = [
+    "https://equorafidao.com",
+    "https://www.equorafidao.com",
+    "http://equorafidao.com:3000",
+    "https://equorafidao.com:3000",
+    "https://equorafimatrix.com",
+    "https://www.equorafimatrix.com",
+    "http://equorafimatrix.com:3001",
+    "https://equorafimatrix.com:3001",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:4000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:4000"
+]
+
+cors_found = False
+for idx, line in enumerate(sanitized_lines):
+    if re.match(r"^[ \t]*CORS_ORIGIN=", line):
+        cors_found = True
+        val = line.split("=", 1)[1].strip()
+        if val.startswith("\"") and val.endswith("\""):
+            val = val[1:-1]
+        elif val.startswith("\x27") and val.endswith("\x27"):
+            val = val[1:-1]
+        existing = [x.strip() for x in val.split(",") if x.strip()]
+        for req in required_cors:
+            if req not in existing:
+                existing.append(req)
+        sanitized_lines[idx] = f"CORS_ORIGIN=\"{\",\".join(existing)}\""
+        break
+
+if not cors_found:
+    sanitized_lines.append(f"CORS_ORIGIN=\"{\",\".join(required_cors)}\"")
+
+output_text = "\n".join(sanitized_lines) + "\n"
+with open(env_file, "w", encoding="utf-8") as f:
+    f.write(output_text)
+
+print(f"[sanitize_env] Success: {len(sanitized_lines)} lines written.")
+for line in sanitized_lines:
+    if line.startswith("CORS_ORIGIN="):
+        print(f"[sanitize_env] {line[:120]}...")
+' || {
+      echo "[sanitize_env] Python3 fallback to awk..."
+      awk '{ sub(/\r$/, ""); if (/^[ \t]*,/) { prev = prev $0 } else { if (NR > 1) print prev; prev = $0 } } END { if (NR > 0) print prev }' .env | awk '{ trimmed = $0; sub(/^[ \t]+/, "", trimmed); sub(/[ \t]+$/, "", trimmed); if (trimmed == "" || substr(trimmed, 1, 1) == "#" || index(trimmed, "=") > 0) { print $0 } else { print "# [FIXED_BY_DEPLOY]: " $0 } }' > .env.sanitized && mv .env.sanitized .env
     }
-    END { if (NR > 0) print prev }
-    ' .env | awk '
-    {
-      trimmed = $0;
-      sub(/^[ \t]+/, "", trimmed);
-      sub(/[ \t]+$/, "", trimmed);
-      if (trimmed == "" || substr(trimmed, 1, 1) == "#" || index(trimmed, "=") > 0) {
-        print $0
-      } else {
-        print "# [FIXED_BY_DEPLOY]: " $0
-      }
-    }
-    ' > .env.sanitized && mv .env.sanitized .env
   fi
 }
 

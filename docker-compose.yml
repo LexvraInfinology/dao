@@ -55,7 +55,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       SIWE_NONCE_TTL_SECONDS: ${SIWE_NONCE_TTL_SECONDS:-300}
-      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN must be set}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://equorafidao.com,https://www.equorafidao.com,http://equorafidao.com:3000,https://equorafidao.com:3000,https://equorafimatrix.com,https://www.equorafimatrix.com,http://equorafimatrix.com:3001,https://equorafimatrix.com:3001,http://localhost:3000,http://localhost:3001,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4000}
       CHAIN_ID: ${CHAIN_ID:-1000}
       RPC_URL: ${RPC_URL:-https://fullnode-one.trobchain.com}
       FULLNODE_URL: ${FULLNODE_URL:-https://fullnode-one.trobchain.com}

@@ -1410,6 +1410,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
       owner_address: ownerBase58,
       ownerAddress: ownerBase58,
       network: TARGET_NETWORK,
+      visible: true,
     };
 
     // Method 1: TrobSafe native triggersmartcontract
@@ -1419,12 +1420,18 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
         const txid = res?.txid || res?.txID || res?.txHash || (typeof res === "string" ? res : null);
         if (txid) return String(txid);
         if (res && res.result === false) {
-          throw new Error(res.Error || res.message || "Transaction rejected in TrobSafe wallet.");
+          const errMsg = res.Error || res.message || "";
+          if (errMsg.toLowerCase().includes("reject") || errMsg.toLowerCase().includes("cancel")) {
+            throw new Error(errMsg || "Transaction rejected in TrobSafe wallet.");
+          }
+          console.warn("[callTrobContractOnChain] Method 1 returned false result:", errMsg);
         }
       } catch (err: any) {
-        if (!err.message?.includes("is not a function")) {
-          throw new Error(err.message || "TrobSafe transaction rejected.");
+        const msg = (err?.message || "").toLowerCase();
+        if (msg.includes("reject") || msg.includes("cancel") || msg.includes("declined") || msg.includes("denied")) {
+          throw new Error("Transaction rejected by user.");
         }
+        console.warn("[callTrobContractOnChain] Method 1 failed, falling back:", err?.message || err);
       }
     }
 
@@ -1435,9 +1442,11 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
         const txid = res?.txid || res?.txID || res?.txHash || (typeof res === "string" ? res : null);
         if (txid) return String(txid);
       } catch (err: any) {
-        if (!err.message?.includes("is not a function")) {
-          throw new Error(err.message || "TrobSafe transaction rejected.");
+        const msg = (err?.message || "").toLowerCase();
+        if (msg.includes("reject") || msg.includes("cancel") || msg.includes("declined") || msg.includes("denied")) {
+          throw new Error("Transaction rejected by user.");
         }
+        console.warn("[callTrobContractOnChain] Method 2 failed, falling back:", err?.message || err);
       }
     }
 
@@ -1455,9 +1464,11 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
           if (typeof dTxid === "string" && dTxid.length > 10) return dTxid;
         }
       } catch (err: any) {
-        if (!err.message?.includes("unsupported") && !err.message?.includes("method not found")) {
-          throw new Error(err.message || "TrobSafe request rejected.");
+        const msg = (err?.message || "").toLowerCase();
+        if (msg.includes("reject") || msg.includes("cancel") || msg.includes("declined") || msg.includes("denied")) {
+          throw new Error("Transaction rejected by user.");
         }
+        console.warn("[callTrobContractOnChain] Method 3 failed, falling back:", err?.message || err);
       }
     }
 

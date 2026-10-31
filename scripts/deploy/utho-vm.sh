@@ -35,25 +35,28 @@ try:
     with open(env_file, "r", encoding="utf-8", errors="ignore") as f:
         raw_text = f.read()
 except Exception as e:
-    print(f"[sanitize_env] Error reading {env_file}: {e}", file=sys.stderr)
+    print("[sanitize_env] Error reading file:", e, file=sys.stderr)
     sys.exit(0)
 
 raw_text = raw_text.replace("\r", "")
 raw_lines = raw_text.split("\n")
+
+q_double = chr(34)
+q_single = chr(39)
 
 merged_lines = []
 for line in raw_lines:
     stripped = line.strip()
     if stripped.startswith(",") and merged_lines:
         prev = merged_lines[-1].rstrip()
-        if prev.endswith(",") or prev.endswith("\\") or (prev.count("\"") % 2 != 0) or (prev.count("\x27") % 2 != 0) or "CORS_ORIGIN" in prev:
+        if prev.endswith(",") or prev.endswith("\\") or (prev.count(q_double) % 2 != 0) or (prev.count(q_single) % 2 != 0) or "CORS_ORIGIN" in prev:
             if prev.endswith("\\"):
                 prev = prev[:-1].rstrip()
             merged_lines[-1] = prev + stripped
         else:
             merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-    elif (stripped.startswith("\"") or stripped.startswith("\x27")) and stripped.endswith(stripped[0]) and len(stripped) > 1 and "=" not in stripped and merged_lines:
-        if merged_lines[-1].count("\"") % 2 != 0 or merged_lines[-1].count("\x27") % 2 != 0:
+    elif (stripped.startswith(q_double) or stripped.startswith(q_single)) and stripped.endswith(stripped[0]) and len(stripped) > 1 and "=" not in stripped and merged_lines:
+        if merged_lines[-1].count(q_double) % 2 != 0 or merged_lines[-1].count(q_single) % 2 != 0:
             merged_lines[-1] = merged_lines[-1].rstrip() + stripped
         else:
             merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
@@ -67,7 +70,7 @@ while i < len(merged_lines):
     if "=" in line and not line.strip().startswith("#"):
         k, v = line.split("=", 1)
         v_strip = v.strip()
-        if (v_strip.startswith("\"") and v_strip.count("\"") % 2 != 0) or (v_strip.startswith("\x27") and v_strip.count("\x27") % 2 != 0):
+        if (v_strip.startswith(q_double) and v_strip.count(q_double) % 2 != 0) or (v_strip.startswith(q_single) and v_strip.count(q_single) % 2 != 0):
             quote_char = v_strip[0]
             accumulated = [line]
             i += 1
@@ -111,28 +114,30 @@ for idx, line in enumerate(sanitized_lines):
     if re.match(r"^[ \t]*CORS_ORIGIN=", line):
         cors_found = True
         val = line.split("=", 1)[1].strip()
-        if val.startswith("\"") and val.endswith("\""):
+        if val.startswith(q_double) and val.endswith(q_double):
             val = val[1:-1]
-        elif val.startswith("\x27") and val.endswith("\x27"):
+        elif val.startswith(q_single) and val.endswith(q_single):
             val = val[1:-1]
         existing = [x.strip() for x in val.split(",") if x.strip()]
         for req in required_cors:
             if req not in existing:
                 existing.append(req)
-        sanitized_lines[idx] = f"CORS_ORIGIN=\"{\",\".join(existing)}\""
+        existing_str = ",".join(existing)
+        sanitized_lines[idx] = "CORS_ORIGIN=" + q_double + existing_str + q_double
         break
 
 if not cors_found:
-    sanitized_lines.append(f"CORS_ORIGIN=\"{\",\".join(required_cors)}\"")
+    req_str = ",".join(required_cors)
+    sanitized_lines.append("CORS_ORIGIN=" + q_double + req_str + q_double)
 
 output_text = "\n".join(sanitized_lines) + "\n"
 with open(env_file, "w", encoding="utf-8") as f:
     f.write(output_text)
 
-print(f"[sanitize_env] Success: {len(sanitized_lines)} lines written.")
+print("[sanitize_env] Success: " + str(len(sanitized_lines)) + " lines written.")
 for line in sanitized_lines:
     if line.startswith("CORS_ORIGIN="):
-        print(f"[sanitize_env] {line[:120]}...")
+        print("[sanitize_env] " + line[:120] + "...")
 ' || {
       echo "[sanitize_env] Python3 fallback to awk..."
       awk '{ sub(/\r$/, ""); if (/^[ \t]*,/) { prev = prev $0 } else { if (NR > 1) print prev; prev = $0 } } END { if (NR > 0) print prev }' .env | awk '{ trimmed = $0; sub(/^[ \t]+/, "", trimmed); sub(/[ \t]+$/, "", trimmed); if (trimmed == "" || substr(trimmed, 1, 1) == "#" || index(trimmed, "=") > 0) { print $0 } else { print "# [FIXED_BY_DEPLOY]: " $0 } }' > .env.sanitized && mv .env.sanitized .env

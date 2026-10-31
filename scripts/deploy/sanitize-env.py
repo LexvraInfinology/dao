@@ -96,11 +96,13 @@ def sanitize_env_file(filepath):
             for req in required_cors:
                 if req not in existing:
                     existing.append(req)
-            sanitized_lines[idx] = f'CORS_ORIGIN="{",".join(existing)}"'
+            existing_str = ",".join(existing)
+            sanitized_lines[idx] = f'CORS_ORIGIN="{existing_str}"'
             break
 
     if not cors_found:
-        sanitized_lines.append(f'CORS_ORIGIN="{",".join(required_cors)}"')
+        req_str = ",".join(required_cors)
+        sanitized_lines.append(f'CORS_ORIGIN="{req_str}"')
 
     output_text = "\n".join(sanitized_lines) + "\n"
     with open(filepath, "w", encoding="utf-8") as f:

@@ -175,12 +175,13 @@ for entry in parsed_entries:
         key_map[entry["key"]] = val_clean
 
 critical_defaults = {
-    "POSTGRES_USER": "postgres",
+    "POSTGRES_USER": "neondb_owner",
     "POSTGRES_PASSWORD": "npg_1fOkpFHAZx2e",
-    "POSTGRES_DB": "equora_db",
-    "DATABASE_URL": "postgresql://postgres:npg_1fOkpFHAZx2e@postgres:5432/equora_db?schema=public",
-    "REDIS_PASSWORD": "replace_me_redis_password",
-    "JWT_SECRET": "equora_jwt_secret_key_32_characters_long_min"
+    "POSTGRES_DB": "neondb",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable",
+    "REDIS_PASSWORD": "EquoraRedis2026Secure",
+    "JWT_SECRET": "equora_jwt_secret_production_key_32_characters_minimum",
+    "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V"
 }
 
 for crit_key, def_val in critical_defaults.items():
@@ -234,6 +235,7 @@ for l in output_lines:
     }
   fi
 }
+
 sanitize_env
 
 command -v git >/dev/null 2>&1 || { echo 'Deployment failed: git is not installed.'; exit 1; }

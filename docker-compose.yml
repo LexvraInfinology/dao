@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
+      POSTGRES_USER: ${POSTGRES_USER:-neondb_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-npg_1fOkpFHAZx2e}
+      POSTGRES_DB: ${POSTGRES_DB:-neondb}
     volumes:
       - equora_pg_data:/var/lib/postgresql/data
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -22,8 +22,8 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"]
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-EquoraRedis2026Secure}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-EquoraRedis2026Secure}"]
     volumes:
       - equora_redis_data:/data
     healthcheck:
@@ -47,12 +47,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
-      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-EquoraRedis2026Secure}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-EquoraRedis2026Secure}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-equora_jwt_secret_production_key_32_characters_minimum}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       SIWE_NONCE_TTL_SECONDS: ${SIWE_NONCE_TTL_SECONDS:-300}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://equorafidao.com,https://www.equorafidao.com,http://equorafidao.com:3000,https://equorafidao.com:3000,https://equorafimatrix.com,https://www.equorafimatrix.com,http://equorafimatrix.com:3001,https://equorafimatrix.com:3001,http://localhost:3000,http://localhost:3001,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4000}
@@ -92,7 +92,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
       CHAIN_ID: ${CHAIN_ID:-1000}
       RPC_URL: ${RPC_URL:-https://fullnode-one.trobchain.com}
       INDEXER_POLL_INTERVAL_MS: ${INDEXER_POLL_INTERVAL_MS:-3000}
@@ -122,10 +122,10 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-EquoraRedis2026Secure}
       QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-5}
       QUEUE_POLL_INTERVAL_MS: ${QUEUE_POLL_INTERVAL_MS:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-info}

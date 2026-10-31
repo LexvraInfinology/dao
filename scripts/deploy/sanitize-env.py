@@ -105,7 +105,6 @@ def sanitize_env_file(filepath):
             parsed_entries.append({"type": "empty"})
             continue
 
-        # Check orphan single-letter comments created by faulty previous regex runs
         m_orphan = re.match(r"^#\s*\[(?:ORPHAN_LINE_REMOVED|FIXED_BY_DEPLOY)\]:\s*([A-Za-z0-9_])$", t)
         if m_orphan:
             orphan_buf += m_orphan.group(1)
@@ -118,7 +117,6 @@ def sanitize_env_file(filepath):
             parsed_entries.append({"type": "comment", "raw": line})
             continue
 
-        # Wrapped comma continuation line (e.g. ,https://...)
         if t.startswith(",") and parsed_entries:
             for i in range(len(parsed_entries) - 1, -1, -1):
                 if parsed_entries[i]["type"] == "pair":
@@ -146,7 +144,6 @@ def sanitize_env_file(filepath):
 
         parsed_entries.append({"type": "pair", "key": k, "val": v})
 
-    # Deduplicate pairs, keeping latest value
     key_map = {}
     for entry in parsed_entries:
         if entry["type"] == "pair":
@@ -155,14 +152,14 @@ def sanitize_env_file(filepath):
                 val_clean = val_clean[1:-1].strip()
             key_map[entry["key"]] = val_clean
 
-    # Restore missing critical variables if empty
     critical_defaults = {
-        "POSTGRES_USER": "postgres",
+        "POSTGRES_USER": "neondb_owner",
         "POSTGRES_PASSWORD": "npg_1fOkpFHAZx2e",
-        "POSTGRES_DB": "equora_db",
-        "DATABASE_URL": "postgresql://postgres:npg_1fOkpFHAZx2e@postgres:5432/equora_db?schema=public",
-        "REDIS_PASSWORD": "replace_me_redis_password",
-        "JWT_SECRET": "equora_jwt_secret_key_32_characters_long_min"
+        "POSTGRES_DB": "neondb",
+        "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable",
+        "REDIS_PASSWORD": "EquoraRedis2026Secure",
+        "JWT_SECRET": "equora_jwt_secret_production_key_32_characters_minimum",
+        "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V"
     }
 
     for crit_key, def_val in critical_defaults.items():
@@ -172,7 +169,6 @@ def sanitize_env_file(filepath):
             else:
                 key_map[crit_key] = def_val
 
-    # Always ensure CORS_ORIGIN is fully set
     key_map["CORS_ORIGIN"] = ",".join(CORS_ORIGINS)
 
     output_lines = []

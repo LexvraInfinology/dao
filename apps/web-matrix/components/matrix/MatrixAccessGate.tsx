@@ -329,6 +329,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           });
         } else {
           setSponsorAddress("");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("equora_sponsor");
+          }
           setSponsorStatus({
             isValid: false,
             isCustom: true,
@@ -343,6 +346,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
         } else {
           setSponsorAddress("");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("equora_sponsor");
+          }
           setSponsorStatus({
             isValid: false,
             isCustom: true,
@@ -522,10 +528,12 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               resolved = userFromCode;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", userFromCode);
+            } else if (isFirstId) {
+              resolved = CONTRACT_ADDRESSES.vault;
+              isRootAllowed = true;
             } else {
-              resolved = ref;
-              isCustomFound = true;
-              localStorage.setItem("equora_sponsor", ref);
+              resolved = "";
+              localStorage.removeItem("equora_sponsor");
             }
           }
           // Case B2: Explicit referral address passed in URL
@@ -572,8 +580,19 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             const stored = localStorage.getItem("equora_sponsor");
             if (stored && (stored.startsWith("0x") || stored.startsWith("T") || /^\d{5}$/.test(stored))) {
               if (stored !== DEPLOYER_BASE58 && stored.toLowerCase() !== DEPLOYER_HEX) {
-                resolved = stored;
-                isCustomFound = true;
+                if (/^\d{5}$/.test(stored)) {
+                  const resolvedFromStored = await getOnChainUserByCode(stored);
+                  if (resolvedFromStored) {
+                    resolved = resolvedFromStored;
+                    isCustomFound = true;
+                    localStorage.setItem("equora_sponsor", resolvedFromStored);
+                  } else {
+                    localStorage.removeItem("equora_sponsor");
+                  }
+                } else {
+                  resolved = stored;
+                  isCustomFound = true;
+                }
               }
             }
           }
@@ -1008,10 +1027,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     // For the genesis/1st member, always route to Protocol Vault — bypass sponsor validation
     const effectiveSponsor = isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress;
 
-    if (!isFirstMember && (!sponsorStatus.isValid || !effectiveSponsor)) {
+    if (!isFirstMember && (!sponsorStatus.isValid || !effectiveSponsor || /^\d{5}$/.test(effectiveSponsor))) {
       toast.error(
         "Invalid Sponsor",
-        sponsorStatus.error || "Please provide a valid sponsor referral link or address."
+        sponsorStatus.error || "Please provide a valid sponsor referral address or registered code."
       );
       return;
     }
@@ -1254,25 +1273,31 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           <div className="flex items-center justify-between text-[#526682] font-medium">
             <span>Sponsor / Upline Node</span>
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-              isVaultSponsor
+              isVaultSponsor || isFirstMember
                 ? "bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa]"
+                : resolvingSponsor
+                ? "bg-amber-50 text-amber-700 border border-amber-200"
                 : sponsorStatus.isValid
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 : "bg-rose-50 text-rose-700 border border-rose-200"
             }`}>
-              {isVaultSponsor ? "Protocol Pools (Apex Root)" : resolvingSponsor ? "Verifying..." : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
+              {isVaultSponsor || isFirstMember ? "Protocol Vault (Apex Root)" : resolvingSponsor ? "Verifying..." : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
             </span>
           </div>
 
           <div className="relative flex items-center">
             <input
               type="text"
-              value={sponsorInput}
+              value={isFirstMember ? "Protocol Vault (Apex Root)" : sponsorInput}
               onChange={(e) => handleSponsorInputChange(e.target.value)}
-              placeholder={isFirstMember ? "Protocol Pools (THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw)" : "Sponsor Base58 address or 5-digit code..."}
-              disabled={isFirstMember && isVaultSponsor}
+              placeholder={isFirstMember ? "Protocol Vault (Apex Root)" : "Sponsor Base58 address or 5-digit code..."}
+              disabled={isFirstMember}
               className={`w-full bg-[#f8faff] border rounded-xl py-2 px-3 pr-16 text-xs font-mono text-[#102341] placeholder:text-slate-400 focus:outline-none focus:bg-white transition-colors ${
-                !sponsorStatus.isValid && !isFirstMember ? "border-rose-300" : "border-[#e0eaf7] focus:border-[#2868e8]"
+                isFirstMember
+                  ? "border-[#d8e6fa] bg-[#f0f6ff] text-[#2868e8] font-semibold cursor-not-allowed"
+                  : !sponsorStatus.isValid
+                  ? "border-rose-300"
+                  : "border-[#e0eaf7] focus:border-[#2868e8]"
               }`}
             />
             {!isFirstMember && (
@@ -1434,7 +1459,16 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               <AlertTriangle className="w-4 h-4" />
               <span>Insufficient Balance (~{requiredTrob.toFixed(2)} TROB Required)</span>
             </button>
-          ) : (!sponsorStatus.isValid || !sponsorAddress) && !isFirstMember ? (
+          ) : resolvingSponsor ? (
+            <button
+              type="button"
+              disabled
+              className="w-full py-3 px-4 rounded-xl bg-slate-100 text-slate-500 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-[#2868e8]" />
+              <span>Verifying Referral Code...</span>
+            </button>
+          ) : (!sponsorStatus.isValid || !sponsorAddress || /^\d{5}$/.test(sponsorAddress)) && !isFirstMember ? (
             <button
               type="button"
               disabled

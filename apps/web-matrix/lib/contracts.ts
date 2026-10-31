@@ -1937,6 +1937,9 @@ export async function joinSlotOnChain(
     const resolvedFromCode = await getOnChainUserByCode(targetSponsor);
     if (resolvedFromCode) {
       targetSponsor = resolvedFromCode;
+    } else {
+      // Unresolved 5-digit code fallback to genesis sponsor
+      targetSponsor = await getOnChainGenesisSponsor();
     }
   }
 

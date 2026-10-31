@@ -30,11 +30,24 @@ export const MAINNET_DEFAULT_ADDRESSES = {
 // Genesis Root Matrix Member (#0001) on TrobChain Mainnet
 export const GENESIS_ROOT_MEMBER_BASE58 = "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa";
 export const GENESIS_ROOT_MEMBER_HEX = "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
+const rawMatrixEnv = process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS;
+const rawVaultEnv = process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS;
+
+const OUTDATED_DISCARD_ADDRESSES = [
+  "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
+  "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
+  "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
+  "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
+  "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
+  "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
+  "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+];
+
 export const CONTRACT_ADDRESSES = {
-  matrix: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
+  matrix: (rawMatrixEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawMatrixEnv)) ? rawMatrixEnv : MAINNET_DEFAULT_ADDRESSES.matrix,
   token: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
   registry: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
-  vault: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault,
+  vault: (rawVaultEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawVaultEnv)) ? rawVaultEnv : MAINNET_DEFAULT_ADDRESSES.vault,
   salaryPool: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
   rewardPool: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
   magicBoxPool: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
@@ -147,6 +160,31 @@ export function toTronHex(input: string): string {
   return "41" + hex.slice(2);
 }
 
+// ── Deployer / Restricted System Accounts ─────────────────────────────────────
+export const DEPLOYER_ADDRESSES = [
+  "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8", // Mainnet Base58
+  "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202", // Mainnet Hex
+  "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr", // Testnet Base58
+  "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f", // Testnet Hex
+];
+
+export function isDeployerAddress(addr?: string | null): boolean {
+  if (!addr) return false;
+  const clean = addr.trim().toLowerCase();
+  for (const dep of DEPLOYER_ADDRESSES) {
+    if (clean === dep.toLowerCase()) return true;
+  }
+  if (clean.startsWith("t") && clean.length === 34) {
+    try {
+      const hex = toHexAddress(clean);
+      for (const dep of DEPLOYER_ADDRESSES) {
+        if (hex.toLowerCase() === dep.toLowerCase()) return true;
+      }
+    } catch {}
+  }
+  return false;
+}
+
 /**
  * Normalizes any address (0x, 41-hex, or Base58) to TrobSafe-native Base58.
  * Fully compatible with browser runtime.
@@ -226,7 +264,7 @@ export async function queryTrobConstant(
   };
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
+  const timer = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(`${ACTIVE_RPC_URL}/wallet/triggersmartcontract`, {
@@ -240,11 +278,18 @@ export async function queryTrobConstant(
     if (data.result && data.result.result && data.constant_result?.length > 0) {
       return data.constant_result[0];
     }
-    throw new Error(
-      data.result?.message
-        ? Buffer.from(data.result.message, "hex").toString()
-        : "Failed to read contract"
-    );
+    const errText = data.result?.message
+      ? Buffer.from(data.result.message, "hex").toString()
+      : "Failed to read contract";
+    if (errText.includes("No contract") || errText.includes("REVERT")) {
+      return "";
+    }
+    throw new Error(errText);
+  } catch (err: any) {
+    if (err.name === "AbortError" || err.message?.includes("aborted")) {
+      return "";
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -1208,57 +1253,56 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
   if (!userAddress) return false;
   const clean = userAddress.trim().toLowerCase();
 
-  // 1. Check local joined-members registry
-  try {
-    const joined = require("./joinedMembers.json");
-    if (Array.isArray(joined)) {
-      const match = joined.some(
-        (m: any) =>
-          m.evm?.toLowerCase() === clean ||
-          m.base58?.toLowerCase() === clean ||
-          (userAddress.startsWith("T") && m.base58 === userAddress)
-      );
-      if (match) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
-        }
-        return true;
-      }
+  // Deployer wallets are strictly excluded from matrix auto-registration
+  if (isDeployerAddress(userAddress)) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`equora_matrix_registered_${clean}`);
     }
-  } catch {}
+    return false;
+  }
 
-  // 3. Check on-chain Slot 1 status
+  // Genesis Root Member is always registered by definition
+  const b58 = toTrobBase58(userAddress);
+  const hex = toHexAddress(userAddress).toLowerCase();
+  const isRoot =
+    b58 === GENESIS_ROOT_MEMBER_BASE58 ||
+    hex === GENESIS_ROOT_MEMBER_HEX.toLowerCase();
+
+  if (isRoot) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
+      localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
+      localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
+    }
+    return true;
+  }
+
+  // Authoritative on-chain Slot 1 status in EquoraMatrix contract
   try {
     const slot1 = await getOnChainSlotStatus(userAddress, 1);
     if (slot1 && slot1.isUnlocked) {
       if (typeof window !== "undefined") {
         localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
+        localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
+        localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
       }
       return true;
     }
-  } catch {}
-
-  // 4. Check Registry contract isRegistered
-  try {
-    const coder = new ethers.AbiCoder();
-    const userHex = toHexAddress(userAddress);
-    const param = coder.encode(["address"], [userHex]).slice(2);
-    const isRegRaw = await queryTrobConstant(CONTRACT_ADDRESSES.registry, "isRegistered(address)", param);
-    if (isRegRaw) {
-      const isReg = Boolean(coder.decode(["bool"], "0x" + isRegRaw)[0]);
-      if (isReg) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
-        }
-        return true;
-      }
-    }
-  } catch {}
-
-  // If user is definitively not registered, purge false local cache!
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(`equora_matrix_registered_${clean}`);
+  } catch (err) {
+    console.warn("[isUserRegisteredInMatrix] Slot 1 check notice:", err);
   }
+
+  // Fallback: check localStorage cache
+  if (typeof window !== "undefined") {
+    const cached =
+      localStorage.getItem(`equora_matrix_registered_${clean}`) === "true" ||
+      localStorage.getItem(`equora_matrix_registered_${b58.toLowerCase()}`) === "true" ||
+      localStorage.getItem(`equora_matrix_registered_${hex}`) === "true";
+    if (cached) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -1393,7 +1437,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
   const w = window as any;
 
   // 1. Resolve TrobSafe provider across all aliases and mobile bridges
-  const trob =
+  const resolveTrob = () =>
     w.trob ||
     w.trobSafe ||
     w.trobsafe ||
@@ -1408,7 +1452,24 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
     w.tronLink ||
     w.trobSafeWallet ||
     w.trobProvider ||
+    (w.ethereum?.isTrobSafe || w.ethereum?.isTrob || w.ethereum?.isTrobium ? w.ethereum : null) ||
+    w.__eip6963TrobProvider ||
     null;
+
+  let trob = resolveTrob();
+  if (!trob) {
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      trob = resolveTrob();
+      if (trob) break;
+    }
+  }
+
+  if (!trob) {
+    throw new Error(
+      "TrobSafe wallet was not detected. Please install TrobSafe extension for Chrome/Brave or open this page inside the TrobSafe Mobile App."
+    );
+  }
 
   // 2. Resolve active user address
   let activeUser = opts.userAddress || "";
@@ -1566,27 +1627,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
     }
   }
 
-  // 6. Ethereum / EIP-1193 / MetaMask fallback
-  if (w.ethereum) {
-    try {
-      const provider = new ethers.BrowserProvider(w.ethereum);
-      const signer = await provider.getSigner();
-      const contractHex = toHexAddress(opts.contractAddress);
-      const contract = new ethers.Contract(contractHex, opts.evmAbi || [], signer);
-      const funcName = opts.functionSelector.replace(/\(.*$/, "");
-      const overrides: any = {};
-      if (opts.callValueSun && opts.callValueSun > 0) {
-        overrides.value = BigInt(opts.callValueSun);
-      }
-      const tx = await contract[funcName](...(opts.evmArgs || []), overrides);
-      const receipt = await tx.wait();
-      return receipt.hash || tx.hash;
-    } catch (err: any) {
-      throw new Error(err.message || "Transaction failed or was rejected.");
-    }
-  }
-
-  throw new Error("No compatible Web3 wallet detected. Please connect MetaMask or TrobSafe.");
+  throw new Error("TrobSafe transaction could not be completed. Please ensure your TrobSafe wallet is unlocked and connected to TrobChain Mainnet.");
 }
 
 /**
@@ -1646,20 +1687,9 @@ export async function approveTokenOnChain(
  * sponsorship or recipient role and is strictly excluded.
  */
 export async function getOnChainGenesisSponsor(): Promise<string> {
-  const MAINNET_DEPLOYER_BASE58 = "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8";
-  const MAINNET_DEPLOYER_HEX = "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202";
-  const TESTNET_DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const TESTNET_DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
-
   // Check custom env sponsor if defined and not deployer
   const configured = (process.env.NEXT_PUBLIC_GENESIS_ROOT_SPONSOR || "").trim();
-  if (
-    configured &&
-    configured !== MAINNET_DEPLOYER_BASE58 &&
-    configured.toLowerCase() !== MAINNET_DEPLOYER_HEX &&
-    configured !== TESTNET_DEPLOYER_BASE58 &&
-    configured.toLowerCase() !== TESTNET_DEPLOYER_HEX
-  ) {
+  if (configured && !isDeployerAddress(configured)) {
     return configured;
   }
 
@@ -1967,10 +1997,7 @@ export async function joinSlotOnChain(
     !isValidAddress ||
     targetSponsor === "0x0000000000000000000000000000000000000000" ||
     targetSponsor === "410000000000000000000000000000000000000000" ||
-    targetSponsor === MAINNET_DEPLOYER_BASE58 ||
-    targetSponsor.toLowerCase() === MAINNET_DEPLOYER_HEX ||
-    targetSponsor === TESTNET_DEPLOYER_BASE58 ||
-    targetSponsor.toLowerCase() === TESTNET_DEPLOYER_HEX
+    isDeployerAddress(targetSponsor)
   ) {
     targetSponsor = await getOnChainGenesisSponsor();
   }

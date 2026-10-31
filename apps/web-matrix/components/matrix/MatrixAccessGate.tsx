@@ -51,6 +51,7 @@ import {
   getOnChainTotalMembers,
   GENESIS_ROOT_MEMBER_BASE58,
   GENESIS_ROOT_MEMBER_HEX,
+  isDeployerAddress,
 } from "@/lib/contracts";
 import { formatAddress } from "@/lib/format";
 import {
@@ -226,9 +227,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     return s;
   };
 
-  const DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
-
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
@@ -251,7 +249,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     }
 
     // Deployer wallet is strictly prohibited as sponsor
-    if (cleaned === DEPLOYER_BASE58 || cleaned.toLowerCase() === DEPLOYER_HEX) {
+    if (isDeployerAddress(cleaned)) {
       setSponsorStatus({
         isValid: false,
         isCustom: false,
@@ -484,16 +482,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         );
         const isFirstId = isCurrentRootWallet || membersCount === 0 || daoSeat === 1;
 
-        // Purge any testnet or invalid cached sponsor from localStorage
+        // Purge any deployer or invalid cached sponsor from localStorage
         if (typeof window !== "undefined") {
           const stored = localStorage.getItem("equora_sponsor");
           if (
             isFirstId ||
             (stored && (
-              stored === "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr" ||
-              stored.toLowerCase() === "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f" ||
-              stored === "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8" ||
-              stored.toLowerCase() === "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202" ||
+              isDeployerAddress(stored) ||
               stored === "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL" ||
               stored === "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx"
             ))
@@ -538,7 +533,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
           // Case B2: Explicit referral address passed in URL
           else if (ref && (ref.startsWith("0x") || ref.startsWith("T"))) {
-            if (ref !== DEPLOYER_BASE58 && ref.toLowerCase() !== DEPLOYER_HEX) {
+            if (!isDeployerAddress(ref)) {
               resolved = ref;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", ref);
@@ -579,7 +574,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           else {
             const stored = localStorage.getItem("equora_sponsor");
             if (stored && (stored.startsWith("0x") || stored.startsWith("T") || /^\d{5}$/.test(stored))) {
-              if (stored !== DEPLOYER_BASE58 && stored.toLowerCase() !== DEPLOYER_HEX) {
+              if (!isDeployerAddress(stored)) {
                 if (/^\d{5}$/.test(stored)) {
                   const resolvedFromStored = await getOnChainUserByCode(stored);
                   if (resolvedFromStored) {
@@ -720,12 +715,21 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       tryAutoConnect();
     };
 
-    // Direct inpage bridge broadcast listener
+    // Direct inpage bridge broadcast listener (ignoring self-dispatched wakeups to avoid message echo storms)
     const handleInpageMessage = (event: MessageEvent) => {
       if (typeof window === "undefined" || event.source !== window) return;
       const data = event.data;
       if (!data) return;
-      if (data.__trobsafe || data.type?.includes("TROBSAFE")) {
+      if (
+        data.type === "TROBSAFE_CONNECT" ||
+        data.type === "TROBSAFE_REQUEST_ACCOUNTS" ||
+        data.target === "trobsafe-inpage" ||
+        data.target === "trobsafe-contentscript" ||
+        data.target === "trobsafe"
+      ) {
+        return;
+      }
+      if (data.__trobsafeResponse || data.type === "TROBSAFE_READY" || data.type === "TROBSAFE_PROVIDER_INJECTED") {
         onProviderReady();
       }
     };
@@ -781,8 +785,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     setCheckingStatus(true);
     setActionError(null);
 
-    // Fast path: if wallet is already known to be registered, unlock Slot 1 immediately
-    const knownRegistered = await isUserRegisteredInMatrix(address);
+    // Fast path: if wallet is already known to be registered or is root member
+    const knownRegistered = isRootWallet || (await isUserRegisteredInMatrix(address));
     if (knownRegistered) {
       setIsSlot1Unlocked(true);
       setCheckingStatus(false);
@@ -805,6 +809,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 setIsSlot1Unlocked(true);
                 if (typeof window !== "undefined") {
                   localStorage.setItem(`equora_matrix_registered_${address.toLowerCase()}`, "true");
+                }
+                if (isStandaloneGate) {
+                  router.replace("/dashboard");
                 }
               }
             })
@@ -1075,13 +1082,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Redirect handling for standalone gate vs protected route wrapper
   useEffect(() => {
-    if (!checkingStatus) {
-      if (isStandaloneGate && isSlot1Unlocked) {
-        router.replace("/dashboard");
-      } else if (!isStandaloneGate && !isSlot1Unlocked) {
-        const search = typeof window !== "undefined" ? window.location.search : "";
-        router.replace(`/gate${search}`);
-      }
+    if (isStandaloneGate && isSlot1Unlocked) {
+      router.replace("/dashboard");
+    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked) {
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/gate${search}`);
     }
   }, [checkingStatus, isSlot1Unlocked, isStandaloneGate, router]);
 

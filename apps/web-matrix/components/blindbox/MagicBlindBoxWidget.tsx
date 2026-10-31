@@ -39,12 +39,6 @@ export function MagicBlindBoxWidget({
     ) {
       return true;
     }
-    try {
-      const joined = require("@/lib/joinedMembers.json");
-      if (Array.isArray(joined)) {
-        return joined.some((m: any) => m.evm?.toLowerCase() === currentAddr || m.base58?.toLowerCase() === currentAddr);
-      }
-    } catch {}
     return false;
   });
 

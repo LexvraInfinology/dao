@@ -89,11 +89,19 @@ export function triggerApkDownload(): void {
   }
 }
 
+let lastWakeupTimestamp = 0;
+
 /**
- * Triggers wakeup signals for the TrobSafe browser extension in-page bridge
+ * Triggers wakeup signals for the TrobSafe browser extension in-page bridge.
+ * Throttled to at most once every 3 seconds to avoid event/postMessage echo loops.
  */
 export function wakeUpExtension(): void {
   if (typeof window === "undefined") return;
+  const now = Date.now();
+  if (now - lastWakeupTimestamp < 3000) {
+    return;
+  }
+  lastWakeupTimestamp = now;
   try {
     window.postMessage({ target: "trobsafe-inpage", action: "connect" }, "*");
     window.postMessage({ type: "TROBSAFE_CONNECT" }, "*");

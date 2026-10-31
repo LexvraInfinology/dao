@@ -157,7 +157,7 @@ export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
                 Smart Contract Ledger
               </div>
               <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 md:hidden shrink-0">
-                {IS_MAINNET ? 'Mainnet' : 'Testnet'}
+                Mainnet
               </span>
             </div>
             <div className="pt-0.5">

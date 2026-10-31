@@ -43,39 +43,35 @@ export async function POST(req: NextRequest) {
     const hexAddr = toTronHex(cleanAddr);
 
     let m: any = null;
-    if (IS_MAINNET) {
-      const memberRes = await queryNeon<any>(
-        `SELECT * FROM "DaoMember" 
-         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
-           AND LOWER(status) IN ('active', 'capped', 'underfunded')
-         LIMIT 1`,
-        [cleanAddr, base58Addr, hexAddr]
-      );
+    const memberRes = await queryNeon<any>(
+      `SELECT * FROM "DaoMember" 
+       WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
+         AND LOWER(status) IN ('active', 'capped', 'underfunded')
+       LIMIT 1`,
+      [cleanAddr, base58Addr, hexAddr]
+    );
 
-      if (memberRes.rows.length === 0) {
-        return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member' }, { status: 404 });
-      }
-
-      m = memberRes.rows[0];
-    } else {
+    if (memberRes.rows.length === 0) {
       const onChainState = await getAndSyncMemberState(cleanAddr);
       if (!onChainState.isMember) {
-        return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member on Testnet' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member' }, { status: 404 });
       }
       m = {
-        id: `testnet-member-${onChainState.position || 1}`,
+        id: `member-${onChainState.position || 1}`,
         address: onChainState.address || cleanAddr,
         position: onChainState.position || 1,
         status: onChainState.status || 'active',
         retopupCount: 0,
         pushedAmountBtt: onChainState.totalEarnedTrob || 0,
-        entryAmountBtt: onChainState.entryAmountTrob || 8076.24,
+        entryAmountBtt: onChainState.entryAmountTrob || 5357.14,
       };
+    } else {
+      m = memberRes.rows[0];
     }
     const isUnderfunded = m.status === 'underfunded';
 
-    // 1. Check if 48-Hour payment/retopup window has expired (Mainnet only).
-    if (IS_MAINNET && !txReceipt.valid && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
+    // 1. Check if 48-Hour payment/retopup window has expired
+    if (!txReceipt.valid && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
       await queryNeon(
         `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
         [m.id]

@@ -42,11 +42,8 @@ function toTronHex(address: string): string {
 // 1 October 2026 00:00:00 UTC (1790812800 seconds = 1790812800000 ms)
 const MIN_WALLET_CREATION_TIMESTAMP = 1790812800000;
 
-const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
-const OFFICIAL_SR_TESTNET_B58 = process.env.NEXT_PUBLIC_OFFICIAL_SR_TESTNET_ADDRESS || "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
-
+const OFFICIAL_SR_MAINNET_B58 = process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
 const OFFICIAL_SR_MAINNET_HEX = toTronHex(OFFICIAL_SR_MAINNET_B58);
-const OFFICIAL_SR_TESTNET_HEX = toTronHex(OFFICIAL_SR_TESTNET_B58);
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 5000): Promise<Response> {
   const controller = new AbortController();
@@ -73,26 +70,18 @@ export async function GET(
 
     const rawAddress = address.trim();
     const canonical = rawAddress.toLowerCase();
-    const host = req.headers.get("host") || "";
-    const isDomainMainnet = host.includes("equorafimatrix.com") || host.includes("equorafidao.com");
-    const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
-    const isMainnet =
-      isDomainMainnet ||
-      (rawMainnetEnv !== undefined
-        ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
-        : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "mainnet").trim().toLowerCase() === "mainnet");
 
     const fullnodeRpc =
       process.env.NEXT_PUBLIC_RPC_URL ||
       process.env.FULLNODE_URL ||
-      (isMainnet ? "https://fullnode-one.trobchain.com" : "https://fullnode-one-testnet.trobchain.com");
+      "https://fullnode-one.trobchain.com";
 
     const explorerApi =
       process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
-      (isMainnet ? "https://backend.trobchain.com/v1" : "https://testnet-backend.trobchain.com/v1");
+      "https://backend.trobchain.com/v1";
 
-    const officialSrB58 = isMainnet ? OFFICIAL_SR_MAINNET_B58 : (OFFICIAL_SR_TESTNET_B58 || OFFICIAL_SR_MAINNET_B58);
-    const officialSrHex = toTronHex(officialSrB58);
+    const officialSrB58 = OFFICIAL_SR_MAINNET_B58;
+    const officialSrHex = OFFICIAL_SR_MAINNET_HEX;
 
     let creationTimestamp: number | null = null;
     let condition1Passed = true;
@@ -143,12 +132,8 @@ export async function GET(
               const hexV = toTronHex(v.vote_address || "");
               return (
                 rawV === OFFICIAL_SR_MAINNET_HEX ||
-                rawV === OFFICIAL_SR_TESTNET_HEX ||
                 rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-                rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
-                hexV === OFFICIAL_SR_MAINNET_HEX ||
-                hexV === OFFICIAL_SR_TESTNET_HEX ||
-                hexV === officialSrHex
+                hexV === OFFICIAL_SR_MAINNET_HEX
               );
             });
           }
@@ -221,12 +206,8 @@ export async function GET(
             const hexV = toTronHex(v.vote_address || "");
             return (
               rawV === OFFICIAL_SR_MAINNET_HEX ||
-              rawV === OFFICIAL_SR_TESTNET_HEX ||
               rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-              rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
-              hexV === OFFICIAL_SR_MAINNET_HEX ||
-              hexV === OFFICIAL_SR_TESTNET_HEX ||
-              hexV === officialSrHex
+              hexV === OFFICIAL_SR_MAINNET_HEX
             );
           });
         }

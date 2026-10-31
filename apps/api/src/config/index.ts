@@ -30,8 +30,6 @@ export const config = {
       process.env.RPC_URL ||
       process.env.FULLNODE_URL ||
       process.env.NEXT_PUBLIC_RPC_URL ||
-      ((process.env.TARGET_NETWORK || "testnet").toLowerCase() === "mainnet"
-        ? "https://fullnode-one.trobchain.com"
-        : "https://fullnode-one-testnet.trobchain.com"),
+      "https://fullnode-one.trobchain.com",
   },
 };

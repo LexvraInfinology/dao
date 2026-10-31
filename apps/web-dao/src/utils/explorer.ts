@@ -1,6 +1,6 @@
 /**
  * Trobium Blockchain Explorer URL utilities.
- * Default official explorer: https://testnet.trobchain.com
+ * Default official explorer: https://trobchain.com
  */
 
 import { EXPLORER_BASE_URL } from '@/config/env';

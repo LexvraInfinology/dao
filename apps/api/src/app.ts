@@ -490,11 +490,9 @@ export function createApp(): Express {
     return clean.toLowerCase();
   }
 
-  // Official SRs: Mainnet and Testnet
+  // Official Super Representative (SR) Address (Mainnet)
   const OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052"; // TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY
-  const OFFICIAL_SR_TESTNET_HEX = "415cc58ba778a87ac1ea060d4aa116509691fb0ae0"; // TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5
   const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
-  const OFFICIAL_SR_TESTNET_B58 = "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
 
   const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
 
@@ -554,11 +552,8 @@ export function createApp(): Express {
                 const hexV = toTronHex(v.vote_address || "");
                 return (
                   rawV === OFFICIAL_SR_MAINNET_HEX ||
-                  rawV === OFFICIAL_SR_TESTNET_HEX ||
                   rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-                  rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
-                  hexV === OFFICIAL_SR_MAINNET_HEX ||
-                  hexV === OFFICIAL_SR_TESTNET_HEX
+                  hexV === OFFICIAL_SR_MAINNET_HEX
                 );
               });
               if (hasVote) currentSrVoted = true;
@@ -625,11 +620,8 @@ export function createApp(): Express {
             const hexV = toTronHex(v.vote_address || "");
             return (
               rawV === OFFICIAL_SR_MAINNET_HEX ||
-              rawV === OFFICIAL_SR_TESTNET_HEX ||
               rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-              rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
-              hexV === OFFICIAL_SR_MAINNET_HEX ||
-              hexV === OFFICIAL_SR_TESTNET_HEX
+              hexV === OFFICIAL_SR_MAINNET_HEX
             );
           });
           if (hasVote) currentSrVoted = true;
@@ -872,11 +864,8 @@ export function createApp(): Express {
       // Verify mandatory protocol conditions from PDF:
       // Condition 1 (New Wallet), Condition 2 (Resource Stake + SR Vote), WhatsApp verification
       const eligibility = await checkWalletEligibility(canonicalAddress);
-      const isTestnet =
-        (process.env.TARGET_NETWORK || "").toLowerCase() === "testnet" ||
-        (process.env.NEXT_PUBLIC_TARGET_NETWORK || "").toLowerCase() === "testnet";
 
-      if (!isDevClaim && !isTestnet) {
+      if (!isDevClaim) {
         if (!eligibility.condition1.passed) {
           res.status(400).json({
             success: false,
@@ -940,7 +929,8 @@ export function createApp(): Express {
 
           if (!onchainVerified) {
             try {
-              const expRes = await fetch(`https://testnet-backend.trobchain.com/v1/transactions/${cleanTx}`);
+              const expUrl = process.env.EXPLORER_API_URL || process.env.TROB_BACKEND_EXPLORER_API_URL || "https://backend.trobchain.com/v1";
+              const expRes = await fetch(`${expUrl}/transactions/${cleanTx}`);
               if (expRes.ok) {
                 const expData = (await expRes.json()) as any;
                 if (expData?.data?.successful || expData?.data?.status === "confirmed") {

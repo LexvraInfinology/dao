@@ -185,7 +185,7 @@ export default function DeployPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Trobchain Testnet Fullnode Connected
+              Trobchain Mainnet Fullnode Connected
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               Contract Deployer & Explorer Verifier

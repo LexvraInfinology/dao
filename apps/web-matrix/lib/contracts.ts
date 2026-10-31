@@ -7,23 +7,9 @@ import { getApiBaseUrl, type MatrixSlotDetails, type MatrixSlotSummary, type Mat
 
 // ── Network & Contract Addresses ─────────────────────────────────────────────
 
-// Automatically detect mainnet if running on production domains
-const isBrowserMainnetDomain = typeof window !== "undefined" && (
-  window.location.hostname === "equorafimatrix.com" ||
-  window.location.hostname.endsWith(".equorafimatrix.com") ||
-  window.location.hostname === "equorafidao.com" ||
-  window.location.hostname.endsWith(".equorafidao.com")
-);
-
-const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
-export const IS_MAINNET = isBrowserMainnetDomain || (
-  rawMainnetEnv !== undefined
-    ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
-    : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "mainnet").trim().toLowerCase() === "mainnet"
-);
-
-export const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
-export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testnet";
+export const IS_MAINNET = true;
+export const TARGET_NETWORK = "mainnet";
+export const NETWORK_NAME = "TrobChain Mainnet";
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
 
 export const MAINNET_DEFAULT_ADDRESSES = {
@@ -40,56 +26,17 @@ export const MAINNET_DEFAULT_ADDRESSES = {
   legacyDaoV2: "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
 };
 
-export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
-  token: "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
-  registry: "TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y",
-  vault: "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx",
-  salaryPool: "TUxdfGh3JTPLX2tUeb5wFDLxHbKJbc2DMK",
-  rewardPool: "TYoCKb3mS8rfwu9H9XyTaQJ8Y6tD27Krrt",
-  magicBoxPool: "TCrFNXw2Ve777u4X3mgshQGnGUXnq4Majv",
-  dao: "THMpusD2dp3icewyNQRWF64k4r2rJypE57",
-  nft: "TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm",
-};
-
-// Strict Network-Guarded Address Resolver
-// Prevents accidental leak of testnet contract addresses into mainnet production, and vice versa
+// Verified TrobChain Mainnet Contract Addresses
 export const CONTRACT_ADDRESSES = {
-  matrix: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix)
-    : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.matrix),
-
-  token: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token)
-    : (process.env.NEXT_PUBLIC_TESTNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || TESTNET_DEFAULT_ADDRESSES.token),
-
-  registry: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry)
-    : (process.env.NEXT_PUBLIC_TESTNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || TESTNET_DEFAULT_ADDRESSES.registry),
-
-  vault: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault)
-    : (process.env.NEXT_PUBLIC_TESTNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || TESTNET_DEFAULT_ADDRESSES.vault),
-
-  salaryPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.salaryPool),
-
-  rewardPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || TESTNET_DEFAULT_ADDRESSES.rewardPool),
-
-  magicBoxPool: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool)
-    : (process.env.NEXT_PUBLIC_TESTNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || TESTNET_DEFAULT_ADDRESSES.magicBoxPool),
-
-  dao: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao)
-    : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || TESTNET_DEFAULT_ADDRESSES.dao),
-
-  nft: IS_MAINNET
-    ? (process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft)
-    : (process.env.NEXT_PUBLIC_TESTNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || TESTNET_DEFAULT_ADDRESSES.nft),
+  matrix: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
+  token: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
+  registry: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
+  vault: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault,
+  salaryPool: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
+  rewardPool: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
+  magicBoxPool: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
+  dao: process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao,
+  nft: process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft,
 };
 
 // ── Domain & Routing Configuration ──────────────────────────────────────────
@@ -106,34 +53,23 @@ export const DAO_URL =
     ? `${window.location.protocol}//${window.location.hostname}:3000`
     : `https://${DAO_DOMAIN}`);
 
-export const ACTIVE_RPC_URL = IS_MAINNET
-  ? (process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
-      (process.env.NEXT_PUBLIC_RPC_URL && !process.env.NEXT_PUBLIC_RPC_URL.includes("testnet")
-        ? process.env.NEXT_PUBLIC_RPC_URL
-        : "https://fullnode-one.trobchain.com"))
-  : (process.env.NEXT_PUBLIC_TESTNET_RPC_URL ||
-      process.env.NEXT_PUBLIC_RPC_URL ||
-      "https://fullnode-one-testnet.trobchain.com");
+export const ACTIVE_RPC_URL =
+  process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
+  (process.env.NEXT_PUBLIC_RPC_URL && !process.env.NEXT_PUBLIC_RPC_URL.includes("testnet")
+    ? process.env.NEXT_PUBLIC_RPC_URL
+    : "https://fullnode-one.trobchain.com");
 
-export const TROBCHAIN_TESTNET_RPC = ACTIVE_RPC_URL; // Backward-compatible alias
+export const EXPLORER_URL =
+  process.env.NEXT_PUBLIC_MAINNET_EXPLORER_URL ||
+  (process.env.NEXT_PUBLIC_EXPLORER_URL && !process.env.NEXT_PUBLIC_EXPLORER_URL.includes("testnet")
+    ? process.env.NEXT_PUBLIC_EXPLORER_URL
+    : "https://trobchain.com");
 
-export const EXPLORER_URL = IS_MAINNET
-  ? (process.env.NEXT_PUBLIC_MAINNET_EXPLORER_URL ||
-      (process.env.NEXT_PUBLIC_EXPLORER_URL && !process.env.NEXT_PUBLIC_EXPLORER_URL.includes("testnet")
-        ? process.env.NEXT_PUBLIC_EXPLORER_URL
-        : "https://trobchain.com"))
-  : (process.env.NEXT_PUBLIC_TESTNET_EXPLORER_URL ||
-      process.env.NEXT_PUBLIC_EXPLORER_URL ||
-      "https://testnet.trobchain.com");
-
-export const EXPLORER_API_URL = IS_MAINNET
-  ? (process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API_URL ||
-      (process.env.NEXT_PUBLIC_EXPLORER_API_URL && !process.env.NEXT_PUBLIC_EXPLORER_API_URL.includes("testnet")
-        ? process.env.NEXT_PUBLIC_EXPLORER_API_URL
-        : "https://backend.trobchain.com/v1"))
-  : (process.env.NEXT_PUBLIC_TESTNET_EXPLORER_API_URL ||
-      process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
-      "https://testnet-backend.trobchain.com/v1");
+export const EXPLORER_API_URL =
+  process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API_URL ||
+  (process.env.NEXT_PUBLIC_EXPLORER_API_URL && !process.env.NEXT_PUBLIC_EXPLORER_API_URL.includes("testnet")
+    ? process.env.NEXT_PUBLIC_EXPLORER_API_URL
+    : "https://backend.trobchain.com/v1");
 
 // ── Base58 / Hex Converter ────────────────────────────────────────────────────
 
@@ -1662,17 +1598,6 @@ export async function getOnChainGenesisSponsor(): Promise<string> {
   return CONTRACT_ADDRESSES.vault;
 }
 
-// Verified on-chain testnet addresses for Genesis Council Seats 1 to 7
-const GENESIS_DAO_TESTNET_SEATS: Record<number, string> = {
-  1: "TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf",
-  2: "THB9S4bRBzR6Zwt4fz3hAfi3TC3AC6pLhx",
-  3: "TLfjCGSzMXJ65C2PKSpb365nExUZqPL282",
-  4: "TZJnxbvgJVmDfjp39H2uXn6qxa2KdaJryD",
-  5: "TB1uPEDoBoBm7gbdi2K1Q3gSEmN8kzqfJH",
-  6: "TVHgBqX1hNdidGppAsazd4SamcBB38BZ9U",
-  7: "TSqBty9XoT2HfpriZ7L4q1WPnYqSh3Rg39",
-};
-
 /**
  * Resolves a DAO council seat (1-100) to its real on-chain member address from EquoraDAO.
  */
@@ -1698,11 +1623,6 @@ export async function getOnChainDaoMemberForSeat(seatNumber: number): Promise<st
     }
   } catch (err) {
     console.warn(`[getOnChainDaoMemberForSeat] DAO seat ${seatNumber} query notice:`, err);
-  }
-
-  // Fallback to verified testnet addresses for seats 1-7
-  if (!IS_MAINNET && GENESIS_DAO_TESTNET_SEATS[seatNumber]) {
-    return GENESIS_DAO_TESTNET_SEATS[seatNumber];
   }
   return null;
 }

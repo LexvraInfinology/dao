@@ -54,7 +54,6 @@ import { getActiveDaoAddress, toTronHex } from '@/utils/trobAddress';
 import { pollOnChainTxSuccess } from '@/utils/txConfirmation';
 
 import {
-  OFFICIAL_SR_TESTNET,
   OFFICIAL_SR_MAINNET,
   FULLNODE_RPC_URL,
 } from '@/config/env';
@@ -62,7 +61,7 @@ import {
 // ─── Constants & Addresses ───────────────────────────────────────────────────
 const DAO_CONTRACT_ADDRESS = getActiveDaoAddress();
 export const OFFICIAL_EQUORA_SR = OFFICIAL_SR_MAINNET;
-export const OFFICIAL_EQUORA_TESTNET_SR = OFFICIAL_SR_TESTNET;
+export const OFFICIAL_EQUORA_TESTNET_SR = OFFICIAL_SR_MAINNET;
 
 // ─── Eligibility Types (matches PDF) ──────────────────────────────────────────
 
@@ -387,10 +386,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
               (eligibility?.condition2.bandwidth.stakedTrob ?? 237);
             const votesToCast = Math.max(1, Math.min(1000, totalFrozen));
 
-            const isTestnet = process.env.NEXT_PUBLIC_TARGET_NETWORK === 'testnet';
-            const primarySr = isTestnet
-              ? (OFFICIAL_EQUORA_TESTNET_SR || OFFICIAL_EQUORA_SR)
-              : (OFFICIAL_EQUORA_SR || OFFICIAL_EQUORA_TESTNET_SR);
+            const primarySr = OFFICIAL_EQUORA_SR;
             if (primarySr) {
               let txVote: any;
               const voteMethod = (tw.transactionBuilder?.voteWitnessAccount || tw.transactionBuilder?.vote)?.bind(tw.transactionBuilder);

@@ -25,16 +25,7 @@ export interface MatrixMemberNode {
   sponsorDescription: string;
 }
 
-// Known verified on-chain testnet addresses for Genesis Council Seats 1 to 7
-export const GENESIS_COUNCIL_TESTNET_ADDRESSES: Record<number, string> = {
-  1: 'TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf',
-  2: 'THB9S4bRBzR6Zwt4fz3hAfi3TC3AC6pLhx',
-  3: 'TLfjCGSzMXJ65C2PKSpb365nExUZqPL282',
-  4: 'TZJnxbvgJVmDfjp39H2uXn6qxa2KdaJryD',
-  5: 'TB1uPEDoBoBm7gbdi2K1Q3gSEmN8kzqfJH',
-  6: 'TVHgBqX1hNdidGppAsazd4SamcBB38BZ9U',
-  7: 'TSqBty9XoT2HfpriZ7L4q1WPnYqSh3Rg39',
-};
+
 
 export const MATRIX_TOP7_NODES: Record<number, MatrixMemberNode> = {
   1: {
@@ -155,7 +146,7 @@ export function resolveSponsorAddressForSeat(
     }
   }
 
-  return GENESIS_COUNCIL_TESTNET_ADDRESSES[parentSeat] || PROTOCOL_VAULT_ADDRESS;
+  return PROTOCOL_VAULT_ADDRESS;
 }
 
 /**

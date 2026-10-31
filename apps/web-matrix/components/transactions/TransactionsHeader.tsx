@@ -24,7 +24,7 @@ export function TransactionsHeader({ timeframe, setTimeframe }: TransactionsHead
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  {IS_MAINNET ? "Mainnet Synced" : "Testnet Synced"}
+                  Mainnet Synced
                 </div>
               </div>
               <h1 className="text-2xl sm:text-[28px] lg:text-[32px] font-black text-[#0f172a] tracking-tight leading-tight">On-Chain Activity</h1>

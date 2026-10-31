@@ -59,7 +59,7 @@ async function fetchLiveTrobPrice(): Promise<any> {
             const pegs = calculateTrobPegs(priceUsd);
             const payload = {
               priceUsd,
-              priceSource: url.includes('testnet') ? 'testnet-market-api' : 'live-market-api',
+              priceSource: 'live-market-api',
               updatedAt: json?.data?.updatedAt || new Date().toISOString(),
               isStale: false,
               ...pegs,

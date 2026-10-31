@@ -14,8 +14,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Allow Cloudflare tunnels, localtunnel, and cross-port local access (3000 & 3001)
-  allowedDevOrigins: ["*.trycloudflare.com", "*.loca.lt", "localhost:*", "127.0.0.1:*", "equorafidao.com", "equorafimatrix.com"],
   webpack: (config, { dev }) => {
     if (dev) {
       config.cache = {

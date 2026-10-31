@@ -268,14 +268,21 @@ export function toCanonicalAddress(input?: string | null): string {
 }
 
 const MATRIX_CONTRACT_HEX =
+  process.env.NEXT_PUBLIC_MAINNET_MATRIX_HEX ||
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   process.env.MATRIX_HEX ||
-  "415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2";
+  "418c05990021d332e01a68c42ce6a7e783a1752d06";
 const REGISTRY_CONTRACT_HEX =
+  process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX ||
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   process.env.REGISTRY_HEX ||
-  "416a193b520670f2f2c633ce62d90a816f70bfdef1";
-const TROB_TESTNET_RPC = process.env.TROB_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one-testnet.trobchain.com";
+  "41d045ad50706313f76b4acbaa370258f6a0da1697";
+const TROB_RPC_ENDPOINT =
+  process.env.RPC_URL ||
+  process.env.FULLNODE_URL ||
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  "https://fullnode-one.trobchain.com";
+const TROB_TESTNET_RPC = TROB_RPC_ENDPOINT;
 const userLastSyncTime = new Map<string, number>();
 
 export async function queryRegistryCodeOnChain(address: string): Promise<number | null> {
@@ -283,7 +290,7 @@ export async function queryRegistryCodeOnChain(address: string): Promise<number 
   if (!canonical || canonical === "0x0000000000000000000000000000000000000000") return null;
   try {
     const userHexParam = canonical.slice(2).padStart(64, "0");
-    const res = await fetch(`${TROB_TESTNET_RPC}/wallet/triggersmartcontract`, {
+    const res = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggersmartcontract`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

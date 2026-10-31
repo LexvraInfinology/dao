@@ -70,6 +70,30 @@ export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
     : null) ||
   'TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi';
 
+// Vault Contract Address (TrobChain Mainnet)
+export const ACTIVE_VAULT_CONTRACT_ADDRESS =
+  process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS ||
+  (process.env.NEXT_PUBLIC_VAULT_ADDRESS && process.env.NEXT_PUBLIC_VAULT_ADDRESS !== 'TPVc8M9XNea33qmTybYRZXYJL4axQscyHx'
+    ? process.env.NEXT_PUBLIC_VAULT_ADDRESS
+    : null) ||
+  'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw';
+
+// Registry Contract Address (TrobChain Mainnet)
+export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
+  process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS ||
+  (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS && process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y'
+    ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
+    : null) ||
+  'TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB';
+
+// Token Contract Address (TrobChain Mainnet)
+export const ACTIVE_TOKEN_CONTRACT_ADDRESS =
+  process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS ||
+  (process.env.NEXT_PUBLIC_TOKEN_ADDRESS && process.env.NEXT_PUBLIC_TOKEN_ADDRESS !== 'TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit'
+    ? process.env.NEXT_PUBLIC_TOKEN_ADDRESS
+    : null) ||
+  'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn';
+
 // Chain ID (Strictly 1000 for TrobChain Mainnet)
 export const CHAIN_ID = 1000;
 

@@ -60,36 +60,36 @@ export const DEPLOYED_CONTRACTS = {
     hex: getActiveDaoHex(),
   },
   EquoraToken: {
-    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit',
-    hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '41b0e42d3a38e37f2be412b06af572fea20d9c5216',
+    base58: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn',
+    hex: process.env.NEXT_PUBLIC_MAINNET_TOKEN_HEX || process.env.NEXT_PUBLIC_TOKEN_HEX || '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9',
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y',
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '416a193b520670f2f2c633ce62d90a816f70bfdef1',
+    base58: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB',
+    hex: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX || process.env.NEXT_PUBLIC_REGISTRY_HEX || '41d045ad50706313f76b4acbaa370258f6a0da1697',
   },
   EquoraVault: {
-    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TPVc8M9XNea33qmTybYRZXYJL4axQscyHx',
-    hex: process.env.NEXT_PUBLIC_VAULT_HEX || '4194596b1b3f9f67baf6a1759b427bca6f1b647562',
+    base58: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw',
+    hex: process.env.NEXT_PUBLIC_MAINNET_VAULT_HEX || process.env.NEXT_PUBLIC_VAULT_HEX || '4155f1f42bc35374f5eefda01a4cfa083c21f34f12',
   },
   EquoraMatrix: {
-    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL',
-    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2',
+    base58: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi',
+    hex: process.env.NEXT_PUBLIC_MAINNET_MATRIX_HEX || process.env.NEXT_PUBLIC_MATRIX_HEX || '418c05990021d332e01a68c42ce6a7e783a1752d06',
   },
   EquoraNFT: {
-    base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || 'TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm',
-    hex: process.env.NEXT_PUBLIC_NFT_HEX || '414c30848f51cc2d0dcf53782d4b884d4cfd17b8eb',
+    base58: process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || 'TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9',
+    hex: process.env.NEXT_PUBLIC_MAINNET_NFT_HEX || process.env.NEXT_PUBLIC_NFT_HEX || '41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d',
   },
   EquoraSalaryPool: {
-    base58: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || 'TUxdfGh3JTPLX2tUeb5wFDLxHbKJbc2DMK',
-    hex: process.env.NEXT_PUBLIC_SALARY_POOL_HEX || '41d04e8eded33e4b240565aa85418208bebabb89bc',
+    base58: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || 'TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9',
+    hex: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_HEX || process.env.NEXT_PUBLIC_SALARY_POOL_HEX || '412e4d82014f04221a30ebabbd40afb0ea00083216',
   },
   EquoraRewardPool: {
-    base58: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || 'TYoCKb3mS8rfwu9H9XyTaQJ8Y6tD27Krrt',
-    hex: process.env.NEXT_PUBLIC_REWARD_POOL_HEX || '41fa662a52c0a9ec078d4f8a60aa1513057ebbe321',
+    base58: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || 'TF6dsLSRY1G9idqpTEM9Xowvdyp7EgFJWh',
+    hex: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_HEX || process.env.NEXT_PUBLIC_REWARD_POOL_HEX || '4138404c670f1d63a059277c71d51781c8e95aa25a',
   },
   EquoraMagicBox: {
-    base58: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || 'TCrFNXw2Ve777u4X3mgshQGnGUXnq4Majv',
-    hex: process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || '411f9771b7ed99ab0ba748c126456592704f194acf',
+    base58: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || 'TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg',
+    hex: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_HEX || process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || '41b988ec2cd42c59af8bf358bee611f432e354513d',
   },
 } as const;
 

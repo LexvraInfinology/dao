@@ -32,7 +32,7 @@ export function to0xAddress(addr?: string): `0x${string}` {
 const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
 const IS_MAINNET = rawMainnetEnv !== undefined
   ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
-  : (process.env.TARGET_NETWORK || process.env.NEXT_PUBLIC_TARGET_NETWORK || "testnet").trim().toLowerCase() === "mainnet";
+  : (process.env.TARGET_NETWORK || process.env.NEXT_PUBLIC_TARGET_NETWORK || "mainnet").trim().toLowerCase() === "mainnet";
 
 const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
 

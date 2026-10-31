@@ -33,7 +33,9 @@ export interface MatrixGatewayInfo {
 }
 
 export const PROTOCOL_VAULT_ADDRESS =
-  process.env.NEXT_PUBLIC_VAULT_ADDRESS || "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx";
+  process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS ||
+  process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+  "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw";
 
 export const MATRIX_GATEWAYS: Record<1 | 2 | 3 | 4, MatrixGatewayInfo> = {
   1: {

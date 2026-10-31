@@ -144,6 +144,18 @@ contract EquoraSalaryPool is ReentrancyGuard {
         vault        = _vault;
     }
 
+    receive() external payable {
+        if (msg.value > 0) {
+            pendingPoolBalance += msg.value;
+        }
+    }
+
+    fallback() external payable {
+        if (msg.value > 0) {
+            pendingPoolBalance += msg.value;
+        }
+    }
+
     /**
      * @dev Set EquoraRewardPool address (called once after deployment wiring).
      *      Can only be set once.
@@ -177,9 +189,10 @@ contract EquoraSalaryPool is ReentrancyGuard {
      * @dev Called by EquoraVault when routing matrix volume deposits (P4, P5, P14).
      *      Adds to pendingPoolBalance for monthly salary distribution.
      */
-    function receivePoolDeposit(uint256 amount) external {
+    function receivePoolDeposit(uint256 amount) external payable {
         if (msg.sender != vault) revert OnlyVault();
-        pendingPoolBalance += amount;
+        uint256 toAdd = msg.value > 0 ? msg.value : amount;
+        pendingPoolBalance += toAdd;
     }
 
     /**
@@ -409,7 +422,16 @@ contract EquoraSalaryPool is ReentrancyGuard {
         pendingBalance[msg.sender]       = 0;
         totalSalaryClaimed[msg.sender]  += amount;
 
-        bool ok = paymentToken.transfer(msg.sender, amount);
+        bool ok = false;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            ok = sent;
+        }
+        if (!ok && address(paymentToken) != address(0)) {
+            try paymentToken.transfer(msg.sender, amount) returns (bool res) {
+                ok = res;
+            } catch {}
+        }
         if (!ok) revert TransferFailed();
 
         emit RoyaltyClaimed(msg.sender, amount, block.timestamp);

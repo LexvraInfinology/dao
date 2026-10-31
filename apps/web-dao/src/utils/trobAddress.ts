@@ -4,13 +4,16 @@
  */
 
 import { sha256, getBytes } from 'ethers';
+import { ACTIVE_DAO_CONTRACT_ADDRESS, ACTIVE_DAO_CONTRACT_HEX } from '@/config/env';
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-export const ACTIVE_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
-export const ACTIVE_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
+export const ACTIVE_DAO_BASE58 = ACTIVE_DAO_CONTRACT_ADDRESS;
+export const ACTIVE_DAO_HEX = toTronHex(ACTIVE_DAO_CONTRACT_ADDRESS);
 
 export const DEPRECATED_DAO_ADDRESSES = new Set([
+  'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT',
+  '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4',
   'TPdBQLEny7KYJomg8AqTyU2AtRAKA2PFYf',
   '4195c81b704bcdb7a7196e3707a025265a196d25eb',
   '0x95c81b704bcdb7a7196e3707a025265a196d25eb',
@@ -44,20 +47,11 @@ export function isDaoAddressDeprecated(addr?: string | null): boolean {
 }
 
 export function getActiveDaoAddress(): string {
-  const env = (process.env.NEXT_PUBLIC_DAO_ADDRESS || process.env.NEXT_PUBLIC_EQUORA_DAO_ADDRESS || '').trim();
-  if (!env || DEPRECATED_DAO_ADDRESSES.has(env)) {
-    return ACTIVE_DAO_BASE58;
-  }
-  return env;
+  return ACTIVE_DAO_CONTRACT_ADDRESS;
 }
 
 export function getActiveDaoHex(): string {
-  const env = (process.env.NEXT_PUBLIC_DAO_HEX || '').trim();
-  const clean = env.replace(/^0x/, '41').toLowerCase();
-  if (!env || DEPRECATED_DAO_ADDRESSES.has(env) || DEPRECATED_DAO_ADDRESSES.has(clean)) {
-    return ACTIVE_DAO_HEX;
-  }
-  return clean;
+  return toTronHex(ACTIVE_DAO_CONTRACT_ADDRESS);
 }
 
 export const DEPLOYED_CONTRACTS = {
@@ -66,20 +60,36 @@ export const DEPLOYED_CONTRACTS = {
     hex: getActiveDaoHex(),
   },
   EquoraToken: {
-    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt',
+    base58: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || 'TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit',
     hex: process.env.NEXT_PUBLIC_TOKEN_HEX || '41b0e42d3a38e37f2be412b06af572fea20d9c5216',
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy',
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '41e182ad0c2aaec48202cd7b897820e5b058c502dd',
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y',
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || '416a193b520670f2f2c633ce62d90a816f70bfdef1',
   },
   EquoraVault: {
-    base58: 'TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB',
-    hex: '41d1c52987ccd9528457cb81a8b9685d2f15889dbb',
+    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TPVc8M9XNea33qmTybYRZXYJL4axQscyHx',
+    hex: process.env.NEXT_PUBLIC_VAULT_HEX || '4194596b1b3f9f67baf6a1759b427bca6f1b647562',
   },
   EquoraMatrix: {
-    base58: 'TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE',
-    hex: '41e50ec6ce93b6a7f91099ebc7d08c510c7dd3e0b7',
+    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL',
+    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2',
+  },
+  EquoraNFT: {
+    base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || 'TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm',
+    hex: process.env.NEXT_PUBLIC_NFT_HEX || '414c30848f51cc2d0dcf53782d4b884d4cfd17b8eb',
+  },
+  EquoraSalaryPool: {
+    base58: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || 'TUxdfGh3JTPLX2tUeb5wFDLxHbKJbc2DMK',
+    hex: process.env.NEXT_PUBLIC_SALARY_POOL_HEX || '41d04e8eded33e4b240565aa85418208bebabb89bc',
+  },
+  EquoraRewardPool: {
+    base58: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || 'TYoCKb3mS8rfwu9H9XyTaQJ8Y6tD27Krrt',
+    hex: process.env.NEXT_PUBLIC_REWARD_POOL_HEX || '41fa662a52c0a9ec078d4f8a60aa1513057ebbe321',
+  },
+  EquoraMagicBox: {
+    base58: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || 'TCrFNXw2Ve777u4X3mgshQGnGUXnq4Majv',
+    hex: process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || '411f9771b7ed99ab0ba748c126456592704f194acf',
   },
 } as const;
 
@@ -146,7 +156,9 @@ export function toTronHex(addr?: string | null): string {
   }
 
   let clean = trimmed;
-  if (clean.startsWith('0x') || clean.startsWith('0X')) {
+  if (clean.startsWith('0x41') || clean.startsWith('0X41')) {
+    clean = clean.slice(2);
+  } else if (clean.startsWith('0x') || clean.startsWith('0X')) {
     clean = '41' + clean.slice(2);
   } else if (!clean.startsWith('41') && clean.length === 40) {
     clean = '41' + clean;

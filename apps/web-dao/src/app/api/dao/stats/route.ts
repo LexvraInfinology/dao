@@ -3,7 +3,9 @@ import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
 import { getMergedOnChainDaoStats } from '../../_lib/onChainMergedDao';
-import { TROB_PRICE_API_URL } from '@/config/env';
+import { IS_MAINNET, FULLNODE_RPC_URL, TROB_PRICE_API_URL } from '@/config/env';
+import { getActiveDaoHex, getActiveDaoAddress } from '@/utils/trobAddress';
+import { Interface, formatUnits } from 'ethers';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +21,109 @@ export async function GET() {
     return NextResponse.json({ success: true, data: cachedStatsData });
   }
 
-  // Trigger real-time on-chain state sync in background (throttled)
+  // ── TESTNET MODE: Fetch strictly from deployed testnet smart contract ──
+  if (!IS_MAINNET) {
+    try {
+      const daoHex = getActiveDaoHex();
+      const rpcUrl = FULLNODE_RPC_URL || 'https://fullnode-one-testnet.trobchain.com';
+      const iface = new Interface([
+        'function getDAOStats() view returns (uint256 memberCount, uint256 totalCollectedAmount, uint256 totalDistributedAmount, bool isCompleted, bool isExpiredStatus, uint256 secondsRemaining, uint256 activeMembers, uint256 blankSlots, uint256 totalPoolReceivedAmount, uint256 totalPoolDistributedAmount)',
+      ]);
+
+      const res = await fetch(`${rpcUrl}/wallet/triggerconstantcontract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner_address: daoHex,
+          contract_address: daoHex,
+          function_selector: 'getDAOStats()',
+          parameter: '',
+        }),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.constant_result?.[0]) {
+          const decoded = iface.decodeFunctionResult('getDAOStats', '0x' + json.constant_result[0]);
+          const memberCount = Number(decoded.memberCount);
+          const activeMembers = Number(decoded.activeMembers);
+          const totalCollectedBTT = parseFloat(formatUnits(decoded.totalCollectedAmount, 6));
+          const totalDistributedBTT = parseFloat(formatUnits(decoded.totalDistributedAmount, 6));
+          const remainingPositions = Math.max(0, 100 - memberCount);
+          const nextAvailableSeat = memberCount < 100 ? memberCount + 1 : 100;
+          const entryFeeUsd = 300;
+          const earningsCapUsd = 1500;
+          const entryFeeBtt = 8076.24;
+          const earningsCapBtt = 26785.71;
+
+          const payload = {
+            memberCount,
+            activeMembers,
+            capacity: 100,
+            remainingPositions,
+            nextAvailableSeat,
+            entryFeeUsd,
+            earningsCapUsd,
+            entryFeeBtt,
+            entryFeeTrob: entryFeeBtt,
+            earningsCapBtt,
+            earningsCapTrob: earningsCapBtt,
+            totalCollectedBTT,
+            totalCollectedTROB: totalCollectedBTT,
+            totalDistributedBTT,
+            totalDistributedTROB: totalDistributedBTT,
+            totalCollectedUSDEstimate: memberCount * 300,
+            totalDistributedUSDEstimate: memberCount * 300,
+            onChain: {
+              source: 'trobchain-testnet',
+              v1: {
+                contractHex: daoHex,
+                contractBase58: getActiveDaoAddress(),
+                totalCollectedTrob: totalCollectedBTT,
+                totalDistributedTrob: totalDistributedBTT,
+              },
+              v2: {
+                contractHex: daoHex,
+                contractBase58: getActiveDaoAddress(),
+                totalCollectedTrob: totalCollectedBTT,
+                totalDistributedTrob: totalDistributedBTT,
+              },
+              merged: {
+                totalCollectedTrob: totalCollectedBTT,
+                totalDistributedTrob: totalDistributedBTT,
+                differenceTrob: Math.round((totalCollectedBTT - totalDistributedBTT) * 1000) / 1000,
+              },
+            },
+            rawDb: {
+              collectedTrob: totalCollectedBTT,
+              distributedTrob: totalDistributedBTT,
+            },
+            isClosed: memberCount >= 100,
+            bttPriceUsd: 0.056,
+            trobPriceUsd: 0.056,
+            priceSource: 'trobchain-testnet',
+            priceUpdatedAt: new Date().toISOString(),
+            dividendYieldApy: '0%',
+            treasurySnapshotUsd: 0,
+          };
+
+          cachedStatsData = payload;
+          cachedStatsTime = Date.now();
+
+          return NextResponse.json({
+            success: true,
+            data: payload,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[dao stats] Testnet on-chain query error:', err);
+    }
+  }
+
+  // ── MAINNET MODE: Trigger real-time on-chain state sync in background (throttled) ──
   syncOnChainMembersState().catch(() => {});
   getOnChainDaoTransactions().catch(() => {});
 
@@ -90,16 +194,16 @@ export async function GET() {
     totalCollectedUSDEstimate: mergedOnChain.mergedCollectedUsd,
     totalDistributedUSDEstimate: mergedOnChain.mergedDistributedUsd,
     onChain: {
-      source: 'merged-v1-v2',
+      source: IS_MAINNET ? 'merged-v1-v2' : 'trobchain-testnet',
       v1: {
-        contractHex: '410a59d6a2dcd3b18687c1efe1625642ad85679377',
-        contractBase58: 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto',
+        contractHex: IS_MAINNET ? '410a59d6a2dcd3b18687c1efe1625642ad85679377' : getActiveDaoHex(),
+        contractBase58: IS_MAINNET ? 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto' : getActiveDaoAddress(),
         totalCollectedTrob: mergedOnChain.v1CollectedTrob,
         totalDistributedTrob: mergedOnChain.v1DistributedTrob,
       },
       v2: {
-        contractHex: '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4',
-        contractBase58: 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT',
+        contractHex: IS_MAINNET ? '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4' : getActiveDaoHex(),
+        contractBase58: IS_MAINNET ? 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT' : getActiveDaoAddress(),
         totalCollectedTrob: mergedOnChain.v2CollectedTrob,
         totalDistributedTrob: mergedOnChain.v2DistributedTrob,
       },

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { getOnChainDaoTransactions, syncOnChainMembersState } from '../../_lib/blockchainSync';
-import { TROB_PRICE_API_URL } from '@/config/env';
+import { IS_MAINNET, FULLNODE_RPC_URL, TROB_PRICE_API_URL } from '@/config/env';
+import { getActiveDaoHex, toTrobBase58 } from '@/utils/trobAddress';
+import { Interface, formatUnits } from 'ethers';
 
 import { calculateMemberEarnedUsd, calculateMemberCycleAndLifetime, CONTRACT_TROB_PEG } from '@/utils/daoEconomics';
 import { toUtcIso } from '../../_lib/dateUtils';
@@ -21,7 +23,139 @@ export async function GET(req: NextRequest) {
   const page = searchParams.get('page') || '1';
   const limit = searchParams.get('limit') || '100';
 
-  // Automatically transition expired seats (12h underfunded or 48h capped) to vacant in Neon DB
+  const now = Date.now();
+  if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 10000) {
+    return NextResponse.json({ success: true, data: cachedMembersPayload });
+  }
+
+  // ── TESTNET MODE: Fetch strictly from deployed testnet smart contract ──
+  if (!IS_MAINNET) {
+    try {
+      const daoHex = getActiveDaoHex();
+      const rpcUrl = FULLNODE_RPC_URL || 'https://fullnode-one-testnet.trobchain.com';
+      const iface = new Interface([
+        'function getAllMembers() view returns (address[])',
+        'function getMemberDetails(address) view returns (bool isMember, uint256 position, uint256 nftTokenId, uint256 fallbackClaimable, uint256 totalEarned, bool isCapped, uint256 retopupDeadline, bool isBlank, uint256 poolClaimable)',
+      ]);
+
+      const res = await fetch(`${rpcUrl}/wallet/triggerconstantcontract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner_address: daoHex,
+          contract_address: daoHex,
+          function_selector: 'getAllMembers()',
+          parameter: '',
+        }),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.constant_result?.[0]) {
+          const memberHexes: string[] = iface.decodeFunctionResult('getAllMembers', '0x' + json.constant_result[0])[0];
+          
+          const membersList = await Promise.all(
+            memberHexes.map(async (mHex, idx) => {
+              const pos = idx + 1;
+              const isZero = !mHex || /^0x0+$/.test(mHex) || /^410+$/.test(mHex) || mHex === '0x0000000000000000000000000000000000000000';
+              if (isZero) return null;
+
+              const b58 = toTrobBase58(mHex);
+              if (!b58 || b58 === 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb') return null;
+
+              let totalEarnedTrob = 0;
+              let isCapped = false;
+              let isBlank = false;
+              let onChainDeadlineIso: string | null = null;
+
+              try {
+                const param = mHex.replace(/^0x/, '').padStart(64, '0');
+                const detRes = await fetch(`${rpcUrl}/wallet/triggerconstantcontract`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    owner_address: daoHex,
+                    contract_address: daoHex,
+                    function_selector: 'getMemberDetails(address)',
+                    parameter: param,
+                  }),
+                  cache: 'no-store',
+                  signal: AbortSignal.timeout(4000),
+                });
+                if (detRes.ok) {
+                  const detJson = await detRes.json();
+                  if (detJson.constant_result?.[0]) {
+                    const decoded = iface.decodeFunctionResult('getMemberDetails', '0x' + detJson.constant_result[0]);
+                    totalEarnedTrob = parseFloat(formatUnits(decoded.totalEarned, 6));
+                    isCapped = Boolean(decoded.isCapped);
+                    isBlank = Boolean(decoded.isBlank);
+                    const dlSec = Number(decoded.retopupDeadline);
+                    if (dlSec > 0) {
+                      onChainDeadlineIso = new Date(dlSec * 1000).toISOString();
+                    }
+                  }
+                }
+              } catch {}
+
+              const effStatus = isBlank ? 'vacant' : isCapped ? 'capped' : 'active';
+              const eco = calculateMemberCycleAndLifetime(
+                pos,
+                effStatus,
+                memberHexes.length,
+                0,
+                totalEarnedTrob,
+                CONTRACT_TROB_PEG
+              );
+
+              return {
+                position: pos,
+                address: b58,
+                nftTokenId: pos,
+                entryAmountBtt: 8076.24,
+                entryAmountTrob: 8076.24,
+                retopupAmountBtt: 0,
+                totalDepositsCount: 1,
+                totalDepositsUsd: 300,
+                pushedAmountBtt: totalEarnedTrob,
+                pushedAmountTrob: totalEarnedTrob,
+                pushedAmountUsdEstimate: eco.lifetimeUsd,
+                currentCycleUsd: eco.currentCycleUsd,
+                currentCycleCapPct: eco.currentCycleCapPct,
+                retopupCount: 0,
+                status: effStatus,
+                joinedAt: new Date().toISOString(),
+                retopupDeadline: onChainDeadlineIso,
+              };
+            })
+          );
+
+          const validMembers = membersList.filter(Boolean);
+          const data = {
+            members: validMembers,
+            total: validMembers.length,
+            bttPriceUsd: 0.056,
+            trobPriceUsd: 0.056,
+            page: 1,
+            limit: 100,
+          };
+
+          cachedMembersPayload = data;
+          cachedMembersTime = Date.now();
+
+          return NextResponse.json({
+            success: true,
+            data,
+          });
+        }
+      }
+    } catch (testnetErr) {
+      console.warn('[members route] Testnet on-chain fetch error:', testnetErr);
+    }
+  }
+
+  // ── MAINNET MODE: Automatically transition expired seats in Neon DB ──
   try {
     const expiredRes = await queryNeon<any>(
       `UPDATE "DaoMember"
@@ -36,11 +170,6 @@ export async function GET(req: NextRequest) {
       cachedMembersTime = 0;
     }
   } catch {}
-
-  const now = Date.now();
-  if (page === '1' && limit === '100' && cachedMembersPayload && now - cachedMembersTime < 10000) {
-    return NextResponse.json({ success: true, data: cachedMembersPayload });
-  }
 
   // Trigger real-time on-chain state sync in background
   syncOnChainMembersState().catch(() => {});

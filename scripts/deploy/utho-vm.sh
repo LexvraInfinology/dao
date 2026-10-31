@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 APP_DIR=/opt/dao
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
-EXPECTED_SERVICES=(frontend api indexer queue postgres redis)
+EXPECTED_SERVICES=(frontend matrix-frontend api indexer queue postgres redis)
 
 cd "$APP_DIR"
 
@@ -39,7 +39,7 @@ print_diagnostics() {
   echo '--- docker compose ps ---'
   compose ps || true
   echo '--- application and infrastructure logs ---'
-  compose logs --no-color --tail=200 postgres redis api frontend indexer queue || true
+  compose logs --no-color --tail=200 postgres redis api frontend matrix-frontend indexer queue || true
 }
 
 wait_for_health() {
@@ -59,7 +59,7 @@ wait_for_health() {
       health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null || true)"
 
       case "$service" in
-        postgres|redis|api|frontend)
+        postgres|redis|api|frontend|matrix-frontend)
           if [ "$state" != running ] || [ "$health" != healthy ]; then
             all_ready=false
           fi
@@ -75,6 +75,7 @@ wait_for_health() {
     if [ "$all_ready" = true ]; then
       compose exec -T api node -e "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       compose exec -T frontend node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      compose exec -T matrix-frontend node -e "fetch('http://127.0.0.1:3001/dashboard').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       return 0
     fi
 

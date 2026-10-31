@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryNeon } from '../../_lib/neonDb';
 import { verifyOnChainTransaction } from '../../_lib/txVerifier';
 import { getActiveDaoAddress } from '@/utils/trobAddress';
-import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
+import { invalidateMemberSyncCache, getAndSyncMemberState } from '../../_lib/onChainMemberSync';
+import { IS_MAINNET } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,26 +42,40 @@ export async function POST(req: NextRequest) {
     const base58Addr = toTrobBase58(cleanAddr);
     const hexAddr = toTronHex(cleanAddr);
 
-    const memberRes = await queryNeon<any>(
-      `SELECT * FROM "DaoMember" 
-       WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
-         AND LOWER(status) IN ('active', 'capped', 'underfunded')
-       LIMIT 1`,
-      [cleanAddr, base58Addr, hexAddr]
-    );
+    let m: any = null;
+    if (IS_MAINNET) {
+      const memberRes = await queryNeon<any>(
+        `SELECT * FROM "DaoMember" 
+         WHERE LOWER(address) IN (LOWER($1), LOWER($2), LOWER($3))
+           AND LOWER(status) IN ('active', 'capped', 'underfunded')
+         LIMIT 1`,
+        [cleanAddr, base58Addr, hexAddr]
+      );
 
-    if (memberRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member' }, { status: 404 });
+      if (memberRes.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member' }, { status: 404 });
+      }
+
+      m = memberRes.rows[0];
+    } else {
+      const onChainState = await getAndSyncMemberState(cleanAddr);
+      if (!onChainState.isMember) {
+        return NextResponse.json({ success: false, error: 'Address is not a registered Genesis Council member on Testnet' }, { status: 404 });
+      }
+      m = {
+        id: `testnet-member-${onChainState.position || 1}`,
+        address: onChainState.address || cleanAddr,
+        position: onChainState.position || 1,
+        status: onChainState.status || 'active',
+        retopupCount: 0,
+        pushedAmountBtt: onChainState.totalEarnedTrob || 0,
+        entryAmountBtt: onChainState.entryAmountTrob || 8076.24,
+      };
     }
-
-    const m = memberRes.rows[0];
     const isUnderfunded = m.status === 'underfunded';
 
-    // 1. Check if 48-Hour payment/retopup window has expired.
-    // If the transaction receipt is valid and was accepted/mined on-chain by the smart contract,
-    // the smart contract's block timestamp was within the acceptable window and accepted the payment.
-    // We strictly record and synchronize the database with on-chain reality.
-    if (!txReceipt.valid && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
+    // 1. Check if 48-Hour payment/retopup window has expired (Mainnet only).
+    if (IS_MAINNET && !txReceipt.valid && m.retopupDeadline && new Date(m.retopupDeadline).getTime() < Date.now()) {
       await queryNeon(
         `UPDATE "DaoMember" SET status = 'vacant', "updatedAt" = NOW() WHERE id = $1`,
         [m.id]
@@ -93,65 +108,6 @@ export async function POST(req: NextRequest) {
           : (trobPriceUsd ? Math.round((entryAmountUsd / trobPriceUsd) * 100) / 100 : 0));
     const pos = m.position || 1;
 
-    // 2. Reset member's earnings counter to 0 (unless underfunded, where past earnings count towards cap!), unlock underfunded status to 'active', update entry amounts if underfunded
-    await queryNeon(
-      `UPDATE "DaoMember"
-       SET "pushedAmountBtt" = CASE WHEN status = 'underfunded' THEN "pushedAmountBtt" ELSE 0 END,
-           status = 'active',
-           "retopupDeadline" = NULL,
-           "cappedAt" = NULL,
-           "retopupCount" = CASE WHEN status = 'underfunded' THEN "retopupCount" ELSE COALESCE("retopupCount", 0) + 1 END,
-           "retopupAmountBtt" = CASE WHEN status = 'underfunded' THEN 0 ELSE $2 END,
-           "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE COALESCE("totalDepositsCount", 1) + 1 END,
-           "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300 ELSE COALESCE("totalDepositsUsd", 300) + 300 END,
-           "lastRetopupAt" = CASE WHEN status = 'underfunded' THEN NULL ELSE NOW() END,
-           "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN GREATEST(5357.14, COALESCE("entryAmountBtt", 0) + $2) ELSE "entryAmountBtt" END,
-           "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300 ELSE "entryAmountUsdAtJoin" END,
-           "txHash" = $3,
-           "updatedAt" = NOW()
-       WHERE id = $1`,
-      [m.id, retopupTrob, cleanTx]
-    );
-
-    // Update User table qualification
-    await queryNeon(
-      `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
-      [m.address]
-    ).catch(() => {});
-
-    // 3. Record retopup event in DaoEvent
-    const eventReason = isUnderfunded
-      ? `Underfunded Council Seat Activated: Full $300 Entry Retopup completed (${retopupTrob} TROB) • Seat #${pos}`
-      : `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupTrob} TROB) • Seat #${pos}`;
-
-    await queryNeon(
-      `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-       VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-live-oracle', $5)
-       ON CONFLICT DO NOTHING`,
-      [
-        m.address,
-        pos,
-        cleanTx,
-        retopupTrob,
-        eventReason,
-      ]
-    );
-
-    // 4. Distribute the $300 retopup fee equally to ALL active uncapped members (including retopup caller)
-    const allMembersRes = await queryNeon<any>(
-      `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt"
-       FROM "DaoMember"
-       WHERE LOWER(status) = 'active'
-       ORDER BY position ASC`
-    );
-
-    const eligibleRecipients = allMembersRes.rows.filter((row: any) => {
-      const currentPushed = parseFloat(row.pushedAmountBtt || '0');
-      const entryBtt = parseFloat(row.entryAmountBtt || '5357.14');
-      const capBtt = entryBtt * 5;
-      return currentPushed < capBtt;
-    });
-
     interface MemberPayout {
       id: string;
       address: string;
@@ -164,113 +120,189 @@ export async function POST(req: NextRequest) {
       isNowCapped: boolean;
     }
 
-    const memberPayouts: MemberPayout[] = eligibleRecipients.map((r: any) => {
-      const currentPushed = parseFloat(r.pushedAmountBtt || '0');
-      const entryBtt = parseFloat(r.entryAmountBtt || '5357.14');
-      return {
-        id: r.id,
-        address: r.address,
-        position: r.position,
-        entryBtt,
-        capBtt: entryBtt * 5,
-        currentPushed,
-        payoutTrob: 0,
-        newPushed: currentPushed,
-        isNowCapped: false,
-      };
-    });
+    let memberPayouts: MemberPayout[] = [];
 
-    if (memberPayouts.length > 0) {
-      const baseShare = retopupTrob / memberPayouts.length;
-      let surplusTrob = 0;
+    if (IS_MAINNET) {
+      // 2. Reset member's earnings counter to 0 (unless underfunded), unlock underfunded status to 'active'
+      await queryNeon(
+        `UPDATE "DaoMember"
+         SET "pushedAmountBtt" = CASE WHEN status = 'underfunded' THEN "pushedAmountBtt" ELSE 0 END,
+             status = 'active',
+             "retopupDeadline" = NULL,
+             "cappedAt" = NULL,
+             "retopupCount" = CASE WHEN status = 'underfunded' THEN "retopupCount" ELSE COALESCE("retopupCount", 0) + 1 END,
+             "retopupAmountBtt" = CASE WHEN status = 'underfunded' THEN 0 ELSE $2 END,
+             "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE COALESCE("totalDepositsCount", 1) + 1 END,
+             "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300 ELSE COALESCE("totalDepositsUsd", 300) + 300 END,
+             "lastRetopupAt" = CASE WHEN status = 'underfunded' THEN NULL ELSE NOW() END,
+             "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN GREATEST(5357.14, COALESCE("entryAmountBtt", 0) + $2) ELSE "entryAmountBtt" END,
+             "entryAmountUsdAtJoin" = CASE WHEN status = 'underfunded' THEN 300 ELSE "entryAmountUsdAtJoin" END,
+             "txHash" = $3,
+             "updatedAt" = NOW()
+         WHERE id = $1`,
+        [m.id, retopupTrob, cleanTx]
+      );
 
-      for (const item of memberPayouts) {
-        const headroom = Math.max(0, item.capBtt - item.currentPushed);
-        if (baseShare <= headroom) {
-          item.payoutTrob = baseShare;
-          item.newPushed = item.currentPushed + baseShare;
-          item.isNowCapped = item.newPushed >= item.capBtt;
-        } else {
-          if (headroom > 0) {
-            item.payoutTrob = headroom;
-            item.newPushed = item.capBtt;
-          }
-          item.isNowCapped = true;
-          surplusTrob += (baseShare - headroom);
-        }
-      }
+      // Update User table qualification
+      await queryNeon(
+        `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
+        [m.address]
+      ).catch(() => {});
 
-      // Iterative surplus redistribution: split surplus equally among remaining uncapped members
-      let surplusRemaining = surplusTrob;
-      for (let round = 0; round < 5 && surplusRemaining > 0.0001; round++) {
-        const remainingUncapped = memberPayouts.filter(p => !p.isNowCapped);
-        if (remainingUncapped.length === 0) break;
+      // 3. Record retopup event in DaoEvent
+      const eventReason = isUnderfunded
+        ? `Underfunded Council Seat Activated: Full $300 Entry Retopup completed (${retopupTrob} TROB) • Seat #${pos}`
+        : `5X Cap Reset: 48h Retopup completed ($300 USD / ${retopupTrob} TROB) • Seat #${pos}`;
 
-        const extraShare = surplusRemaining / remainingUncapped.length;
-        let nextSurplus = 0;
+      await queryNeon(
+        `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
+         VALUES (gen_random_uuid(), 'retopup', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, 300, 'trobchain-live-oracle', $5)
+         ON CONFLICT DO NOTHING`,
+        [
+          m.address,
+          pos,
+          cleanTx,
+          retopupTrob,
+          eventReason,
+        ]
+      );
 
-        for (const item of remainingUncapped) {
-          const headroom = Math.max(0, item.capBtt - item.newPushed);
-          if (extraShare <= headroom) {
-            item.payoutTrob += extraShare;
-            item.newPushed += extraShare;
-            if (item.newPushed >= item.capBtt) {
-              item.isNowCapped = true;
-            }
+      // 4. Distribute the $300 retopup fee equally to ALL active uncapped members (including retopup caller)
+      const allMembersRes = await queryNeon<any>(
+        `SELECT id, address, position, "pushedAmountBtt", "entryAmountBtt"
+         FROM "DaoMember"
+         WHERE LOWER(status) = 'active'
+         ORDER BY position ASC`
+      );
+
+      const eligibleRecipients = allMembersRes.rows.filter((row: any) => {
+        const currentPushed = parseFloat(row.pushedAmountBtt || '0');
+        const entryBtt = parseFloat(row.entryAmountBtt || '5357.14');
+        const capBtt = entryBtt * 5;
+        return currentPushed < capBtt;
+      });
+
+      memberPayouts = eligibleRecipients.map((r: any) => {
+        const currentPushed = parseFloat(r.pushedAmountBtt || '0');
+        const entryBtt = parseFloat(r.entryAmountBtt || '5357.14');
+        return {
+          id: r.id,
+          address: r.address,
+          position: r.position,
+          entryBtt,
+          capBtt: entryBtt * 5,
+          currentPushed,
+          payoutTrob: 0,
+          newPushed: currentPushed,
+          isNowCapped: false,
+        };
+      });
+
+      if (memberPayouts.length > 0) {
+        const baseShare = retopupTrob / memberPayouts.length;
+        let surplusTrob = 0;
+
+        for (const item of memberPayouts) {
+          const headroom = Math.max(0, item.capBtt - item.currentPushed);
+          if (baseShare <= headroom) {
+            item.payoutTrob = baseShare;
+            item.newPushed = item.currentPushed + baseShare;
+            item.isNowCapped = item.newPushed >= item.capBtt;
           } else {
             if (headroom > 0) {
-              item.payoutTrob += headroom;
+              item.payoutTrob = headroom;
               item.newPushed = item.capBtt;
             }
             item.isNowCapped = true;
-            nextSurplus += (extraShare - headroom);
+            surplusTrob += (baseShare - headroom);
           }
         }
-        surplusRemaining = nextSurplus;
-      }
 
-      // Apply updates and broadcast payouts
-      for (const item of memberPayouts) {
-        if (item.payoutTrob <= 0) continue;
+        // Iterative surplus redistribution: split surplus equally among remaining uncapped members
+        let surplusRemaining = surplusTrob;
+        for (let round = 0; round < 5 && surplusRemaining > 0.0001; round++) {
+          const remainingUncapped = memberPayouts.filter(p => !p.isNowCapped);
+          if (remainingUncapped.length === 0) break;
 
-        let retopupDeadline: string | null = null;
-        if (item.isNowCapped) {
-          const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
-          retopupDeadline = deadlineDate.toISOString();
+          const extraShare = surplusRemaining / remainingUncapped.length;
+          let nextSurplus = 0;
+
+          for (const item of remainingUncapped) {
+            const headroom = Math.max(0, item.capBtt - item.newPushed);
+            if (extraShare <= headroom) {
+              item.payoutTrob += extraShare;
+              item.newPushed += extraShare;
+              if (item.newPushed >= item.capBtt) {
+                item.isNowCapped = true;
+              }
+            } else {
+              if (headroom > 0) {
+                item.payoutTrob += headroom;
+                item.newPushed = item.capBtt;
+              }
+              item.isNowCapped = true;
+              nextSurplus += (extraShare - headroom);
+            }
+          }
+          surplusRemaining = nextSurplus;
         }
 
-        await queryNeon(
-          `UPDATE "DaoMember"
-           SET "pushedAmountBtt" = $1,
-               status = CASE WHEN $2 THEN 'capped' ELSE status END,
-               "cappedAt" = CASE WHEN $2 THEN NOW() ELSE "cappedAt" END,
-               "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
-               "updatedAt" = NOW()
-           WHERE id = $4`,
-          [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
-        );
+        // Apply updates and broadcast payouts
+        for (const item of memberPayouts) {
+          if (item.payoutTrob <= 0) continue;
 
-        const isCaller = item.id === m.id;
-        const eventReason = isCaller
-          ? `Instant Cashback on Retopup Loop (Seat #${pos})`
-          : `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`;
-        const effectivePriceUsd = trobPriceUsd ?? (retopupTrob > 0 ? 300 / retopupTrob : 0.044);
-        const actualUsd = parseFloat((item.payoutTrob * effectivePriceUsd).toFixed(2));
+          let retopupDeadline: string | null = null;
+          if (item.isNowCapped) {
+            const deadlineDate = new Date(Date.now() + 48 * 3600 * 1000);
+            retopupDeadline = deadlineDate.toISOString();
+          }
 
-        await queryNeon(
-          `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
-           VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)
-           ON CONFLICT DO NOTHING`,
-          [
-            item.address,
-            pos,
-            `${cleanTx}-retopup-push-${item.position}`,
-            item.payoutTrob,
-            actualUsd,
-            eventReason,
-          ]
-        );
+          await queryNeon(
+            `UPDATE "DaoMember"
+             SET "pushedAmountBtt" = $1,
+                 status = CASE WHEN $2 THEN 'capped' ELSE status END,
+                 "cappedAt" = CASE WHEN $2 THEN NOW() ELSE "cappedAt" END,
+                 "retopupDeadline" = CASE WHEN $2 THEN $3 ELSE "retopupDeadline" END,
+                 "updatedAt" = NOW()
+             WHERE id = $4`,
+            [item.newPushed, item.isNowCapped, retopupDeadline, item.id]
+          );
+
+          const isCaller = item.id === m.id;
+          const eventReason = isCaller
+            ? `Instant Cashback on Retopup Loop (Seat #${pos})`
+            : `Dividend push from Seat #${pos} (Retopup Distribution)${item.isNowCapped ? ' (5X Cap Reached)' : ''}`;
+          const effectivePriceUsd = trobPriceUsd ?? (retopupTrob > 0 ? 300 / retopupTrob : 0.044);
+          const actualUsd = parseFloat((item.payoutTrob * effectivePriceUsd).toFixed(2));
+
+          await queryNeon(
+            `INSERT INTO "DaoEvent" (id, "eventType", "userAddress", "incomingPosition", "recipientCount", "txHash", "blockNumber", "timestamp", "createdAt", "amountBtt", "amountUsdEst", "priceSource", reason)
+             VALUES (gen_random_uuid(), 'pushed', $1, $2, NULL, $3, 1, NOW(), NOW(), $4, $5, 'blockchain-onchain', $6)
+             ON CONFLICT DO NOTHING`,
+            [
+              item.address,
+              pos,
+              `${cleanTx}-retopup-push-${item.position}`,
+              item.payoutTrob,
+              actualUsd,
+              eventReason,
+            ]
+          );
+        }
       }
+    } else {
+      // Testnet mode: caller gets instant testnet feedback
+      memberPayouts = [{
+        id: m.id,
+        address: m.address,
+        position: pos,
+        entryBtt: m.entryAmountBtt || 8076.24,
+        capBtt: (m.entryAmountBtt || 8076.24) * 5,
+        currentPushed: 0,
+        payoutTrob: retopupTrob,
+        newPushed: 0,
+        isNowCapped: false,
+      }];
     }
 
     const callerPayout = memberPayouts.find(p => p.id === m.id);

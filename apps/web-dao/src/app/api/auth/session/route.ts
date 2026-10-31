@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyJwt } from '../../_lib/jwt';
 import { queryNeon } from '../../_lib/neonDb';
 import { toTrobBase58, toTronHex } from '@/utils/trobAddress';
+import { IS_MAINNET } from '@/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,25 @@ export async function GET(req: NextRequest) {
     );
 
     const user = userRes.rows[0];
-    const isMember = Boolean(user && user.daoPosition && user.daoStatus !== 'vacant' && user.daoStatus !== 'blank');
+    let isMember = Boolean(user && user.daoPosition && user.daoStatus !== 'vacant' && user.daoStatus !== 'blank');
+    let daoPosition = user?.daoPosition ?? null;
+    let nftTokenId = user?.nftTokenId;
+
+    if (!IS_MAINNET) {
+      try {
+        const { getAndSyncMemberState } = await import('../../_lib/onChainMemberSync');
+        const synced = await getAndSyncMemberState(base58Addr || addr);
+        if (synced.isMember && synced.position) {
+          isMember = true;
+          daoPosition = synced.position;
+          nftTokenId = synced.nftTokenId;
+        } else {
+          isMember = false;
+          daoPosition = null;
+          nftTokenId = null;
+        }
+      } catch {}
+    }
 
     return NextResponse.json({
       success: true,
@@ -44,10 +63,10 @@ export async function GET(req: NextRequest) {
         isRegistered: Boolean(user),
         userId: user?.userId ?? null,
         sponsor: user?.sponsorAddress ?? null,
-        isQualified: user?.isQualified ?? false,
+        isQualified: user?.isQualified ?? isMember,
         daoMember: isMember,
-        daoPosition: user?.daoPosition ?? null,
-        nftBadgesCount: user?.nftTokenId ? 1 : 0,
+        daoPosition,
+        nftBadgesCount: nftTokenId ? 1 : 0,
       },
     });
   } catch (err: unknown) {

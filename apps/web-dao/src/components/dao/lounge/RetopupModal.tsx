@@ -235,8 +235,8 @@ export const RetopupModal: React.FC<RetopupModalProps> = ({
         }),
       }).catch(() => null);
 
-      if (!res) {
-        res = await fetch('https://api.equorafidao.com/api/dao/retopup', {
+      if (!res && process.env.NEXT_PUBLIC_API_URL) {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/api/dao/retopup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

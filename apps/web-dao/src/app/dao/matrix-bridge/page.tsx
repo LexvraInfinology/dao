@@ -6,6 +6,7 @@ import MatrixCountdownCard from '@/components/dao/matrix/MatrixCountdownCard';
 import MatrixTreeGraph from '@/components/dao/matrix/MatrixTreeGraph';
 import { ProtocolPoolsCard } from '@/components/dao/matrix/ProtocolPoolsCard';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { GenesisMatrixPriorityBanner } from '@/components/dao/matrix/GenesisMatrixPriorityBanner';
 import { useWallet } from '@/context/WalletContext';
 import { useAuthContext } from '@/context/AuthContext';
 import { useDaoMember, useTrobPrice } from '@/hooks/useApi';
@@ -25,6 +26,10 @@ export default function MatrixBridgePage() {
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn font-sans py-2 sm:py-5 lg:py-6 max-w-5xl mx-auto w-full px-1">
       <UnderfundedAlertBanner />
+      <GenesisMatrixPriorityBanner
+        isMember={memberData?.isMember ?? Boolean(userSeat)}
+        position={userSeat}
+      />
 
       {/* ── Header Section (Crisp & Focused) ── */}
       <div className="text-center flex flex-col items-center">

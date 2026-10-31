@@ -3,6 +3,7 @@
 import React from 'react';
 import { CreditCard, ShieldCheck, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import { getExplorerAddressUrl } from '@/utils/explorer';
+import { IS_MAINNET, NETWORK_NAME } from '@/config/env';
 
 interface TreasuryBalanceCardProps {
   balance?: number;
@@ -156,7 +157,7 @@ export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
                 Smart Contract Ledger
               </div>
               <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 md:hidden shrink-0">
-                Mainnet
+                {IS_MAINNET ? 'Mainnet' : 'Testnet'}
               </span>
             </div>
             <div className="pt-0.5">
@@ -176,7 +177,7 @@ export const TreasuryBalanceCard: React.FC<TreasuryBalanceCardProps> = ({
             </div>
           </div>
           <div className="pt-0.5 flex items-center justify-between text-[9.5px] text-[#64748B]">
-            <span className="hidden md:inline font-medium">TrobChain Mainnet</span>
+            <span className="hidden md:inline font-medium">{NETWORK_NAME}</span>
             <span className="truncate">Immutable rules enforced by code</span>
           </div>
         </div>

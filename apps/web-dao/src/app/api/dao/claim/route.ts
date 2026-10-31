@@ -3,11 +3,23 @@ import { fetchFromBackend } from '../../_lib/proxy';
 import { queryNeon } from '../../_lib/neonDb';
 import { checkServerlessEligibility } from '../../_lib/eligibility';
 import { getActiveDaoAddress, getActiveDaoHex, toTronHex } from '@/utils/trobAddress';
-import { TROB_PRICE_API_URL } from '@/config/env';
+import { TROB_PRICE_API_URL, IS_MAINNET } from '@/config/env';
 import { verifyOnChainTransaction, getOnChainMemberPosition } from '../../_lib/txVerifier';
 import { invalidateMemberSyncCache } from '../../_lib/onChainMemberSync';
 
 export const dynamic = 'force-dynamic';
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-device-fingerprint, X-Device-Fingerprint, x-signature, x-address, *',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,14 +45,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Address is required' }, { status: 400 });
     }
 
-    // 0. Auto-forfeit/vacate any capped seats whose 48h retopup deadline expired without payment
-    await queryNeon(
-      `UPDATE "DaoMember"
-       SET status = 'vacant', "updatedAt" = NOW()
-       WHERE LOWER(status) IN ('capped', 'expired')
-         AND "retopupDeadline" IS NOT NULL
-         AND "retopupDeadline" < NOW()`
-    );
+    if (IS_MAINNET) {
+      // 0. Auto-forfeit/vacate any capped seats whose 48h retopup deadline expired without payment
+      await queryNeon(
+        `UPDATE "DaoMember"
+         SET status = 'vacant', "updatedAt" = NOW()
+         WHERE LOWER(status) IN ('capped', 'expired')
+           AND "retopupDeadline" IS NOT NULL
+           AND "retopupDeadline" < NOW()`
+      );
+    }
 
     // Server-side eligibility check (Gating conditions bypassed as requested: allow verified on-chain deposits)
     const elig = await checkServerlessEligibility(address, clientFingerprint);
@@ -109,20 +123,22 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if user is already an active member in DB for this exact position
-    const existingUser = await queryNeon<any>(
-      `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
-      [userAddr]
-    );
-    if (existingUser.rows.length > 0 && existingUser.rows[0].position === finalPos) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          position: existingUser.rows[0].position,
-          address: existingUser.rows[0].address,
-          alreadyMember: true,
-        },
-      });
+    if (IS_MAINNET) {
+      // Check if user is already an active member in DB for this exact position
+      const existingUser = await queryNeon<any>(
+        `SELECT id, position, address FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND LOWER(status) IN ('active', 'capped') LIMIT 1`,
+        [userAddr]
+      );
+      if (existingUser.rows.length > 0 && existingUser.rows[0].position === finalPos) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            position: existingUser.rows[0].position,
+            address: existingUser.rows[0].address,
+            alreadyMember: true,
+          },
+        });
+      }
     }
 
     // Fetch dynamic live market price for exact $300 USD calculation
@@ -143,30 +159,31 @@ export async function POST(req: NextRequest) {
     const cashbackUsd = parseFloat((entryAmountUsd / finalPos).toFixed(2));
     const cashbackTrob = Math.round((cashbackUsd / trobPriceUsd) * 100) / 100;
 
-    // Ensure user exists in "User" table to satisfy DaoMember_address_fkey foreign key constraint
-    const existingUserRecord = await queryNeon<any>(
-      `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
-      [userAddr]
-    );
-
     let dbUserAddress = userAddr;
-    if (existingUserRecord.rows.length === 0) {
-      const nextUserIdRes = await queryNeon<{ max_id: string }>(
-        `SELECT COALESCE(MAX("userId"), 0) + 1 AS max_id FROM "User"`
+    if (IS_MAINNET) {
+      // Ensure user exists in "User" table to satisfy DaoMember_address_fkey foreign key constraint
+      const existingUserRecord = await queryNeon<any>(
+        `SELECT id, address FROM "User" WHERE LOWER(address) = LOWER($1) LIMIT 1`,
+        [userAddr]
       );
-      const nextUserId = parseInt(String(nextUserIdRes.rows[0]?.max_id || '1'), 10) || 1;
 
-      await queryNeon(
-        `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
-         ON CONFLICT (address) DO NOTHING`,
-        [userAddr, nextUserId]
-      );
-    } else {
-      dbUserAddress = existingUserRecord.rows[0].address;
-    }
+      if (existingUserRecord.rows.length === 0) {
+        const nextUserIdRes = await queryNeon<{ max_id: string }>(
+          `SELECT COALESCE(MAX("userId"), 0) + 1 AS max_id FROM "User"`
+        );
+        const nextUserId = parseInt(String(nextUserIdRes.rows[0]?.max_id || '1'), 10) || 1;
 
-    // Check if slot row exists (e.g. from previously vacant/expired occupant)
+        await queryNeon(
+          `INSERT INTO "User" (id, address, "userId", "registrationTimestamp", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, NOW(), NOW(), NOW())
+           ON CONFLICT (address) DO NOTHING`,
+          [userAddr, nextUserId]
+        );
+      } else {
+        dbUserAddress = existingUserRecord.rows[0].address;
+      }
+
+      // Check if slot row exists (e.g. from previously vacant/expired occupant)
     const slotRow = await queryNeon<any>(
       `SELECT id FROM "DaoMember" WHERE position = $1 LIMIT 1`,
       [finalPos]
@@ -344,6 +361,7 @@ export async function POST(req: NextRequest) {
           );
         }
       }
+    }
     }
     invalidateMemberSyncCache();
 

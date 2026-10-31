@@ -13,6 +13,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 // ------------------------------------------------------------------------------
@@ -39,6 +40,10 @@ model User {
   matrixSlots           MatrixSlot[]
   placedMatrixNodes     MatrixPlacement[] @relation("PlacedUser")
   ownedMatrixNodes      MatrixPlacement[] @relation("MatrixOwner")
+  matrixProfile         MatrixProfile?
+  matrixTransactions    MatrixTransaction[]
+  matrixActivities      MatrixActivity[]
+  matrixSettings        MatrixSettings?
   nftBadges             NftBadge[]
   vestingLocks          VestingLock[]
   withdrawals           Withdrawal[]
@@ -92,6 +97,14 @@ model DaoMember {
   entryAmountUsdAtJoin  Decimal?            @db.Decimal(36, 18)
   priceSource           String?             // "onchain" | "offchain-estimate"
   pushedAmountBtt       Decimal             @default(0) @db.Decimal(36, 18)
+  retopupAmountBtt      Decimal             @default(0) @db.Decimal(36, 18)
+  retopupCount          Int                 @default(0)
+  lastRetopupAt         DateTime?
+  retopupDeadline       DateTime?
+  cappedAt              DateTime?
+  totalDepositsCount    Int                 @default(1)
+  totalDepositsUsd      Decimal             @default(0) @db.Decimal(36, 18)
+  deviceFingerprint     String?
   joinedAt              DateTime
   status                String              @default("active")
   txHash                String
@@ -103,6 +116,15 @@ model DaoMember {
 
   @@index([position])
   @@index([joinedAt])
+}
+
+model WhatsappVerification {
+  address     String    @id
+  phone       String?
+  verified    Boolean   @default(true)
+  verified_at DateTime? @default(now())
+
+  @@map("whatsapp_verifications")
 }
 
 model DaoEvent {
@@ -148,6 +170,7 @@ model MatrixSlot {
   user            User              @relation(fields: [userAddress], references: [address], onDelete: Cascade)
   slotNumber      Int               // 1 to 12
   currentCycle    Int               @default(1)
+  recyclesCount   Int               @default(0)
   filledNodes     Int               @default(0) // 0 to 14
   isUnlocked      Boolean           @default(false)
   upgradeReserve  Decimal           @default(0) @db.Decimal(36, 18)
@@ -204,6 +227,108 @@ model MatrixCycleEvent {
   @@unique([userAddress, slotNumber, cycleNumber])
   @@index([userAddress, slotNumber])
   @@index([completedAt])
+}
+
+// ------------------------------------------------------------------------------
+// 4a. MATRIX USER EXTENSIONS & AUDIT TRAILS
+// ------------------------------------------------------------------------------
+
+model MatrixProfile {
+  id                    String    @id @default(uuid())
+  userAddress           String    @unique
+  user                  User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  username              String?
+  avatarUrl             String?
+  bio                   String?
+  telegram              String?
+  twitter               String?
+  totalEarnings         Decimal   @default(0) @db.Decimal(36, 18)
+  directEarnings        Decimal   @default(0) @db.Decimal(36, 18)
+  matrixEarnings        Decimal   @default(0) @db.Decimal(36, 18)
+  poolEarnings          Decimal   @default(0) @db.Decimal(36, 18)
+  availableBalance      Decimal   @default(0) @db.Decimal(36, 18)
+  withdrawnTotal        Decimal   @default(0) @db.Decimal(36, 18)
+  recyclesCount         Int       @default(0)
+  teamCount             Int       @default(0)
+  rankTier              Int       @default(0) // 0: None, 1: ALPHA, 2: PRIME, 3: ELITE, 4: CROWN
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userAddress])
+  @@index([rankTier])
+  @@index([totalEarnings])
+}
+
+model MatrixTransaction {
+  id                    String    @id @default(uuid())
+  userAddress           String
+  user                  User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  type                  String    // "SLOT_PURCHASE", "CYCLE_COMPLETED", "COMMISSION_EARNED", "SPILLOVER_RECEIVED", "UPGRADE_DEDUCTION", "POOL_DISTRIBUTION", "WITHDRAWAL"
+  slotNumber            Int?
+  cycle                 Int?
+  position              Int?
+  amount                Decimal   @db.Decimal(36, 18)
+  amountUsd             Decimal?  @db.Decimal(36, 18)
+  token                 String    @default("TROB")
+  fromAddress           String?
+  toAddress             String?
+  txHash                String?
+  status                String    @default("COMPLETED") // "COMPLETED", "PENDING", "FAILED"
+  description           String?
+  timestamp             DateTime  @default(now())
+
+  @@index([userAddress])
+  @@index([type])
+  @@index([status])
+  @@index([timestamp])
+}
+
+model MatrixActivity {
+  id                    String    @id @default(uuid())
+  userAddress           String
+  user                  User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  action                String    // "MEMBER_JOINED", "SLOT_ACTIVATED", "CYCLE_COMPLETED", "COMMISSION_RECEIVED", "SPILLOVER", "REWARD_RECEIVED", "WITHDRAWAL_COMPLETED", "RANK_PROMOTED"
+  title                 String
+  description           String
+  slotNumber            Int?
+  amount                Decimal?  @db.Decimal(36, 18)
+  txHash                String?
+  timestamp             DateTime  @default(now())
+
+  @@index([userAddress])
+  @@index([action])
+  @@index([timestamp])
+}
+
+model MatrixSettings {
+  id                    String    @id @default(uuid())
+  userAddress           String    @unique
+  user                  User      @relation(fields: [userAddress], references: [address], onDelete: Cascade)
+  autoUpgrade           Boolean   @default(true)
+  autoReinvest          Boolean   @default(true)
+  telegramNotifications Boolean   @default(true)
+  emailNotifications    Boolean   @default(false)
+  soundEffects          Boolean   @default(true)
+  currency              String    @default("USD")
+  theme                 String    @default("dark")
+  matrixDisplayMode     String    @default("level") // "level", "tree", "list"
+  hideZeroBalances      Boolean   @default(false)
+  email                 String?
+  telegram              String?
+  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now())
+
+  @@index([userAddress])
+}
+
+model MatrixRankPoolState {
+  tier                  Int       @id // 1: ALPHA, 2: PRIME, 3: ELITE, 4: CROWN
+  tierName              String    // "ALPHA", "PRIME", "ELITE", "CROWN"
+  poolBalance           Decimal   @default(0) @db.Decimal(36, 18)
+  totalDistributed      Decimal   @default(0) @db.Decimal(36, 18)
+  qualifierCount        Int       @default(0)
+  nextDistributionAt    DateTime?
+  updatedAt             DateTime  @updatedAt
 }
 
 // ------------------------------------------------------------------------------

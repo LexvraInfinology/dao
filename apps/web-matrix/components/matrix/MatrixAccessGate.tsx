@@ -51,6 +51,7 @@ import {
   getOnChainTotalMembers,
   GENESIS_ROOT_MEMBER_BASE58,
   GENESIS_ROOT_MEMBER_HEX,
+  isDeployerAddress,
 } from "@/lib/contracts";
 import { formatAddress } from "@/lib/format";
 import {
@@ -226,9 +227,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     return s;
   };
 
-  const DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
-
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
@@ -251,7 +249,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     }
 
     // Deployer wallet is strictly prohibited as sponsor
-    if (cleaned === DEPLOYER_BASE58 || cleaned.toLowerCase() === DEPLOYER_HEX) {
+    if (isDeployerAddress(cleaned)) {
       setSponsorStatus({
         isValid: false,
         isCustom: false,
@@ -478,16 +476,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         );
         const isFirstId = isCurrentRootWallet || membersCount === 0 || daoSeat === 1;
 
-        // Purge any testnet or invalid cached sponsor from localStorage
+        // Purge any deployer or invalid cached sponsor from localStorage
         if (typeof window !== "undefined") {
           const stored = localStorage.getItem("equora_sponsor");
           if (
             isFirstId ||
             (stored && (
-              stored === "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr" ||
-              stored.toLowerCase() === "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f" ||
-              stored === "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8" ||
-              stored.toLowerCase() === "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202" ||
+              isDeployerAddress(stored) ||
               stored === "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL" ||
               stored === "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx"
             ))
@@ -530,7 +525,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
           // Case B2: Explicit referral address passed in URL
           else if (ref && (ref.startsWith("0x") || ref.startsWith("T"))) {
-            if (ref !== DEPLOYER_BASE58 && ref.toLowerCase() !== DEPLOYER_HEX) {
+            if (!isDeployerAddress(ref)) {
               resolved = ref;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", ref);
@@ -571,7 +566,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           else {
             const stored = localStorage.getItem("equora_sponsor");
             if (stored && (stored.startsWith("0x") || stored.startsWith("T") || /^\d{5}$/.test(stored))) {
-              if (stored !== DEPLOYER_BASE58 && stored.toLowerCase() !== DEPLOYER_HEX) {
+              if (!isDeployerAddress(stored)) {
                 resolved = stored;
                 isCustomFound = true;
               }

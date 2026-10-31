@@ -51,11 +51,11 @@ The protocol is officially deployed on **TrobChain Mainnet**:
 
 | Contract | Base58 Address | Hex Address (`0x` / `41`) | Role |
 |---|---|---|---|
-| **EquoraDAO** | `TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto` | `410a59d6a2dcd3b18687c1efe1625642ad85679377` | 100-Seat Council DAO, Queue & 300/N Dividend Engine |
-| **EquoraRegistry** | `TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy` | `41e182ad0c2aaec48202cd7b897820e5b058c502dd` | 5-Digit Referral Codes & Member Qualification |
-| **EquoraNFT** | `TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz` | `41ac99f67a5a8edad419a2613fe9ff7bbea118d20a` | Soulbound TRB-721 Proof-of-Seat Passports |
-| **EquoraVault** | `TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB` | `41d1c52987ccd9528457cb81a8b9685d2f15889dbb` | Multi-Tier Yield Routing (35% DAO / 40% Salary / 15% Rewards / 10% Box) |
-| **EquoraMatrix** | `TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE` | `41e50ec6ce93b6a7f91099ebc7d08c510c7dd3e0b7` | 12-Slot, 14-Node Single-Leg Spillover Matrix |
+| **EquoraDAO** | `THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V` | `4151114b92df6041f5a0e7ebc13e6ed68298fd28b0` | 100-Seat Council DAO, Queue & 300/N Dividend Engine |
+| **EquoraRegistry** | `TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB` | `41d045ad50706313f76b4acbaa370258f6a0da1697` | 5-Digit Referral Codes & Member Qualification |
+| **EquoraNFT** | `TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9` | `41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d` | Soulbound TRB-721 Proof-of-Seat Passports |
+| **EquoraVault** | `THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw` | `4155f1f42bc35374f5eefda01a4cfa083c21f34f12` | Multi-Tier Yield Routing (35% DAO / 40% Salary / 15% Rewards / 10% Box) |
+| **EquoraMatrix** | `TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi` | `418c05990021d332e01a68c42ce6a7e783a1752d06` | 12-Slot, 14-Node Single-Leg Spillover Matrix |
 | **EquoraToken** | `TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn` | `4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9` | Protocol Native TRC-20 Payment Token (TROB) |
 
 ---

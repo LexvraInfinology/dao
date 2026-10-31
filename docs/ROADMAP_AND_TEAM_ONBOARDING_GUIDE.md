@@ -68,12 +68,12 @@ All contracts are deployed on TrobChain L1. Both **Base58** (Tron standard) and 
 
 | Contract | Base58 Address | Canonical Hex Address (`0x` / `41`) | Role |
 |---|---|---|---|
-| **EquoraMatrix** | `TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE` | `0xe50ec6ce93b6a7f91099ebc7d08c510c7dd3e0b7` | Mainnet 12-Slot Matrix Engine |
-| **EquoraToken (TROB)** | `TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn` | `0x90b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9` | Native Mainnet TRC-20 Payment Token |
-| **EquoraVault** | `TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB` | `0xd1c52987ccd9528457cb81a8b9685d2f15889dbb` | Multi-Tier Yield Routing (35% DAO / 40% Salary / 15% Rewards / 10% Box) |
-| **EquoraDAO** | `TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto` | `0x0a59d6a2dcd3b18687c1efe1625642ad85679377` | 100-Seat Council DAO & Dividend Engine |
-| **EquoraRegistry** | `TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy` | `0xe182ad0c2aaec48202cd7b897820e5b058c502dd` | 5-Digit Referral Codes & Member Qualification |
-| **EquoraNFT** | `TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz` | `0xac99f67a5a8edad419a2613fe9ff7bbea118d20a` | Soulbound TRB-721 Proof-of-Seat Passports |
+| **EquoraMatrix** | `TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi` | `418c05990021d332e01a68c42ce6a7e783a1752d06` | Mainnet 12-Slot Matrix Engine |
+| **EquoraToken (TROB)** | `TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn` | `4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9` | Native Mainnet TRC-20 Payment Token |
+| **EquoraVault** | `THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw` | `4155f1f42bc35374f5eefda01a4cfa083c21f34f12` | Multi-Tier Yield Routing (35% DAO / 40% Salary / 15% Rewards / 10% Box) |
+| **EquoraDAO** | `THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V` | `4151114b92df6041f5a0e7ebc13e6ed68298fd28b0` | 100-Seat Council DAO & Dividend Engine |
+| **EquoraRegistry** | `TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB` | `41d045ad50706313f76b4acbaa370258f6a0da1697` | 5-Digit Referral Codes & Member Qualification |
+| **EquoraNFT** | `TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9` | `41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d` | Soulbound TRB-721 Proof-of-Seat Passports |
 
 ---
 
@@ -187,12 +187,12 @@ NEXT_PUBLIC_EXPLORER_URL=https://trobchain.com
 NEXT_PUBLIC_EXPLORER_API_URL=https://backend.trobchain.com/v1
 
 # Verified Smart Contracts (Mainnet)
-NEXT_PUBLIC_MATRIX_ADDRESS=TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE
+NEXT_PUBLIC_MATRIX_ADDRESS=TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi
 NEXT_PUBLIC_TOKEN_ADDRESS=TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn
-NEXT_PUBLIC_VAULT_ADDRESS=TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB
-NEXT_PUBLIC_DAO_ADDRESS=TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto
-NEXT_PUBLIC_REGISTRY_ADDRESS=TWXbakETzfE9sBYdHTCp37HwygGKLY6AGy
-NEXT_PUBLIC_NFT_ADDRESS=TRhqfaRNRPeNTNoewLdamZ9W9Rz5erdHjz
+NEXT_PUBLIC_VAULT_ADDRESS=THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw
+NEXT_PUBLIC_DAO_ADDRESS=THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V
+NEXT_PUBLIC_REGISTRY_ADDRESS=TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB
+NEXT_PUBLIC_NFT_ADDRESS=TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9
 
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=7663d51173c43f7ad40158edb7e88859
 ```

@@ -188,15 +188,15 @@ critical_defaults = {
     "WEB_PORT": "3000",
     "MATRIX_WEB_PORT": "3001",
     "API_PORT": "4000",
-    "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
-    "NEXT_PUBLIC_MATRIX_ADDRESS": "TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi",
+    "NEXT_PUBLIC_DAO_ADDRESS": "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
+    "NEXT_PUBLIC_MATRIX_ADDRESS": "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
     "NEXT_PUBLIC_TOKEN_ADDRESS": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-    "NEXT_PUBLIC_REGISTRY_ADDRESS": "TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB",
-    "NEXT_PUBLIC_VAULT_ADDRESS": "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw",
-    "NEXT_PUBLIC_NFT_ADDRESS": "TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9",
-    "NEXT_PUBLIC_SALARY_POOL_ADDRESS": "TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9",
-    "NEXT_PUBLIC_REWARD_POOL_ADDRESS": "TF6dsLSRY1G9idqpTEM9Xowvdyp7EgFJWh",
-    "NEXT_PUBLIC_MAGIC_BOX_ADDRESS": "TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg",
+    "NEXT_PUBLIC_REGISTRY_ADDRESS": "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
+    "NEXT_PUBLIC_VAULT_ADDRESS": "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
+    "NEXT_PUBLIC_NFT_ADDRESS": "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
+    "NEXT_PUBLIC_SALARY_POOL_ADDRESS": "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
+    "NEXT_PUBLIC_REWARD_POOL_ADDRESS": "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
+    "NEXT_PUBLIC_MAGIC_BOX_ADDRESS": "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
     "NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS": "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY",
     "NEXT_PUBLIC_CHAIN_ID": "1000",
     "CHAIN_ID": "1000",
@@ -225,21 +225,35 @@ if "DATABASE_URL" in key_map and "@postgres:5432" in key_map["DATABASE_URL"]:
 
 # Strictly overwrite any outdated legacy or testnet addresses in production .env
 outdated_matrix_addrs = [
+    "TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi",
     "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
     "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
     "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
     "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
 ]
 if key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS") in outdated_matrix_addrs or not key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS"):
-    key_map["NEXT_PUBLIC_MATRIX_ADDRESS"] = "TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi"
+    key_map["NEXT_PUBLIC_MATRIX_ADDRESS"] = "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV"
 
 outdated_vault_addrs = [
+    "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw",
     "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
     "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
     "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
 ]
 if key_map.get("NEXT_PUBLIC_VAULT_ADDRESS") in outdated_vault_addrs or not key_map.get("NEXT_PUBLIC_VAULT_ADDRESS"):
-    key_map["NEXT_PUBLIC_VAULT_ADDRESS"] = "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw"
+    key_map["NEXT_PUBLIC_VAULT_ADDRESS"] = "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J"
+
+outdated_registry_addrs = [
+    "TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB",
+]
+if key_map.get("NEXT_PUBLIC_REGISTRY_ADDRESS") in outdated_registry_addrs or not key_map.get("NEXT_PUBLIC_REGISTRY_ADDRESS"):
+    key_map["NEXT_PUBLIC_REGISTRY_ADDRESS"] = "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj"
+
+outdated_dao_addrs = [
+    "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
+]
+if key_map.get("NEXT_PUBLIC_DAO_ADDRESS") in outdated_dao_addrs or not key_map.get("NEXT_PUBLIC_DAO_ADDRESS"):
+    key_map["NEXT_PUBLIC_DAO_ADDRESS"] = "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2"
 
 # Strictly enforce host ports matching Nginx reverse proxy architecture (DAO: 3000, Matrix: 3001, API: 4000)
 key_map["WEB_PORT"] = "3000"

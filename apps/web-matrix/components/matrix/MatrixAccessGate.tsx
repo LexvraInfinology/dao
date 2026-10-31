@@ -156,8 +156,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     let mounted = true;
     const updateLivePricing = async () => {
       try {
-        const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
-        if (res.ok) {
+        const res = await fetch("/api/price/trob", { cache: "no-store" }).catch(() => fetch("/api/price", { cache: "no-store" }));
+        if (res && res.ok) {
           const json = await res.json();
           const p = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
           if (p && !isNaN(p) && p > 0 && mounted) {

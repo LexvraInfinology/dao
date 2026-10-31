@@ -156,7 +156,7 @@ def sanitize_env_file(filepath):
         "POSTGRES_USER": "neondb_owner",
         "POSTGRES_PASSWORD": "npg_1fOkpFHAZx2e",
         "POSTGRES_DB": "neondb",
-        "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable",
+        "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require",
         "REDIS_PASSWORD": "EquoraRedis2026Secure",
         "JWT_SECRET": "equora_jwt_secret_production_key_32_characters_minimum",
         "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V"
@@ -168,6 +168,9 @@ def sanitize_env_file(filepath):
                 key_map[crit_key] = backup_map[crit_key]
             else:
                 key_map[crit_key] = def_val
+
+    if "DATABASE_URL" in key_map and "@postgres:5432" in key_map["DATABASE_URL"]:
+        key_map["DATABASE_URL"] = "postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
     key_map["CORS_ORIGIN"] = ",".join(CORS_ORIGINS)
 

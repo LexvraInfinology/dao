@@ -59,8 +59,8 @@ export function SlotPurchaseModal({
       }
 
       try {
-        const pRes = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
-        if (pRes.ok) {
+        const pRes = await fetch("/api/price/trob", { cache: "no-store" }).catch(() => fetch("/api/price", { cache: "no-store" }));
+        if (pRes && pRes.ok) {
           const pJson = await pRes.json();
           const p = Number(pJson?.data?.priceUsd ?? pJson?.priceUsd ?? pJson?.price);
           if (p > 0 && !cancelled) setLivePriceUsd(p);

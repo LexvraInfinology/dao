@@ -47,7 +47,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-EquoraRedis2026Secure}
@@ -92,7 +92,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
       CHAIN_ID: ${CHAIN_ID:-1000}
       RPC_URL: ${RPC_URL:-https://fullnode-one.trobchain.com}
       INDEXER_POLL_INTERVAL_MS: ${INDEXER_POLL_INTERVAL_MS:-3000}
@@ -122,7 +122,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_1fOkpFHAZx2e@ep-ancient-smoke-b4y6grfd-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-EquoraRedis2026Secure}
@@ -150,6 +150,7 @@ services:
         NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafidao.com}
         NEXT_PUBLIC_DAO_URL: ${NEXT_PUBLIC_DAO_URL:-https://equorafidao.com}
         NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-${CHAIN_ID:-1000}}
+        NEXT_PUBLIC_IS_MAINNET: ${NEXT_PUBLIC_IS_MAINNET:-true}
         NEXT_PUBLIC_TARGET_NETWORK: ${NEXT_PUBLIC_TARGET_NETWORK:-mainnet}
         NEXT_PUBLIC_EXPLORER_URL: ${NEXT_PUBLIC_EXPLORER_URL:-https://trobchain.com}
         NEXT_PUBLIC_EXPLORER_API_URL: ${NEXT_PUBLIC_EXPLORER_API_URL:-https://backend.trobchain.com/v1}
@@ -224,6 +225,7 @@ services:
         NEXT_PUBLIC_MATRIX_URL: ${NEXT_PUBLIC_MATRIX_URL:-https://equorafimatrix.com}
         NEXT_PUBLIC_DAO_URL: ${NEXT_PUBLIC_DAO_URL:-https://equorafidao.com}
         NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-${CHAIN_ID:-1000}}
+        NEXT_PUBLIC_IS_MAINNET: ${NEXT_PUBLIC_IS_MAINNET:-true}
         NEXT_PUBLIC_TARGET_NETWORK: ${NEXT_PUBLIC_TARGET_NETWORK:-mainnet}
         NEXT_PUBLIC_EXPLORER_URL: ${NEXT_PUBLIC_EXPLORER_URL:-https://trobchain.com}
         NEXT_PUBLIC_EXPLORER_API_URL: ${NEXT_PUBLIC_EXPLORER_API_URL:-https://backend.trobchain.com/v1}

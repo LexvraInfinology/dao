@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/trob-market/price",
+        destination: "https://backend.trobchain.com/v1/market/price",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

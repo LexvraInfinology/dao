@@ -477,19 +477,28 @@ export const matrixApi = {
     slot1Trob: number;
   }> {
     try {
-      const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
-      if (res.ok) {
-        const json = await res.json();
-        const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
-        if (Number.isFinite(price) && price > 0) {
-          return {
-            priceUsd: price,
-            priceSource: "live-market-api",
-            updatedAt: json?.data?.updatedAt || new Date().toISOString(),
-            isStale: false,
-            slot1Trob: Math.round((30 / price) * 100) / 100,
-          };
-        }
+      const endpoints = [
+        "/api/price/trob",
+        "/api/price",
+        "/api/trob-market/price",
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, { cache: "no-store" });
+          if (res.ok) {
+            const json = await res.json();
+            const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
+            if (Number.isFinite(price) && price > 0) {
+              return {
+                priceUsd: price,
+                priceSource: "live-market-proxy",
+                updatedAt: json?.data?.updatedAt || new Date().toISOString(),
+                isStale: false,
+                slot1Trob: Math.round((30 / price) * 100) / 100,
+              };
+            }
+          }
+        } catch {}
       }
     } catch {}
 

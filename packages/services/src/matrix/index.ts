@@ -2334,27 +2334,39 @@ export class MatrixService {
     activeSlots: number;
     totalContributed: number;
   }>> {
-    const canonicalAddress = address.toLowerCase();
-    const directs = await prisma.user.findMany({
-      where: { sponsorAddress: canonicalAddress },
-      include: {
-        matrixProfile: true,
-        matrixSlots: { where: { isUnlocked: true } },
-      },
-      orderBy: { registrationTimestamp: "desc" },
-    });
+    const canonicalAddress = toCanonicalAddress(address);
+    const rawAddress = (address || "").trim();
+    try {
+      const directs = await prisma.user.findMany({
+        where: {
+          OR: [
+            { sponsorAddress: canonicalAddress },
+            { sponsorAddress: rawAddress },
+            { sponsorAddress: rawAddress.toLowerCase() },
+          ],
+        },
+        include: {
+          matrixProfile: true,
+          matrixSlots: { where: { isUnlocked: true } },
+        },
+        orderBy: { registrationTimestamp: "desc" },
+      });
 
-    return directs.map((d: any) => ({
-      address: d.address,
-      userId: d.userId,
-      username: d.matrixProfile?.username || `Operative #${d.userId}`,
-      joinedAt: d.registrationTimestamp,
-      activeSlots: d.matrixSlots.length,
-      totalContributed: d.matrixSlots.reduce(
-        (sum: number, s: any) => sum + (SLOT_COSTS[s.slotNumber] || 0),
-        0
-      ),
-    }));
+      return directs.map((d: any) => ({
+        address: d.address,
+        userId: d.userId,
+        username: d.matrixProfile?.username || `Operative #${d.userId}`,
+        joinedAt: d.registrationTimestamp,
+        activeSlots: d.matrixSlots?.length || 0,
+        totalContributed: (d.matrixSlots || []).reduce(
+          (sum: number, s: any) => sum + (SLOT_COSTS[s.slotNumber] || 0),
+          0
+        ),
+      }));
+    } catch (err: any) {
+      console.warn(`[MatrixService] Notice in getDirectMembers(${canonicalAddress}):`, err?.message || err);
+      return [];
+    }
   }
 
   // ── LIVE PRICE & MARKET ORACLE ──────────────────────────────────────────

@@ -21,10 +21,11 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
   const [trobPrice, setTrobPrice] = React.useState<number>(0.03174);
 
   React.useEffect(() => {
-    fetch("https://backend.trobchain.com/v1/market/price")
-      .then((r) => r.json())
+    fetch("/api/price/trob")
+      .catch(() => fetch("/api/price"))
+      .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        const p = Number(j?.data?.priceUsd ?? j?.priceUsd);
+        const p = Number(j?.data?.priceUsd ?? j?.priceUsd ?? j?.price);
         if (p > 0) setTrobPrice(p);
       })
       .catch(() => {});

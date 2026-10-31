@@ -7,10 +7,20 @@ import { getApiBaseUrl, type MatrixSlotDetails, type MatrixSlotSummary, type Mat
 
 // ── Network & Contract Addresses ─────────────────────────────────────────────
 
+// Automatically detect mainnet if running on production domains
+const isBrowserMainnetDomain = typeof window !== "undefined" && (
+  window.location.hostname === "equorafimatrix.com" ||
+  window.location.hostname.endsWith(".equorafimatrix.com") ||
+  window.location.hostname === "equorafidao.com" ||
+  window.location.hostname.endsWith(".equorafidao.com")
+);
+
 const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
-export const IS_MAINNET = rawMainnetEnv !== undefined
-  ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
-  : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "testnet").trim().toLowerCase() === "mainnet";
+export const IS_MAINNET = isBrowserMainnetDomain || (
+  rawMainnetEnv !== undefined
+    ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
+    : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "mainnet").trim().toLowerCase() === "mainnet"
+);
 
 export const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
 export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testnet";
@@ -410,17 +420,27 @@ export function getSlotCost(slotNumber: number): number {
  * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
  */
 export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
-  // 1. Fetch live market price from TrobChain market oracle first!
+  // 1. Fetch live market price from internal proxy or market oracle
   let liveSun = 0;
   try {
-    const res = await fetch("https://backend.trobchain.com/v1/market/price", { cache: "no-store" });
-    if (res.ok) {
-      const json = await res.json();
-      const price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price ?? 0.03715);
-      if (price > 0) {
-        liveSun = Math.max(300_000_000, Math.round((30 / price) * 1_000_000));
-      }
+    const endpoints = [
+      "/api/price/trob",
+      "/api/price",
+      "/api/trob-market/price",
+    ];
+    let price = 0;
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep, { cache: "no-store" });
+        if (res.ok) {
+          const json = await res.json();
+          price = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price ?? 0);
+          if (price > 0) break;
+        }
+      } catch {}
     }
+    if (price <= 0) price = 0.056; // Live market benchmark
+    liveSun = Math.max(300_000_000, Math.round((30 / price) * 1_000_000));
   } catch (err) {
     console.warn("[MarketPrice] Live price fetch notice:", err);
   }

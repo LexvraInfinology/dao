@@ -1070,12 +1070,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     } catch {}
   }
   const TROB_PRICE = 0.056;
-  const isFounder = userHex.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
-  // Verified cumulative matrix earnings across unlocked slots:
-  // Slot 1 (Cycle 1): $180, Slot 2 (Cycle 1): $360, Slot 3 (Cycle 1): $720 => Total: $1,260.00 USD
   const effectiveEarnedUsd = totalEarned > 0
     ? totalEarned * TROB_PRICE
-    : (boardEarnedTrob > 0 ? boardEarnedTrob * TROB_PRICE : (isFounder ? 1260.00 : 0));
+    : (boardEarnedTrob > 0 ? boardEarnedTrob * TROB_PRICE : 0);
   const effectiveEarnedTrob = effectiveEarnedUsd / TROB_PRICE;
 
   let directReferralsCount = 0;
@@ -1202,8 +1199,8 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     rankTier,
     rankName: rankNames[rankTier],
     currentSlot: currentActiveSlot, // Currently active, live playable slot (Slot 1)
-    highestUnlockedSlot: Math.max(highestUnlockedSlot, isFounder ? 4 : 1),
-    isSlot2Reserved: highestUnlockedSlot >= 2 || isFounder,
+    highestUnlockedSlot: Math.max(highestUnlockedSlot, 1),
+    isSlot2Reserved: highestUnlockedSlot >= 2,
     totalEarnings: effectiveEarnedUsd, // Exact on-chain board earnings ($60.00 USD)
     totalEarningsUsd: effectiveEarnedUsd,
     totalEarningsTrob: effectiveEarnedTrob, // Exact raw TROB (1071.43)
@@ -1231,18 +1228,7 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
   if (!userAddress) return false;
   const clean = userAddress.trim().toLowerCase();
 
-  // 1. Genesis Seat 1 is permanently registered
-  if (
-    clean === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02" ||
-    userAddress === "TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf"
-  ) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
-    }
-    return true;
-  }
-
-  // 2. Check local joined-members registry
+  // 1. Check local joined-members registry
   try {
     const joined = require("./joinedMembers.json");
     if (Array.isArray(joined)) {

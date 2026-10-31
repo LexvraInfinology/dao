@@ -17,7 +17,7 @@ import { wakeUpExtension } from "@/lib/walletConnect";
 import { getStoredUserAddress } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { isUserRegisteredInMatrix } from "@/lib/contracts";
+import { isUserRegisteredInMatrix, NETWORK_NAME, CHAIN_ID } from "@/lib/contracts";
 
 export function HeroSection() {
   const router = useRouter();
@@ -283,10 +283,10 @@ export function HeroSection() {
                         <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-[11px] font-semibold text-slate-500">
                           <span className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            TrobChain Testnet
+                            {NETWORK_NAME}
                           </span>
                           <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono text-[10px]">
-                            13000
+                            {CHAIN_ID}
                           </span>
                         </div>
 

@@ -23,11 +23,10 @@ export function OverviewTab({
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 4;
 
-  const isFounder = address?.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
   const totalEarnedUsd =
     dashboard?.totalEarnedUsd ??
     (profile?.totalEarningsUsd ??
-      (profile?.totalEarnings ?? (isFounder ? 1260.00 : 0)));
+      (profile?.totalEarnings ?? 0));
   const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (totalEarnedUsd / 0.056));
 
   const directsCount =

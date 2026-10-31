@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CONTRACT_ADDRESSES, EXPLORER_URL } from "@/lib/contracts";
 
 export function FooterSection() {
   const [email, setEmail] = useState("");
@@ -152,7 +153,7 @@ export function FooterSection() {
                 </li>
                 <li>
                   <a
-                    href="https://testnet.trobchain.com/#/contract/0x599C88bFdEDC7C7a7d5B726b27dE90fe34B3632A"
+                    href={`${EXPLORER_URL}/#/contract/${CONTRACT_ADDRESSES.matrix}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-blue-600 transition-colors"
@@ -189,7 +190,7 @@ export function FooterSection() {
                 </li>
                 <li>
                   <a
-                    href="https://testnet.trobchain.com"
+                    href={EXPLORER_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-blue-600 transition-colors"

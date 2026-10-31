@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { EXPLORER_URL } from "@/lib/contracts";
+import { EXPLORER_URL, NETWORK_NAME, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 interface NotificationItem {
   id: string;
@@ -84,24 +84,24 @@ export function ProtocolNotificationsModal({
       id: "notif-5",
       title: "EquoraMatrix On-Chain Contract Synced",
       description:
-        "Contract TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ is operating normally on TrobChain testnet with automated $0 slot progressions.",
+        `Contract ${CONTRACT_ADDRESSES.matrix} is operating normally on ${NETWORK_NAME} with automated $0 slot progressions.`,
       category: "tx",
-      timestamp: "TrobChain Testnet",
+      timestamp: NETWORK_NAME,
       badge: "VERIFIED EVM",
       badgeColor: "bg-[#f8fafc] text-[#64748b] border-[#e2e8f0]",
-      link: `${EXPLORER_URL}/blockchain/account/TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ`,
+      link: `${EXPLORER_URL}/#/contract/${CONTRACT_ADDRESSES.matrix}`,
       linkText: "Explorer Account",
     },
     {
       id: "notif-6",
       title: "DAO Contract Treasury Sync",
       description:
-        "EquoraDAOv2 contract TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp verified on TrobChain. Instant flush mechanism available.",
+        `EquoraDAOv2 contract ${CONTRACT_ADDRESSES.dao} verified on ${NETWORK_NAME}. Instant flush mechanism available.`,
       category: "tx",
-      timestamp: "TrobChain Testnet",
+      timestamp: NETWORK_NAME,
       badge: "DAO V2",
       badgeColor: "bg-[#f8fafc] text-[#64748b] border-[#e2e8f0]",
-      link: `${EXPLORER_URL}/blockchain/account/TBZTnpE2fz9FWXSiUAiKXW5UwQnPUZCWdp`,
+      link: `${EXPLORER_URL}/#/contract/${CONTRACT_ADDRESSES.dao}`,
       linkText: "Explorer Contract",
     },
   ];

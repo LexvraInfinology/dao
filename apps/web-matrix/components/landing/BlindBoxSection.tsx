@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
-import { getOnChainProtocolPoolsStats, ProtocolPoolsStats } from "@/lib/contracts";
+import { getOnChainProtocolPoolsStats, ProtocolPoolsStats, CONTRACT_ADDRESSES, EXPLORER_URL } from "@/lib/contracts";
 import joinedMembersData from "@/lib/joinedMembers.json";
 
 export function BlindBoxSection() {
@@ -50,7 +50,7 @@ export function BlindBoxSection() {
   );
 
   const explorerContractUrl =
-    "https://testnet.trobchain.com/#/contract/TMskpNoL2qUUArzo2ECHjCKVeYCnnU5W1C";
+    `${EXPLORER_URL}/#/contract/${CONTRACT_ADDRESSES.magicBoxPool}`;
 
   return (
     <section

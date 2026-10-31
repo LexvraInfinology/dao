@@ -73,10 +73,14 @@ export async function GET(
 
     const rawAddress = address.trim();
     const canonical = rawAddress.toLowerCase();
+    const host = req.headers.get("host") || "";
+    const isDomainMainnet = host.includes("equorafimatrix.com") || host.includes("equorafidao.com");
     const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
-    const isMainnet = rawMainnetEnv !== undefined
-      ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
-      : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "testnet").trim().toLowerCase() === "mainnet";
+    const isMainnet =
+      isDomainMainnet ||
+      (rawMainnetEnv !== undefined
+        ? (String(rawMainnetEnv).trim().toLowerCase() === "true" || String(rawMainnetEnv).trim() === "1")
+        : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "mainnet").trim().toLowerCase() === "mainnet");
 
     const fullnodeRpc =
       process.env.NEXT_PUBLIC_RPC_URL ||

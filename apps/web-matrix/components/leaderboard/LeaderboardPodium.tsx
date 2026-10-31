@@ -5,6 +5,7 @@ import { CrownBadge } from "./CrownBadge";
 
 import { MatrixLeaderboardEntry } from "@/lib/api";
 import { formatAddress } from "@/lib/format";
+import { NETWORK_NAME } from "@/lib/contracts";
 
 export interface LeaderboardPodiumProps {
   handleCopy: (address: string) => void;
@@ -48,7 +49,7 @@ export function LeaderboardPodium({
         </div>
         <div className="bg-white border border-[#e2e8f0] rounded-2xl p-6 text-center shadow-xs">
           <p className="text-[13px] font-semibold text-[#64748b]">
-            No podium winners recorded yet. Cycle slots to claim the top podium positions on TrobChain testnet!
+            No podium winners recorded yet. Cycle slots to claim the top podium positions on {NETWORK_NAME}!
           </p>
         </div>
       </div>

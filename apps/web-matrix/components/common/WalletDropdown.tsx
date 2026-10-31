@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUserStore, useMatrixStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 import { toast } from "@/lib/toast";
-import { getOnChainTokenBalance } from "@/lib/contracts";
+import { getOnChainTokenBalance, EXPLORER_URL } from "@/lib/contracts";
 import { hasTrobSafeProvider, connectTrobSafe } from "@/lib/web3Wallet";
 import { WalletConnectModal } from "./WalletConnectModal";
 
@@ -132,16 +132,13 @@ export function WalletDropdown() {
   }
 
   const base58Display = toTrobBase58(address);
-  const explorerUrl = `https://testnet.trobchain.com/#/address/${base58Display || address}`;
+  const explorerUrl = `${EXPLORER_URL}/#/address/${base58Display || address}`;
 
-  const isFounder = address.toLowerCase() === "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
   const matrixEarningsUsd =
     profile?.totalEarnings !== undefined
       ? profile.totalEarnings
       : profile?.matrixEarnings !== undefined
       ? profile.matrixEarnings
-      : isFounder
-      ? 1260.00
       : 0;
 
   return (

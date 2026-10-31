@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, User, Coins, RotateCcw, ExternalLink, Loader2 } from "lucide-react";
-import { getOnChainSlotDetails } from "@/lib/contracts";
+import { ArrowRight, User, Coins, RotateCcw, ExternalLink } from "lucide-react";
+import { getOnChainSlotDetails, NETWORK_NAME, EXPLORER_URL } from "@/lib/contracts";
 import joinedMembersData from "@/lib/joinedMembers.json";
 import { formatAddress } from "@/lib/format";
 
@@ -154,14 +154,14 @@ export function ActivitySection() {
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-[#1E293B] bg-white/40 px-2 py-0.5 rounded-full border border-white/40">
                   <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#12B76A]" />
-                  <span className="hidden min-[360px]:inline">TrobChain Testnet</span>
+                  <span className="hidden min-[360px]:inline">{NETWORK_NAME}</span>
                 </div>
               </div>
 
               {/* Activity rows — Sheer pills: solid white on left for legibility, crystal-clear on right so pointing hand shows cleanly */}
               <div className="space-y-1.5 sm:space-y-2 pt-2 sm:pt-3">
                 {activities.map((item) => {
-                  const explorerUrl = `https://testnet.trobchain.com/#/transaction/${item.txHash}`;
+                  const explorerUrl = `${EXPLORER_URL}/#/transaction/${item.txHash}`;
                   return (
                     <div
                       key={item.id}

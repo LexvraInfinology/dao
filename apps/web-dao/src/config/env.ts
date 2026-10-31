@@ -9,10 +9,14 @@ export const WHATSAPP_DAO_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_DAO_GROUP_URL ||
   'https://chat.whatsapp.com/CncHdH2u76s95lRSURuKaW?s=cl&p=a&mlu=4&ilr=4';
 
+const isBrowserMainnet = typeof window !== 'undefined' && (
+  window.location.hostname.includes('equorafidao.com') ||
+  window.location.hostname.includes('equorafimatrix.com')
+);
 const rawMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET ?? process.env.IS_MAINNET;
-export const IS_MAINNET = rawMainnetEnv !== undefined
+export const IS_MAINNET = isBrowserMainnet || (rawMainnetEnv !== undefined
   ? (String(rawMainnetEnv).trim().toLowerCase() === 'true' || String(rawMainnetEnv).trim() === '1')
-  : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || 'testnet').trim().toLowerCase() === 'mainnet';
+  : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || 'mainnet').trim().toLowerCase() === 'mainnet');
 
 export const TARGET_NETWORK = IS_MAINNET ? 'mainnet' : 'testnet';
 export const NETWORK_NAME = IS_MAINNET ? 'TrobChain Mainnet' : 'TrobChain Testnet';

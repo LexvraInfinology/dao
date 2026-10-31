@@ -12,6 +12,7 @@ import {
   claimMilestoneRewardOnChain,
   claimMagicBoxRewardOnChain,
   flushDaoPoolOnChain,
+  NETWORK_NAME,
 } from "@/lib/contracts";
 import { useUserStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -89,7 +90,7 @@ export function ProtocolPoolsPanel({
       const tx = await flushDaoPoolOnChain(userAddress);
       toast.success("DAO Balance Distributed", `11,578.45 TROB pushed to council members: ${tx.slice(0, 10)}...`);
     } catch (err: any) {
-      toast.error("Flush Notice", err?.message || "Execution completed on testnet.");
+      toast.error("Flush Notice", err?.message || `Execution completed on ${NETWORK_NAME}.`);
     } finally {
       setFlushingDao(false);
     }

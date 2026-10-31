@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getOnChainSlotDetails } from "@/lib/contracts";
+import { getOnChainSlotDetails, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export function MatrixMechanismSection() {
   const [filledNodes, setFilledNodes] = useState<number>(3);
@@ -14,7 +14,7 @@ export function MatrixMechanismSection() {
     let active = true;
     const fetchTreeData = async () => {
       try {
-        const slot1 = await getOnChainSlotDetails("0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02", 1).catch(() => null);
+        const slot1 = await getOnChainSlotDetails(CONTRACT_ADDRESSES.vault, 1).catch(() => null);
         if (slot1 && slot1.nodes && active) {
           const filled = slot1.nodes.map((n: any) => Boolean(n.filled));
           setNodesData(filled);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails, toHexAddress, getSlotCost } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getOnChainSlotDetails, toHexAddress, getSlotCost, EXPLORER_URL } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -954,7 +954,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-200/50">
                       <span className="text-slate-500">Tx Hash:</span>
                       <a
-                        href={`https://testnet.trobchain.com/#/transaction/${getNodeInfo(selectedNodeModal.pos).txHash}`}
+                        href={`${EXPLORER_URL}/#/transaction/${getNodeInfo(selectedNodeModal.pos).txHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="font-mono text-[10px] text-emerald-700 hover:underline flex items-center gap-1"

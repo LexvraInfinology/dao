@@ -122,6 +122,10 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=accept-new \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=120 \
+            -o TCPKeepAlive=yes \
+            -o ConnectTimeout=60 \
             "$CLEAN_USER@$CLEAN_HOST" "DEPLOY_BRANCH=${GITHUB_REF_NAME} bash -s" < scripts/deploy/utho-vm.sh
 
       - name: Remove temporary SSH credentials

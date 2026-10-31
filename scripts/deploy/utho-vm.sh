@@ -19,29 +19,40 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# Auto-heal .env formatting on VM: fix any wrapped comma lines or malformed CORS_ORIGIN
-cp .env .env.pre-deploy.bak
-sed -i 's/\r$//' .env 2>/dev/null || true
-sed -i ':a;N;$!ba;s/\n[[:space:]]*,/,/g' .env 2>/dev/null || true
-sed -i -E 's/^CORS_ORIGIN=([^"].*)$/CORS_ORIGIN="\1"/' .env 2>/dev/null || true
-if command -v python3 >/dev/null 2>&1; then
-  python3 -c "
-import re
-with open('.env', 'r', encoding='utf-8', errors='ignore') as f:
-    text = f.read().replace('\r', '')
-text = re.sub(r'\n\s*,', ',', text)
-lines = []
-for line in text.split('\n'):
-    m = re.match(r'^(CORS_ORIGIN)=(.*)$', line)
-    if m:
-        val = m.group(2).strip().strip('\"').strip('\'')
-        lines.append(f'{m.group(1)}=\"{val}\"')
-    else:
-        lines.append(line)
-with open('.env', 'w', encoding='utf-8') as f:
-    f.write('\n'.join(lines))
-" 2>/dev/null || true
-fi
+# Robust POSIX awk-based .env sanitization function:
+# 1. Joins wrapped lines that begin with a comma (e.g. multiline CORS_ORIGIN)
+# 2. Strips any Windows carriage returns (\r)
+# 3. Comments out any orphaned lines that lack '=' so Docker Compose parser never crashes
+sanitize_env() {
+  if [ -f .env ]; then
+    cp .env .env.pre-deploy.bak
+    awk '
+    {
+      sub(/\r$/, "");
+      if (/^[ \t]*,/) {
+        prev = prev $0
+      } else {
+        if (NR > 1) print prev;
+        prev = $0
+      }
+    }
+    END { if (NR > 0) print prev }
+    ' .env | awk '
+    {
+      trimmed = $0;
+      sub(/^[ \t]+/, "", trimmed);
+      sub(/[ \t]+$/, "", trimmed);
+      if (trimmed == "" || substr(trimmed, 1, 1) == "#" || index(trimmed, "=") > 0) {
+        print $0
+      } else {
+        print "# [FIXED_BY_DEPLOY]: " $0
+      }
+    }
+    ' > .env.sanitized && mv .env.sanitized .env
+  fi
+}
+
+sanitize_env
 
 command -v git >/dev/null 2>&1 || { echo 'Deployment failed: git is not installed.'; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo 'Deployment failed: docker is not installed.'; exit 1; }
@@ -122,9 +133,11 @@ rollback() {
   fi
 
   git checkout -f -B "$DEPLOY_BRANCH" "$rollback_commit"
+  sanitize_env
 
   if ! compose config --quiet; then
     echo 'Rollback failed: previous Compose configuration is invalid.'
+    compose config 2>&1 | head -n 30 || true
     exit 1
   fi
 
@@ -160,8 +173,11 @@ git checkout -f -B "$DEPLOY_BRANCH" "$target_commit"
 test "$(git rev-parse HEAD)" = "$target_commit"
 test -f .env
 
+sanitize_env
+
 if ! compose config --quiet; then
   echo 'Deployment failed: Docker Compose configuration is invalid.'
+  compose config 2>&1 | head -n 30 || true
   rollback "$previous_commit"
 fi
 

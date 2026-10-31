@@ -5,68 +5,22 @@ import re
 
 def sanitize_env_file(filepath):
     if not os.path.exists(filepath):
-        print(f"[sanitize-env] File not found: {filepath}", file=sys.stderr)
+        print("[sanitize-env] File not found: " + filepath, file=sys.stderr)
         return False
 
     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-        raw_text = f.read()
+        content = f.read()
 
-    raw_text = raw_text.replace("\r", "")
-    raw_lines = raw_text.split("\n")
+    # 1. Strip Windows carriage returns
+    content = content.replace("\r", "")
 
-    # Pass 1: join continuation lines (wrapped comma-separated lists like CORS_ORIGIN)
-    merged_lines = []
-    for line in raw_lines:
-        stripped = line.strip()
-        if stripped.startswith(",") and merged_lines:
-            prev = merged_lines[-1].rstrip()
-            if prev.endswith(",") or prev.endswith("\\") or (prev.count('"') % 2 != 0) or (prev.count("'") % 2 != 0) or "CORS_ORIGIN" in prev:
-                if prev.endswith("\\"):
-                    prev = prev[:-1].rstrip()
-                merged_lines[-1] = prev + stripped
-            else:
-                merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-        elif (stripped.startswith('"') or stripped.startswith("'")) and stripped.endswith(stripped[0]) and len(stripped) > 1 and "=" not in stripped and merged_lines:
-            if merged_lines[-1].count('"') % 2 != 0 or merged_lines[-1].count("'") % 2 != 0:
-                merged_lines[-1] = merged_lines[-1].rstrip() + stripped
-            else:
-                merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-        else:
-            merged_lines.append(line)
+    # 2. Unpack jammed lines where VAR= or # Header is immediately preceded by another value without newline
+    content = re.sub(r'([^\n])(#\s+[0-9A-Za-z])', r'\1\n\2', content)
+    content = re.sub(r'([^\n])([A-Z_][A-Z0-9_]*=)', r'\1\n\2', content)
 
-    # Pass 2: check for unclosed quotes across lines
-    final_lines = []
-    i = 0
-    while i < len(merged_lines):
-        line = merged_lines[i]
-        if "=" in line and not line.strip().startswith("#"):
-            k, v = line.split("=", 1)
-            v_strip = v.strip()
-            if (v_strip.startswith('"') and v_strip.count('"') % 2 != 0) or (v_strip.startswith("'") and v_strip.count("'") % 2 != 0):
-                quote_char = v_strip[0]
-                accumulated = [line]
-                i += 1
-                while i < len(merged_lines):
-                    next_line = merged_lines[i]
-                    accumulated.append(next_line.strip())
-                    if quote_char in next_line:
-                        break
-                    i += 1
-                line = "".join(accumulated)
-        final_lines.append(line)
-        i += 1
-
-    # Pass 3: Comment out any orphaned lines without =
-    sanitized_lines = []
-    for line in final_lines:
-        trimmed = line.strip()
-        if not trimmed or trimmed.startswith("#") or "=" in trimmed:
-            sanitized_lines.append(line)
-        else:
-            sanitized_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-
-    # Pass 4: Ensure CORS_ORIGIN has both port 3000 (dao) and 3001 (matrix)
-    required_cors = [
+    # 3. Clean line by line
+    cleaned_lines = []
+    cors_origins = [
         "https://equorafidao.com",
         "https://www.equorafidao.com",
         "http://equorafidao.com:3000",
@@ -83,35 +37,55 @@ def sanitize_env_file(filepath):
         "http://127.0.0.1:4000"
     ]
 
-    cors_found = False
-    for idx, line in enumerate(sanitized_lines):
-        if re.match(r"^[ \t]*CORS_ORIGIN=", line):
-            cors_found = True
-            val = line.split("=", 1)[1].strip()
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            elif val.startswith("'") and val.endswith("'"):
-                val = val[1:-1]
-            existing = [x.strip() for x in val.split(",") if x.strip()]
-            for req in required_cors:
-                if req not in existing:
-                    existing.append(req)
-            existing_str = ",".join(existing)
-            sanitized_lines[idx] = f'CORS_ORIGIN="{existing_str}"'
-            break
+    q_double = chr(34)
+    cors_set = False
 
-    if not cors_found:
-        req_str = ",".join(required_cors)
-        sanitized_lines.append(f'CORS_ORIGIN="{req_str}"')
+    for line in content.split("\n"):
+        trimmed = line.strip()
+        if not trimmed:
+            cleaned_lines.append("")
+            continue
+        if trimmed.startswith("#"):
+            cleaned_lines.append(trimmed)
+            continue
+        if "=" not in trimmed:
+            cleaned_lines.append("# [ORPHAN_LINE_REMOVED]: " + trimmed)
+            continue
 
-    output_text = "\n".join(sanitized_lines) + "\n"
+        k, v = trimmed.split("=", 1)
+        k = k.strip()
+        v = v.strip()
+
+        # Remove outer quotes if present
+        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+            v = v[1:-1].strip()
+
+        if k == "CORS_ORIGIN":
+            cors_set = True
+            cleaned_lines.append("CORS_ORIGIN=" + q_double + ",".join(cors_origins) + q_double)
+            continue
+
+        # Clean accidental CORS origins contamination from contract addresses or hexes
+        if ("_ADDRESS" in k or "_HEX" in k or "_KEY" in k) and (",http://" in v or ",https://" in v):
+            v = v.split(",http://")[0].split(",https://")[0].strip()
+            if v.startswith('"') or v.startswith("'"):
+                v = v[1:]
+            if v.endswith('"') or v.endswith("'"):
+                v = v[:-1]
+
+        cleaned_lines.append(k + "=" + v)
+
+    if not cors_set:
+        cleaned_lines.append("CORS_ORIGIN=" + q_double + ",".join(cors_origins) + q_double)
+
+    output_text = "\n".join(cleaned_lines) + "\n"
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(output_text)
 
-    print(f"[sanitize-env] Successfully sanitized {filepath}: {len(sanitized_lines)} lines.")
-    for line in sanitized_lines:
-        if line.startswith("CORS_ORIGIN="):
-            print(f"[sanitize-env] {line[:120]}...")
+    print("[sanitize-env] Successfully sanitized " + filepath + ": " + str(len(cleaned_lines)) + " lines.")
+    for l in cleaned_lines:
+        if l.startswith("CORS_ORIGIN="):
+            print("[sanitize-env] " + l[:120] + "...")
     return True
 
 if __name__ == "__main__":

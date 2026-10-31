@@ -33,66 +33,16 @@ import sys, os, re
 env_file = ".env"
 try:
     with open(env_file, "r", encoding="utf-8", errors="ignore") as f:
-        raw_text = f.read()
+        content = f.read()
 except Exception as e:
     print("[sanitize_env] Error reading file:", e, file=sys.stderr)
     sys.exit(0)
 
-raw_text = raw_text.replace("\r", "")
-raw_lines = raw_text.split("\n")
+content = content.replace("\r", "")
+content = re.sub(r"([^\n])(#\s+[0-9A-Za-z])", r"\1\n\2", content)
+content = re.sub(r"([^\n])([A-Z_][A-Z0-9_]*=)", r"\1\n\2", content)
 
-q_double = chr(34)
-q_single = chr(39)
-
-merged_lines = []
-for line in raw_lines:
-    stripped = line.strip()
-    if stripped.startswith(",") and merged_lines:
-        prev = merged_lines[-1].rstrip()
-        if prev.endswith(",") or prev.endswith("\\") or (prev.count(q_double) % 2 != 0) or (prev.count(q_single) % 2 != 0) or "CORS_ORIGIN" in prev:
-            if prev.endswith("\\"):
-                prev = prev[:-1].rstrip()
-            merged_lines[-1] = prev + stripped
-        else:
-            merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-    elif (stripped.startswith(q_double) or stripped.startswith(q_single)) and stripped.endswith(stripped[0]) and len(stripped) > 1 and "=" not in stripped and merged_lines:
-        if merged_lines[-1].count(q_double) % 2 != 0 or merged_lines[-1].count(q_single) % 2 != 0:
-            merged_lines[-1] = merged_lines[-1].rstrip() + stripped
-        else:
-            merged_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-    else:
-        merged_lines.append(line)
-
-final_lines = []
-i = 0
-while i < len(merged_lines):
-    line = merged_lines[i]
-    if "=" in line and not line.strip().startswith("#"):
-        k, v = line.split("=", 1)
-        v_strip = v.strip()
-        if (v_strip.startswith(q_double) and v_strip.count(q_double) % 2 != 0) or (v_strip.startswith(q_single) and v_strip.count(q_single) % 2 != 0):
-            quote_char = v_strip[0]
-            accumulated = [line]
-            i += 1
-            while i < len(merged_lines):
-                next_line = merged_lines[i]
-                accumulated.append(next_line.strip())
-                if quote_char in next_line:
-                    break
-                i += 1
-            line = "".join(accumulated)
-    final_lines.append(line)
-    i += 1
-
-sanitized_lines = []
-for line in final_lines:
-    trimmed = line.strip()
-    if not trimmed or trimmed.startswith("#") or "=" in trimmed:
-        sanitized_lines.append(line)
-    else:
-        sanitized_lines.append("# [FIXED_BY_DEPLOY]: " + line)
-
-required_cors = [
+cors_origins = [
     "https://equorafidao.com",
     "https://www.equorafidao.com",
     "http://equorafidao.com:3000",
@@ -109,35 +59,54 @@ required_cors = [
     "http://127.0.0.1:4000"
 ]
 
-cors_found = False
-for idx, line in enumerate(sanitized_lines):
-    if re.match(r"^[ \t]*CORS_ORIGIN=", line):
-        cors_found = True
-        val = line.split("=", 1)[1].strip()
-        if val.startswith(q_double) and val.endswith(q_double):
-            val = val[1:-1]
-        elif val.startswith(q_single) and val.endswith(q_single):
-            val = val[1:-1]
-        existing = [x.strip() for x in val.split(",") if x.strip()]
-        for req in required_cors:
-            if req not in existing:
-                existing.append(req)
-        existing_str = ",".join(existing)
-        sanitized_lines[idx] = "CORS_ORIGIN=" + q_double + existing_str + q_double
-        break
+q_double = chr(34)
+cors_set = False
+cleaned_lines = []
 
-if not cors_found:
-    req_str = ",".join(required_cors)
-    sanitized_lines.append("CORS_ORIGIN=" + q_double + req_str + q_double)
+for line in content.split("\n"):
+    trimmed = line.strip()
+    if not trimmed:
+        cleaned_lines.append("")
+        continue
+    if trimmed.startswith("#"):
+        cleaned_lines.append(trimmed)
+        continue
+    if "=" not in trimmed:
+        cleaned_lines.append("# [ORPHAN_LINE_REMOVED]: " + trimmed)
+        continue
 
-output_text = "\n".join(sanitized_lines) + "\n"
+    k, v = trimmed.split("=", 1)
+    k = k.strip()
+    v = v.strip()
+
+    if (v.startswith(q_double) and v.endswith(q_double)) or (v.startswith(chr(39)) and v.endswith(chr(39))):
+        v = v[1:-1].strip()
+
+    if k == "CORS_ORIGIN":
+        cors_set = True
+        cleaned_lines.append("CORS_ORIGIN=" + q_double + ",".join(cors_origins) + q_double)
+        continue
+
+    if ("_ADDRESS" in k or "_HEX" in k or "_KEY" in k) and (",http://" in v or ",https://" in v):
+        v = v.split(",http://")[0].split(",https://")[0].strip()
+        if v.startswith(q_double) or v.startswith(chr(39)):
+            v = v[1:]
+        if v.endswith(q_double) or v.endswith(chr(39)):
+            v = v[:-1]
+
+    cleaned_lines.append(k + "=" + v)
+
+if not cors_set:
+    cleaned_lines.append("CORS_ORIGIN=" + q_double + ",".join(cors_origins) + q_double)
+
+output_text = "\n".join(cleaned_lines) + "\n"
 with open(env_file, "w", encoding="utf-8") as f:
     f.write(output_text)
 
-print("[sanitize_env] Success: " + str(len(sanitized_lines)) + " lines written.")
-for line in sanitized_lines:
-    if line.startswith("CORS_ORIGIN="):
-        print("[sanitize_env] " + line[:120] + "...")
+print("[sanitize_env] Success: " + str(len(cleaned_lines)) + " lines written.")
+for l in cleaned_lines:
+    if l.startswith("CORS_ORIGIN="):
+        print("[sanitize_env] " + l[:120] + "...")
 ' || {
       echo "[sanitize_env] Python3 fallback to awk..."
       awk '{ sub(/\r$/, ""); if (/^[ \t]*,/) { prev = prev $0 } else { if (NR > 1) print prev; prev = $0 } } END { if (NR > 0) print prev }' .env | awk '{ trimmed = $0; sub(/^[ \t]+/, "", trimmed); sub(/[ \t]+$/, "", trimmed); if (trimmed == "" || substr(trimmed, 1, 1) == "#" || index(trimmed, "=") > 0) { print $0 } else { print "# [FIXED_BY_DEPLOY]: " $0 } }' > .env.sanitized && mv .env.sanitized .env

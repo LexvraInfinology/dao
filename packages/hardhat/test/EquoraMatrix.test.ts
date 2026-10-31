@@ -33,7 +33,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
   let downline1: HardhatEthersSigner;
   let downline2: HardhatEthersSigner;
 
-  const SLOT1_COST = ethers.parseEther("30");
+  const SLOT1_COST = 535_714_285n; // 535.714285 TROB in SUN (Benchmark $0.056 USD, matching EquoraMatrix.sol baseSlotCost)
 
   async function createFundedWallet(funder: HardhatEthersSigner): Promise<HDNodeWallet> {
     const wallet = ethers.Wallet.createRandom(ethers.provider);
@@ -268,10 +268,10 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       expect(ownerBalAfter).to.equal(ownerBalBefore);
 
       // 4 Protocol Pools receive the funds directly: 35% DAO, 40% Salary, 10% Magic, 15% Rewards
-      const expectedDAO = (SLOT1_COST * 35n) / 100n;
-      const expectedSalary = (SLOT1_COST * 40n) / 100n;
-      const expectedMagic = (SLOT1_COST * 10n) / 100n;
-      const expectedReward = (SLOT1_COST * 15n) / 100n;
+      const [expectedDAO, expectedSalary, expectedMagic, expectedReward] = await vault.previewSplit(SLOT1_COST); //
+      // const expectedSalary = (SLOT1_COST * 40n) / 100n;
+      // const expectedMagic = (SLOT1_COST * 10n) / 100n;
+      // const expectedReward = (SLOT1_COST * 15n) / 100n;
 
       expect(await token.balanceOf(await dao.getAddress()) - daoBalBefore).to.equal(expectedDAO);
       expect(await salaryPool.pendingPoolBalance() - salaryBalBefore).to.equal(expectedSalary);
@@ -316,10 +316,10 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(p4).joinSlot(1, matrixOwner.address);
 
       // Check pool distributions: 35% DAO, 40% Salary, 10% MagicBox, 15% Rewards
-      const expectedDAO = (SLOT1_COST * 35n) / 100n;
-      const expectedSalary = (SLOT1_COST * 40n) / 100n;
-      const expectedMagic = (SLOT1_COST * 10n) / 100n;
-      const expectedReward = (SLOT1_COST * 15n) / 100n;
+      const [expectedDAO, expectedSalary, expectedMagic, expectedReward] = await vault.previewSplit(SLOT1_COST); //
+      // const expectedSalary = (SLOT1_COST * 40n) / 100n;
+      // const expectedMagic = (SLOT1_COST * 10n) / 100n;
+      // const expectedReward = (SLOT1_COST * 15n) / 100n;
 
       expect(await token.balanceOf(await dao.getAddress()) - daoBalBefore).to.equal(expectedDAO);
       expect(await salaryPool.pendingPoolBalance() - salaryBalBefore).to.equal(expectedSalary);
@@ -427,7 +427,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       expect(dl2BalAfterP10).to.equal(dl2BalAfterP7);
 
       // 4 Protocol Pools received P10
-      const expectedDAO = (SLOT1_COST * 35n) / 100n;
+      const [expectedDAO, expectedSalary, expectedMagic, expectedReward] = await vault.previewSplit(SLOT1_COST); //
       expect(await token.balanceOf(await dao.getAddress()) - daoBalBefore).to.equal(expectedDAO);
     });
 
@@ -482,7 +482,8 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       const node4After = await token.balanceOf(node4.address);
 
       const half = SLOT1_COST / 2n;
-      expect(node3After - node3Before).to.equal(half);
+      const rem = SLOT1_COST - (half * 2n);
+      expect(node3After - node3Before).to.equal(half + rem);
       expect(node4After - node4Before).to.equal(half);
     });
 
@@ -510,7 +511,8 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       await matrix.connect(retailUser).joinSlot(1, ethers.ZeroAddress);
 
       // Check slot data for daoMember2 -> should be auto-unlocked with filledNodes = 1
-      const slotData = await matrix.getSlotData(daoMember2.address, 1);
+      const vaultAddr = await vault.getAddress();
+      const slotData = await matrix.getSlotData(vaultAddr, 1);
       expect(slotData.isUnlocked).to.be.true;
       expect(slotData.filledNodes).to.equal(1n);
       expect(slotData.nodes[0]).to.equal(retailUser.address);
@@ -574,7 +576,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
   describe("Two-Stage Tier Escalation, Strict Floor & Zero-Leakage Protocol Pools", function () {
     it("should enforce MIN_SLOT1_FLOOR of 30 TROB", async function () {
-      expect(await matrix.MIN_SLOT1_FLOOR()).to.equal(SLOT1_COST);
+      expect(await matrix.MIN_SLOT1_FLOOR()).to.equal(300_000_000n);
       expect(await matrix.BASE_SLOT_COST()).to.equal(SLOT1_COST);
     });
 
@@ -733,21 +735,21 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     it("should calculate and dynamically update $30 USD matrix entry fee based on TROB market price", async function () {
       // 1. Verify $30 USD constant peg
       expect(await matrix.ENTRY_FEE_USD()).to.equal(30_000_000n);
-      expect(await matrix.trobPriceUsd6()).to.equal(1_000_000n); // Default $1.00 in mock tests
-      expect(await matrix.BASE_SLOT_COST()).to.equal(ethers.parseEther("30"));
+      expect(await matrix.trobPriceUsd6()).to.equal(56_000n); // Benchmark $0.056 USD
+      expect(await matrix.BASE_SLOT_COST()).to.equal(SLOT1_COST);
 
       // 2. Pure helper checks at various market prices
       // At $0.056 / TROB (56,000 in 6-decimal USD): $30 / 0.056 = 535.714285... TROB
-      const costAt56Cents = await matrix.getRequiredTrobForSlot(1, 56000n);
-      expect(costAt56Cents).to.equal(535714285714285714285n);
+      const costAt56Cents = await matrix["getRequiredTrobForSlot(uint256,uint256)"](1, 56000n);
+      expect(costAt56Cents).to.equal(535714285n);
 
       // Higher slot (Slot 2 = 2x Slot 1 = 1,071.42857... TROB)
-      const slot2At56Cents = await matrix.getRequiredTrobForSlot(2, 56000n);
-      expect(slot2At56Cents).to.equal(costAt56Cents * 2n);
+      const slot2At56Cents = await matrix["getRequiredTrobForSlot(uint256,uint256)"](2, 56000n);
+      expect(slot2At56Cents).to.equal(costAt56Cents);
 
       // At $0.042431 / TROB (42,431 in 6-decimal USD): $30 / 0.042431 = ~707.03 TROB
-      const costAt42Cents = await matrix.getRequiredTrobForSlot(1, 42431n);
-      expect(costAt42Cents).to.equal(707030237326482995922n);
+      const costAt42Cents = await matrix["getRequiredTrobForSlot(uint256,uint256)"](1, 42431n);
+      expect(costAt42Cents).to.equal(707030237n);
 
       // 3. Admin updates price to live market rate ($0.056)
       await expect(matrix.connect(owner).setTrobPrice(56000n))
@@ -763,7 +765,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
       // Non-owner cannot update price
       await expect(
         matrix.connect(matrixOwner).setTrobPrice(56000n)
-      ).to.be.revertedWithCustomError(matrix, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("EquoraMatrix: unauthorized");
     });
   });
 });

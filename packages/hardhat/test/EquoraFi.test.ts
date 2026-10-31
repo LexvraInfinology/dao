@@ -14,8 +14,8 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const TIER_STANDARD = ethers.parseEther("30");   // 30 TROB
-const TIER_DAO      = ethers.parseEther("300");  // 300 TROB
+const TIER_STANDARD = 30_000_000n;   // 30 TROB (6 decimals SUN)
+const TIER_DAO      = 300_000_000n;  // 300 TROB (6 decimals SUN)
 
 const DAY     = 86400;
 const DAYS_21 = 21 * DAY;
@@ -109,7 +109,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     it("fallback to root when invalid/unassigned sponsor code used", async () => {
       // 99999 is unassigned
       await registerUser(users[0], 99999);
-      expect(await registry.getSponsor(users[0].address)).to.equal(root.address);
+      expect(await registry.getSponsor(users[0].address)).to.equal(await vault.getAddress());
     });
 
     it("should qualify user after exactly 2 direct referrals", async () => {
@@ -203,7 +203,8 @@ describe("Equora.Fi — Full Protocol Suite", function () {
 
     it("should allow DAO join without referrals (open buy-in)", async () => {
       await registerUser(users[0], 10000);
-      await mintAndApprove(users[0], await dao.getAddress(), TIER_DAO);
+      const entryFee = await dao.entryFee();
+      await mintAndApprove(users[0], await dao.getAddress(), entryFee);
       const tx = await dao.connect(users[0]).joinDAO();
       await expect(tx).to.emit(dao, "DAOPositionJoined").withArgs(
         users[0].address, 1n, 1n, await time.latest()
@@ -372,7 +373,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
       await dao.connect(users[0]).joinDAO();
 
       // 2. Vault routes pool deposit (e.g. 100 TROB)
-      const depositAmt = ethers.parseEther("100");
+      const depositAmt = 100_000_000n; // 100 TROB in SUN (6 decimals)
       await token.mint(await vault.getAddress(), depositAmt);
 
       // Simulate matrix calling vault.routePoolDeposit
@@ -381,14 +382,14 @@ describe("Equora.Fi — Full Protocol Suite", function () {
 
       // 3. User 0 should have 35 TROB claimable (35% of 100 TROB)
       const claimable = await dao.getPendingPoolShare(users[0].address);
-      expect(claimable).to.equal(ethers.parseEther("35"));
+      expect(claimable).to.equal(35_000_000n);
 
       // 4. User 0 claims yield
       const balBefore = await token.balanceOf(users[0].address);
       await dao.connect(users[0]).claimPoolShare();
       const balAfter = await token.balanceOf(users[0].address);
 
-      expect(balAfter - balBefore).to.equal(ethers.parseEther("35"));
+      expect(balAfter - balBefore).to.equal(35_000_000n);
       expect(await dao.getPendingPoolShare(users[0].address)).to.equal(0n);
     });
   });
@@ -409,7 +410,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     it("should accumulate 10% of registration deposits in poolBalance", async () => {
       await registerUser(users[0], 10000, TIER_STANDARD);
       // 10% of 30 TROB = 3 TROB
-      expect(await magicBox.poolBalance()).to.equal(ethers.parseEther("3"));
+      expect(await magicBox.poolBalance()).to.equal(3_000_000n);
     });
   });
 
@@ -428,7 +429,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     it("should accumulate 40% of registration deposits in pendingPoolBalance", async () => {
       await registerUser(users[0], 10000, TIER_STANDARD);
       // 40% of 30 TROB = 12 TROB
-      expect(await salaryPool.pendingPoolBalance()).to.equal(ethers.parseEther("12"));
+      expect(await salaryPool.pendingPoolBalance()).to.equal(12_000_000n);
     });
   });
 
@@ -441,19 +442,28 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     it("should accumulate 15% of deposits in poolBalance", async () => {
       await registerUser(users[0], 10000, TIER_STANDARD);
       // 15% of 30 TROB = 4.5 TROB
-      expect(await rewardPool.poolBalance()).to.equal(ethers.parseEther("4.5"));
+      expect(await rewardPool.poolBalance()).to.equal(4_500_000n);
     });
 
     it("should pay 10% of pool balance upon Alpha milestone", async () => {
       // 1. Build pool balance to 100 TROB
-      await token.mint(await rewardPool.getAddress(), ethers.parseEther("100"));
-      await rewardPool.receiveDeposit(ethers.parseEther("100"));
+      await token.mint(await rewardPool.getAddress(), 100_000_000n);
+      await rewardPool.receiveDeposit(100_000_000n);
 
       // 2. Impersonate salaryPool (authorized caller)
       const salaryPoolAddress = await salaryPool.getAddress();
       await ethers.provider.send("hardhat_setBalance", [salaryPoolAddress, "0x1000000000000000000"]);
       const salarySigner = await ethers.getImpersonatedSigner(salaryPoolAddress);
       await rewardPool.connect(salarySigner).creditMilestoneReward(users[0].address, 1);
+
+      // Fast-forward to the 21st settlement day and settle monthly pool
+      const block = await ethers.provider.getBlock("latest");
+      const date = new Date(Number(block!.timestamp) * 1000);
+      const currentDay = date.getUTCDate();
+      let daysToAdd = currentDay < 21 ? (21 - currentDay) : (32 - currentDay + 21);
+      await ethers.provider.send("evm_increaseTime", [daysToAdd * 86400 + 3600]);
+      await ethers.provider.send("evm_mine", []);
+      await rewardPool.settleMonthlyRankRewards();
 
       // Alpha payout is 10% of 104.5 TROB (or 10% of 100 TROB)
       const pending = await rewardPool.getPendingReward(users[0].address);

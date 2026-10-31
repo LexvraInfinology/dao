@@ -78,6 +78,20 @@ def sanitize_env_file(filepath):
     if not cors_set:
         cleaned_lines.append("CORS_ORIGIN=" + q_double + ",".join(cors_origins) + q_double)
 
+    keys_present = {l.split("=", 1)[0].strip() for l in cleaned_lines if "=" in l and not l.strip().startswith("#")}
+    defaults = {
+        "DATABASE_URL": "postgresql://neondb_owner:npg_1fOkpFHAZx2e@postgres:5432/neondb?sslmode=disable",
+        "POSTGRES_USER": "neondb_owner",
+        "POSTGRES_PASSWORD": "npg_1fOkpFHAZx2e",
+        "POSTGRES_DB": "neondb",
+        "REDIS_PASSWORD": "EquoraRedis2026Secure",
+        "JWT_SECRET": "equora_jwt_secret_production_key_32_characters_minimum",
+        "NEXT_PUBLIC_DAO_ADDRESS": "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
+    }
+    for dk, dv in defaults.items():
+        if dk not in keys_present:
+            cleaned_lines.append(dk + "=" + dv)
+
     output_text = "\n".join(cleaned_lines) + "\n"
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(output_text)

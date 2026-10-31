@@ -26,6 +26,8 @@ export const MAINNET_DEFAULT_ADDRESSES = {
   magicBoxPool: "TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg",
   dao: "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
   nft: "TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9",
+  legacyDaoV1: "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
+  legacyDaoV2: "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
 };
 
 export const TESTNET_DEFAULT_ADDRESSES = {

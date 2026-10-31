@@ -37,7 +37,16 @@ export async function getOnChainDaoTransactions(
   try {
     const addressesToQuery = [daoAddress];
     if (IS_MAINNET) {
-      addressesToQuery.push('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto');
+      if (!addressesToQuery.includes('TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT')) {
+        addressesToQuery.push('TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT');
+      }
+      if (!addressesToQuery.includes('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto')) {
+        addressesToQuery.push('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto');
+      }
+      const vaultAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw';
+      if (vaultAddress && !addressesToQuery.includes(vaultAddress)) {
+        addressesToQuery.push(vaultAddress);
+      }
     }
     if (filterAddress && filterAddress.trim()) {
       const cleanFilter = filterAddress.trim();

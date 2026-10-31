@@ -18,6 +18,9 @@ export const V1_DAO_BASE58 = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
 export const V2_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
 export const V2_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
 
+export const V3_DAO_HEX = '4151114b92df6041f5a0e7ebc13e6ed68298fd28b0';
+export const V3_DAO_BASE58 = 'THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V';
+
 export interface MergedOnChainDaoStats {
   v1CollectedTrob: number;
   v1DistributedTrob: number;
@@ -149,12 +152,14 @@ export async function getMergedOnChainDaoStats(trobPriceUsd: number = 0.056): Pr
     return result;
   }
 
-  // ── MAINNET MODE: Fetch live constants from both V1 and V2 in parallel ──────
-  const [v1Col, v1Dist, v2Col, v2Dist] = await Promise.all([
+  // ── MAINNET MODE: Fetch live constants from V1, V2 and active V3 in parallel ──────
+  const [v1Col, v1Dist, v2Col, v2Dist, v3Col, v3Dist] = await Promise.all([
     queryContractUint(V1_DAO_HEX, 'totalCollected()'),
     queryContractUint(V1_DAO_HEX, 'totalDistributed()'),
     queryContractUint(V2_DAO_HEX, 'totalCollected()'),
     queryContractUint(V2_DAO_HEX, 'totalDistributed()'),
+    queryContractUint(getActiveDaoHex(), 'totalCollected()'),
+    queryContractUint(getActiveDaoHex(), 'totalDistributed()'),
   ]);
 
   // If RPC call succeeded, use live value. If a packet was dropped, maintain last confirmed verified value.
@@ -162,9 +167,11 @@ export async function getMergedOnChainDaoStats(trobPriceUsd: number = 0.056): Pr
   const finalV1Distributed = v1Dist !== null ? v1Dist : (lastConfirmedStats?.v1DistributedTrob ?? 440558.049);
   const finalV2Collected = v2Col !== null ? v2Col : (lastConfirmedStats?.v2CollectedTrob ?? 19078.61);
   const finalV2Distributed = v2Dist !== null ? v2Dist : (lastConfirmedStats?.v2DistributedTrob ?? 19077.11);
+  const finalV3Collected = v3Col !== null ? v3Col : 0;
+  const finalV3Distributed = v3Dist !== null ? v3Dist : 0;
 
-  const mergedCollectedTrob = Math.round((finalV1Collected + finalV2Collected) * 1000) / 1000;
-  const mergedDistributedTrob = Math.round((finalV1Distributed + finalV2Distributed) * 1000) / 1000;
+  const mergedCollectedTrob = Math.round((finalV1Collected + finalV2Collected + finalV3Collected) * 1000) / 1000;
+  const mergedDistributedTrob = Math.round((finalV1Distributed + finalV2Distributed + finalV3Distributed) * 1000) / 1000;
 
   const mergedCollectedUsd = 26400.0;
   const mergedDistributedUsd = 26261.01;
@@ -214,9 +221,24 @@ export async function getMemberOnChainFinancials(
   const evmHex = hex.startsWith('41') ? hex.slice(2) : hex.replace(/^0x/, '');
   const paddedParam = evmHex.toLowerCase().padStart(64, '0');
 
-  // Query getMemberDetails(address) on appropriate contract
-  const targetDaoHex = IS_MAINNET ? V2_DAO_HEX : getActiveDaoHex();
-  const detailsHex = await queryContractRaw(targetDaoHex, 'getMemberDetails(address)', paddedParam);
+  // Query getMemberDetails(address) on active V3 contract first
+  let targetDaoHex = getActiveDaoHex();
+  let detailsHex = await queryContractRaw(targetDaoHex, 'getMemberDetails(address)', paddedParam);
+
+  // If not found on V3, fallback to V2 (PT) and V1 (neto)
+  if (!detailsHex || detailsHex.slice(0, 64) === '0000000000000000000000000000000000000000000000000000000000000000') {
+    const v2Details = await queryContractRaw(V2_DAO_HEX, 'getMemberDetails(address)', paddedParam);
+    if (v2Details && v2Details.slice(0, 64) !== '0000000000000000000000000000000000000000000000000000000000000000') {
+      detailsHex = v2Details;
+      targetDaoHex = V2_DAO_HEX;
+    } else {
+      const v1Details = await queryContractRaw(V1_DAO_HEX, 'getMemberDetails(address)', paddedParam);
+      if (v1Details && v1Details.slice(0, 64) !== '0000000000000000000000000000000000000000000000000000000000000000') {
+        detailsHex = v1Details;
+        targetDaoHex = V1_DAO_HEX;
+      }
+    }
+  }
 
   let isMember = false;
   let position: number | null = null;

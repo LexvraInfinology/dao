@@ -62,6 +62,18 @@
       "addressHex": "418c05990021d332e01a68c42ce6a7e783a1752d06",
       "evmAddress": "0x8c05990021d332e01a68c42ce6a7e783a1752d06",
       "txHash": "a78f8b18d30005b8d3b5c7da85ad69c3d908c5b8ed589a2ea1b8704a7b46ea39"
+    },
+    "legacy": {
+      "EquoraDAOv1_neto": {
+        "addressBase58": "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
+        "addressHex": "410a59d6a2dcd3b18687c1efe1625642ad85679377",
+        "evmAddress": "0x0a59d6a2dcd3b18687c1efe1625642ad85679377"
+      },
+      "EquoraDAOv2_PT": {
+        "addressBase58": "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
+        "addressHex": "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4",
+        "evmAddress": "0x9031dbc5faddd365a9b3d40ddc0c550ca0f369e4"
+      }
     }
   }
 }

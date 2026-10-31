@@ -43,8 +43,9 @@ export const TROB_PRICE_API_URL =
 
 // Official Super Representative (SR) Addresses for Governance Staking & Voting
 export const OFFICIAL_SR_MAINNET =
-  process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS ||
-  'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
+  process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS && !process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS.includes('K7S')
+    ? process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS
+    : 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
 
 export const OFFICIAL_SR_TESTNET = OFFICIAL_SR_MAINNET;
 export const OFFICIAL_SR = OFFICIAL_SR_MAINNET;

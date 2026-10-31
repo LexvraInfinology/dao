@@ -559,23 +559,31 @@ export interface WalletEligibility {
     creationDate: string | null;
     minRequiredDate: string;
     reason?: string;
+    isOptional?: boolean;
   };
   condition2: {
     passed: boolean;
+    isOptional?: boolean;
     energy: {
       stakedTrob: number;
       requiredTrob: number;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     bandwidth: {
       stakedTrob: number;
       requiredTrob: number;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     srVote: {
       voted: boolean;
       officialSrAddress: string;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     missingRequirements: string[];
   };

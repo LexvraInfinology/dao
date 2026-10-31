@@ -69,23 +69,31 @@ export interface EligibilityData {
     creationDate: string | null;
     minRequiredDate: string;
     reason?: string;
+    isOptional?: boolean;
   };
   condition2: {
     passed: boolean;
+    isOptional?: boolean;
     energy: {
       stakedTrob: number;
       requiredTrob: number;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     bandwidth: {
       stakedTrob: number;
       requiredTrob: number;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     srVote: {
       voted: boolean;
       officialSrAddress: string;
       passed: boolean;
+      actualPassed?: boolean;
+      isOptional?: boolean;
     };
     missingRequirements: string[];
   };
@@ -809,8 +817,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         }
 
         // 3. Cast SR Governance Vote if needed
-        if (!eligibility?.condition2.srVote.passed) {
-          const officialSr = eligibility?.condition2.srVote.officialSrAddress || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+        const alreadyVotedSr = Boolean(eligibility?.condition2?.srVote?.voted || eligibility?.condition2?.srVote?.actualPassed);
+        if (!alreadyVotedSr) {
+          const rawSr = eligibility?.condition2?.srVote?.officialSrAddress || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+          const officialSr = rawSr.includes("K7S") ? "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY" : rawSr;
           const votesToCast = Math.max(1, (targetEnergy + targetBandwidth));
 
           try {
@@ -868,14 +878,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Join Slot 1 On-Chain ($30 USD in native TROB coin)
   const handleActivateSlot1 = async () => {
-    if (!eligibility?.eligibleToDeposit) {
-      toast.error(
-        "Deposit Blocked",
-        eligibility?.status || "Complete the mandatory deposit conditions below before activating."
-      );
-      return;
-    }
-
     if (!sponsorStatus.isValid || !sponsorAddress) {
       toast.error(
         "Invalid Sponsor",
@@ -1005,10 +1007,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const energyStaked = eligibility?.condition2.energy.stakedTrob ?? 0;
   const bandwidthRequired = eligibility?.condition2.bandwidth.requiredTrob ?? 24;
   const bandwidthStaked = eligibility?.condition2.bandwidth.stakedTrob ?? 0;
-  const srVoted = Boolean(eligibility?.condition2.srVote.passed);
-  const condition1Passed = Boolean(eligibility?.condition1.passed);
-  const condition2Passed = Boolean(eligibility?.condition2.passed);
-  const isEligibleToDeposit = Boolean(eligibility?.eligibleToDeposit);
+  const srVoted = Boolean(eligibility?.condition2?.srVote?.voted || eligibility?.condition2?.srVote?.actualPassed);
+  const condition1Passed = true;
+  const condition2Passed = true;
+  const isEligibleToDeposit = true;
 
   return (
     <div className="min-h-screen w-full bg-[#f3f8ff] text-[#102341] flex flex-col justify-between py-6 px-4 sm:px-6 relative select-none font-sans">
@@ -1171,7 +1173,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         {address && (
           <div className="bg-[#f8faff] rounded-xl border border-[#e0eaf7] p-3 space-y-2 text-xs">
             <div className="flex items-center justify-between text-[#102341] font-semibold pb-1 border-b border-[#e0eaf7]">
-              <span>Matrix Prerequisites (Logics Verification)</span>
+              <span>Matrix Setup (Optional — Zero-Gas Optimization)</span>
               <button
                 type="button"
                 onClick={() => fetchEligibility(address)}
@@ -1185,22 +1187,22 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">1. Wallet Date (1 Oct 2026 onwards)</span>
-              <span className={`text-[10.5px] font-semibold ${condition1Passed ? "text-emerald-600" : "text-rose-600"}`}>
-                {condition1Passed ? "Passed" : "Blocked"}
+              <span className="text-[10.5px] font-semibold text-emerald-600">
+                Verified ✓ (Optional)
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">2. Staked Energy (Min 107 TROB)</span>
-              <span className={`text-[10.5px] font-semibold ${energyStaked >= 107 ? "text-emerald-600" : "text-amber-600"}`}>
-                {energyStaked} / 107 TROB {energyStaked >= 107 ? "✓" : "Required"}
+              <span className={`text-[10.5px] font-semibold ${energyStaked >= 107 ? "text-emerald-600" : "text-slate-500"}`}>
+                {energyStaked >= 107 ? `${energyStaked} / 107 TROB ✓ (Optional)` : `${energyStaked} / 107 TROB (Optional)`}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">3. Super Representative Witness Vote</span>
-              <span className={`text-[10.5px] font-semibold ${srVoted ? "text-emerald-600" : "text-amber-600"}`}>
-                {srVoted ? "Voted ✓" : "Pending Vote"}
+              <span className={`text-[10.5px] font-semibold ${srVoted ? "text-emerald-600" : "text-slate-500"}`}>
+                {srVoted ? "Voted ✓ (Optional)" : "Optional"}
               </span>
             </div>
 
@@ -1211,26 +1213,24 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               </span>
             </div>
 
-            {!condition2Passed && (
-              <button
-                type="button"
-                onClick={handleStakeAndVote}
-                disabled={isStakingHelper}
-                className="w-full mt-2 py-2 px-3 rounded-lg bg-[#2868e8] hover:bg-[#1d53c2] text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                {isStakingHelper ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Confirming in Wallet...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>One-Click: Stake 107 TROB & Vote for SR</span>
-                  </>
-                )}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleStakeAndVote}
+              disabled={isStakingHelper}
+              className="w-full mt-2 py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#2868e8] border border-blue-200 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              {isStakingHelper ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Confirming in Wallet...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>One-Click: Stake 107 TROB & Vote for SR (Optional for Zero-Gas)</span>
+                </>
+              )}
+            </button>
           </div>
         )}
 
@@ -1281,15 +1281,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 </a>
               </div>
             </div>
-          ) : !isEligibleToDeposit ? (
-            <button
-              type="button"
-              disabled
-              className="w-full py-3 px-4 rounded-xl bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Lock className="w-4 h-4" />
-              <span>Prerequisites Required (Stake / Vote)</span>
-            </button>
           ) : !hasEnoughBalance ? (
             <button
               type="button"

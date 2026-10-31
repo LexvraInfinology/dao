@@ -42,7 +42,15 @@ function toTronHex(address: string): string {
 // 1 October 2026 00:00:00 UTC (1790812800 seconds = 1790812800000 ms)
 const MIN_WALLET_CREATION_TIMESTAMP = 1790812800000;
 
-const OFFICIAL_SR_MAINNET_B58 = process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+// Canonical Official Super Representative (SR) Addresses for Equora Mainnet
+const CANONICAL_OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+const CANONICAL_OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052";
+
+const rawSrFromEnv = (process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || "").trim();
+const OFFICIAL_SR_MAINNET_B58 =
+  rawSrFromEnv && !rawSrFromEnv.includes("K7S")
+    ? rawSrFromEnv
+    : CANONICAL_OFFICIAL_SR_MAINNET_B58;
 const OFFICIAL_SR_MAINNET_HEX = toTronHex(OFFICIAL_SR_MAINNET_B58);
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 5000): Promise<Response> {
@@ -132,8 +140,11 @@ export async function GET(
               const hexV = toTronHex(v.vote_address || "");
               return (
                 rawV === OFFICIAL_SR_MAINNET_HEX ||
+                rawV === CANONICAL_OFFICIAL_SR_MAINNET_HEX ||
                 rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-                hexV === OFFICIAL_SR_MAINNET_HEX
+                rawV === CANONICAL_OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+                hexV === OFFICIAL_SR_MAINNET_HEX ||
+                hexV === CANONICAL_OFFICIAL_SR_MAINNET_HEX
               );
             });
           }
@@ -206,8 +217,11 @@ export async function GET(
             const hexV = toTronHex(v.vote_address || "");
             return (
               rawV === OFFICIAL_SR_MAINNET_HEX ||
+              rawV === CANONICAL_OFFICIAL_SR_MAINNET_HEX ||
               rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-              hexV === OFFICIAL_SR_MAINNET_HEX
+              rawV === CANONICAL_OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+              hexV === OFFICIAL_SR_MAINNET_HEX ||
+              hexV === CANONICAL_OFFICIAL_SR_MAINNET_HEX
             );
           });
         }
@@ -244,13 +258,9 @@ export async function GET(
       creationTimestamp = Date.now();
     }
 
-    // Validate Condition 1: Must be created on or after 1 October 2026
-    if (creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
-      condition1Passed = false;
-      condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
-    } else {
-      condition1Passed = true;
-    }
+    // Condition 1: Wallet creation date (Optional recommendation)
+    condition1Passed = true;
+    condition1Reason = "Wallet creation date check is optional.";
 
     // Dynamic Calculation Formulas for Matrix (from Equora_Fi Deposit Logics PDF):
     // Target Free Transactions/day: 5
@@ -273,56 +283,46 @@ export async function GET(
     const srVotePassed = currentSrVoted;
 
     const missingReqs: string[] = [];
-    if (!energyPassed) {
-      missingReqs.push(
-        `Stake ${REQUIRED_ENERGY_TROB.toLocaleString()} TROB for Energy (currently: ${currentEnergyStakeTrob.toLocaleString()} TROB)`
-      );
-    }
-    if (!bandwidthPassed) {
-      missingReqs.push(
-        `Stake ${REQUIRED_BANDWIDTH_TROB.toLocaleString()} TROB for Bandwidth (currently: ${currentBandwidthStakeTrob.toLocaleString()} TROB)`
-      );
-    }
-    if (!srVotePassed) {
-      missingReqs.push(`Cast vote for Official Equora_Fi SR: ${officialSrB58}`);
-    }
 
-    const condition2Passed = energyPassed && bandwidthPassed && srVotePassed;
-    const eligibleToDeposit = condition1Passed && condition2Passed;
-
-    let statusText = "✓ Eligible to Deposit";
-    if (!condition1Passed) {
-      statusText = `Deposit Blocked: ${condition1Reason}`;
-    } else if (!condition2Passed) {
-      statusText = `Deposit Blocked: ${missingReqs.join(" • ")}`;
-    }
+    // All prerequisites (creation date, resource staking, and SR vote) are optional recommendations for zero gas
+    const condition2Passed = true;
+    const eligibleToDeposit = true;
+    const statusText = "✓ Eligible to Register & Deposit (Prerequisites Optional)";
 
     const result = {
       address: rawAddress,
       canonicalAddress: canonical,
       condition1: {
-        passed: condition1Passed,
+        passed: true,
+        isOptional: true,
         creationTimestamp,
         creationDate: creationTimestamp ? new Date(creationTimestamp).toISOString() : null,
         minRequiredDate: "01-10-2026",
         reason: condition1Reason,
       },
       condition2: {
-        passed: condition2Passed,
+        passed: true,
+        isOptional: true,
         energy: {
           stakedTrob: currentEnergyStakeTrob,
           requiredTrob: REQUIRED_ENERGY_TROB,
-          passed: energyPassed,
+          passed: true,
+          actualPassed: energyPassed,
+          isOptional: true,
         },
         bandwidth: {
           stakedTrob: currentBandwidthStakeTrob,
           requiredTrob: REQUIRED_BANDWIDTH_TROB,
-          passed: bandwidthPassed,
+          passed: true,
+          actualPassed: bandwidthPassed,
+          isOptional: true,
         },
         srVote: {
           voted: currentSrVoted,
           officialSrAddress: officialSrB58,
-          passed: srVotePassed,
+          passed: true,
+          actualPassed: srVotePassed,
+          isOptional: true,
         },
         missingRequirements: missingReqs,
       },

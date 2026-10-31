@@ -439,7 +439,6 @@ export async function connectTrobSafe(): Promise<string> {
       localStorage.setItem("equora_auth_address", clean);
       localStorage.setItem("equora_matrix_address", clean);
       localStorage.setItem("equora_user_address", clean);
-      localStorage.setItem(`equora_matrix_registered_${clean.toLowerCase()}`, "true");
     }
 
     setStoredUserAddress(clean);

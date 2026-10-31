@@ -49,6 +49,8 @@ import {
   toTronHex,
   isUserRegisteredInMatrix,
   getOnChainTotalMembers,
+  GENESIS_ROOT_MEMBER_BASE58,
+  GENESIS_ROOT_MEMBER_HEX,
 } from "@/lib/contracts";
 import { formatAddress } from "@/lib/format";
 import {
@@ -158,6 +160,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // Genesis DAO Seat from URL query (if referred from DAO)
   const [daoSeat, setDaoSeat] = useState<number | null>(null);
 
+  const isRootWallet = Boolean(
+    address &&
+    (toTrobBase58(address) === GENESIS_ROOT_MEMBER_BASE58 ||
+      address.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
+  );
+  const isFirstMember = isRootWallet || totalMembers === 0 || daoSeat === 1;
+
   // Dynamic $30.00 USD entry cost based on live TrobChain oracle
   const [slotCostSun, setSlotCostSun] = useState<number>(945179584);
   const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.03174);
@@ -223,7 +232,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
-    const isFirstId = totalMembers === 0 || daoSeat === 1;
+    const isFirstId = isRootWallet || totalMembers === 0 || daoSeat === 1;
 
     if (!cleaned) {
       if (isFirstId) {
@@ -294,6 +303,12 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         return;
       }
       setResolvingSponsor(true);
+      setSponsorStatus({
+        isValid: false,
+        isCustom: true,
+        isGenesis: false,
+        error: undefined,
+      });
       // Asynchronously resolve on-chain to sponsor wallet address
       getOnChainUserByCode(codeNum).then((resolvedAddr) => {
         setResolvingSponsor(false);
@@ -454,7 +469,25 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         // Query total on-chain members to detect 1st ID
         const membersCount = await getOnChainTotalMembers().catch(() => 0);
         if (isMounted) setTotalMembers(membersCount);
-        const isFirstId = membersCount === 0;
+        const isFirstId = isRootWallet || membersCount === 0 || daoSeat === 1;
+
+        // Purge any testnet or invalid cached sponsor from localStorage
+        if (typeof window !== "undefined") {
+          const stored = localStorage.getItem("equora_sponsor");
+          if (
+            isFirstId ||
+            (stored && (
+              stored === "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr" ||
+              stored.toLowerCase() === "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f" ||
+              stored === "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8" ||
+              stored.toLowerCase() === "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202" ||
+              stored === "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL" ||
+              stored === "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx"
+            ))
+          ) {
+            localStorage.removeItem("equora_sponsor");
+          }
+        }
 
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
@@ -599,6 +632,23 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       isMounted = false;
     };
   }, []);
+
+  // Auto-Assign Protocol Pools to Genesis Root Member
+  useEffect(() => {
+    if (address) {
+      const isRoot =
+        toTrobBase58(address) === GENESIS_ROOT_MEMBER_BASE58 ||
+        address.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase();
+      if (isRoot || totalMembers === 0) {
+        setSponsorAddress(CONTRACT_ADDRESSES.vault);
+        setSponsorInput(toTrobBase58(CONTRACT_ADDRESSES.vault));
+        setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("equora_sponsor");
+        }
+      }
+    }
+  }, [address, totalMembers]);
 
   // 3. Auto-Detect Installed Wallet (Extension, Android APK, iOS Bridge)
   useEffect(() => {
@@ -1061,7 +1111,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     );
   }
 
-  const isFirstMember = totalMembers === 0 || daoSeat === 1;
   const displayAddress = address ? toTrobBase58(address) : "";
   const displaySponsor = sponsorAddress ? toTrobBase58(sponsorAddress) : "";
   const isVaultSponsor = Boolean(
@@ -1210,36 +1259,44 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               type="text"
               value={sponsorInput}
               onChange={(e) => handleSponsorInputChange(e.target.value)}
-              placeholder="Sponsor Base58 address or 5-digit code..."
+              placeholder={isFirstMember ? "Protocol Pools (THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw)" : "Sponsor Base58 address or 5-digit code..."}
+              disabled={isFirstMember && isVaultSponsor}
               className={`w-full bg-[#f8faff] border rounded-xl py-2 px-3 pr-16 text-xs font-mono text-[#102341] placeholder:text-slate-400 focus:outline-none focus:bg-white transition-colors ${
-                !sponsorStatus.isValid ? "border-rose-300" : "border-[#e0eaf7] focus:border-[#2868e8]"
+                !sponsorStatus.isValid && !isFirstMember ? "border-rose-300" : "border-[#e0eaf7] focus:border-[#2868e8]"
               }`}
             />
-            <div className="absolute right-1 flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={handlePasteSponsor}
-                className="px-2 py-1 rounded-md text-[10.5px] font-medium text-[#2868e8] hover:bg-[#f0f6ff] transition-colors cursor-pointer"
-              >
-                Paste
-              </button>
-              {sponsorStatus.isCustom && (
+            {!isFirstMember && (
+              <div className="absolute right-1 flex items-center gap-0.5">
                 <button
                   type="button"
-                  onClick={handleResetSponsor}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                  title="Reset to default"
+                  onClick={handlePasteSponsor}
+                  className="px-2 py-1 rounded-md text-[10.5px] font-medium text-[#2868e8] hover:bg-[#f0f6ff] transition-colors cursor-pointer"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  Paste
                 </button>
-              )}
-            </div>
+                {sponsorStatus.isCustom && (
+                  <button
+                    type="button"
+                    onClick={handleResetSponsor}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    title="Reset to default"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {isFirstMember && isVaultSponsor && (
-            <p className="text-[11px] text-[#2868e8] font-medium flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#2868e8]" />
-              <span>Genesis Matrix 1st ID — Uplink automatically routes to Protocol Pools.</span>
-            </p>
+            <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-[#2868e8] space-y-1">
+              <div className="flex items-center gap-1.5 font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-[#2868e8]" />
+                <span>Genesis Matrix Root Node (#0001)</span>
+              </div>
+              <p className="text-[#526682] leading-relaxed">
+                You are activating the 1st node in the Equora Matrix. No upline referral sponsor is required — 100% of your $30.00 USD entry fee routes directly to the Protocol Pools (Vault).
+              </p>
+            </div>
           )}
           {sponsorStatus.error && !isFirstMember && (
             <p className="text-[11px] text-rose-600 font-medium">{sponsorStatus.error}</p>

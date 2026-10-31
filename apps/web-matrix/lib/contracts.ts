@@ -27,6 +27,9 @@ export const MAINNET_DEFAULT_ADDRESSES = {
 };
 
 // Verified TrobChain Mainnet Contract Addresses
+// Genesis Root Matrix Member (#0001) on TrobChain Mainnet
+export const GENESIS_ROOT_MEMBER_BASE58 = "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa";
+export const GENESIS_ROOT_MEMBER_HEX = "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
 export const CONTRACT_ADDRESSES = {
   matrix: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
   token: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
@@ -1937,12 +1940,20 @@ export async function joinSlotOnChain(
     }
   }
 
-  // Check total members on chain to see if this is 1st member
+  // Check total members on chain or if connected user is Genesis Root Member
   let isFirstMember = false;
-  try {
-    const count = await getOnChainTotalMembers();
-    if (count === 0) isFirstMember = true;
-  } catch {}
+  if (
+    userAddress &&
+    (toTrobBase58(userAddress) === GENESIS_ROOT_MEMBER_BASE58 ||
+      userAddress.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
+  ) {
+    isFirstMember = true;
+  } else {
+    try {
+      const count = await getOnChainTotalMembers();
+      if (count === 0) isFirstMember = true;
+    } catch {}
+  }
 
   const hexCheck = toHexAddress(targetSponsor);
   const isValidAddress = ethers.isAddress(hexCheck) && hexCheck !== "0x0000000000000000000000000000000000000000";

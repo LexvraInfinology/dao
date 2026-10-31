@@ -192,12 +192,16 @@ async function main() {
   const matrixHex = deployed.contracts.EquoraMatrix.addressHex;
 
   const seat1EvmAddr = "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02"; // Seat 1
-  const slotCostSun = 535714285; // $30 USD pegged cost
+  const coder = new ethers.AbiCoder();
+  const mCostHex = await callConstant(matrixHex, "slotCosts(uint256)", coder.encode(["uint256"], [1]).slice(2));
+  const slotCostSun = mCostHex ? Number(coder.decode(["uint256"], "0x" + mCostHex)[0]) : 945179584;
+  const fundAmountSun = slotCostSun + 30_000_000;
 
   console.log(`================================================================`);
   console.log(`🌟 EXPANDING MATRIX TO TOP 7 GENESIS MEMBERS (NODES 4, 5, 6)`);
   console.log(`   Matrix Contract: ${deployed.contracts.EquoraMatrix.addressBase58}`);
   console.log(`   Seat 1 (Apex):   ${seat1EvmAddr}`);
+  console.log(`   Slot 1 Dynamic Cost: ${slotCostSun / 1e6} TROB (${slotCostSun} SUN)`);
   console.log(`================================================================\n`);
 
   const memberHistoryPath = path.resolve(__dirname, "../joined-members.json");
@@ -224,8 +228,8 @@ async function main() {
   const m5Wallet = ethers.Wallet.createRandom();
   const m5Signer = privateKeyToAddress(m5Wallet.privateKey);
   console.log(`   Member 5 Address: ${m5Signer.tronBase58} (${m5Signer.evmAddress})`);
-  console.log(`   💸 Funding 539 TROB to Member 5...`);
-  await transferTrob(deployer, m5Signer.tronHex, 539_000_000);
+  console.log(`   💸 Funding ${fundAmountSun / 1e6} TROB to Member 5...`);
+  await transferTrob(deployer, m5Signer.tronHex, fundAmountSun);
   console.log(`   🚀 Executing joinSlot(1, ${member2.evm}) for Member 5...`);
   const tx5 = await triggerJoinSlot(m5Signer, matrixHex, member2.evm, slotCostSun);
   console.log(`      ✅ Member 5 Confirmed on-chain! Tx: 0x${tx5}`);
@@ -248,8 +252,8 @@ async function main() {
   const m6Wallet = ethers.Wallet.createRandom();
   const m6Signer = privateKeyToAddress(m6Wallet.privateKey);
   console.log(`   Member 6 Address: ${m6Signer.tronBase58} (${m6Signer.evmAddress})`);
-  console.log(`   💸 Funding 539 TROB to Member 6...`);
-  await transferTrob(deployer, m6Signer.tronHex, 539_000_000);
+  console.log(`   💸 Funding ${fundAmountSun / 1e6} TROB to Member 6...`);
+  await transferTrob(deployer, m6Signer.tronHex, fundAmountSun);
   console.log(`   🚀 Executing joinSlot(1, ${member3.evm}) for Member 6...`);
   const tx6 = await triggerJoinSlot(m6Signer, matrixHex, member3.evm, slotCostSun);
   console.log(`      ✅ Member 6 Confirmed on-chain! Tx: 0x${tx6}`);
@@ -272,8 +276,8 @@ async function main() {
   const m7Wallet = ethers.Wallet.createRandom();
   const m7Signer = privateKeyToAddress(m7Wallet.privateKey);
   console.log(`   Member 7 Address: ${m7Signer.tronBase58} (${m7Signer.evmAddress})`);
-  console.log(`   💸 Funding 539 TROB to Member 7...`);
-  await transferTrob(deployer, m7Signer.tronHex, 539_000_000);
+  console.log(`   💸 Funding ${fundAmountSun / 1e6} TROB to Member 7...`);
+  await transferTrob(deployer, m7Signer.tronHex, fundAmountSun);
   console.log(`   🚀 Executing joinSlot(1, ${member3.evm}) for Member 7...`);
   const tx7 = await triggerJoinSlot(m7Signer, matrixHex, member3.evm, slotCostSun);
   console.log(`      ✅ Member 7 Confirmed on-chain! Tx: 0x${tx7}`);

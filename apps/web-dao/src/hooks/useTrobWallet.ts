@@ -121,7 +121,9 @@ export function useTrobWallet(): TrobWalletState {
   const [error, setError]             = useState<string | null>(null);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [isWrongNetwork, setIsWrongNetwork] = useState<boolean>(false);
-  const [networkName, setNetworkName]       = useState<string>('mainnet');
+  const [networkName, setNetworkName]       = useState<string>(
+    process.env.NEXT_PUBLIC_TARGET_NETWORK || (process.env.NEXT_PUBLIC_IS_MAINNET === 'false' ? 'testnet' : 'mainnet')
+  );
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const checkNetwork = useCallback((t?: any) => {
@@ -132,13 +134,16 @@ export function useTrobWallet(): TrobWalletState {
     const host = String(trob?.fullNode?.host || w.trobWeb?.fullNode?.host || '').toLowerCase();
     const net = String(trob?.network || '').toLowerCase();
     const isTest = host.includes('nile') || host.includes('shasta') || host.includes('testnet') || net === 'testnet';
-    const targetNet = process.env.NEXT_PUBLIC_TARGET_NETWORK || 'mainnet';
+    const targetNet = process.env.NEXT_PUBLIC_TARGET_NETWORK || (process.env.NEXT_PUBLIC_IS_MAINNET === 'false' ? 'testnet' : 'mainnet');
     if (targetNet === 'mainnet' && isTest) {
       setIsWrongNetwork(true);
       setNetworkName('testnet');
+    } else if (targetNet === 'testnet' && !isTest && (host.includes('fullnode') && !host.includes('testnet'))) {
+      setIsWrongNetwork(true);
+      setNetworkName('mainnet');
     } else {
       setIsWrongNetwork(false);
-      setNetworkName(isTest ? 'testnet' : 'mainnet');
+      setNetworkName(isTest ? 'testnet' : targetNet);
     }
   }, []);
   const getTrob = (): TrobWalletAPI | any | null => {

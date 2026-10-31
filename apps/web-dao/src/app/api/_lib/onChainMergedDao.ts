@@ -8,14 +8,18 @@
  * Seamless continuous state retention prevents screen jitter.
  */
 
-import { FULLNODE_RPC_URL } from '@/config/env';
-import { toTronHex, toTrobBase58 } from '@/utils/trobAddress';
+import { FULLNODE_RPC_URL, IS_MAINNET } from '@/config/env';
+import { toTronHex, toTrobBase58, getActiveDaoHex } from '@/utils/trobAddress';
+import { Interface, formatUnits } from 'ethers';
 
 export const V1_DAO_HEX = '410a59d6a2dcd3b18687c1efe1625642ad85679377';
 export const V1_DAO_BASE58 = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
 
 export const V2_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
 export const V2_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
+
+export const V3_DAO_HEX = '4151114b92df6041f5a0e7ebc13e6ed68298fd28b0';
+export const V3_DAO_BASE58 = 'THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V';
 
 export interface MergedOnChainDaoStats {
   v1CollectedTrob: number;
@@ -118,12 +122,44 @@ export async function getMergedOnChainDaoStats(trobPriceUsd: number = 0.056): Pr
     return lastConfirmedStats;
   }
 
-  // Fetch live constants from both V1 and V2 in parallel
-  const [v1Col, v1Dist, v2Col, v2Dist] = await Promise.all([
+  // ── TESTNET MODE: Query active testnet DAO contract only ───────────────────
+  if (!IS_MAINNET) {
+    const activeDaoHex = getActiveDaoHex();
+    const [col, dist] = await Promise.all([
+      queryContractUint(activeDaoHex, 'totalCollected()'),
+      queryContractUint(activeDaoHex, 'totalDistributed()'),
+    ]);
+
+    const finalCol = col !== null ? col : 80780;
+    const finalDist = dist !== null ? dist : 80780;
+
+    const result: MergedOnChainDaoStats = {
+      v1CollectedTrob: 0,
+      v1DistributedTrob: 0,
+      v2CollectedTrob: finalCol,
+      v2DistributedTrob: finalDist,
+      mergedCollectedTrob: finalCol,
+      mergedDistributedTrob: finalDist,
+      mergedCollectedUsd: 3000.0,
+      mergedDistributedUsd: 3000.0,
+      memberCount: 10,
+      activeMemberCount: 10,
+      nextAvailableSeat: 11,
+      timestamp: new Date().toISOString(),
+    };
+    lastConfirmedStats = result;
+    lastStatsFetchTime = now;
+    return result;
+  }
+
+  // ── MAINNET MODE: Fetch live constants from V1, V2 and active V3 in parallel ──────
+  const [v1Col, v1Dist, v2Col, v2Dist, v3Col, v3Dist] = await Promise.all([
     queryContractUint(V1_DAO_HEX, 'totalCollected()'),
     queryContractUint(V1_DAO_HEX, 'totalDistributed()'),
     queryContractUint(V2_DAO_HEX, 'totalCollected()'),
     queryContractUint(V2_DAO_HEX, 'totalDistributed()'),
+    queryContractUint(getActiveDaoHex(), 'totalCollected()'),
+    queryContractUint(getActiveDaoHex(), 'totalDistributed()'),
   ]);
 
   // If RPC call succeeded, use live value. If a packet was dropped, maintain last confirmed verified value.
@@ -131,12 +167,12 @@ export async function getMergedOnChainDaoStats(trobPriceUsd: number = 0.056): Pr
   const finalV1Distributed = v1Dist !== null ? v1Dist : (lastConfirmedStats?.v1DistributedTrob ?? 440558.049);
   const finalV2Collected = v2Col !== null ? v2Col : (lastConfirmedStats?.v2CollectedTrob ?? 19078.61);
   const finalV2Distributed = v2Dist !== null ? v2Dist : (lastConfirmedStats?.v2DistributedTrob ?? 19077.11);
+  const finalV3Collected = v3Col !== null ? v3Col : 0;
+  const finalV3Distributed = v3Dist !== null ? v3Dist : 0;
 
-  const mergedCollectedTrob = Math.round((finalV1Collected + finalV2Collected) * 1000) / 1000;
-  const mergedDistributedTrob = Math.round((finalV1Distributed + finalV2Distributed) * 1000) / 1000;
+  const mergedCollectedTrob = Math.round((finalV1Collected + finalV2Collected + finalV3Collected) * 1000) / 1000;
+  const mergedDistributedTrob = Math.round((finalV1Distributed + finalV2Distributed + finalV3Distributed) * 1000) / 1000;
 
-  // Fixed historical USD accounting: Each active member paid $300 USD fixed deposit.
-  // 88 active members * $300 = $26,400.00 USD collected; distributions pegged at block-payout rate.
   const mergedCollectedUsd = 26400.0;
   const mergedDistributedUsd = 26261.01;
 
@@ -185,8 +221,24 @@ export async function getMemberOnChainFinancials(
   const evmHex = hex.startsWith('41') ? hex.slice(2) : hex.replace(/^0x/, '');
   const paddedParam = evmHex.toLowerCase().padStart(64, '0');
 
-  // Query getMemberDetails(address) on V2
-  const detailsHex = await queryContractRaw(V2_DAO_HEX, 'getMemberDetails(address)', paddedParam);
+  // Query getMemberDetails(address) on active V3 contract first
+  let targetDaoHex = getActiveDaoHex();
+  let detailsHex = await queryContractRaw(targetDaoHex, 'getMemberDetails(address)', paddedParam);
+
+  // If not found on V3, fallback to V2 (PT) and V1 (neto)
+  if (!detailsHex || detailsHex.slice(0, 64) === '0000000000000000000000000000000000000000000000000000000000000000') {
+    const v2Details = await queryContractRaw(V2_DAO_HEX, 'getMemberDetails(address)', paddedParam);
+    if (v2Details && v2Details.slice(0, 64) !== '0000000000000000000000000000000000000000000000000000000000000000') {
+      detailsHex = v2Details;
+      targetDaoHex = V2_DAO_HEX;
+    } else {
+      const v1Details = await queryContractRaw(V1_DAO_HEX, 'getMemberDetails(address)', paddedParam);
+      if (v1Details && v1Details.slice(0, 64) !== '0000000000000000000000000000000000000000000000000000000000000000') {
+        detailsHex = v1Details;
+        targetDaoHex = V1_DAO_HEX;
+      }
+    }
+  }
 
   let isMember = false;
   let position: number | null = null;
@@ -207,39 +259,42 @@ export async function getMemberOnChainFinancials(
     }
   }
 
-  const underfundedQuarantineMap: Record<string, { position: number; unearnedDebtTrob: number; initialV1DepositTrob: number }> = {
-    'tquggb4jz81yjdyd4l3ykbfux21smpnkwm': { position: 79, unearnedDebtTrob: 580.28, initialV1DepositTrob: 1.5 },
-    'tnxrvazbgr4jafp2pcuyacmk6ucbs8qajc': { position: 80, unearnedDebtTrob: 580.26, initialV1DepositTrob: 1.5 },
-    'ttxpqbmvx7kvy2wgsehp1htjn9nwzu53gt': { position: 84, unearnedDebtTrob: 384.23, initialV1DepositTrob: 1.5 },
-    'tcq3cbp2ngdtucnk4hyyyuaaftpuahvvjn': { position: 85, unearnedDebtTrob: 384.21, initialV1DepositTrob: 1.5 },
-    'tjee83cgsmysb6grbm5jnx2v1facogpu4b': { position: 90, unearnedDebtTrob: 129.86, initialV1DepositTrob: 5.0 },
-    'ttz5ptt3dc7rma3p6rnvvhuuoya5vulmdh': { position: 91, unearnedDebtTrob: 129.80, initialV1DepositTrob: 5.0 },
-  };
-
-  const quarantined = underfundedQuarantineMap[b58.toLowerCase()];
-  if (quarantined) {
-    const quarantinedMember: MemberOnChainFinancials = {
-      address: b58,
-      position: quarantined.position,
-      isMember: false,
-      status: 'vacant',
-      userInflowUsd: 0,
-      userInflowTrob: quarantined.initialV1DepositTrob,
-      userOutflowUsd: 0,
-      userOutflowTrob: 0,
-      userNetReturnUsd: 0,
-      userMultiplier: 0,
-      retopupCount: 0,
-      underfundedAudit: {
-        wasUnderfunded: true,
-        unearnedDebtTrob: quarantined.unearnedDebtTrob,
-        initialV1DepositTrob: quarantined.initialV1DepositTrob,
-        recovered: true,
-        note: 'Reservation expired without funding. Unearned payouts quarantined; earnings reset to 0.',
-      },
+  // Underfunded quarantine map applies exclusively to Mainnet historical migration
+  if (IS_MAINNET) {
+    const underfundedQuarantineMap: Record<string, { position: number; unearnedDebtTrob: number; initialV1DepositTrob: number }> = {
+      'tquggb4jz81yjdyd4l3ykbfux21smpnkwm': { position: 79, unearnedDebtTrob: 580.28, initialV1DepositTrob: 1.5 },
+      'tnxrvazbgr4jafp2pcuyacmk6ucbs8qajc': { position: 80, unearnedDebtTrob: 580.26, initialV1DepositTrob: 1.5 },
+      'ttxpqbmvx7kvy2wgsehp1htjn9nwzu53gt': { position: 84, unearnedDebtTrob: 384.23, initialV1DepositTrob: 1.5 },
+      'tcq3cbp2ngdtucnk4hyyyuaaftpuahvvjn': { position: 85, unearnedDebtTrob: 384.21, initialV1DepositTrob: 1.5 },
+      'tjee83cgsmysb6grbm5jnx2v1facogpu4b': { position: 90, unearnedDebtTrob: 129.86, initialV1DepositTrob: 5.0 },
+      'ttz5ptt3dc7rma3p6rnvvhuuoya5vulmdh': { position: 91, unearnedDebtTrob: 129.80, initialV1DepositTrob: 5.0 },
     };
-    memberCache.set(cacheKey, { data: quarantinedMember, time: now });
-    return quarantinedMember;
+
+    const quarantined = underfundedQuarantineMap[b58.toLowerCase()];
+    if (quarantined) {
+      const quarantinedMember: MemberOnChainFinancials = {
+        address: b58,
+        position: quarantined.position,
+        isMember: false,
+        status: 'vacant',
+        userInflowUsd: 0,
+        userInflowTrob: quarantined.initialV1DepositTrob,
+        userOutflowUsd: 0,
+        userOutflowTrob: 0,
+        userNetReturnUsd: 0,
+        userMultiplier: 0,
+        retopupCount: 0,
+        underfundedAudit: {
+          wasUnderfunded: true,
+          unearnedDebtTrob: quarantined.unearnedDebtTrob,
+          initialV1DepositTrob: quarantined.initialV1DepositTrob,
+          recovered: true,
+          note: 'Reservation expired without funding. Unearned payouts quarantined; earnings reset to 0.',
+        },
+      };
+      memberCache.set(cacheKey, { data: quarantinedMember, time: now });
+      return quarantinedMember;
+    }
   }
 
   if (!isMember || !position || position === 0) {
@@ -260,58 +315,55 @@ export async function getMemberOnChainFinancials(
     return nonMember;
   }
 
-  // Calculate exact on-chain inflow & outflow per seat specifications
+  // Calculate on-chain inflow & outflow
   let userInflowUsd = 300.0;
-  let userInflowTrob = 5084.75;
+  let userInflowTrob = IS_MAINNET ? 5357.14 : 8076.24;
   let userOutflowTrob = Number(totalEarnedSun) / 1e6;
   let retopupCount = 0;
   let status: 'active' | 'capped' | 'vacant' = isBlank ? 'vacant' : isCapped ? 'capped' : 'active';
   let underfundedAudit: MemberOnChainFinancials['underfundedAudit'];
 
-  // Seat-specific on-chain parity rules
-  if (position === 1) {
-    retopupCount = 1;
-    userInflowUsd = 600.0;
-    userInflowTrob = 10169.49;
-    userOutflowTrob = Math.max(userOutflowTrob, 25867.28);
-  } else if (position === 12) {
-    // Underfunded Seat 12: Paid 1.5 TROB (V1) + 5,355.64 TROB (V2 completion) = 5,357.14 TROB ($300 USD)
-    // Instant cashback = 446.30 TROB, dividends = 872.88 TROB => Outflow = 1,319.18 TROB ($73.87 USD)
-    userInflowUsd = 300.0;
-    userInflowTrob = 5357.14;
-    userOutflowTrob = 1319.18;
-    underfundedAudit = {
-      wasUnderfunded: true,
-      unearnedDebtTrob: 799.47,
-      initialV1DepositTrob: 1.5,
-      completionDepositTrob: 5355.64,
-      cashbackReceivedTrob: 446.30,
-      recovered: true,
-      note: 'Underfunded debt settled. Full $300 deposit confirmed on-chain.',
-    };
-  } else if (position === 76) {
-    // Replaced expired reservation: Paid 6,386.51 TROB ($300 USD). Cashback received: 73.41 TROB ($4.11 USD).
-    userInflowUsd = 300.0;
-    userInflowTrob = 6386.51;
-    userOutflowTrob = 73.41;
-  } else if ([79, 80, 84, 85, 90, 91].includes(position)) {
-    // Vacant/quarantined seats: Unearned funds recovered/quarantined on-chain. Outflow is strictly 0.
-    status = 'vacant';
-    const initDeposit = [90, 91].includes(position) ? 5.0 : 1.5;
-    userInflowUsd = 0;
-    userInflowTrob = initDeposit;
-    userOutflowTrob = 0;
-    underfundedAudit = {
-      wasUnderfunded: true,
-      unearnedDebtTrob: position === 79 ? 580.28 : position === 80 ? 580.26 : position === 84 ? 384.23 : position === 85 ? 384.21 : 129.86,
-      initialV1DepositTrob: initDeposit,
-      recovered: true,
-      note: 'Reservation expired without funding. Unearned payouts quarantined; earnings reset to 0.',
-    };
+  // Mainnet-only seat-specific historical parity rules
+  if (IS_MAINNET) {
+    if (position === 1) {
+      retopupCount = 1;
+      userInflowUsd = 600.0;
+      userInflowTrob = 10169.49;
+      userOutflowTrob = Math.max(userOutflowTrob, 25867.28);
+    } else if (position === 12) {
+      userInflowUsd = 300.0;
+      userInflowTrob = 5357.14;
+      userOutflowTrob = 1319.18;
+      underfundedAudit = {
+        wasUnderfunded: true,
+        unearnedDebtTrob: 799.47,
+        initialV1DepositTrob: 1.5,
+        completionDepositTrob: 5355.64,
+        cashbackReceivedTrob: 446.30,
+        recovered: true,
+        note: 'Underfunded debt settled. Full $300 deposit confirmed on-chain.',
+      };
+    } else if (position === 76) {
+      userInflowUsd = 300.0;
+      userInflowTrob = 6386.51;
+      userOutflowTrob = 73.41;
+    } else if ([79, 80, 84, 85, 90, 91].includes(position)) {
+      status = 'vacant';
+      const initDeposit = [90, 91].includes(position) ? 5.0 : 1.5;
+      userInflowUsd = 0;
+      userInflowTrob = initDeposit;
+      userOutflowTrob = 0;
+      underfundedAudit = {
+        wasUnderfunded: true,
+        unearnedDebtTrob: position === 79 ? 580.28 : position === 80 ? 580.26 : position === 84 ? 384.23 : position === 85 ? 384.21 : 129.86,
+        initialV1DepositTrob: initDeposit,
+        recovered: true,
+        note: 'Reservation expired without funding. Unearned payouts quarantined; earnings reset to 0.',
+      };
+    }
   }
 
-  // Fixed historical benchmark peg for earned dividends ($0.056 USD/TROB = $300 / 5,357.14 TROB)
-  // Past inflows, outflows, and cap progress must remain fixed at historical distribution rate
+  // Fixed benchmark peg for earned dividends ($0.056 USD/TROB = $300 / 5,357.14 TROB)
   const CONTRACT_HISTORICAL_PEG = 0.056;
   const userOutflowUsd = Math.round(userOutflowTrob * CONTRACT_HISTORICAL_PEG * 100) / 100;
   const userNetReturnUsd = Math.round((userOutflowUsd - userInflowUsd) * 100) / 100;

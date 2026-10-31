@@ -175,18 +175,22 @@ export class PriceService {
 
 export const priceService = new PriceService();
 
-const NEON_DIRECT_URL =
-  process.env.NEON_DATABASE_URL ||
-  "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
-
 export async function queryNeonHttp<T = any>(query: string, params: any[] = []): Promise<T[]> {
   try {
-    let dbUrl = process.env.DATABASE_URL || "";
-    if (!dbUrl.includes("neon.tech")) {
-      dbUrl = NEON_DIRECT_URL;
+    const rawUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+    if (!rawUrl) {
+      console.warn("[DAO Service] No DATABASE_URL defined for queryNeonHttp");
+      return [];
     }
-    const match = dbUrl.match(/@([^/:]+)/);
-    const host = match && match[1] ? match[1] : "ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech";
+
+    // Direct endpoint host for Neon HTTPS SQL API
+    const directUrl = rawUrl.replace("-pooler.", ".");
+    const match = directUrl.match(/@([^/:]+)/);
+    const host = match && match[1] ? match[1] : "";
+    if (!host) {
+      console.warn("[DAO Service] Could not parse host from DATABASE_URL");
+      return [];
+    }
     const endpoint = `https://${host}/sql`;
 
     const controller = new AbortController();
@@ -194,7 +198,7 @@ export async function queryNeonHttp<T = any>(query: string, params: any[] = []):
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
-        "Neon-Connection-String": dbUrl,
+        "Neon-Connection-String": directUrl,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ query, params }),
@@ -642,8 +646,9 @@ export class DaoService {
         orderBy: { timestamp: "desc" },
       });
 
-      capHitAt = capEvent?.timestamp || member.updatedAt || new Date();
-      retopupDeadline = new Date(capHitAt.getTime() + 48 * 3600 * 1000);
+      const resolvedCapHit = capEvent?.timestamp || member.updatedAt || new Date();
+      capHitAt = resolvedCapHit;
+      retopupDeadline = new Date(resolvedCapHit.getTime() + 48 * 3600 * 1000);
       retopupTimeRemainingSeconds = Math.max(0, Math.floor((retopupDeadline.getTime() - Date.now()) / 1000));
     } else if (isUnderfunded) {
       const deadline = (member as any).retopupDeadline ? new Date((member as any).retopupDeadline) : new Date(Date.now() + 48 * 3600 * 1000);

@@ -20,7 +20,7 @@ export interface UseApiResult<T> {
  * useApi<T> — fetches a GET endpoint and returns { data, loading, error, refetch }.
  * Automatically attaches JWT Bearer token from AuthContext when available.
  */
-export const EQUORA_CACHE_VERSION = 'v2026_10_06_live_v2';
+export const EQUORA_CACHE_VERSION = 'v2026_10_25_live_v3';
 
 // Auto-purge stale client caches on version bump
 if (typeof window !== 'undefined') {
@@ -479,6 +479,28 @@ export function useDaoMember(address: string | null, pollMs: number = 10_000) {
     address ? `/api/dao/member/${address}` : null,
     { enabled: !!address, pollMs }
   );
+}
+
+export interface DaoMemberListItem {
+  id: string;
+  position: number;
+  address: string;
+  nftTokenId?: number | null;
+  status: string;
+  joinedAt?: string;
+  retopupCount?: number;
+  isActive?: boolean;
+  referralCode?: string | number;
+}
+
+export interface DaoMembersData {
+  members: DaoMemberListItem[];
+  total: number;
+  claimedCount?: number;
+}
+
+export function useDaoMembers(pollMs: number = 30_000) {
+  return useApi<DaoMembersData>('/api/dao/members?page=1&limit=100', { pollMs });
 }
 
 export function useDaoProfile(address: string | null) {

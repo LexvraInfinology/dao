@@ -17,10 +17,13 @@ import {
   Zap,
   Clock,
   Lock,
+  GitBranch,
 } from 'lucide-react';
 import { VideoModal } from '@/components/ui/VideoModal';
 import { DaoDashboardStats } from '@/components/dao/DaoDashboardStats';
 import { UnderfundedAlertBanner } from '@/components/dao/UnderfundedAlertBanner';
+import { GenesisMatrixPriorityBanner } from '@/components/dao/matrix/GenesisMatrixPriorityBanner';
+import { getMatrixReferralUrl } from '@/config/matrixTree';
 import { useWallet } from '@/context/WalletContext';
 import {
   useDaoMember,
@@ -79,6 +82,7 @@ export default function DaoDashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6 animate-fadeIn w-full max-w-full overflow-x-hidden font-sans">
       <UnderfundedAlertBanner />
+      <GenesisMatrixPriorityBanner isMember={isMember} position={myPosition} />
 
       {/* =======================================================================
           1. HERO SECTION — Member-Aware, Trobium Styled & Tightly Packed
@@ -181,6 +185,22 @@ export default function DaoDashboardPage() {
                         <Wallet className="w-3.5 h-3.5" />
                         <span>Open Member Lounge</span>
                       </Link>
+                      {myPosition && myPosition >= 1 && myPosition <= 7 && (
+                        <a
+                          href={getMatrixReferralUrl(myPosition)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5 bg-[#071A4A] hover:bg-[#155EEF] text-white shadow-xs transition-colors"
+                        >
+                          <GitBranch className="w-3.5 h-3.5 text-[#93C5FD]" />
+                          <span>
+                            {myPosition === 1
+                              ? 'Activate Apex Node (Slot 1)'
+                              : `Join Matrix (Sponsor #${Math.floor(myPosition / 2)})`}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </a>
+                      )}
                       <Link
                         href="/dao/seats"
                         className="btn-ghost px-4 py-2 text-xs font-semibold rounded-xl uppercase tracking-wider flex items-center gap-1.5"

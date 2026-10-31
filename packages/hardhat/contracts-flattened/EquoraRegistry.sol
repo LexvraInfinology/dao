@@ -39,6 +39,7 @@ abstract contract Context {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 
+pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -138,6 +139,7 @@ abstract contract Ownable is Context {
 // File contracts/interfaces/IEquoraRegistry.sol
 
 // Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.20;
 
 /**
  * @title IEquoraRegistry
@@ -163,8 +165,7 @@ interface IEquoraRegistry {
 // File contracts/core/EquoraRegistry.sol
 
 // Original license: SPDX_License_Identifier: MIT
-
-
+pragma solidity ^0.8.20;
 /**
  * @title EquoraRegistry
  * @dev Central user registry for Equora.Fi platform.
@@ -277,10 +278,24 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         address _daoContract,
         address _matrixContract
     ) external onlyOwner {
-        if (_vaultContract != address(0)) vaultContract = _vaultContract;
+        if (_vaultContract != address(0)) {
+            vaultContract = _vaultContract;
+            // Automatically anchor root to vaultContract if root is currently deployer/owner
+            if (root == owner() || root == address(0)) {
+                root = _vaultContract;
+            }
+        }
         if (_daoContract   != address(0)) daoContract   = _daoContract;
         if (_matrixContract!= address(0)) matrixContract= _matrixContract;
         emit ContractsAuthorized(_vaultContract, _daoContract, _matrixContract);
+    }
+
+    /**
+     * @dev Allows owner during deployment wiring to anchor root to EquoraVault.
+     */
+    function setRoot(address _newRoot) external onlyOwner {
+        require(_newRoot != address(0), "EquoraRegistry: Invalid root");
+        root = _newRoot;
     }
 
     // ─── Core Registration ────────────────────────────────────────────────────
@@ -292,7 +307,8 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         if (user == address(0)) revert InvalidUser();
         if (_users[user].isRegistered) revert AlreadyRegistered();
 
-        address validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user) ? sponsor : root;
+        address fallbackRoot = (vaultContract != address(0)) ? vaultContract : root;
+        address validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user && sponsor != owner()) ? sponsor : fallbackRoot;
         uint32 newCode = _generateUniqueCode(user);
 
         totalUsers++;
@@ -355,10 +371,11 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
      *      Falls back to root if code is 0, out of range, or unregistered.
      */
     function _resolveSponsor(uint32 code, address user) internal view returns (address) {
-        if (code == 0 || code < CODE_MIN || code > CODE_MAX) return root;
+        address fallbackRoot = (vaultContract != address(0)) ? vaultContract : root;
+        if (code == 0 || code < CODE_MIN || code > CODE_MAX) return fallbackRoot;
         address candidate = codeToUser[code];
-        if (candidate == address(0) || candidate == user || !_users[candidate].isRegistered) {
-            return root;
+        if (candidate == address(0) || candidate == user || candidate == owner() || !_users[candidate].isRegistered) {
+            return fallbackRoot;
         }
         return candidate;
     }

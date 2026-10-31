@@ -1,5 +1,9 @@
 export const BACKEND_API_PORT: number = parseInt(process.env.API_PORT || '4000', 10);
-export const BACKEND_API_URL: string = process.env.BACKEND_API_URL || 'http://localhost:4000';
+export const BACKEND_API_URL: string =
+  process.env.BACKEND_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://api.equorafidao.com'
+    : 'http://localhost:4000');
 const BACKEND_URL: string = BACKEND_API_URL;
 
 let isBackendDown = false;

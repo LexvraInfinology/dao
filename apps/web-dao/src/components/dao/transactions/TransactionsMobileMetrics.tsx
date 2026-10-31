@@ -104,7 +104,7 @@ export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps>
               ${formatUsd(userInflowUsd)}
             </div>
             <div className="text-[11px] text-[#60739A] font-medium font-jakarta truncate">
-              {formatTrob(userInflowTrob)} TROB Outflow
+              {formatTrob(userInflowTrob)} TROB Deposited
             </div>
           </div>
 
@@ -128,7 +128,7 @@ export const TransactionsMobileMetrics: React.FC<TransactionsMobileMetricsProps>
               ${formatUsd(userOutflowUsd)}
             </div>
             <div className="text-[11px] text-[#60739A] font-medium font-jakarta truncate">
-              {formatTrob(userOutflowTrob)} TROB Inflow
+              {formatTrob(userOutflowTrob)} TROB Received
             </div>
           </div>
         </div>

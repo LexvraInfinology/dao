@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, CheckCircle2, ExternalLink, Code2, Cpu } from 'lucide-react';
 import { EquoraLogo } from '@/components/ui/EquoraLogo';
-import { EXPLORER_BASE_URL } from '@/config/env';
+import { EXPLORER_BASE_URL, NETWORK_NAME } from '@/config/env';
 
 export default function AuditPage() {
   const contracts = [
@@ -62,7 +62,7 @@ export default function AuditPage() {
               Security & Audit
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              TrobChain Mainnet • Automated Verification & Invariant Proofs
+              {NETWORK_NAME} • Automated Verification & Invariant Proofs
             </p>
           </div>
 

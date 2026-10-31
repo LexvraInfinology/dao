@@ -80,17 +80,17 @@ function hexToTrobBase58(addr: string): string {
 }
 
 async function queryNeonDirect<T = any>(sql: string, params: any[] = []): Promise<{ rows: T[] }> {
-  const dbUrl =
-    process.env.DATABASE_URL ||
-    "postgresql://neondb_owner:npg_VzZWl5Td8gxf@ep-super-heart-ax2fet8a.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require";
-  const match = dbUrl.match(/@([^/:]+)/);
+  const dbUrl = process.env.DATABASE_URL || "";
+  if (!dbUrl) return { rows: [] };
+  const directUrl = dbUrl.replace("-pooler.", ".");
+  const match = directUrl.match(/@([^/:]+)/);
   if (match && match[1]) {
     const endpoint = `https://${match[1]}/sql`;
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Neon-Connection-String": dbUrl,
+          "Neon-Connection-String": directUrl,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query: sql, params }),
@@ -209,7 +209,8 @@ export class BlockchainIndexer {
     const currentBlock = BigInt(blockData.block_header?.raw_data?.number || 0);
 
     if (!this.hasLoggedOnline || this.wasOffline) {
-      logger.info(`🔗 TrobChain Mainnet Connected (Block #${currentBlock})`);
+      const netName = config.rpcUrl.includes("testnet") ? "TrobChain Testnet" : "TrobChain Mainnet";
+      logger.info(`🔗 ${netName} Connected (Block #${currentBlock})`);
       this.hasLoggedOnline = true;
       this.wasOffline = false;
     }
@@ -220,8 +221,11 @@ export class BlockchainIndexer {
     }
 
     // 2. Query DAO contract members
-    const rawDao = process.env.NEXT_PUBLIC_DAO_HEX || process.env.NEXT_PUBLIC_DAO_ADDRESS || "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4";
-    const daoHex = (rawDao.startsWith("0x") ? "41" + rawDao.slice(2) : rawDao).toLowerCase();
+    const daoHex = (
+      process.env.NEXT_PUBLIC_DAO_HEX
+        ? (process.env.NEXT_PUBLIC_DAO_HEX.startsWith("0x") ? "41" + process.env.NEXT_PUBLIC_DAO_HEX.slice(2) : process.env.NEXT_PUBLIC_DAO_HEX)
+        : ("41" + config.contracts.dao.slice(2))
+    ).toLowerCase();
 
     const contractRes = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
       method: "POST",

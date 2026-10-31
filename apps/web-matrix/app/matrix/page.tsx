@@ -381,6 +381,9 @@ export default function MatrixPage() {
               sponsorAddress={profile?.sponsorAddress}
               upline2Address={profile?.upline2Address}
               isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
+              referralCode={profile?.referralCode}
+              joinedAt={profile?.joinedAt}
+              daoSeat={profile?.daoSeat || (profile?.userId && profile.userId <= 100 ? profile.userId : undefined)}
             />
           </div>
 

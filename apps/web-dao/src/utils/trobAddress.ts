@@ -75,6 +75,22 @@ export const DEPLOYED_CONTRACTS = {
     base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL',
     hex: process.env.NEXT_PUBLIC_MATRIX_HEX || '415d23ddb2e7d8eae84db5f57300b2c5f44a6b6ec2',
   },
+  EquoraNFT: {
+    base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || 'TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm',
+    hex: process.env.NEXT_PUBLIC_NFT_HEX || '414c30848f51cc2d0dcf53782d4b884d4cfd17b8eb',
+  },
+  EquoraSalaryPool: {
+    base58: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || 'TUxdfGh3JTPLX2tUeb5wFDLxHbKJbc2DMK',
+    hex: process.env.NEXT_PUBLIC_SALARY_POOL_HEX || '41d04e8eded33e4b240565aa85418208bebabb89bc',
+  },
+  EquoraRewardPool: {
+    base58: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || 'TYoCKb3mS8rfwu9H9XyTaQJ8Y6tD27Krrt',
+    hex: process.env.NEXT_PUBLIC_REWARD_POOL_HEX || '41fa662a52c0a9ec078d4f8a60aa1513057ebbe321',
+  },
+  EquoraMagicBox: {
+    base58: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || 'TCrFNXw2Ve777u4X3mgshQGnGUXnq4Majv',
+    hex: process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || '411f9771b7ed99ab0ba748c126456592704f194acf',
+  },
 } as const;
 
 function encode58(buffer: Uint8Array): string {

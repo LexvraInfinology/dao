@@ -38,6 +38,13 @@ function shortAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
+function formatDuration(totalSec: number) {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+}
+
 export const GenesisMatrixPriorityBanner: React.FC<GenesisMatrixPriorityBannerProps> = ({
   position,
   isMember,
@@ -89,10 +96,36 @@ export const GenesisMatrixPriorityBanner: React.FC<GenesisMatrixPriorityBannerPr
     ? allMembers.find((m) => m.position === parentSeat)
     : null;
 
+  // 4-Hour Grace Period Timer for Genesis Council downline settlement
+  const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+  const parentJoinTime = parentMember?.joinedAt ? new Date(parentMember.joinedAt).getTime() : 0;
+  const parentUnlockTimestamp = parentJoinTime > 0 ? parentJoinTime + FOUR_HOURS_MS : 0;
+
+  const [parentRemainingSec, setParentRemainingSec] = useState<number>(() => {
+    if (!parentUnlockTimestamp || isDirectGateway) return 0;
+    return Math.max(0, Math.floor((parentUnlockTimestamp - Date.now()) / 1000));
+  });
+
+  useEffect(() => {
+    if (!parentUnlockTimestamp || isDirectGateway) {
+      setParentRemainingSec(0);
+      return;
+    }
+    const updateCountdown = () => {
+      const left = Math.max(0, Math.floor((parentUnlockTimestamp - Date.now()) / 1000));
+      setParentRemainingSec(left);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [parentUnlockTimestamp, isDirectGateway]);
+
+  const isParentLockedByTimer = !isDirectGateway && parentRemainingSec > 0;
+
   // Cascading Lock State:
   // - Direct Gateway seats (Seats 1, 2, 26, 27, 51, 52, 76, 77) are unlocked immediately.
-  // - Downline seats (k >= 3) unlock once parent member is recognized / active.
-  const isParentActive = isDirectGateway || (parentMember && (parentMember.isActive !== false));
+  // - Downline seats (k >= 3) unlock once parent member is recognized / active and 4h settlement is complete.
+  const isParentActive = isDirectGateway || (parentMember && (parentMember.isActive !== false) && !isParentLockedByTimer);
 
   // Resolve Sponsor Address & 5-digit code
   const sponsorAddress = isDirectGateway
@@ -122,7 +155,7 @@ export const GenesisMatrixPriorityBanner: React.FC<GenesisMatrixPriorityBannerPr
     } catch {}
   };
 
-  // Locked State: Waiting for Parent Seat to Activate
+  // Locked State: Waiting for Parent Seat to Activate or Finish 4-Hour Settlement
   if (!isParentActive) {
     return (
       <div className="rounded-2xl bg-white border border-[#E2ECF9] p-4 sm:p-5 shadow-[0_2px_12px_rgba(15,23,42,0.02)] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 font-sans">
@@ -137,11 +170,17 @@ export const GenesisMatrixPriorityBanner: React.FC<GenesisMatrixPriorityBannerPr
               </span>
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
                 <Clock className="w-3 h-3" />
-                <span>Parent Node Pending Activation</span>
+                <span>
+                  {isParentLockedByTimer
+                    ? `Parent 4-Hour Settlement: ${formatDuration(parentRemainingSec)}`
+                    : 'Parent Node Pending Activation'}
+                </span>
               </span>
             </div>
             <p className="text-xs text-[#64748B] leading-relaxed max-w-2xl">
-              Under protocol rules, priority placement maintains a strict binary tree. Your allocation is anchored to <strong>Council Seat #{parentSeat}</strong> ({quadrantInfo.legPosition === 'left' ? 'Left Leg' : 'Right Leg'}). Your link and 5-digit code will unlock instantly when Council Seat #{parentSeat} activates their Slot 1 ID on-chain.
+              {isParentLockedByTimer
+                ? `Parent Council Seat #${parentSeat} is currently in its 4-hour Genesis Council settlement window. To maintain strict binary tree symmetry, downline allocation links unlock automatically upon timer expiry.`
+                : `Under protocol rules, priority placement maintains a strict binary tree. Your allocation is anchored to Council Seat #${parentSeat} (${quadrantInfo.legPosition === 'left' ? 'Left Leg' : 'Right Leg'}). Your link and 5-digit code will unlock instantly when Council Seat #${parentSeat} activates their Slot 1 ID on-chain.`}
             </p>
           </div>
         </div>
@@ -151,7 +190,7 @@ export const GenesisMatrixPriorityBanner: React.FC<GenesisMatrixPriorityBannerPr
           className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed flex items-center gap-2 shrink-0 self-end lg:self-center"
         >
           <Lock className="w-3.5 h-3.5" />
-          <span>Awaiting Seat #{parentSeat}</span>
+          <span>{isParentLockedByTimer ? `Settling (${formatDuration(parentRemainingSec)})` : `Awaiting Seat #${parentSeat}`}</span>
         </button>
       </div>
     );

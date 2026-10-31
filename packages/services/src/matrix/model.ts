@@ -116,6 +116,7 @@ export interface MatrixUserProfileDTO {
   highestUnlockedSlot: number;
   referralCode?: number | null;
   sponsorCode?: number | null;
+  daoSeat?: number | null;
   joinedAt: Date;
 }
 

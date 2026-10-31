@@ -1120,8 +1120,25 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   }
 
   let userReferralCode: number | null = null;
+  let daoSeat: number | null = null;
+  let onChainJoinedAt: string | null = null;
   try {
-    userReferralCode = await getOnChainCodeByUser(userHex);
+    const [code, seat, userRaw] = await Promise.all([
+      getOnChainCodeByUser(userHex).catch(() => null),
+      getOnChainDaoSeat(userHex).catch(() => 0),
+      queryTrobConstant(CONTRACT_ADDRESSES.registry, "getUser(address)", coder.encode(["address"], [userHex]).slice(2)).catch(() => null),
+    ]);
+    if (code) userReferralCode = code;
+    if (seat && seat >= 1 && seat <= 100) daoSeat = seat;
+    if (userRaw) {
+      try {
+        const dec = coder.decode(["bool", "address", "uint256", "uint256", "uint256", "uint32"], "0x" + userRaw);
+        const regTime = Number(dec[2]);
+        if (regTime > 0) {
+          onChainJoinedAt = new Date(regTime * 1000).toISOString();
+        }
+      } catch {}
+    }
   } catch {}
 
   const isRegistered = isRegRaw ? Boolean(coder.decode(["bool"], "0x" + isRegRaw)[0]) : false;
@@ -1154,6 +1171,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     sponsorUserId: sponsorCode,
     sponsorCode,
     referralCode: userReferralCode,
+    daoSeat,
     upline2Address,
     directReferralsCount,
     activeDirectsCount,
@@ -1178,7 +1196,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     withdrawnTotalTrob: withdrawnTotal,
     recyclesCount: 0,
     isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 || joinedMeta),
-    joinedAt: new Date().toISOString(),
+    joinedAt: onChainJoinedAt || (typeof window !== "undefined" ? localStorage.getItem(`equora_joined_at_${userHex}`) : null) || new Date().toISOString(),
   };
 }
 
@@ -1866,6 +1884,38 @@ export async function getOnChainCodeByUser(userAddress: string): Promise<number 
     console.warn(`[getOnChainCodeByUser] address ${userAddress} query notice:`, err);
   }
   return null;
+}
+
+const onChainDaoSeatCache = new Map<string, number>();
+
+/**
+ * Resolves a user's wallet address to their Genesis DAO Council Seat number (1 to 100) via EquoraDAOv2.sol.
+ */
+export async function getOnChainDaoSeat(userAddress: string): Promise<number> {
+  if (!userAddress) return 0;
+  const userHex = toHexAddress(userAddress).toLowerCase();
+  if (onChainDaoSeatCache.has(userHex)) {
+    return onChainDaoSeatCache.get(userHex)!;
+  }
+  try {
+    const coder = new ethers.AbiCoder();
+    const param = coder.encode(["address"], [userHex]).slice(2);
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.dao,
+      "memberPosition(address)",
+      param
+    );
+    if (raw && typeof raw === "string") {
+      const pos = Number(coder.decode(["uint256"], "0x" + raw)[0]);
+      if (pos >= 1 && pos <= 100) {
+        onChainDaoSeatCache.set(userHex, pos);
+        return pos;
+      }
+    }
+  } catch (err) {
+    console.warn(`[getOnChainDaoSeat] address ${userAddress} query notice:`, err);
+  }
+  return 0;
 }
 
 /**

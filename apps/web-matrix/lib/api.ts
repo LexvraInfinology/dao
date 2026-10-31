@@ -74,6 +74,7 @@ export interface MatrixUserProfile {
   sponsorUserId: number | null;
   sponsorCode?: number | null;
   referralCode?: number | null;
+  daoSeat?: number | null;
   upline2Address?: string | null;
   directReferralsCount: number;
   activeDirectsCount?: number;

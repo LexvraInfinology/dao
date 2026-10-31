@@ -43,7 +43,7 @@ export async function getOnChainDaoTransactions(
       if (!addressesToQuery.includes('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto')) {
         addressesToQuery.push('TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto');
       }
-      const vaultAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw';
+      const vaultAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J';
       if (vaultAddress && !addressesToQuery.includes(vaultAddress)) {
         addressesToQuery.push(vaultAddress);
       }

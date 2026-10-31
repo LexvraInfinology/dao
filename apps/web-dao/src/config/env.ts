@@ -56,12 +56,12 @@ export const ACTIVE_DAO_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_DAO_ADDRESS && process.env.NEXT_PUBLIC_DAO_ADDRESS !== 'THMpusD2dp3icewyNQRWF64k4r2rJypE57'
     ? process.env.NEXT_PUBLIC_DAO_ADDRESS
     : null) ||
-  'THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V';
+  'TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2';
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_MAINNET_DAO_HEX ||
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  '0x51114b92df6041f5a0e7ebc13e6ed68298fd28b0';
+  '0x5cbc4c27409afcbc897099b6a18e09d4de0cbc2f';
 
 // Matrix Contract Address (TrobChain Mainnet)
 export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
@@ -69,7 +69,7 @@ export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_MATRIX_ADDRESS && process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL'
     ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
     : null) ||
-  'TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi';
+  'TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV';
 
 // Vault Contract Address (TrobChain Mainnet)
 export const ACTIVE_VAULT_CONTRACT_ADDRESS =
@@ -77,7 +77,7 @@ export const ACTIVE_VAULT_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_VAULT_ADDRESS && process.env.NEXT_PUBLIC_VAULT_ADDRESS !== 'TPVc8M9XNea33qmTybYRZXYJL4axQscyHx'
     ? process.env.NEXT_PUBLIC_VAULT_ADDRESS
     : null) ||
-  'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw';
+  'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J';
 
 // Registry Contract Address (TrobChain Mainnet)
 export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
@@ -85,7 +85,7 @@ export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS && process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y'
     ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
     : null) ||
-  'TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB';
+  'TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj';
 
 // Token Contract Address (TrobChain Mainnet)
 export const ACTIVE_TOKEN_CONTRACT_ADDRESS =

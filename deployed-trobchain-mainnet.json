@@ -1,0 +1,72 @@
+{
+  "network": "trobchain-mainnet",
+  "deployer": "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8",
+  "deployedAt": "2026-10-31T17:34:01.833Z",
+  "contracts": {
+    "EquoraCoin": {
+      "addressBase58": "TS6XGpAtHma98gs8qDHdsh4BZYDEAAGjJt",
+      "addressHex": "41b0e42d3a38e37f2be412b06af572fea20d9c5216",
+      "evmAddress": "0xb0e42d3a38e37f2be412b06af572fea20d9c5216",
+      "totalSupply": "210,000,000 EQC (21 Crore)"
+    },
+    "EquoraToken": {
+      "addressBase58": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
+      "addressHex": "4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9",
+      "evmAddress": "0x90b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9"
+    },
+    "EquoraNFT": {
+      "addressBase58": "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
+      "addressHex": "4190543c0b77f8857ab5f2537787aca08aab33f4da",
+      "evmAddress": "0x90543c0b77f8857ab5f2537787aca08aab33f4da",
+      "txHash": "40e836c9c04374a2c8ad59c2b17c8c124dcfcb2a802411f920b15028af71b94b",
+      "owner": "0x0000000000000000000000000000000000000000"
+    },
+    "EquoraRegistry": {
+      "addressBase58": "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
+      "addressHex": "418e83290b2f0d7914eec432ff765604c0ccfcbcb1",
+      "evmAddress": "0x8e83290b2f0d7914eec432ff765604c0ccfcbcb1",
+      "txHash": "a30116f5fa700a12a1eff3ec69ec1063bec3406ee9ed367835d706cff006ea3b",
+      "owner": "0x0000000000000000000000000000000000000000"
+    },
+    "EquoraDAOv2": {
+      "addressBase58": "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
+      "addressHex": "415cbc4c27409afcbc897099b6a18e09d4de0cbc2f",
+      "evmAddress": "0x5cbc4c27409afcbc897099b6a18e09d4de0cbc2f",
+      "txHash": "9bce71613a35edfbd406c9f973cd7db200705e3b08a1ee7d7f786ba9d1cf2fa1",
+      "seatsMigrated": 93,
+      "admin": "0x0000000000000000000000000000000000000000"
+    },
+    "EquoraVault": {
+      "addressBase58": "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
+      "addressHex": "41cbfa4351180513f0ee0682d2d1e0ab9b515be1c7",
+      "evmAddress": "0xcbfa4351180513f0ee0682d2d1e0ab9b515be1c7",
+      "txHash": "ed781072ebcbb33dfcf4dc4bcfc6b982d3a952cdd47931b0e42548022b06b4ce",
+      "initialized": true
+    },
+    "EquoraSalaryPool": {
+      "addressBase58": "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
+      "addressHex": "419dbb89afb46826dda5823821eed3a71506b05d4b",
+      "evmAddress": "0x9dbb89afb46826dda5823821eed3a71506b05d4b",
+      "txHash": "4f3a62829d49c1b750465240862bd63f2810327e38159bf8a04bfd6665f0effd"
+    },
+    "EquoraRewardPool": {
+      "addressBase58": "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
+      "addressHex": "412a599860f2fd6ea68f4456909f85b650c15515c2",
+      "evmAddress": "0x2a599860f2fd6ea68f4456909f85b650c15515c2",
+      "txHash": "19b10f1f50bb167093f31c045472d81f6cc08248c2cead1ebec7423badff4bf4"
+    },
+    "EquoraMagicBox": {
+      "addressBase58": "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
+      "addressHex": "41189beeb2d803e98258b6b9b001f2845b125339c1",
+      "evmAddress": "0x189beeb2d803e98258b6b9b001f2845b125339c1",
+      "txHash": "71dd0e4cbdcffe742fd86213af31a91829d8a889ec8c099627e46a1fb4878ea2"
+    },
+    "EquoraMatrix": {
+      "addressBase58": "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
+      "addressHex": "41a3ddfed64133e12c172fc97b4f6894a25af2ce50",
+      "evmAddress": "0xa3ddfed64133e12c172fc97b4f6894a25af2ce50",
+      "txHash": "488c91e5a95c099f1801b037f7d3ea5338b6193e1afb569c36a33a541cc14450",
+      "owner": "0x0000000000000000000000000000000000000000"
+    }
+  }
+}

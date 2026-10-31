@@ -68,7 +68,7 @@ export const DEPLOYED_CONTRACTS = {
     hex: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX || process.env.NEXT_PUBLIC_REGISTRY_HEX || '41d045ad50706313f76b4acbaa370258f6a0da1697',
   },
   EquoraVault: {
-    base58: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw',
+    base58: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J',
     hex: process.env.NEXT_PUBLIC_MAINNET_VAULT_HEX || process.env.NEXT_PUBLIC_VAULT_HEX || '4155f1f42bc35374f5eefda01a4cfa083c21f34f12',
   },
   EquoraMatrix: {

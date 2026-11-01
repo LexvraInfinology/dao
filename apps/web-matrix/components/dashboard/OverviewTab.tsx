@@ -21,7 +21,7 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const currentSlot = dashboard?.currentSlot ?? profile?.currentSlot ?? 1;
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 4;
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
 
   const totalEarnedUsd =
     dashboard?.totalEarnedUsd ??
@@ -36,7 +36,7 @@ export function OverviewTab({
     0;
   const isQualified = profile?.isQualified ?? directsCount >= 2;
 
-  const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? (highestUnlockedSlot >= 4 ? 14 : 0);
+  const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? 0;
   const currentRank = profile?.rankName || "NONE";
 
   // Recent activity list
@@ -118,7 +118,7 @@ export function OverviewTab({
             Slot #{currentSlotStr}
           </div>
           <div className="text-[10.5px] text-[#8494a9] mt-1.5 truncate">
-            {highestUnlockedSlot >= 4 ? "Slots 1-4 Active (14/14 Fulfilled)" : `${filledNodes} / 14 seats filled`}
+            {`${filledNodes} / 14 seats filled`}
           </div>
         </div>
 

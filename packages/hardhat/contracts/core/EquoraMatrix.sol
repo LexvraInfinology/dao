@@ -147,6 +147,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // Genesis DAO contract — to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
     address public daoContract;
 
+    // Genesis Apex Root wallet address
+    address public genesisRoot;
+
     // -------------------------------------------------------------------------
     // Matrix State
     // -------------------------------------------------------------------------
@@ -254,6 +257,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     event BalanceWithdrawn(address indexed user, uint256 amount, uint256 timestamp);
     event VaultContractSet(address indexed vault);
     event DaoContractSet(address indexed dao);
+    event GenesisRootSet(address indexed root);
     event SlotReserved(
         address indexed user,
         uint8   indexed fromSlot,
@@ -392,6 +396,63 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         emit DaoContractSet(_dao);
     }
 
+    function setGenesisRoot(address _root) external onlyOwner {
+        require(_root != address(0), "EquoraMatrix: invalid root");
+        genesisRoot = _root;
+        emit GenesisRootSet(_root);
+    }
+
+    /**
+     * @dev Seeds the Genesis Apex Root and Seat #1 (Node 1) on-chain.
+     *      _genesisRoot is set to Apex Root (#0001) with Slot 1 unlocked.
+     *      _node1User is placed directly in Seat #1 (nodes[0]) under Genesis Root.
+     *      Seat #2 (nodes[1]) is left open (address(0)) for the next natural entrant.
+     */
+    function seedGenesisEcosystem(address _genesisRoot, address _node1User) external onlyOwner {
+        require(_genesisRoot != address(0), "EquoraMatrix: invalid genesis root");
+        genesisRoot = _genesisRoot;
+
+        // 1. Setup Genesis Root Slot 1
+        userSlots[_genesisRoot][1].isUnlocked = true;
+        userSlots[_genesisRoot][1].isLive = true;
+        userSlots[_genesisRoot][1].currentCycle = 1;
+        highestSlot[_genesisRoot] = 1;
+
+        if (!registry.isRegistered(_genesisRoot)) {
+            try registry.registerUser(_genesisRoot, vaultContract) {} catch {}
+        }
+
+        // 2. Setup Node 1 User (_node1User) in Seat #1
+        if (_node1User != address(0)) {
+            if (!registry.isRegistered(_node1User)) {
+                try registry.registerUser(_node1User, _genesisRoot) {} catch {}
+            }
+
+            userSlots[_node1User][1].isUnlocked = true;
+            userSlots[_node1User][1].isLive = true;
+            userSlots[_node1User][1].currentCycle = 1;
+            highestSlot[_node1User] = 1;
+
+            // Place into Seat #1 (Position 1, index 0)
+            userSlots[_genesisRoot][1].nodes[0] = _node1User;
+            userSlots[_genesisRoot][1].filledNodes = 1;
+
+            if (!hasDirectReferralDeposited[_genesisRoot][_node1User]) {
+                hasDirectReferralDeposited[_genesisRoot][_node1User] = true;
+                activeDirectReferrals[_genesisRoot] = 1;
+                _activeDirectReferralsList[_genesisRoot].push(_node1User);
+                emit ActiveDirectReferralCounted(_genesisRoot, _node1User, 1, block.timestamp);
+            }
+
+            emit SlotJoined(_node1User, 1, baseSlotCost, _genesisRoot, block.timestamp);
+            emit PositionFilled(_genesisRoot, 1, 1, 1, _node1User, baseSlotCost);
+        }
+
+        emit GenesisRootSet(_genesisRoot);
+        emit SlotJoined(_genesisRoot, 1, baseSlotCost, vaultContract, block.timestamp);
+        emit TreeGraphStarted(_genesisRoot, 1, block.timestamp);
+    }
+
     function setContracts(
         address _token,
         address _registry,
@@ -488,7 +549,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     function register(address sponsor) external returns (bool) {
         address validSponsor = sponsor;
         if ((validSponsor == address(0) || validSponsor == owner()) && vaultContract != address(0)) {
-            validSponsor = vaultContract;
+            validSponsor = (genesisRoot != address(0)) ? genesisRoot : vaultContract;
         }
         return registry.registerUser(msg.sender, validSponsor);
     }
@@ -540,7 +601,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (!registry.isRegistered(msg.sender)) {
             address targetSponsor = sponsor;
             if ((targetSponsor == address(0) || targetSponsor == owner()) && vaultContract != address(0)) {
-                targetSponsor = vaultContract;
+                targetSponsor = (genesisRoot != address(0)) ? genesisRoot : vaultContract;
             }
             registry.registerUser(msg.sender, targetSponsor);
         }
@@ -591,6 +652,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      Otherwise falls back to registry.getRoot().
      */
     function _getRootMatrixOwner() internal view returns (address) {
+        if (genesisRoot != address(0)) {
+            return genesisRoot;
+        }
         if (vaultContract != address(0)) {
             return vaultContract;
         }

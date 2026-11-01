@@ -15,17 +15,16 @@
       "evmAddress": "0x90b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9"
     },
     "EquoraNFT": {
-      "addressBase58": "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
-      "addressHex": "4190543c0b77f8857ab5f2537787aca08aab33f4da",
-      "evmAddress": "0x90543c0b77f8857ab5f2537787aca08aab33f4da",
-      "txHash": "40e836c9c04374a2c8ad59c2b17c8c124dcfcb2a802411f920b15028af71b94b",
+      "addressBase58": "TYhsf65YRD64Dz5b8CpRsjGzb22ZYtacZj",
+      "addressHex": "41f964817a670445817918c88f926b5850d753474d",
+      "evmAddress": "0xf964817a670445817918c88f926b5850d753474d",
       "owner": "0x0000000000000000000000000000000000000000"
     },
     "EquoraRegistry": {
-      "addressBase58": "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
-      "addressHex": "418e83290b2f0d7914eec432ff765604c0ccfcbcb1",
-      "evmAddress": "0x8e83290b2f0d7914eec432ff765604c0ccfcbcb1",
-      "txHash": "a30116f5fa700a12a1eff3ec69ec1063bec3406ee9ed367835d706cff006ea3b",
+      "addressBase58": "TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN",
+      "addressHex": "411a7f29b91424fd6715c5048b458dcf7beeeaeebc",
+      "evmAddress": "0x1a7f29b91424fd6715c5048b458dcf7beeeaeebc",
+      "root": "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa",
       "owner": "0x0000000000000000000000000000000000000000"
     },
     "EquoraDAOv2": {
@@ -62,11 +61,14 @@
       "txHash": "71dd0e4cbdcffe742fd86213af31a91829d8a889ec8c099627e46a1fb4878ea2"
     },
     "EquoraMatrix": {
-      "addressBase58": "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
-      "addressHex": "41a3ddfed64133e12c172fc97b4f6894a25af2ce50",
-      "evmAddress": "0xa3ddfed64133e12c172fc97b4f6894a25af2ce50",
-      "txHash": "488c91e5a95c099f1801b037f7d3ea5338b6193e1afb569c36a33a541cc14450",
+      "addressBase58": "TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz",
+      "addressHex": "411a5f193d5b9654282fed67931d9123c00da9c879",
+      "evmAddress": "0x1a5f193d5b9654282fed67931d9123c00da9c879",
+      "genesisRoot": "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa",
+      "node1User": "THiH4WkoXmVKHoRiWBrp2HaoVUAbj4bpwp",
+      "seat2Status": "OPEN_EMPTY",
       "owner": "0x0000000000000000000000000000000000000000"
     }
-  }
+  },
+  "updatedAt": "2026-11-01T00:10:48.713Z"
 }

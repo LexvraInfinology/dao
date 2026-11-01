@@ -94,7 +94,7 @@ export function MatrixDirectMembers(props: MatrixDirectMembersProps = {}) {
 
   const referralUrl =
     typeof window !== "undefined" && address
-      ? `${window.location.origin}/?ref=${profile?.referralCode || toTrobBase58(address)}`
+      ? `${window.location.origin}/?ref=${toTrobBase58(address)}`
       : "";
 
   const handleCopyText = (text: string, label = "Text") => {

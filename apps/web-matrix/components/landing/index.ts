@@ -7,3 +7,4 @@ export { BlindBoxSection } from "./BlindBoxSection";
 export { FaqSection } from "./FaqSection";
 export { FooterSection } from "./FooterSection";
 export { HeroVideo } from "./HeroVideo";
+export { RefRedirect } from "./RefRedirect";

@@ -90,7 +90,7 @@ export function HeroSection() {
       if (isReg) {
         router.push("/dashboard");
       } else {
-        router.push("/gate");
+        router.push(`/gate${typeof window !== "undefined" ? window.location.search : ""}`);
       }
       return;
     }
@@ -112,7 +112,7 @@ export function HeroSection() {
           if (isReg) {
             router.push("/dashboard");
           } else {
-            router.push("/gate");
+            router.push(`/gate${typeof window !== "undefined" ? window.location.search : ""}`);
           }
           return;
         }
@@ -325,7 +325,7 @@ export function HeroSection() {
                                 if (isReg) {
                                   router.push("/dashboard");
                                 } else {
-                                  router.push("/gate");
+                                  router.push(`/gate${typeof window !== "undefined" ? window.location.search : ""}`);
                                 }
                               }
                             }}
@@ -710,7 +710,7 @@ export function HeroSection() {
           if (isReg) {
             router.push("/dashboard");
           } else {
-            router.push("/gate");
+            router.push(`/gate${typeof window !== "undefined" ? window.location.search : ""}`);
           }
         }}
         onDisconnect={handleDisconnectWallet}

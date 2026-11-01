@@ -69,7 +69,7 @@ export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_MATRIX_ADDRESS && process.env.NEXT_PUBLIC_MATRIX_ADDRESS !== 'TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL'
     ? process.env.NEXT_PUBLIC_MATRIX_ADDRESS
     : null) ||
-  'TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV';
+  'TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz';
 
 // Vault Contract Address (TrobChain Mainnet)
 export const ACTIVE_VAULT_CONTRACT_ADDRESS =
@@ -85,7 +85,7 @@ export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
   (process.env.NEXT_PUBLIC_REGISTRY_ADDRESS && process.env.NEXT_PUBLIC_REGISTRY_ADDRESS !== 'TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y'
     ? process.env.NEXT_PUBLIC_REGISTRY_ADDRESS
     : null) ||
-  'TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj';
+  'TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN';
 
 // Token Contract Address (TrobChain Mainnet)
 export const ACTIVE_TOKEN_CONTRACT_ADDRESS =

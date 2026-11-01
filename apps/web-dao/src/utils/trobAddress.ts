@@ -64,16 +64,16 @@ export const DEPLOYED_CONTRACTS = {
     hex: process.env.NEXT_PUBLIC_MAINNET_TOKEN_HEX || process.env.NEXT_PUBLIC_TOKEN_HEX || '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9',
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB',
-    hex: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX || process.env.NEXT_PUBLIC_REGISTRY_HEX || '41d045ad50706313f76b4acbaa370258f6a0da1697',
+    base58: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || 'TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN',
+    hex: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX || process.env.NEXT_PUBLIC_REGISTRY_HEX || '411a7f29b91424fd6715c5048b458dcf7beeeaeebc',
   },
   EquoraVault: {
     base58: process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J',
     hex: process.env.NEXT_PUBLIC_MAINNET_VAULT_HEX || process.env.NEXT_PUBLIC_VAULT_HEX || '4155f1f42bc35374f5eefda01a4cfa083c21f34f12',
   },
   EquoraMatrix: {
-    base58: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TNjaJr6pHV2uBkBG9sDGtuxo4AAzqHBCJi',
-    hex: process.env.NEXT_PUBLIC_MAINNET_MATRIX_HEX || process.env.NEXT_PUBLIC_MATRIX_HEX || '418c05990021d332e01a68c42ce6a7e783a1752d06',
+    base58: process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || 'TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz',
+    hex: process.env.NEXT_PUBLIC_MAINNET_MATRIX_HEX || process.env.NEXT_PUBLIC_MATRIX_HEX || '411a5f193d5b9654282fed67931d9123c00da9c879',
   },
   EquoraNFT: {
     base58: process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || 'TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9',

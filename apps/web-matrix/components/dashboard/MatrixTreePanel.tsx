@@ -419,7 +419,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const nextUpcomingPos = filledCount < 14 ? filledCount + 1 : null;
   const slotCost = getSlotCost(selectedSlot);
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 4;
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
 
   // Node Component Render: Vibrant Blue & Green Active/Filled and Large Responsive Cards
   const renderTreeNode = (pos: number) => {
@@ -634,7 +634,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
           const isUnlocked = sNum <= highestUnlockedSlot;
-          const isCompleted = sNum <= 3;
+          const isCompleted = isUnlocked && ((activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14) || (activeSlotDetails?.totalCycles && activeSlotDetails.totalCycles > 1 && sNum < activeSlotDetails.slotNumber));
           const cost = getSlotCost(sNum);
           return (
             <button

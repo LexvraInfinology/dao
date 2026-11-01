@@ -93,7 +93,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     details?.totalEarnedUsd ||
     data?.totalEarnedUsd ||
     profile?.totalEarningsUsd ||
-    (profile?.totalEarnings ? profile.totalEarnings : 1260.0);
+    (profile?.totalEarnings ?? 0);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">

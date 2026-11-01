@@ -13,15 +13,15 @@ export const NETWORK_NAME = "TrobChain Mainnet";
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
 
 export const MAINNET_DEFAULT_ADDRESSES = {
-  matrix: "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
+  matrix: "TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz",
   token: "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-  registry: "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
+  registry: "TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN",
   vault: "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
   salaryPool: "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
   rewardPool: "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
   magicBoxPool: "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
   dao: "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
-  nft: "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
+  nft: "TYhsf65YRD64Dz5b8CpRsjGzb22ZYtacZj",
   legacyDaoV1: "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
   legacyDaoV2: "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
 };
@@ -30,29 +30,17 @@ export const MAINNET_DEFAULT_ADDRESSES = {
 // Genesis Root Matrix Member (#0001) on TrobChain Mainnet
 export const GENESIS_ROOT_MEMBER_BASE58 = "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa";
 export const GENESIS_ROOT_MEMBER_HEX = "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
-const rawMatrixEnv = process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS;
-const rawVaultEnv = process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS;
-
-const OUTDATED_DISCARD_ADDRESSES = [
-  "TWrMSgbvPoaxmHCJcWVSJng1X9V7MGrteE",
-  "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
-  "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
-  "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
-  "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
-  "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
-  "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
-];
 
 export const CONTRACT_ADDRESSES = {
-  matrix: (rawMatrixEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawMatrixEnv)) ? rawMatrixEnv : MAINNET_DEFAULT_ADDRESSES.matrix,
-  token: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
-  registry: process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
-  vault: (rawVaultEnv && !OUTDATED_DISCARD_ADDRESSES.includes(rawVaultEnv)) ? rawVaultEnv : MAINNET_DEFAULT_ADDRESSES.vault,
-  salaryPool: process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
-  rewardPool: process.env.NEXT_PUBLIC_MAINNET_REWARD_POOL_ADDRESS || process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
-  magicBoxPool: process.env.NEXT_PUBLIC_MAINNET_MAGIC_BOX_ADDRESS || process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
-  dao: process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao,
-  nft: process.env.NEXT_PUBLIC_MAINNET_NFT_ADDRESS || process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft,
+  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
+  token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
+  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault,
+  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
+  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
+  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
+  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao,
+  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft,
 };
 
 // ── Domain & Routing Configuration ──────────────────────────────────────────

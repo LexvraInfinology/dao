@@ -146,9 +146,7 @@ export function ReferralLinkCard({
 
   const base58Addr = address ? toTrobBase58(address) : "";
   const referralCode = onChainCode || (address ? get5DigitCode(address) : 56321);
-  const referralUrl = onChainCode
-    ? `${origin}/?ref=${onChainCode}`
-    : (base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`);
+  const referralUrl = base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`;
 
   const handleCopyLink = () => {
     if (!address) {
@@ -190,8 +188,8 @@ export function ReferralLinkCard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* 5-Digit Referral Code Pill / Genesis Lock Pill */}
-          {isLocked ? (
+          {/* Genesis Lock Pill (if locked) */}
+          {isLocked && (
             <div
               title={`Genesis Council Seat #${daoSeat} settling period`}
               className="px-2.5 py-1 rounded-full bg-[#fff6df] border border-[#fae2ab] text-[11px] font-bold text-[#b97a17] flex items-center gap-1.5 shadow-2xs"
@@ -200,17 +198,6 @@ export function ReferralLinkCard({
               <span>Genesis Lock:</span>
               <span className="font-mono font-extrabold">{formatDuration(remainingSec)}</span>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCopyCode}
-              title="Click to copy your 5-digit code"
-              className="px-2.5 py-1 rounded-full bg-[#f0f5fc] hover:bg-[#e4effa] border border-[#d6e4f5] text-[11px] font-bold text-[#1e58c8] flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2868e8]" />
-              <span>Code:</span>
-              <span className="font-mono font-extrabold">{referralCode}</span>
-            </button>
           )}
 
           {sponsorAddress && sponsorAddress !== "0x0000000000000000000000000000000000000000" ? (
@@ -245,7 +232,7 @@ export function ReferralLinkCard({
                 <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#fde8be] text-[#8f5a05] font-bold">4-Hour Lock</span>
               </div>
               <div className="text-[11px] text-[#a16a12] mt-0.5">
-                To ensure symmetrical binary tree placement, your 5-digit referral code and affiliate link will unlock automatically in:
+                To ensure symmetrical binary tree placement, your affiliate referral link will unlock automatically in:
               </div>
             </div>
           </div>
@@ -263,26 +250,8 @@ export function ReferralLinkCard({
           <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
             <button
               type="button"
-              onClick={handleCopyCode}
-              className={`px-3 py-1.5 rounded-lg text-[11.5px] font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                copiedCode
-                  ? "bg-[#0e9f79] text-white"
-                  : "bg-white hover:bg-[#eef5fc] text-[#1e58c8] border border-[#d6e4f5]"
-              }`}
-            >
-              {copiedCode ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-white" />
-                  <span>Code Copied</span>
-                </>
-              ) : (
-                `Copy Code (${referralCode})`
-              )}
-            </button>
-            <button
-              type="button"
               onClick={handleCopyLink}
-              className={`px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              className={`px-4 py-2 rounded-lg text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 copiedLink
                   ? "bg-[#0e9f79] text-white shadow-xs"
                   : "bg-[#2563eb] hover:bg-[#1d4ed8] text-white shadow-xs"
@@ -296,7 +265,7 @@ export function ReferralLinkCard({
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy Link</span>
+                  <span>Copy Referral Link</span>
                 </>
               )}
             </button>

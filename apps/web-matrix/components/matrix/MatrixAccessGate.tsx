@@ -242,7 +242,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           isValid: false,
           isCustom: false,
           isGenesis: false,
-          error: "A verified sponsor referral address or 5-digit code is mandatory. Direct entry without a sponsor is not permitted.",
+          error: "A verified sponsor referral wallet address is mandatory. Direct entry without a sponsor is not permitted.",
         });
       }
       return;
@@ -283,7 +283,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         isValid: false,
         isCustom: true,
         isGenesis: false,
-        error: "Invalid format. Enter a 5-digit referral code (e.g. 54821) or a valid Trob/Tron (T...) address.",
+        error: "Invalid format. Enter a valid TrobSafe wallet address (T... or 0x...).",
       });
       return;
     }
@@ -450,7 +450,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         error: "A verified sponsor referral address is mandatory.",
       });
       localStorage.removeItem("equora_sponsor");
-      toast.info("Sponsor Cleared", "Enter a sponsor address or 5-digit referral code.");
+      toast.info("Sponsor Cleared", "Enter a sponsor wallet address.");
     }
   };
 
@@ -637,7 +637,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             isValid: false,
             isCustom: false,
             isGenesis: false,
-            error: "A verified sponsor referral address or 5-digit code is mandatory. Direct entry into the matrix without a referral sponsor is prohibited.",
+            error: "A verified sponsor referral wallet address is mandatory. Direct entry into the matrix without a referral sponsor is prohibited.",
           });
         }
       } catch (err) {
@@ -1295,7 +1295,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               type="text"
               value={isFirstMember ? "Protocol Vault (Apex Root)" : sponsorInput}
               onChange={(e) => handleSponsorInputChange(e.target.value)}
-              placeholder={isFirstMember ? "Protocol Vault (Apex Root)" : "Sponsor Base58 address or 5-digit code..."}
+              placeholder={isFirstMember ? "Protocol Vault (Apex Root)" : "Sponsor Base58 wallet address (T...)"}
               disabled={isFirstMember}
               className={`w-full bg-[#f8faff] border rounded-xl py-2 px-3 pr-16 text-xs font-mono text-[#102341] placeholder:text-slate-400 focus:outline-none focus:bg-white transition-colors ${
                 isFirstMember

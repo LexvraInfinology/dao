@@ -32,7 +32,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const slots = props.slots ?? storeSlots;
   const slotCost = getSlotCost(selectedSlotNumber);
   const currentCycle = slotDetails?.currentCycle ?? 1;
-  const totalCycles = slotDetails?.totalCycles ?? (currentCycle > 1 ? currentCycle : (selectedSlotNumber <= 3 ? 2 : 1));
+  const totalCycles = slotDetails?.totalCycles ?? currentCycle;
   const nodes = slotDetails?.nodes ?? [];
 
   // Live on-chain qualification state

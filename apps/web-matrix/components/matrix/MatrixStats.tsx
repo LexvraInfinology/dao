@@ -31,9 +31,9 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
   const currentSlotSummary = slots?.find((s) => s.slotNumber === selectedSlotNumber);
   const filledNodes = currentSlotSummary?.filledNodes ?? 0;
   const currentCycle = currentSlotSummary?.currentCycle ?? (currentSlotSummary?.isUnlocked ? 1 : 0);
-  const isUnlocked = currentSlotSummary?.isUnlocked ?? (selectedSlotNumber <= 4);
+  const isUnlocked = Boolean(currentSlotSummary?.isUnlocked ?? (selectedSlotNumber === 1));
   const slotCost = currentSlotSummary?.cost ?? (30 * Math.pow(2, selectedSlotNumber - 1));
-  const totalEarned = profile?.matrixEarnings ?? profile?.totalEarnings ?? slots?.reduce((sum, s) => sum + (s.totalEarned || 0), 0) ?? 1260;
+  const totalEarned = profile?.matrixEarnings ?? profile?.totalEarnings ?? slots?.reduce((sum, s) => sum + (s.totalEarned || 0), 0) ?? 0;
 
   return (
     <>

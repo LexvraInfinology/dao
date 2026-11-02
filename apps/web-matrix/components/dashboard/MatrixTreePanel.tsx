@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails, getOnChainDirectMembers, toHexAddress, getSlotCost, EXPLORER_URL } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getOnChainSlotDetails, getOnChainDirectMembers, toHexAddress, getSlotCost, EXPLORER_URL, APEX_LEADER_HEX } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -513,7 +513,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const rawTarget = address || data?.address;
   const targetHex = rawTarget ? toHexAddress(rawTarget).toLowerCase() : "";
   const isApexRoot =
-    targetHex === "0x5fd6266a07fa4ba10dd34e9a315edd47904b8823" ||
+    (Boolean(APEX_LEADER_HEX) && targetHex === APEX_LEADER_HEX) ||
     targetHex === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
 
   const directsCount =

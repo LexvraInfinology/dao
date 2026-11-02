@@ -311,7 +311,7 @@ export async function getOnChainDaoTransactions(
             const targetMember = discoveredMembers.find((m) => m.position === seatIdx);
             const recipient = isCashback
               ? caller
-              : (targetMember?.user || (seatIdx === 1 ? 'TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf' : ''));
+              : (targetMember?.user || (seatIdx === 1 ? (process.env.NEXT_PUBLIC_APEX_LEADER_ADDRESS || process.env.APEX_LEADER_ADDRESS || '') : ''));
             if (!recipient) continue;
 
             const itemTime = isCashback

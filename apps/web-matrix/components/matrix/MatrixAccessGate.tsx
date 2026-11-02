@@ -46,6 +46,7 @@ import {
   getOnChainUserByCode,
   getOnChainCodeByUser,
   toTrobBase58,
+  toHexAddress,
   toTronHex,
   isUserRegisteredInMatrix,
   getOnChainTotalMembers,
@@ -489,8 +490,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             isFirstId ||
             (stored && (
               isDeployerAddress(stored) ||
-              stored === "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa" ||
-              stored.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902"
+              toTrobBase58(stored) === GENESIS_ROOT_MEMBER_BASE58 ||
+              toHexAddress(stored).toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase()
             ))
           ) {
             localStorage.removeItem("equora_sponsor");

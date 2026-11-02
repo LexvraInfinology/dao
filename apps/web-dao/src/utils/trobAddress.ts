@@ -66,32 +66,32 @@ export const DEPLOYED_CONTRACTS = {
     hex: process.env.NEXT_PUBLIC_TOKEN_HEX || (isMainnetMode ? '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9' : '418065e61914497415e464cbc7b67eadb10d13f569'),
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || (isMainnetMode ? 'TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN' : 'TDeTkVTHDv8i9aHi1eZBMUPSvuReypxAw1'),
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || (isMainnetMode ? '411a7f29b91424fd6715c5048b458dcf7beeeaeebc' : '412854e95c847472bb7130baf5f3d9363dcee5fe18'),
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || (isMainnetMode ? 'TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN' : 'TG1Jm7BC37CiUm9WKGSM7r57k3BVo5Z5ND'),
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || (isMainnetMode ? '411a7f29b91424fd6715c5048b458dcf7beeeaeebc' : '41423664f5cfd3c235777f182b9c88f87d2f32c6bb'),
   },
   EquoraVault: {
-    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || (isMainnetMode ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TXn5f6qg8egX1fww3aUAfrpoM3K91Lpq3Q'),
-    hex: process.env.NEXT_PUBLIC_VAULT_HEX || (isMainnetMode ? '4155f1f42bc35374f5eefda01a4cfa083c21f34f12' : '41ef380fa5abfba8a057e1df49c0f6b3d6b24280ee'),
+    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || (isMainnetMode ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TTbKnsxHwGiG9u5cvq5TKZMd56TqEtpLCJ'),
+    hex: process.env.NEXT_PUBLIC_VAULT_HEX || (isMainnetMode ? '4155f1f42bc35374f5eefda01a4cfa083c21f34f12' : '41c14ec7ecfbe1c04de27ab0f42874c833cad0b066'),
   },
   EquoraMatrix: {
-    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || (isMainnetMode ? 'TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz' : 'TNU8aUC8H8osyfhr2TnNzNNEMZPtGV4D8o'),
-    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || (isMainnetMode ? '411a5f193d5b9654282fed67931d9123c00da9c879' : '418919e11e219e81d9f510947f9d4f9e9ac04f4cc6'),
+    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || (isMainnetMode ? 'TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz' : 'TB4V7VuvkB3mavbLBkEXPmm9pooX5eKJfA'),
+    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || (isMainnetMode ? '411a5f193d5b9654282fed67931d9123c00da9c879' : '410bf7a78782c7e99e6737b833f834ff0762ab2896'),
   },
   EquoraNFT: {
-    base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || (isMainnetMode ? 'TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9' : 'TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J'),
-    hex: process.env.NEXT_PUBLIC_NFT_HEX || (isMainnetMode ? '41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d' : '41f53e5d75a6d93e2a0c441c562dbf3332c41bfc0c'),
+    base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || (isMainnetMode ? 'TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9' : 'TRmtmYSpWbgdrHG3n8AufTXnPWvgCwZHGK'),
+    hex: process.env.NEXT_PUBLIC_NFT_HEX || (isMainnetMode ? '41b19eea3d6882c5f078b6b4ea54c8286dcd8a1a8d' : '41ad5e377f87994d98fc835c7310e7d9bf1929ad3a'),
   },
   EquoraSalaryPool: {
-    base58: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || (isMainnetMode ? 'TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9' : 'TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM'),
-    hex: process.env.NEXT_PUBLIC_SALARY_POOL_HEX || (isMainnetMode ? '412e4d82014f04221a30ebabbd40afb0ea00083216' : '41a3e4cdf6a90b3b3a57ce716c1882bd20eb1aa830'),
+    base58: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || (isMainnetMode ? 'TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9' : 'TRsbvWsmta6ab9qhjDTohvu5P2xoQy4pLD'),
+    hex: process.env.NEXT_PUBLIC_SALARY_POOL_HEX || (isMainnetMode ? '412e4d82014f04221a30ebabbd40afb0ea00083216' : '41ae72a69bf0d302c8891b5eabe20f98fa115e87fc'),
   },
   EquoraRewardPool: {
-    base58: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || (isMainnetMode ? 'TF6dsLSRY1G9idqpTEM9Xowvdyp7EgFJWh' : 'TMAiUnfvgchovZ4ffq7BuEPidCd1SxVJBf'),
-    hex: process.env.NEXT_PUBLIC_REWARD_POOL_HEX || (isMainnetMode ? '4138404c670f1d63a059277c71d51781c8e95aa25a' : '417ad690f733b9f8a83aba72b4fd4b86ce0c4ba76c'),
+    base58: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || (isMainnetMode ? 'TF6dsLSRY1G9idqpTEM9Xowvdyp7EgFJWh' : 'TNQirwDJRn9yGS34L5p2nDqF2ctWrQcwJs'),
+    hex: process.env.NEXT_PUBLIC_REWARD_POOL_HEX || (isMainnetMode ? '4138404c670f1d63a059277c71d51781c8e95aa25a' : '418874d592e2c7be347232c80ddbb8f8611e29c415'),
   },
   EquoraMagicBox: {
-    base58: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || (isMainnetMode ? 'TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg' : 'TAoMXsB2Em1iK9tSqwGaPDL3A7hLHrR8Ue'),
-    hex: process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || (isMainnetMode ? '41b988ec2cd42c59af8bf358bee611f432e354513d' : '41091b166dd91ead929d45f0125942382cc59bb250'),
+    base58: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || (isMainnetMode ? 'TStE36Pqa72f8hUdemSjtoi1SxpWmrjaYg' : 'THjcRLiSqxKRhgRVwoZzCTgfrc99qB1qvF'),
+    hex: process.env.NEXT_PUBLIC_MAGIC_BOX_HEX || (isMainnetMode ? '41b988ec2cd42c59af8bf358bee611f432e354513d' : '41552ebb5159b039479171057f97656c89c30cd0f1'),
   },
 } as const;
 

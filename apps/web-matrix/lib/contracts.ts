@@ -217,6 +217,10 @@ export const GENESIS_ROOT_MEMBER_BASE58 =
   toTrobBase58(CONTRACT_ADDRESSES.vault);
 export const GENESIS_ROOT_MEMBER_HEX = toHexAddress(GENESIS_ROOT_MEMBER_BASE58);
 
+// Apex Leader / Top Seat #1 (Configured dynamically from .env.local via NEXT_PUBLIC_APEX_LEADER_ADDRESS)
+export const APEX_LEADER_ADDRESS = (process.env.NEXT_PUBLIC_APEX_LEADER_ADDRESS || "").trim();
+export const APEX_LEADER_HEX = (process.env.NEXT_PUBLIC_APEX_LEADER_HEX || (APEX_LEADER_ADDRESS ? toHexAddress(APEX_LEADER_ADDRESS) : "")).toLowerCase();
+
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
 export const MATRIX_ABI = [
@@ -745,7 +749,7 @@ export async function getOnChainSlotDetails(
 
       const isApex =
         uCanon === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
-        uCanon === "0x5fd6266a07fa4ba10dd34e9a315edd47904b8823";
+        (Boolean(APEX_LEADER_HEX) && uCanon === APEX_LEADER_HEX);
       const isQualified = isApex || userDirects.length >= 2;
 
       if (!isQualified) {
@@ -1284,7 +1288,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       }
     }
   }
-  if (!sponsorAddress && joinedMeta?.sponsor && joinedMeta.sponsor.toLowerCase() !== "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
+  if (!sponsorAddress && joinedMeta?.sponsor && !isDeployerAddress(joinedMeta.sponsor)) {
     sponsorAddress = joinedMeta.sponsor.toLowerCase();
   }
   // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
@@ -1294,7 +1298,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 
   const isVaultSponsor =
     sponsorAddress === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
-    sponsorAddress === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
+    isDeployerAddress(sponsorAddress);
 
   let upline2Address: string | null = null;
   let sponsorCode: number | null = null;
@@ -1307,7 +1311,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       ]);
       if (up2Raw) {
         const up2 = coder.decode(["address"], "0x" + up2Raw)[0];
-        if (up2 && up2 !== "0x0000000000000000000000000000000000000000" && up2.toLowerCase() !== "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
+        if (up2 && up2 !== "0x0000000000000000000000000000000000000000" && !isDeployerAddress(up2)) {
           upline2Address = up2.toLowerCase();
         }
       }
@@ -2201,7 +2205,7 @@ export async function joinSlotOnChain(
     targetSponsor === "0x0000000000000000000000000000000000000000" ||
     targetSponsor === "410000000000000000000000000000000000000000" ||
     isDeployerAddress(targetSponsor) ||
-    hexCheck.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902"
+    isDeployerAddress(hexCheck)
   ) {
     targetSponsor = await getOnChainGenesisSponsor();
   }

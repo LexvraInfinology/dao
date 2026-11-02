@@ -917,9 +917,10 @@ export class MatrixService {
       }
 
       // Check 2-Direct Qualification Gate
+      const apexLeaderCanonical = (process.env.APEX_LEADER_ADDRESS || process.env.NEXT_PUBLIC_APEX_LEADER_ADDRESS ? toCanonicalAddress(process.env.APEX_LEADER_ADDRESS || process.env.NEXT_PUBLIC_APEX_LEADER_ADDRESS!) : "").toLowerCase();
       const isApex =
         canonicalAddress === VAULT_CONTRACT_CANONICAL ||
-        canonicalAddress === "0x5fd6266a07fa4ba10dd34e9a315edd47904b8823";
+        (Boolean(apexLeaderCanonical) && canonicalAddress === apexLeaderCanonical);
       const isQualified = isApex || directReferrals.length >= 2;
 
       if (!isQualified) {

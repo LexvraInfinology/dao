@@ -50,16 +50,16 @@ const MAINNET_DEFAULT_CONTRACTS = {
 };
 
 const TESTNET_DEFAULT_CONTRACTS = {
-  registry: "TDeTkVTHDv8i9aHi1eZBMUPSvuReypxAw1",
+  registry: "TG1Jm7BC37CiUm9WKGSM7r57k3BVo5Z5ND",
   token:    "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
-  nft:      "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
+  nft:      "TRmtmYSpWbgdrHG3n8AufTXnPWvgCwZHGK",
   vesting:  "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
-  dao:      "TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW",
-  matrix:   "TNU8aUC8H8osyfhr2TnNzNNEMZPtGV4D8o",
-  vault:    "TXn5f6qg8egX1fww3aUAfrpoM3K91Lpq3Q",
-  salary:   "TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM",
-  reward:   "TMAiUnfvgchovZ4ffq7BuEPidCd1SxVJBf",
-  magicBox: "TAoMXsB2Em1iK9tSqwGaPDL3A7hLHrR8Ue",
+  dao:      "TBf9Vw7TJoptyzMZEKQYsKK9Ei3GQGYnto",
+  matrix:   "TB4V7VuvkB3mavbLBkEXPmm9pooX5eKJfA",
+  vault:    "TTbKnsxHwGiG9u5cvq5TKZMd56TqEtpLCJ",
+  salary:   "TRsbvWsmta6ab9qhjDTohvu5P2xoQy4pLD",
+  reward:   "TNQirwDJRn9yGS34L5p2nDqF2ctWrQcwJs",
+  magicBox: "THjcRLiSqxKRhgRVwoZzCTgfrc99qB1qvF",
 };
 
 const DEFAULT_CONTRACTS = IS_MAINNET ? MAINNET_DEFAULT_CONTRACTS : TESTNET_DEFAULT_CONTRACTS;

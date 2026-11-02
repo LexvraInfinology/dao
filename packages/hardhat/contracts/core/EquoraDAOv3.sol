@@ -1217,6 +1217,18 @@ contract EquoraDAOv3 is ReentrancyGuard {
         return daoMembers;
     }
 
+    function getLastMember() external view returns (address) {
+        if (daoMembers.length == 0) return address(0);
+        return daoMembers[daoMembers.length - 1];
+    }
+
+    function timeRemainingInWindow() external view returns (uint256) {
+        if (daoCompleted) return 0;
+        uint256 deadline = daoLaunchTimestamp + SEAT_WINDOW;
+        if (block.timestamp >= deadline) return 0;
+        return deadline - block.timestamp;
+    }
+
     function isClosed() external view returns (bool) {
         return daoCompleted;
     }

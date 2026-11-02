@@ -170,8 +170,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const isFirstMember = isRootWallet || totalMembers === 0 || daoSeat === 1;
 
   // Dynamic $30.00 USD entry cost based on live TrobChain oracle
-  const [slotCostSun, setSlotCostSun] = useState<number>(945179584);
-  const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.03174);
+  const [slotCostSun, setSlotCostSun] = useState<number>(882508678);
+  const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.033994);
 
   useEffect(() => {
     let mounted = true;

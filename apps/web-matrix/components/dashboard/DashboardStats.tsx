@@ -18,7 +18,7 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
 
   // Dynamic Market Oracle Peg: 1 Matrix Slot Payout = $30.00 USD
-  const [trobPrice, setTrobPrice] = React.useState<number>(0.03174);
+  const [trobPrice, setTrobPrice] = React.useState<number>(0.033994);
 
   React.useEffect(() => {
     fetch("/api/price/trob")

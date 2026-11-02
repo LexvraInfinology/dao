@@ -133,7 +133,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
             amount: isSend ? -displayUsd : displayUsd,
             amountDisplay: `${isSend ? "-" : "+"} $${displayUsd.toFixed(2)}`,
             trobSubtitle: trobTokens ? `${trobTokens.toFixed(2)} TROB` : null,
-            status: t.status === "COMPLETED" ? "Confirmed" : t.status === "PENDING" ? "Pending" : "Failed",
+            status: (t.status === "COMPLETED" || t.status === "Confirmed") ? "Confirmed" : t.status === "PENDING" ? "Pending" : "Failed",
             date: formatDateSafe(t.timestamp),
             time: timeStr,
             txHash: t.txHash ? `${t.txHash.slice(0, 8)}...${t.txHash.slice(-4)}` : "—",

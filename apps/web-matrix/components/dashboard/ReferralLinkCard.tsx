@@ -179,12 +179,12 @@ export function ReferralLinkCard({
               REFERRAL &amp; AFFILIATE LINK
             </span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
-              isQualified
+              (isQualified || directsCount >= 2)
                 ? "bg-[#e8fbf5] text-[#0e9f79] border border-[#c3f0e0]"
                 : "bg-[#fff6df] text-[#b97a17] border border-[#fae2ab]"
             }`}>
               <ShieldCheck className="w-3 h-3" />
-              {isQualified ? "Qualified (100% Yield)" : "Need 2 Directs"}
+              {(isQualified || directsCount >= 2) ? "Qualified (100% Yield)" : "Need 2 Directs"}
             </span>
           </div>
           <h3 className="text-[15px] sm:text-[17px] font-black tracking-tight text-[#102341] mt-0.5">

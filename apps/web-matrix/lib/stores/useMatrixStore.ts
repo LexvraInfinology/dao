@@ -237,10 +237,12 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
       if (onChainDetails || onChainProf) {
         const TROB_PRICE_USD = 0.056;
-        const totalEarnedTrob = onChainProf?.totalEarningsTrob ?? (onChainDetails?.totalEarned ?? 0);
-        const totalEarnedUsd = onChainProf?.totalEarningsUsd ?? (totalEarnedTrob * TROB_PRICE_USD);
-        const availableWithdrawTrob = onChainProf?.availableBalanceTrob ?? 0;
-        const availableWithdrawUsd = onChainProf?.availableBalanceUsd ?? (availableWithdrawTrob * TROB_PRICE_USD);
+        const totalEarnedUsd = (onChainDetails?.totalEarnedUsd && onChainDetails.totalEarnedUsd > 0)
+          ? onChainDetails.totalEarnedUsd
+          : (onChainProf?.totalEarningsUsd ?? 0);
+        const totalEarnedTrob = onChainDetails?.totalEarnedTrob ?? onChainProf?.totalEarningsTrob ?? (totalEarnedUsd > 0 ? totalEarnedUsd / TROB_PRICE_USD : 0);
+        const availableWithdrawUsd = totalEarnedUsd;
+        const availableWithdrawTrob = totalEarnedTrob;
         const filledCount = onChainDetails?.filledNodes ?? 0;
 
         const onChainDashboard: MatrixDashboardOverview = {

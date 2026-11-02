@@ -6,7 +6,7 @@ import {
   MatrixTransaction,
 } from "../api";
 import { useUserStore } from "./useUserStore";
-import { getOnChainUserProfile, getOnChainJoinedTransactions } from "../contracts";
+import { getOnChainUserProfile, getOnChainJoinedTransactions, getOnChainUserTransactions } from "../contracts";
 
 export interface FinanceState {
   earnings: MatrixEarningsOverview | null;
@@ -118,6 +118,22 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     if (transactions.length > 0 && !force) return;
 
     set({ loadingTransactions: true, error: null });
+    // 1. Prioritize live 100% on-chain blockchain transaction ledger
+    try {
+      const onChainRes = await getOnChainUserTransactions(addr);
+      if (onChainRes && onChainRes.items && onChainRes.items.length > 0) {
+        set({
+          transactions: onChainRes.items,
+          transactionStats: onChainRes.stats,
+          loadingTransactions: false,
+        });
+        return;
+      }
+    } catch (err: any) {
+      console.warn("[FinanceStore] On-chain tx ledger notice:", err?.message || err);
+    }
+
+    // 2. Fallback to API / DB
     try {
       const res = await matrixApi.getTransactions(addr, options);
       if (res && res.items && res.items.length > 0) {
@@ -128,23 +144,9 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         });
         return;
       }
-    } catch {
-      // Fallback to verified on-chain transactions
-    }
+    } catch {}
 
-    try {
-      const onChainRes = getOnChainJoinedTransactions(addr);
-      set({
-        transactions: onChainRes.items,
-        transactionStats: onChainRes.stats,
-        loadingTransactions: false,
-      });
-    } catch (err: any) {
-      set({
-        error: err?.message || "Failed to load transactions",
-        loadingTransactions: false,
-      });
-    }
+    set({ loadingTransactions: false });
   },
 
   withdraw: async (amount: number, userAddress?: string, txHash?: string) => {

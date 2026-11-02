@@ -73,19 +73,24 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     (storeSlotDetails && storeSlotDetails.slotNumber === activeSlotNumber ? storeSlotDetails : null) ||
     liveDetails;
 
+  // Real filled nodes for current inspected cycle
+  const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
+  const realFilledNodes = nodesList.filter((n: any) => n?.filled).length;
+
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
-  const isSlotUnlocked = details ? Boolean(details.isUnlocked) : (activeSlotNumber <= highestUnlockedSlot);
-  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive);
+  const isSlot1Escalated =
+    Boolean(profile?.isSlot2Reserved) ||
+    highestUnlockedSlot >= 2 ||
+    (details?.slotNumber === 1 && (realFilledNodes >= 5 || (nodesList[3]?.filled && nodesList[4]?.filled)));
+  const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
+  const isSlotUnlocked = details ? Boolean(details.isUnlocked || (activeSlotNumber <= effectiveHighestUnlocked)) : (activeSlotNumber <= effectiveHighestUnlocked);
+  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive || (activeSlotNumber === 2 && ((details as any)?.slot1FilledNodes >= 14 || (profile as any)?.isSlot1Complete)));
   const isSlotStandby = isSlotUnlocked && activeSlotNumber > 1 && !isSlotLive;
 
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
   const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
   const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
   const isViewingSnapshot = Boolean(isSlotUnlocked && details?.isViewingSnapshot);
-
-  // Real filled nodes for current inspected cycle
-  const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
-  const realFilledNodes = nodesList.filter((n: any) => n?.filled).length;
   const filledNodes = isSlotUnlocked ? (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? (isViewingSnapshot ? 14 : 0))) : 0;
   const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14);
   const remainingNodes = isSlotUnlocked ? Math.max(14 - filledNodes, 0) : 14;
@@ -267,10 +272,10 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         {!isSlotUnlocked ? (
           <button
             type="button"
-            onClick={() => selectSlot(highestUnlockedSlot, undefined, address || undefined)}
+            onClick={() => selectSlot(effectiveHighestUnlocked, undefined, address || undefined)}
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
-            <span>← Return to Active Slot #{String(highestUnlockedSlot).padStart(2, "0")}</span>
+            <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>
           </button>
         ) : (
           <>

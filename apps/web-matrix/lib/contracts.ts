@@ -604,6 +604,59 @@ export async function getOnChainSlotDetails(
     }
   }
 
+  // Auto-Escalation Check (Node 4 & Node 5 in Slot N-1 auto-reserves and unlocks Slot N in Standby Mode at $0 out-of-pocket):
+  let prevSlotCompleted = false;
+  let prevSlotEscalated = false;
+  if (!isUnlocked && slotNumber > 1 && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const prevParam = coder.encode(["address", "uint256"], [userHex, slotNumber - 1]).slice(2);
+      const prevRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getSlotData(address,uint256)",
+        prevParam
+      );
+      if (prevRaw) {
+        const prevDecoded = coder.decode(
+          ["bool", "uint256", "uint256", "address[14]", "uint256"],
+          "0x" + prevRaw
+        );
+        const prevFilled = Number(prevDecoded[2]) || 0;
+        const prevCycle = Number(prevDecoded[1]) || 0;
+        const prevNodes = prevDecoded[3] || [];
+        const isP4 = prevNodes[3] && prevNodes[3] !== "0x0000000000000000000000000000000000000000";
+        const isP5 = prevNodes[4] && prevNodes[4] !== "0x0000000000000000000000000000000000000000";
+        if ((isP4 && isP5) || prevFilled >= 5 || prevCycle > 1 || prevFilled >= 14) {
+          prevSlotEscalated = true;
+          isUnlocked = true;
+          currentCycle = 1;
+        }
+        if (prevFilled >= 14 || prevCycle > 1) {
+          prevSlotCompleted = true;
+        }
+      }
+    } catch {}
+
+    // Dynamic subtree projection fallback
+    if (!isUnlocked && slotNumber === 2) {
+      try {
+        const uDirects = await getDynamicDirects(userHex.toLowerCase());
+        if (uDirects.length >= 2) {
+          let totalCount = uDirects.length;
+          for (const d of uDirects) {
+            const ch = await getDynamicDirects(d.toLowerCase());
+            totalCount += ch.length;
+            if (totalCount >= 5) break;
+          }
+          if (totalCount >= 5) {
+            isUnlocked = true;
+            currentCycle = 1;
+            prevSlotEscalated = true;
+          }
+        }
+      } catch {}
+    }
+  }
+
   const totalCycles = isUnlocked ? (Number(currentCycle) || 1) : 0;
   const liveFilledNodes = isUnlocked ? Number(filledNodes) : 0;
 
@@ -759,6 +812,15 @@ export async function getOnChainSlotDetails(
       isLive = Boolean(coder.decode(["bool"], "0x" + liveRaw)[0]);
     }
   } catch {}
+
+  // If slot was escalated via P4+P5 of previous slot:
+  // It is in STANDBY if previous slot is not yet 14/14 complete.
+  // It is LIVE if previous slot has completed all 14 nodes!
+  if (slotNumber > 1 && isUnlocked && !isLive) {
+    if (prevSlotCompleted) {
+      isLive = true;
+    }
+  }
 
   // Build lookup map from joinedMembers.json for rich labels & Base58 addresses
   const memberMetaMap = new Map<string, any>();
@@ -993,12 +1055,21 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
 
   const result = [];
   for (let i = 1; i <= 12; i++) {
-    const isUnlocked = Boolean(unlockedArr[i - 1]);
-    const isLive = liveArr[i - 1] !== undefined ? liveArr[i - 1] : (i <= 4 ? isUnlocked : false);
+    let isUnlocked = Boolean(unlockedArr[i - 1]);
+    let isLive = liveArr[i - 1] !== undefined ? liveArr[i - 1] : (i <= 4 ? isUnlocked : false);
     const cycle = Number(cyclesArr[i - 1]) || (isUnlocked ? 1 : 0);
     const filled = Number(filledArr[i - 1]) || 0;
     const cost = getSlotCost(i);
     const recycles = Math.max(0, cycle - 1);
+
+    // Auto-escalation checks: If previous slot has Node 4 & Node 5 filled or cycle > 1 or filled >= 5:
+    if (i > 1 && !isUnlocked && result[i - 2]) {
+      const prevSlot: any = result[i - 2];
+      if (prevSlot.filledNodes >= 5 || prevSlot.recyclesCount > 0) {
+        isUnlocked = true;
+        isLive = prevSlot.filledNodes >= 14 || prevSlot.recyclesCount > 0;
+      }
+    }
 
     // Each completed cycle fulfilled 14 nodes and yielded 6 direct P2P payments (6 * cost)
     // Slot 1: 1 * 6 * $30 = $180.00
@@ -1099,16 +1170,34 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     } catch {}
   }
 
-  // Determine live matrix board earnings from slot data (e.g. Slot 1 P3 + P6 = $60 USD / 1071.43 TROB)
+  // Determine live matrix board earnings & Auto-escalation from Slot 1 data
   let boardEarnedTrob = 0;
+  let slot1FilledCount = 0;
+  let isSlot1Escalated = false;
+  let isSlot1Complete = false;
   if (slot1Raw) {
     try {
-      const [, , , , s1Earned] = coder.decode(
+      const [, s1Cycle, s1Filled, s1Nodes, s1Earned] = coder.decode(
         ["bool", "uint256", "uint256", "address[14]", "uint256"],
         "0x" + slot1Raw
       );
+      slot1FilledCount = Number(s1Filled) || 0;
+      const cNum = Number(s1Cycle) || 1;
+      const isP4 = s1Nodes && s1Nodes[3] && s1Nodes[3] !== "0x0000000000000000000000000000000000000000";
+      const isP5 = s1Nodes && s1Nodes[4] && s1Nodes[4] !== "0x0000000000000000000000000000000000000000";
+      if ((isP4 && isP5) || slot1FilledCount >= 5 || cNum > 1 || slot1FilledCount >= 14) {
+        isSlot1Escalated = true;
+      }
+      if (slot1FilledCount >= 14 || cNum > 1) {
+        isSlot1Complete = true;
+      }
       boardEarnedTrob = Number(ethers.formatUnits(s1Earned, 6));
     } catch {}
+  }
+
+  // If Slot 1 has P4 and P5 filled, Slot 2 is automatically unlocked in standby mode
+  if (isSlot1Escalated && highestUnlockedSlot < 2) {
+    highestUnlockedSlot = 2;
   }
   // Fixed protocol USD tier valuation: Each Slot 1 settlement is strictly $30.00 USD
   // Protects against floating exchange rate confusion while keeping exact on-chain TROB tokens intact
@@ -1255,8 +1344,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     rankTier,
     rankName: rankNames[rankTier],
     currentSlot: currentActiveSlot, // Currently active, live playable slot (Slot 1)
-    highestUnlockedSlot: Math.max(highestUnlockedSlot, 1),
-    isSlot2Reserved: highestUnlockedSlot >= 2,
+    highestUnlockedSlot: Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1),
+    isSlot2Reserved: isSlot1Escalated || highestUnlockedSlot >= 2,
+    isSlot1Complete,
     totalEarnings: effectiveEarnedUsd, // Exact on-chain board earnings ($60.00 USD)
     totalEarningsUsd: effectiveEarnedUsd,
     totalEarningsTrob: effectiveEarnedTrob, // Exact raw TROB (1071.43)

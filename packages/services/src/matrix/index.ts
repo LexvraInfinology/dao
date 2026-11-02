@@ -603,7 +603,10 @@ export class MatrixService {
       }
 
       const profile = user.matrixProfile;
-      const highestSlot = user.matrixSlots[0]?.slotNumber ?? 0;
+      const slot1 = user.matrixSlots?.find((s) => s.slotNumber === 1);
+      const isSlot1Escalated = Boolean(slot1 && slot1.filledNodes >= 5);
+      const dbHighestSlot = user.matrixSlots[0]?.slotNumber ?? 0;
+      const highestSlot = Math.max(dbHighestSlot, isSlot1Escalated ? 2 : 1);
 
       // Team count and active qualification calculation (parallelized)
       const [directTeamCount, activeDirectsCount] = await Promise.all([

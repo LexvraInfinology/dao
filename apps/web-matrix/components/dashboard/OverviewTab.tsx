@@ -21,7 +21,11 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const currentSlot = dashboard?.currentSlot ?? profile?.currentSlot ?? 1;
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
+  const highestUnlockedSlot = Math.max(
+    profile?.highestUnlockedSlot ?? 1,
+    dashboard?.highestUnlockedSlot ?? 1,
+    profile?.isSlot2Reserved ? 2 : 1
+  );
 
   const totalEarnedUsd =
     dashboard?.totalEarnedUsd ??

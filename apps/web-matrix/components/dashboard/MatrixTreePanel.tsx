@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Share2,
   Sparkles,
+  ArrowRight,
   Award,
   Lock,
 } from "lucide-react";
@@ -268,10 +269,43 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const activeSlotDetails = liveSlotData || storeSlotDetails;
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
+
+  // Dynamic Auto-Escalation:
+  // When Node 4 (index 3) and Node 5 (index 4) of Slot 1 are filled,
+  // Slot 2 unlocks automatically in Standby Mode at $0 out-of-pocket!
+  const slot1Nodes =
+    (activeSlotDetails?.slotNumber === 1 ? activeSlotDetails?.nodes : null) ||
+    data?.activeSlotProgress?.nodes ||
+    [];
+  const isNodeOccupied = (n: any) =>
+    Boolean(
+      n?.filled ||
+      (n?.placedUser && n.placedUser !== "0x0000000000000000000000000000000000000000" && n.placedUser !== "0x0") ||
+      (n?.base58 && n.base58 !== "-" && n.base58.length > 5)
+    );
+  const isP4Occupied = isNodeOccupied(slot1Nodes[3]);
+  const isP5Occupied = isNodeOccupied(slot1Nodes[4]);
+  const slot1FilledCount =
+    (activeSlotDetails?.slotNumber === 1 ? (activeSlotDetails?.filledNodes ?? (activeSlotDetails?.nodes ? activeSlotDetails.nodes.filter((n: any) => n?.filled).length : 0)) : 0) ||
+    (data?.activeSlotProgress?.filledNodes ?? 0);
+  const isSlot1Escalated =
+    (isP4Occupied && isP5Occupied) ||
+    slot1FilledCount >= 5 ||
+    Boolean(profile?.isSlot2Reserved) ||
+    highestUnlockedSlot >= 2;
+
+  const effectiveHighestUnlocked = Math.max(
+    highestUnlockedSlot,
+    isSlot1Escalated ? 2 : 1
+  );
+
   const isCurrentSlotUnlocked = activeSlotDetails
-    ? Boolean(activeSlotDetails.isUnlocked)
-    : (selectedSlot <= highestUnlockedSlot);
-  const isCurrentSlotLive = selectedSlot === 1 ? true : Boolean(activeSlotDetails?.isLive);
+    ? Boolean(activeSlotDetails.isUnlocked || (selectedSlot <= effectiveHighestUnlocked))
+    : (selectedSlot <= effectiveHighestUnlocked);
+  const isCurrentSlotLive =
+    selectedSlot === 1
+      ? true
+      : Boolean(activeSlotDetails?.isLive || (selectedSlot === 2 && slot1FilledCount >= 14));
   const isSlotStandby = isCurrentSlotUnlocked && selectedSlot > 1 && !isCurrentSlotLive;
 
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedCycle ?? 1) : 0;
@@ -762,7 +796,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       <div className="py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
-          const isSlotUnlocked = sNum <= highestUnlockedSlot;
+          const isSlotUnlocked = sNum <= effectiveHighestUnlocked;
           const isCompleted = isSlotUnlocked && ((activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14) || (activeSlotDetails?.totalCycles && activeSlotDetails.totalCycles > 1 && sNum < activeSlotDetails.slotNumber));
           const cost = getSlotCost(sNum);
           return (
@@ -797,6 +831,33 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           );
         })}
       </div>
+
+      {/* ───────────────── AUTO-ESCALATION NOTIFICATION (Slot 2 Unlocked from P4+P5) ───────────────── */}
+      {selectedSlot === 1 && isSlot1Escalated && (
+        <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-blue-50 border border-emerald-200 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-emerald-950 block">
+                🎉 Next Slot #02 ($60) Unlocked in Standby Mode!
+              </span>
+              <span className="text-[11px] text-emerald-800 font-medium">
+                Auto-reserved at $0 out-of-pocket via Positions #4 &amp; #5. Live team placements will begin once your Slot #01 board completes all 14 positions ({slot1FilledCount}/14 filled).
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSelectSlot(2)}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
+          >
+            <span>View Slot #02 Board</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* ───────────────── STANDBY TIER BANNER (P4+P5 Auto-Reserved) ───────────────── */}
       {isSlotStandby && (
@@ -842,10 +903,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           </div>
           <button
             type="button"
-            onClick={() => handleSelectSlot(highestUnlockedSlot)}
+            onClick={() => handleSelectSlot(effectiveHighestUnlocked)}
             className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
           >
-            ← View Active Slot #{String(highestUnlockedSlot).padStart(2, "0")}
+            ← View Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}
           </button>
         </div>
       )}

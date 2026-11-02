@@ -34,10 +34,16 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const slots = props.slots ?? storeSlots;
   const slotCost = getSlotCost(selectedSlotNumber);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
-  const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked) : (selectedSlotNumber <= highestUnlockedSlot);
+  const rawNodes = slotDetails?.nodes ?? [];
+  const isSlot1Escalated =
+    Boolean(profile?.isSlot2Reserved) ||
+    highestUnlockedSlot >= 2 ||
+    (slotDetails?.slotNumber === 1 && ((slotDetails?.filledNodes ?? 0) >= 5 || (rawNodes[3]?.filled && rawNodes[4]?.filled)));
+  const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
+  const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked || (selectedSlotNumber <= effectiveHighestUnlocked)) : (selectedSlotNumber <= effectiveHighestUnlocked);
   const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;
-  const nodes = isSlotUnlocked ? (slotDetails?.nodes ?? []) : [];
+  const nodes = isSlotUnlocked ? rawNodes : [];
 
   // Live on-chain qualification state
   const [qualification, setQualification] = useState<{ isQualified: boolean; activeDirectsCount: number }>({
@@ -412,10 +418,10 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
           </div>
           <button
             type="button"
-            onClick={() => selectSlotStore(highestUnlockedSlot, undefined, address || undefined)}
+            onClick={() => selectSlotStore(effectiveHighestUnlocked, undefined, address || undefined)}
             className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
           >
-            ← View Slot #{String(highestUnlockedSlot).padStart(2, "0")}
+            ← View Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}
           </button>
         </div>
       )}

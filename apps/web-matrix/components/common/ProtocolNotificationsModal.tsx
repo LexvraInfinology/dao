@@ -35,6 +35,22 @@ export function ProtocolNotificationsModal({
   );
 
   const notifications: NotificationItem[] = [
+    ...(isSlot2Unlocked
+      ? [
+          {
+            id: "notif-slot2-unlocked",
+            title: "🎉 Next Slot #02 ($60) Unlocked in Standby Mode!",
+            description:
+              "Positions #4 and #5 on your Slot #01 board have automatically reserved Slot #02 ($60 Tier) at $0 out-of-pocket! Your Slot #02 board is now open. Live placements will begin once your Slot #01 board finishes all 14 positions.",
+            category: "pool" as const,
+            timestamp: "Auto-Reserved via P4 + P5",
+            badge: "SLOT 2 OPENED",
+            badgeColor: "bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]",
+            link: "/dashboard",
+            linkText: "View Slot #02 Board",
+          },
+        ]
+      : []),
     {
       id: "notif-1",
       title: "DAO 35% Pool: Instant Block Payouts Active",

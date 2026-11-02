@@ -38,16 +38,26 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/matrix/:path*",
-        destination: "http://127.0.0.1:4000/api/matrix/:path*",
-      },
+    const backendUrl =
+      process.env.API_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:4000");
+
+    const rewritesList = [
       {
         source: "/api/trob-market/price",
         destination: "https://backend.trobchain.com/v1/market/price",
       },
     ];
+
+    if (backendUrl) {
+      rewritesList.unshift({
+        source: "/api/matrix/:path*",
+        destination: `${backendUrl.replace(/\/+$/, "")}/api/matrix/:path*`,
+      });
+    }
+
+    return rewritesList;
   },
 };
 

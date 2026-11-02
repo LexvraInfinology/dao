@@ -1551,7 +1551,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
       });
       const preJson = await preRes.json();
       if (preJson?.result?.result && preJson?.transaction) {
-        const signFn = trob.trx?.sign || trob.signTransaction || trob.sign || trob.signdata;
+        const signFn = trob.trx?.sign || trob.signTransaction || trob.sign ;
         if (typeof signFn === "function") {
           try {
             const rawSigned = await signFn.call(trob.trx || trob, preJson.transaction);

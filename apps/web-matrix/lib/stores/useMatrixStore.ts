@@ -289,7 +289,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
                 title,
                 slot: 1,
                 position: pos,
-                amount: n.amount || 945.18,
+                amount: n.amount || 882.51,
                 amountUsd: 30.0,
                 token: "TROB",
                 fromAddress: n.placedUser || n.base58,

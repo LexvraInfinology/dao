@@ -41,7 +41,9 @@ const nextConfig: NextConfig = {
     const backendUrl =
       process.env.API_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:4000");
+      (process.env.NODE_ENV === "production"
+        ? "https://api.equorafidao.com"
+        : "http://127.0.0.1:4000");
 
     const rewritesList = [
       {

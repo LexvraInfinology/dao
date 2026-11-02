@@ -17,7 +17,9 @@ export function getApiBaseUrl(): string {
     const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
     return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
   }
-  return "http://127.0.0.1:4000/api/matrix";
+  return process.env.NODE_ENV === "production"
+    ? "https://api.equorafidao.com/api/matrix"
+    : "http://127.0.0.1:4000/api/matrix";
 }
 
 export const API_BASE_URL = getApiBaseUrl();

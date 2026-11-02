@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { SEAT_METAS } from "./MatrixTreePanel";
-import { Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Sparkles, ArrowRight, CheckCircle2, Lock } from "lucide-react";
 import { getSlotCost, getOnChainSlotDetails, toHexAddress } from "@/lib/contracts";
 
 interface NextPositionPanelProps {
@@ -73,19 +73,27 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     (storeSlotDetails && storeSlotDetails.slotNumber === activeSlotNumber ? storeSlotDetails : null) ||
     liveDetails;
 
-  const currentCycle = details?.currentCycle ?? (storeSelectedCycle || 1);
-  const totalCycles = details?.totalCycles ?? currentCycle;
-  const snapshotCount = details?.snapshotCount ?? 0;
-  const isViewingSnapshot = Boolean(details?.isViewingSnapshot);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
+  const isSlotUnlocked = details ? Boolean(details.isUnlocked) : (activeSlotNumber <= highestUnlockedSlot);
+  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive);
+  const isSlotStandby = isSlotUnlocked && activeSlotNumber > 1 && !isSlotLive;
+
+  const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
+  const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
+  const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
+  const isViewingSnapshot = Boolean(isSlotUnlocked && details?.isViewingSnapshot);
 
   // Real filled nodes for current inspected cycle
-  const filledNodes = details?.filledNodes ?? (isViewingSnapshot ? 14 : 0);
-  const isCycleComplete = isViewingSnapshot || filledNodes >= 14;
-  const remainingNodes = Math.max(14 - filledNodes, 0);
-  const percentFilled = isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
+  const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
+  const realFilledNodes = nodesList.filter((n: any) => n?.filled).length;
+  const filledNodes = isSlotUnlocked ? (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? (isViewingSnapshot ? 14 : 0))) : 0;
+  const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14);
+  const remainingNodes = isSlotUnlocked ? Math.max(14 - filledNodes, 0) : 14;
+  const percentFilled = !isSlotUnlocked ? 0 : isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
 
-  const nextUpcomingSeat = isCycleComplete ? 1 : filledNodes + 1;
-  const nextSeatMeta = SEAT_METAS[nextUpcomingSeat];
+  const firstOpenIdx = nodesList.length > 0 ? nodesList.findIndex((n: any) => !n?.filled) : -1;
+  const nextUpcomingSeat = !isSlotUnlocked ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : filledNodes + 1);
+  const nextSeatMeta = nextUpcomingSeat ? SEAT_METAS[nextUpcomingSeat] : null;
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
 
@@ -94,6 +102,11 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     data?.totalEarnedUsd ||
     profile?.totalEarningsUsd ||
     (profile?.totalEarnings ?? 0);
+  const totalEarnedTrob =
+    details?.totalEarnedTrob ||
+    data?.totalEarnedTrob ||
+    profile?.totalEarningsTrob ||
+    (totalEarnedUsd / 0.056);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -103,7 +116,17 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           <span className="text-[11px] font-bold text-[#475569] uppercase tracking-wide">
             Next Position
           </span>
-          {isViewingSnapshot ? (
+          {!isSlotUnlocked ? (
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10.5px] font-extrabold border border-slate-200 flex items-center gap-1">
+              <Lock className="w-3 h-3 text-slate-500" />
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Locked Tier
+            </span>
+          ) : isSlotStandby ? (
+            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10.5px] font-extrabold border border-blue-300 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Standby Reserved
+            </span>
+          ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #{currentCycle} Fulfilled (14/14)
@@ -118,11 +141,14 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         {/* Slot Title & Node Count */}
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-[24px] lg:text-[28px] font-black text-[#0f172a] leading-tight">
+            <h3 className="text-[24px] lg:text-[28px] font-black text-[#0f172a] leading-tight flex items-center gap-1.5">
               Slot #{String(activeSlotNumber).padStart(2, "0")}
+              {!isSlotUnlocked && <Lock className="w-5 h-5 text-slate-400" />}
             </h3>
             <span className="text-[11px] font-bold text-slate-500">
-              {isViewingSnapshot
+              {!isSlotUnlocked
+                ? `$${cost.toFixed(2)} Tier • Awaiting Auto-Unlock`
+                : isViewingSnapshot
                 ? `$${cost.toFixed(2)} Tier • Cycle #${currentCycle} All Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
             </span>
@@ -130,10 +156,10 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
 
           <div className="text-right">
             <span className="text-[13px] font-black text-[#0f172a]">
-              {isViewingSnapshot ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
+              {!isSlotUnlocked ? "0 / 14 Nodes" : isViewingSnapshot ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
             </span>
             <div className="text-[10px] font-bold text-slate-400">
-              {isViewingSnapshot ? "Cycle Completed" : `${remainingNodes} Remaining`}
+              {!isSlotUnlocked ? "Tier Locked" : isViewingSnapshot ? "Cycle Completed" : `${remainingNodes} Remaining`}
             </div>
           </div>
         </div>
@@ -142,103 +168,156 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         <div className="w-full h-[7px] rounded-full bg-[#e2e8f0] mb-3 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              isCycleComplete
+              !isSlotUnlocked
+                ? "bg-slate-300 w-0"
+                : isCycleComplete
                 ? "bg-emerald-500"
                 : "bg-gradient-to-r from-blue-600 to-indigo-600"
             }`}
-            style={{ width: `${percentFilled}%` }}
+            style={{ width: !isSlotUnlocked ? "0%" : `${percentFilled}%` }}
           />
         </div>
 
         {/* Next Open Position Spotlight */}
-        <div
-          className={`p-2.5 rounded-xl border mb-3.5 ${
-            isViewingSnapshot
-              ? "bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-white border-emerald-200/80"
-              : "bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white border-blue-200/80"
-          }`}
-        >
-          <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-            {isViewingSnapshot ? (
-              <>
-                <span className="flex items-center gap-1.5 text-emerald-900">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>Cycle #{currentCycle} Fulfilled:</span>
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
-                  14/14 Settled
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1.5 text-blue-900">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-                  <span>Next Seat Placement:</span>
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
-                  Seat #{nextUpcomingSeat}
-                </span>
-              </>
-            )}
+        {isSlotStandby ? (
+          <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white mb-3.5 space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className="flex items-center gap-1.5 text-blue-900">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>Standby Tier Reserved</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-extrabold border border-blue-300">
+                $0 Paid via P4 &amp; P5
+              </span>
+            </div>
+            <p className="text-[11.5px] font-medium text-blue-800 leading-relaxed">
+              Slot #{String(activeSlotNumber).padStart(2, "0")} is reserved in Standby mode! Team placements will activate automatically once your Slot #{activeSlotNumber - 1} completes all 14 positions.
+            </p>
+            <button
+              type="button"
+              onClick={() => selectSlot(activeSlotNumber - 1)}
+              className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+            >
+              ← Back to Active Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Board
+            </button>
           </div>
-
-          <p className="text-[11.5px] font-semibold text-slate-700">
-            {isViewingSnapshot ? (
-              <span>
-                All 14 seats are 100% completed &amp; on-chain payouts fulfilled. Automated P4+P5 escalation and 6 direct P2P yields (${(6 * cost).toFixed(2)}) settled.
+        ) : !isSlotUnlocked ? (
+          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/80 mb-3.5">
+            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span className="flex items-center gap-1.5 text-slate-700">
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Slot #{String(activeSlotNumber).padStart(2, "0")} Locked</span>
               </span>
-            ) : (
-              <span>
-                <strong>Position {nextUpcomingSeat} ({nextSeatMeta?.fullRole || nextSeatMeta?.role || "Next Operative"}):</strong>{" "}
-                {nextSeatMeta?.desc || "Next eligible team member placement."} (${cost.toFixed(2)}).
+              <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">
+                $0 Out-of-Pocket
               </span>
-            )}
-          </p>
-        </div>
-
-        {/* Navigation & Action Buttons */}
-        {isViewingSnapshot && totalCycles > currentCycle ? (
-          <button
-            type="button"
-            onClick={() => selectSlot(activeSlotNumber, totalCycles, address || undefined)}
-            className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
-          >
-            <span>Switch to Active Cycle {totalCycles} Board</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        ) : !isViewingSnapshot && snapshotCount > 0 ? (
-          <button
-            type="button"
-            onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
-            className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
-          >
-            <span>← View Cycle 1 Completed Board (14/14 🏆)</span>
-          </button>
-        ) : null}
-
-        {activeSlotNumber < 12 && (
-          <button
-            type="button"
-            onClick={() => selectSlot(activeSlotNumber + 1, 1, address || undefined)}
-            className={`w-full py-2 px-3 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 ${
+            </div>
+            <p className="text-[11.5px] font-medium text-slate-600 leading-relaxed">
+              This slot is currently locked. It will automatically activate with ZERO out-of-pocket cost when your Slot #{Math.max(1, activeSlotNumber - 1)} completes all 14 positions (via P4 &amp; P5 auto-reserve escalation).
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`p-2.5 rounded-xl border mb-3.5 ${
               isViewingSnapshot
-                ? "bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200"
-                : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
+                ? "bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-white border-emerald-200/80"
+                : "bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white border-blue-200/80"
             }`}
           >
-            <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} (${nextTierCost}) Board in Tree</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+              {isViewingSnapshot ? (
+                <>
+                  <span className="flex items-center gap-1.5 text-emerald-900">
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>Cycle #{currentCycle} Fulfilled:</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
+                    14/14 Settled
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1.5 text-blue-900">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                    <span>Next Seat Placement:</span>
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
+                    Seat #{nextUpcomingSeat}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <p className="text-[11.5px] font-semibold text-slate-700">
+              {isViewingSnapshot ? (
+                <span>
+                  All 14 seats are 100% completed &amp; on-chain payouts fulfilled. Automated P4+P5 escalation and 6 direct P2P yields (${(6 * cost).toFixed(2)}) settled.
+                </span>
+              ) : (
+                <span>
+                  <strong>Position {nextUpcomingSeat} ({nextSeatMeta?.fullRole || nextSeatMeta?.role || "Next Operative"}):</strong>{" "}
+                  {nextSeatMeta?.desc || "Next eligible team member placement."} (${cost.toFixed(2)}).
+                </span>
+              )}
+            </p>
+          </div>
         )}
 
-        {activeSlotNumber > 1 && (
+        {/* Navigation & Action Buttons */}
+        {!isSlotUnlocked ? (
           <button
             type="button"
-            onClick={() => selectSlot(activeSlotNumber - 1, 1, address || undefined)}
-            className="w-full py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+            onClick={() => selectSlot(highestUnlockedSlot, undefined, address || undefined)}
+            className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
-            <span>← View Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Board</span>
+            <span>← Return to Active Slot #{String(highestUnlockedSlot).padStart(2, "0")}</span>
           </button>
+        ) : (
+          <>
+            {isViewingSnapshot && totalCycles > currentCycle ? (
+              <button
+                type="button"
+                onClick={() => selectSlot(activeSlotNumber, totalCycles, address || undefined)}
+                className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
+              >
+                <span>Switch to Active Cycle {totalCycles} Board</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            ) : !isViewingSnapshot && snapshotCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
+                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+              >
+                <span>← View Cycle 1 Completed Board (14/14 🏆)</span>
+              </button>
+            ) : null}
+
+            {activeSlotNumber < 12 && (
+              <button
+                type="button"
+                onClick={() => selectSlot(activeSlotNumber + 1, 1, address || undefined)}
+                className={`w-full py-2 px-3 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 ${
+                  isViewingSnapshot
+                    ? "bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200"
+                    : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
+                }`}
+              >
+                <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} (${nextTierCost}) Board in Tree</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {activeSlotNumber > 1 && (
+              <button
+                type="button"
+                onClick={() => selectSlot(activeSlotNumber - 1, 1, address || undefined)}
+                className="w-full py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+              >
+                <span>← View Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Board</span>
+              </button>
+            )}
+          </>
         )}
 
         {/* Smart Contract Automated Tier Escalation Status */}
@@ -270,15 +349,20 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         <div className="mb-5">
           <div>
             <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Total Earned</span>
-            <div className="text-[28px] sm:text-[32px] font-extrabold text-[#0f172a] leading-none mt-1">
-              ${totalEarnedUsd.toFixed(2)}
+            <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+              <span className="text-[28px] sm:text-[32px] font-extrabold text-[#0f172a] leading-none">
+                ${totalEarnedUsd.toFixed(2)}
+              </span>
+              <span className="text-[11.5px] font-mono font-bold text-slate-500">
+                ({totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)
+              </span>
             </div>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[12px] font-bold text-[#2563eb]">
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="text-[11.5px] font-bold text-[#2563eb]">
                 {totalEarnedUsd > 0 ? `$${totalEarnedUsd.toFixed(2)} USD` : "Live P2P Yield"}
               </span>
               <span className="text-[#cbd5e1]">•</span>
-              <span className="text-[11px] font-semibold text-[#64748b]">On-Chain Lifetime Total</span>
+              <span className="text-[11px] font-semibold text-[#0e9f79]">Verified On-Chain</span>
             </div>
           </div>
         </div>

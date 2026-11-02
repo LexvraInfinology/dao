@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { EXPLORER_URL, NETWORK_NAME, CONTRACT_ADDRESSES } from "@/lib/contracts";
+import { useUserStore } from "@/lib/stores";
 
 interface NotificationItem {
   id: string;
@@ -26,6 +27,8 @@ export function ProtocolNotificationsModal({
   isOpen,
   onClose,
 }: ProtocolNotificationsModalProps) {
+  const profile = useUserStore((s) => s.profile);
+  const isSlot2Unlocked = (profile?.highestUnlockedSlot && profile.highestUnlockedSlot >= 2) || Boolean(profile?.isSlot2Reserved);
   const [selectedFilter, setSelectedFilter] = useState<"all" | "pool" | "rank" | "magicbox" | "tx">("all");
   const [unreadIds, setUnreadIds] = useState<Set<string>>(
     new Set(["notif-1", "notif-2", "notif-3", "notif-4"])

@@ -6,6 +6,10 @@ dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 dotenv.config();
 
+const isMainnet =
+  process.env.IS_MAINNET === "true" ||
+  process.env.NEXT_PUBLIC_IS_MAINNET === "true" ||
+  (process.env.TARGET_NETWORK || process.env.NEXT_PUBLIC_TARGET_NETWORK || "").toLowerCase() === "mainnet";
 
 export const config = {
   env: process.env.NODE_ENV || "development",
@@ -25,11 +29,11 @@ export const config = {
     nonceTtlSeconds: parseInt(process.env.SIWE_NONCE_TTL_SECONDS || "300", 10),
   },
   blockchain: {
-    chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || "1000", 10),
+    chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || (isMainnet ? "1000" : "1001"), 10),
     rpcUrl:
       process.env.RPC_URL ||
       process.env.FULLNODE_URL ||
       process.env.NEXT_PUBLIC_RPC_URL ||
-      "https://fullnode-one.trobchain.com",
+      (isMainnet ? "https://fullnode-one.trobchain.com" : "https://fullnode-one-testnet.trobchain.com"),
   },
 };

@@ -1,4 +1,4 @@
-/**
+ /**
  * Direct On-Chain Merged DAO Service
  * Fetches and merges live on-chain state from BOTH:
  *  1. EquoraDAO (V1): 410a59d6a2dcd3b18687c1efe1625642ad85679377 (TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto)
@@ -12,14 +12,14 @@ import { FULLNODE_RPC_URL, IS_MAINNET } from '@/config/env';
 import { toTronHex, toTrobBase58, getActiveDaoHex } from '@/utils/trobAddress';
 import { Interface, formatUnits } from 'ethers';
 
-export const V1_DAO_HEX = '410a59d6a2dcd3b18687c1efe1625642ad85679377';
-export const V1_DAO_BASE58 = 'TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto';
+export const V1_DAO_HEX = process.env.NEXT_PUBLIC_LEGACY_V1_DAO_HEX || '41ad9f950884df26767a7d3aec255f53839f955080';
+export const V1_DAO_BASE58 = process.env.NEXT_PUBLIC_LEGACY_V1_DAO_ADDRESS || 'TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd';
 
-export const V2_DAO_HEX = '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4';
-export const V2_DAO_BASE58 = 'TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT';
+export const V2_DAO_HEX = process.env.NEXT_PUBLIC_LEGACY_V2_DAO_HEX || '41687a15cb759d8ab57a2e3a2c141b728ef9d5cb74';
+export const V2_DAO_BASE58 = process.env.NEXT_PUBLIC_LEGACY_V2_DAO_ADDRESS || 'TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy';
 
-export const V3_DAO_HEX = '4151114b92df6041f5a0e7ebc13e6ed68298fd28b0';
-export const V3_DAO_BASE58 = 'THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V';
+export const V3_DAO_HEX = process.env.NEXT_PUBLIC_DAO_HEX || '41d2b5680da9913bdc7ebe8a00ed419ecb60b669c5';
+export const V3_DAO_BASE58 = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW';
 
 export interface MergedOnChainDaoStats {
   v1CollectedTrob: number;
@@ -328,8 +328,8 @@ export async function getMemberOnChainFinancials(
     if (position === 1) {
       retopupCount = 1;
       userInflowUsd = 600.0;
-      userInflowTrob = 10169.49;
-      userOutflowTrob = Math.max(userOutflowTrob, 25867.28);
+      userInflowTrob = 12419.70;
+      userOutflowTrob = totalEarnedSun > 0 ? Number(totalEarnedSun) / 1e6 : 1021.72;
     } else if (position === 12) {
       userInflowUsd = 300.0;
       userInflowTrob = 5357.14;

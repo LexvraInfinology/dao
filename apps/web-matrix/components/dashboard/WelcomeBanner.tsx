@@ -3,10 +3,17 @@
 import React from "react";
 import { useUserStore } from "@/lib/stores";
 import { toTrobBase58 } from "@/lib/format";
+import { CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export function WelcomeBanner() {
   const profile = useUserStore((s) => s.profile);
   const sponsor = profile?.sponsorAddress;
+
+  const isVaultSponsor =
+    !sponsor ||
+    Boolean(profile?.isVaultSponsor) ||
+    sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+    (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor);
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-3.5 gap-2">
@@ -16,14 +23,21 @@ export function WelcomeBanner() {
           <span className="text-[10.5px] font-bold text-[#2563eb] tracking-[0.08em] uppercase">
             WELCOME TO EQUORAFI MATRIX
           </span>
-          {sponsor && sponsor !== "0x0000000000000000000000000000000000000000" && (
+          {isVaultSponsor ? (
+            <span className="text-[10.5px] font-semibold text-slate-500 flex items-center gap-1">
+              <span>• Genesis Root:</span>
+              <span className="font-mono font-bold text-[#2563eb]">
+                Protocol Vault (Apex Root)
+              </span>
+            </span>
+          ) : sponsor && sponsor !== "0x0000000000000000000000000000000000000000" ? (
             <span className="text-[10.5px] font-semibold text-slate-500 flex items-center gap-1">
               <span>• Sponsor:</span>
               <span className="font-mono font-bold text-[#2563eb]">
                 {profile?.sponsorCode ? `#${profile.sponsorCode} • ` : ""}{toTrobBase58(sponsor).slice(0, 5)}...{toTrobBase58(sponsor).slice(-4)}
               </span>
             </span>
-          )}
+          ) : null}
         </div>
         <h1 className="text-[20px] sm:text-[24px] lg:text-[28px] font-extrabold text-[#0f172a] leading-[1.2] tracking-tight mb-0.5">
           The Matrix. <span className="text-[#2563eb]">Built to Move.</span>

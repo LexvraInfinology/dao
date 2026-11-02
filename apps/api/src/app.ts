@@ -489,10 +489,16 @@ export function createApp(): Express {
     }
     return clean.toLowerCase();
   }
+  // Official Super Representative (SR) Address (Mainnet vs Testnet)
+  const isMainnetEnv =
+    process.env.IS_MAINNET === "true" ||
+    process.env.NEXT_PUBLIC_IS_MAINNET === "true" ||
+    (process.env.TARGET_NETWORK || process.env.NEXT_PUBLIC_TARGET_NETWORK || "").toLowerCase() === "mainnet";
 
-  // Official Super Representative (SR) Address (Mainnet)
-  const OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052"; // TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY
-  const OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+  const OFFICIAL_SR_TESTNET_B58 = process.env.OFFICIAL_SR_TESTNET_ADDRESS || process.env.NEXT_PUBLIC_OFFICIAL_SR_TESTNET_ADDRESS || "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
+  const OFFICIAL_SR_TESTNET_HEX = "415cc58ba778a87ac1ea060d4aa116509691fb0ae0";
+  const OFFICIAL_SR_MAINNET_B58 = process.env.OFFICIAL_SR_MAINNET_ADDRESS || process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
+  const OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052";
 
   const whatsappRegistry: Record<string, { verified: boolean; verifiedAt: string; phone?: string }> = {};
 
@@ -552,8 +558,11 @@ export function createApp(): Express {
                 const hexV = toTronHex(v.vote_address || "");
                 return (
                   rawV === OFFICIAL_SR_MAINNET_HEX ||
+                  rawV === OFFICIAL_SR_TESTNET_HEX ||
                   rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-                  hexV === OFFICIAL_SR_MAINNET_HEX
+                  rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+                  hexV === OFFICIAL_SR_MAINNET_HEX ||
+                  hexV === OFFICIAL_SR_TESTNET_HEX
                 );
               });
               if (hasVote) currentSrVoted = true;
@@ -566,7 +575,7 @@ export function createApp(): Express {
 
       // 2. Query FullNode RPC for live blockchain state
       const hexAddress = toTronHex(rawAddress);
-      const fullnode = process.env.FULLNODE_URL || process.env.RPC_URL || "https://fullnode-one.trobchain.com";
+      const fullnode = process.env.FULLNODE_URL || process.env.RPC_URL || (isMainnetEnv ? "https://fullnode-one.trobchain.com" : "https://fullnode-one-testnet.trobchain.com");
       const acctRes = await fetch(`${fullnode}/wallet/getaccount`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -619,10 +628,13 @@ export function createApp(): Express {
             const rawV = (v.vote_address || "").trim().toLowerCase();
             const hexV = toTronHex(v.vote_address || "");
             return (
-              rawV === OFFICIAL_SR_MAINNET_HEX ||
-              rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
-              hexV === OFFICIAL_SR_MAINNET_HEX
-            );
+                  rawV === OFFICIAL_SR_MAINNET_HEX ||
+                  rawV === OFFICIAL_SR_TESTNET_HEX ||
+                  rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+                  rawV === OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
+                  hexV === OFFICIAL_SR_MAINNET_HEX ||
+                  hexV === OFFICIAL_SR_TESTNET_HEX
+                );
           });
           if (hasVote) currentSrVoted = true;
         }

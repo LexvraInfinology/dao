@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Check, Copy, Share2, ShieldCheck, Clock, Lock } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { getOnChainCodeByUser } from "@/lib/contracts";
+import { getOnChainCodeByUser, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export interface ReferralLinkCardProps {
   address?: string | null;
@@ -51,6 +51,11 @@ export function ReferralLinkCard({
   const [origin, setOrigin] = useState(
     process.env.NEXT_PUBLIC_MATRIX_URL || "https://equorafimatrix.com"
   );
+
+  const isVaultSponsor =
+    !sponsorAddress ||
+    sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+    (sponsorAddress.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsorAddress);
 
   // 4-Hour Launch Grace Period for Genesis Council seats (1 to 100)
   const isGenesisCouncil = Boolean(daoSeat && daoSeat >= 1 && daoSeat <= 100);
@@ -200,7 +205,18 @@ export function ReferralLinkCard({
             </div>
           )}
 
-          {sponsorAddress && sponsorAddress !== "0x0000000000000000000000000000000000000000" ? (
+          {isVaultSponsor ? (
+            <div
+              onClick={() => toast.copy(toTrobBase58(CONTRACT_ADDRESSES.vault), "Protocol Vault")}
+              title="Click to copy Protocol Vault address"
+              className="px-2.5 py-1 rounded-full bg-[#f8fafc] border border-[#e2e8f0] text-[11px] font-bold text-[#475569] flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 transition-colors"
+            >
+              <span>Upline:</span>
+              <span className="font-mono font-extrabold text-[#2563eb]">
+                Protocol Vault (Apex Root)
+              </span>
+            </div>
+          ) : sponsorAddress && sponsorAddress !== "0x0000000000000000000000000000000000000000" ? (
             <div
               onClick={() => toast.copy(toTrobBase58(sponsorAddress), "Sponsor Address")}
               title="Click to copy Sponsor address"
@@ -280,11 +296,12 @@ export function ReferralLinkCard({
         ) : (
           <span>Share your personal link to register partners directly into your Level 1 &amp; Level 2 matrix.</span>
         )}
-        {sponsorAddress && (
-          <span className="text-[#657895] shrink-0">
-            Sponsor: <span className="font-mono font-bold text-[#102341]">{formatAddress(sponsorAddress)}</span>
+        <span className="text-[#657895] shrink-0">
+          Sponsor:{" "}
+          <span className="font-mono font-bold text-[#102341]">
+            {isVaultSponsor ? `Protocol Vault (${formatAddress(toTrobBase58(CONTRACT_ADDRESSES.vault))})` : formatAddress(sponsorAddress || "")}
           </span>
-        )}
+        </span>
       </div>
     </div>
   );

@@ -118,10 +118,6 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
     ) external onlyOwner {
         if (_vaultContract != address(0)) {
             vaultContract = _vaultContract;
-            // Automatically anchor root to vaultContract if root is currently deployer/owner
-            if (root == owner() || root == address(0)) {
-                root = _vaultContract;
-            }
         }
         if (_daoContract   != address(0)) daoContract   = _daoContract;
         if (_matrixContract!= address(0)) matrixContract= _matrixContract;
@@ -145,7 +141,7 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         if (user == address(0)) revert InvalidUser();
         if (_users[user].isRegistered) revert AlreadyRegistered();
 
-        address fallbackRoot = (vaultContract != address(0)) ? vaultContract : root;
+        address fallbackRoot = root;
         address validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user && sponsor != owner()) ? sponsor : fallbackRoot;
         uint32 newCode = _generateUniqueCode(user);
 
@@ -209,7 +205,7 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
      *      Falls back to root if code is 0, out of range, or unregistered.
      */
     function _resolveSponsor(uint32 code, address user) internal view returns (address) {
-        address fallbackRoot = (vaultContract != address(0)) ? vaultContract : root;
+        address fallbackRoot = root;
         if (code == 0 || code < CODE_MIN || code > CODE_MAX) return fallbackRoot;
         address candidate = codeToUser[code];
         if (candidate == address(0) || candidate == user || candidate == owner() || !_users[candidate].isRegistered) {

@@ -3,18 +3,21 @@
 // ==============================================================================
 
 export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
-    return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
-  }
-  // In the browser, check if running on localhost
+  // In the browser:
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:4000/api/matrix";
     }
+    // Remote / Tunnel / Mobile / Domain access — use relative path rewritten by Next.js to backend API
+    return "/api/matrix";
   }
-  return "https://api.equorafidao.com/api/matrix";
+  // Server-side (Node SSR)
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.startsWith("/")) {
+    const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
+    return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
+  }
+  return "http://127.0.0.1:4000/api/matrix";
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -76,6 +79,7 @@ export interface MatrixUserProfile {
   referralCode?: number | null;
   daoSeat?: number | null;
   upline2Address?: string | null;
+  isVaultSponsor?: boolean;
   directReferralsCount: number;
   activeDirectsCount?: number;
   isQualified?: boolean;

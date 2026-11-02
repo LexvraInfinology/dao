@@ -92,7 +92,7 @@ export function OverviewTab({
             ${totalEarnedUsd.toFixed(2)}
           </div>
           <div className="text-[10.5px] text-[#0e9f79] font-bold mt-1.5 truncate">
-            All slots combined • P2P Settled
+            All slots combined • P2P Settled on Blockchain
           </div>
         </div>
 

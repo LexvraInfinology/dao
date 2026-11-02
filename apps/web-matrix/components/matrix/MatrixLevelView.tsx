@@ -21,18 +21,18 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const defaultProgressionLevels = Array.from({ length: 12 }, (_, i) => {
     const lvl = i + 1;
-    const isUnlocked = lvl <= 4;
+    const isUnlocked = lvl === 1;
     const cost = 30 * Math.pow(2, lvl - 1);
-    const recycles = lvl <= 3 ? 1 : 0;
-    const earnedVal = isUnlocked ? (recycles * 6 * cost) : 0;
+    const recycles = 0;
+    const earnedVal = 0;
     return {
       level: lvl,
       num: String(lvl).padStart(2, "0"),
       status: isUnlocked ? "Active" : "Locked",
       statusType: isUnlocked ? "active" : "locked",
-      nodesFilled: lvl <= 3 ? 14 : 0,
+      nodesFilled: 0,
       totalNodes: 14,
-      progress: lvl <= 3 ? 100 : 0,
+      progress: 0,
       earned: `$${earnedVal.toFixed(2)}`,
       isActive: isUnlocked,
       cost,
@@ -66,7 +66,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
         })
       : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false }));
 
-  const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 4;
+  const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 1;
 
   return (
               /* ═══════════════════════════════════════════════════════════ */

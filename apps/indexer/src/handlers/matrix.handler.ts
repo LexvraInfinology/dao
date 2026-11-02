@@ -173,20 +173,23 @@ export async function handleDistributionExecuted(event: {
       }).catch(() => {});
     }
 
+    // Fixed protocol USD tier valuation: Slot 1 = $30, Slot 2 = $60, etc.
+    const slotCostUsd = 30 * Math.pow(2, Math.max(1, slotNumber) - 1);
+
     await prisma.matrixProfile.upsert({
       where: { userAddress: recipient },
       create: {
         userAddress: recipient,
         username: `Operative #${recipient.slice(2, 6).toUpperCase()}`,
-        totalEarnings: amountDecimal,
-        availableBalance: amountDecimal,
-        directEarnings: isDirect ? amountDecimal : 0,
-        matrixEarnings: isDirect ? 0 : amountDecimal,
+        totalEarnings: slotCostUsd,
+        availableBalance: slotCostUsd,
+        directEarnings: isDirect ? slotCostUsd : 0,
+        matrixEarnings: isDirect ? 0 : slotCostUsd,
       },
       update: {
-        totalEarnings: { increment: amountDecimal },
-        availableBalance: { increment: amountDecimal },
-        ...(isDirect ? { directEarnings: { increment: amountDecimal } } : { matrixEarnings: { increment: amountDecimal } }),
+        totalEarnings: { increment: slotCostUsd },
+        availableBalance: { increment: slotCostUsd },
+        ...(isDirect ? { directEarnings: { increment: slotCostUsd } } : { matrixEarnings: { increment: slotCostUsd } }),
       },
     }).catch(() => {});
 
@@ -196,6 +199,7 @@ export async function handleDistributionExecuted(event: {
         userAddress: recipient,
         type: isDirect ? "COMMISSION_EARNED" : "SPILLOVER_RECEIVED",
         amount: amountDecimal,
+        amountUsd: slotCostUsd,
         slotNumber,
         cycle,
         position: event.position,

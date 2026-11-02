@@ -12,6 +12,7 @@ export interface Transaction {
   to: string;
   amount: number;
   amountDisplay: string;
+  trobSubtitle?: string | null;
   status: "Confirmed" | "Pending" | "Failed";
   date: string;
   time: string;
@@ -116,13 +117,22 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
             timeStr = "";
           }
 
+          const rawAmt = Number(t.amount);
+          const rawUsd = Number(t.amountUsd);
+          const slotTierUsd = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30.0;
+          const displayUsd = (rawUsd > 0 && rawUsd <= 500)
+            ? rawUsd
+            : (rawAmt > 0 && rawAmt <= 500 ? rawAmt : slotTierUsd);
+          const trobTokens = (t as any).trobAmount || (rawAmt > 500 ? rawAmt : null);
+
           return {
             id: idx + 1,
             type: txType,
             from: isSend ? "You" : t.fromAddress ? formatAddress(t.fromAddress) : "Network",
             to: isSend ? (t.toAddress ? formatAddress(t.toAddress) : "System") : "You",
-            amount: isSend ? -t.amount : t.amount,
-            amountDisplay: `${isSend ? "-" : "+"} $${Number(t.amount).toFixed(2)}`,
+            amount: isSend ? -displayUsd : displayUsd,
+            amountDisplay: `${isSend ? "-" : "+"} $${displayUsd.toFixed(2)}`,
+            trobSubtitle: trobTokens ? `${trobTokens.toFixed(2)} TROB` : null,
             status: t.status === "COMPLETED" ? "Confirmed" : t.status === "PENDING" ? "Pending" : "Failed",
             date: formatDateSafe(t.timestamp),
             time: timeStr,
@@ -224,7 +234,7 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>{tx.amountDisplay}</div>
-                          <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD</div>
+                          <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD {tx.trobSubtitle && <span className="text-[9.5px] text-slate-400 font-normal">({tx.trobSubtitle})</span>}</div>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-semibold bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0]">{tx.status}</span>

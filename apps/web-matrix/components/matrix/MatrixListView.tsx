@@ -22,7 +22,7 @@ export interface MatrixMember {
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore } from "@/lib/stores";
 import { formatAddress, formatDateSafe } from "@/lib/format";
-import { getSlotCost } from "@/lib/contracts";
+import { getSlotCost, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export interface MatrixListViewProps {
   handleCopy?: (text: string) => void;
@@ -51,22 +51,24 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
     (slotDetails?.nodes ? slotDetails.nodes.filter((n) => n.filled).length : 0);
 
   const matrixMembers: MatrixMember[] = React.useMemo(() => {
-    if (!slotDetails?.nodes || slotDetails.nodes.length === 0) {
+    const isUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked) : selectedSlotNumber === 1;
+
+    if (!isUnlocked || !slotDetails?.nodes || slotDetails.nodes.length === 0) {
       return Array.from({ length: 14 }, (_, i) => ({
         pos: String(i + 1).padStart(2, "0"),
-        isOpen: true,
-        status: "Open",
-        statusType: "open" as const,
+        isOpen: isUnlocked,
+        status: isUnlocked ? "Open" : "Locked",
+        statusType: (isUnlocked ? "open" : "locked") as any,
         level: `Slot ${selectedSlotNumber}`,
       }));
     }
 
     return Array.from({ length: 14 }, (_, i) => {
       const posNum = i + 1;
-      const node = slotDetails.nodes.find((n) => n.position === posNum);
+      const node = isUnlocked ? slotDetails.nodes.find((n) => n.position === posNum) : null;
       const posStr = String(posNum).padStart(2, "0");
       if (node && node.filled) {
-        const addr = node.placedUser || "";
+        const addr = node.placedUser || (node as any)?.base58 || (posNum === 4 || posNum === 5 || posNum === 14 ? CONTRACT_ADDRESSES.vault : "");
         const shortAddr = addr ? formatAddress(addr) : `Member #${posNum}`;
         const joinedDate = formatDateSafe(node.timestamp, "On-Chain Active");
         return {
@@ -91,9 +93,9 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
 
       return {
         pos: posStr,
-        isOpen: true,
-        status: "Open",
-        statusType: "open" as const,
+        isOpen: isUnlocked,
+        status: isUnlocked ? "Open" : "Locked",
+        statusType: (isUnlocked ? "open" : "locked") as any,
         level: `Slot ${selectedSlotNumber}`,
       };
     });

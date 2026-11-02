@@ -267,21 +267,22 @@ export function toCanonicalAddress(input?: string | null): string {
   return str.toLowerCase();
 }
 
+const IS_MAINNET_SVC = process.env.IS_MAINNET === "true" || process.env.NEXT_PUBLIC_IS_MAINNET === "true";
 const MATRIX_CONTRACT_HEX =
-  process.env.NEXT_PUBLIC_MAINNET_MATRIX_HEX ||
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   process.env.MATRIX_HEX ||
-  "411a5f193d5b9654282fed67931d9123c00da9c879";
+  (IS_MAINNET_SVC ? "411a5f193d5b9654282fed67931d9123c00da9c879" : "418919e11e219e81d9f510947f9d4f9e9ac04f4cc6");
 const REGISTRY_CONTRACT_HEX =
-  process.env.NEXT_PUBLIC_MAINNET_REGISTRY_HEX ||
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   process.env.REGISTRY_HEX ||
-  "411a7f29b91424fd6715c5048b458dcf7beeeaeebc";
+  (IS_MAINNET_SVC ? "411a7f29b91424fd6715c5048b458dcf7beeeaeebc" : "412854e95c847472bb7130baf5f3d9363dcee5fe18");
+const VAULT_CONTRACT_CANONICAL =
+  toCanonicalAddress(process.env.NEXT_PUBLIC_VAULT_ADDRESS || process.env.VAULT_ADDRESS || "0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee");
 const TROB_RPC_ENDPOINT =
   process.env.RPC_URL ||
   process.env.FULLNODE_URL ||
   process.env.NEXT_PUBLIC_RPC_URL ||
-  "https://fullnode-one.trobchain.com";
+  (IS_MAINNET_SVC ? "https://fullnode-one.trobchain.com" : "https://fullnode-one-testnet.trobchain.com");
 const TROB_TESTNET_RPC = TROB_RPC_ENDPOINT;
 const userLastSyncTime = new Map<string, number>();
 const registryCodeCache = new Map<string, number>();
@@ -598,7 +599,7 @@ export class MatrixService {
       });
 
       if (!user) {
-        return await this.getOrCreateUser(canonicalAddress, sponsorAddress);
+        return getFallbackProfile(canonicalAddress);
       }
 
       const profile = user.matrixProfile;
@@ -751,6 +752,9 @@ export class MatrixService {
           },
         },
         include: {
+          user: {
+            select: { sponsorAddress: true },
+          },
           placements: {
             where: { slotNumber },
             orderBy: { position: "asc" },
@@ -774,11 +778,14 @@ export class MatrixService {
         where: { sponsorAddress: canonicalAddress },
         select: {
           address: true,
+          userId: true,
+          registrationTimestamp: true,
           matrixSlots: {
             where: { slotNumber: 1, isUnlocked: true },
             select: { id: true },
           },
         },
+        orderBy: { registrationTimestamp: "asc" },
       }).catch(() => []);
       const directSet = new Set(directReferrals.map((r: any) => r.address.toLowerCase()));
       const depositedDirectSet = new Set(
@@ -828,10 +835,11 @@ export class MatrixService {
         };
       });
 
-      // Dynamic Subtree Downline Overlay for Open Spots in Active Board
-      const pos1Addr = nodesArray[0]?.placedUser?.toLowerCase() || null;
-      const pos2Addr = nodesArray[1]?.placedUser?.toLowerCase() || null;
-
+      // Strict Top-to-Bottom, Left-to-Right (Breadth-First Balanced) Matrix Resolution
+      // 1. Direct referrals strictly fill Level 1 (Positions 1 & 2) first, qualifying the user.
+      // 2. All subsequent entrants (extra directs 3+, team downlines) fill sequentially Left-to-Right.
+      // 3. Level 2 (Pos 3, 4, 5, 6) MUST completely fill before Level 3 (Pos 7..14) receives any node,
+      //    guaranteeing that Position 6 is NEVER skipped or left empty while Pos 7 & 8 are filled.
       const getDownlineDirects = async (sponsor: string | null) => {
         if (!sponsor) return [];
         return await prisma.user.findMany({
@@ -849,254 +857,189 @@ export class MatrixService {
         }).catch(() => []);
       };
 
-      if (pos1Addr) {
-        const p1Directs = await getDownlineDirects(pos1Addr);
-        let idx = 0;
-        if (!nodesArray[2].filled && p1Directs[idx]) {
-          const d = p1Directs[idx++];
-          nodesArray[2] = {
-            position: 3,
-            level: 2,
+      const placedSet = new Set<string>();
+      if (canonicalAddress) placedSet.add(canonicalAddress.toLowerCase());
+      for (const n of nodesArray) {
+        if (n.filled && n.placedUser) placedSet.add(n.placedUser.toLowerCase());
+      }
+
+      // Level 1: Position 1 and Position 2 (User's direct referrals)
+      let dIdx = 0;
+      if (!nodesArray[0].filled && directReferrals[dIdx]) {
+        const d: any = directReferrals[dIdx++];
+        const dAddr = d.address.toLowerCase();
+        if (!placedSet.has(dAddr)) {
+          nodesArray[0] = {
+            position: 1,
+            level: 1,
             filled: true,
             placedUser: d.address,
             userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
+            payoutType: "UPLINE_1",
+            recipientAddress: slot?.user?.sponsorAddress || "0xProtocolPools_EquoraVault",
             wasFallback: false,
             amount: SLOT_COSTS[slotNumber] || 0,
             timestamp: d.registrationTimestamp,
-            isDirect: false,
+            isDirect: true,
             isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
+            isSpillover: false,
           };
-        }
-        if (!nodesArray[3].filled && p1Directs[idx]) {
-          const d = p1Directs[idx++];
-          nodesArray[3] = {
-            position: 4,
-            level: 2,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "PROTOCOL_POOL",
-            recipientAddress: "0xProtocolPools_EquoraVault",
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
+          placedSet.add(dAddr);
         }
       }
 
-      if (pos2Addr) {
-        const p2Directs = await getDownlineDirects(pos2Addr);
-        let idx = 0;
-        if (!nodesArray[4].filled && p2Directs[idx]) {
-          const d = p2Directs[idx++];
-          nodesArray[4] = {
-            position: 5,
-            level: 2,
+      if (!nodesArray[1].filled && directReferrals[dIdx]) {
+        const d: any = directReferrals[dIdx++];
+        const dAddr = d.address.toLowerCase();
+        if (!placedSet.has(dAddr)) {
+          nodesArray[1] = {
+            position: 2,
+            level: 1,
             filled: true,
             placedUser: d.address,
             userId: d.userId,
-            payoutType: "PROTOCOL_POOL",
-            recipientAddress: "0xProtocolPools_EquoraVault",
+            payoutType: "UPLINE_2",
+            recipientAddress: slot?.user?.sponsorAddress || "0xProtocolPools_EquoraVault",
             wasFallback: false,
             amount: SLOT_COSTS[slotNumber] || 0,
             timestamp: d.registrationTimestamp,
-            isDirect: false,
+            isDirect: true,
             isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
+            isSpillover: false,
           };
-        }
-        if (!nodesArray[5].filled && p2Directs[idx]) {
-          const d = p2Directs[idx++];
-          nodesArray[5] = {
-            position: 6,
-            level: 2,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
+          placedSet.add(dAddr);
         }
       }
 
-      // Level 3 (Pos 7 to 14)
-      const pos3Addr = nodesArray[2]?.placedUser?.toLowerCase() || null;
-      if (pos3Addr) {
-        const p3Directs = await getDownlineDirects(pos3Addr);
-        let idx = 0;
-        if (!nodesArray[6].filled && p3Directs[idx]) {
-          const d = p3Directs[idx++];
-          nodesArray[6] = {
-            position: 7,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "SPILLOVER_DOWNLINE1",
-            recipientAddress: pos1Addr || canonicalAddress,
+      // Check 2-Direct Qualification Gate
+      const isApex =
+        canonicalAddress === VAULT_CONTRACT_CANONICAL ||
+        canonicalAddress === "0x5fd6266a07fa4ba10dd34e9a315edd47904b8823";
+      const isQualified = isApex || directReferrals.length >= 2;
+
+      if (!isQualified) {
+        // User has NOT achieved 2 direct referrals requirement:
+        // Personal tree cannot progress beyond Level 1 direct referrals.
+        // Positions 3 through 14 must remain completely empty!
+        for (let pos = 3; pos <= 14; pos++) {
+          nodesArray[pos - 1] = {
+            position: pos,
+            level: getLevelForPosition(pos),
+            filled: false,
+            placedUser: null,
+            userId: null,
+            payoutType: null,
+            recipientAddress: null,
             wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
+            amount: 0,
+            timestamp: null,
             isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
+            isDirectDeposited: false,
+            isSpillover: false,
           };
         }
-        if (!nodesArray[7].filled && p3Directs[idx]) {
-          const d = p3Directs[idx++];
-          nodesArray[7] = {
-            position: 8,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
+        return {
+          slotNumber,
+          cost: SLOT_COSTS[slotNumber] || 0,
+          isUnlocked: Boolean(slot?.isUnlocked),
+          currentCycle: targetCycle,
+          recyclesCount: slot?.recyclesCount || 0,
+          filledNodes: nodesArray.filter(n => n.filled).length,
+          upgradeReserve: Number(slot?.upgradeReserve || 0),
+          totalEarned: Number(slot?.totalEarned || 0),
+          nodes: nodesArray,
+        };
+      }
+
+      // True Breadth-First-Search (BFS) Balanced Top-to-Bottom, Left-to-Right Matrix Filling
+      // 1. Extra direct referrals of YOU (beyond first 2) are placed in candidate queue first
+      // 2. An exploreQueue tracks placed nodes in BFS order so their downlines fill empty slots sequentially
+      // 3. Positions 3 through 14 are filled strictly Left-to-Right without ANY gaps!
+      const candidateQueue: any[] = [];
+      for (; dIdx < directReferrals.length; dIdx++) {
+        const d: any = directReferrals[dIdx];
+        const dAddr = d.address.toLowerCase();
+        if (!placedSet.has(dAddr)) {
+          candidateQueue.push({ ...d, isDirect: true });
+          placedSet.add(dAddr);
         }
       }
 
-      const pos4Addr = nodesArray[3]?.placedUser?.toLowerCase() || null;
-      if (pos4Addr) {
-        const p4Directs = await getDownlineDirects(pos4Addr);
-        let idx = 0;
-        if (!nodesArray[8].filled && p4Directs[idx]) {
-          const d = p4Directs[idx++];
-          nodesArray[8] = {
-            position: 9,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
-        }
-        if (!nodesArray[9].filled && p4Directs[idx]) {
-          const d = p4Directs[idx++];
-          nodesArray[9] = {
-            position: 10,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "SPILLOVER_DOWNLINE2",
-            recipientAddress: pos2Addr || canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
-        }
+      // Queue of placed nodes whose downlines will be explored in strict BFS order:
+      const exploreQueue: string[] = [];
+      for (const n of nodesArray) {
+        if (n.filled && n.placedUser) exploreQueue.push(n.placedUser.toLowerCase());
       }
 
-      const pos5Addr = nodesArray[4]?.placedUser?.toLowerCase() || null;
-      if (pos5Addr) {
-        const p5Directs = await getDownlineDirects(pos5Addr);
-        let idx = 0;
-        if (!nodesArray[10].filled && p5Directs[idx]) {
-          const d = p5Directs[idx++];
-          nodesArray[10] = {
-            position: 11,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
-        }
-        if (!nodesArray[11].filled && p5Directs[idx]) {
-          const d = p5Directs[idx++];
-          nodesArray[11] = {
-            position: 12,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "OWNER_DIRECT",
-            recipientAddress: canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
-        }
-      }
+      const pos1Addr = nodesArray[0]?.placedUser?.toLowerCase() || null;
+      const pos2Addr = nodesArray[1]?.placedUser?.toLowerCase() || null;
 
-      const pos6Addr = nodesArray[5]?.placedUser?.toLowerCase() || null;
-      if (pos6Addr) {
-        const p6Directs = await getDownlineDirects(pos6Addr);
-        let idx = 0;
-        if (!nodesArray[12].filled && p6Directs[idx]) {
-          const d = p6Directs[idx++];
-          nodesArray[12] = {
-            position: 13,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "SPILLOVER_DOWNLINE2",
-            recipientAddress: pos2Addr || canonicalAddress,
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
+      // Helper to generate node object based on position rules in EquoraMatrix.sol
+      const createNodeForPos = (pos: number, cand: any) => {
+        const level = getLevelForPosition(pos);
+        let payoutType = "OWNER_DIRECT";
+        let recipientAddress = canonicalAddress;
+        if (pos === 4) {
+          payoutType = "PROTOCOL_POOL";
+          recipientAddress = "0xProtocolPools_EquoraVault";
+        } else if (pos === 5) {
+          payoutType = "PROTOCOL_POOL";
+          recipientAddress = "0xProtocolPools_EquoraVault";
+        } else if (pos === 7) {
+          payoutType = "SPILLOVER_DOWNLINE1";
+          recipientAddress = pos1Addr || canonicalAddress;
+        } else if (pos === 10) {
+          payoutType = "SPILLOVER_DOWNLINE2";
+          recipientAddress = pos2Addr || canonicalAddress;
+        } else if (pos === 13) {
+          payoutType = "SPILLOVER_DOWNLINE2";
+          recipientAddress = pos2Addr || canonicalAddress;
+        } else if (pos === 14) {
+          payoutType = "PROTOCOL_POOL";
+          recipientAddress = "0xProtocolPools_EquoraVault";
         }
-        if (!nodesArray[13].filled && p6Directs[idx]) {
-          const d = p6Directs[idx++];
-          nodesArray[13] = {
-            position: 14,
-            level: 3,
-            filled: true,
-            placedUser: d.address,
-            userId: d.userId,
-            payoutType: "PROTOCOL_POOL",
-            recipientAddress: "0xProtocolPools_EquoraVault",
-            wasFallback: false,
-            amount: SLOT_COSTS[slotNumber] || 0,
-            timestamp: d.registrationTimestamp,
-            isDirect: false,
-            isDirectDeposited: d.matrixSlots && d.matrixSlots.length > 0,
-            isSpillover: true,
-          };
+        return {
+          position: pos,
+          level,
+          filled: true,
+          placedUser: cand.address,
+          userId: cand.userId,
+          payoutType,
+          recipientAddress,
+          wasFallback: false,
+          amount: SLOT_COSTS[slotNumber] || 0,
+          timestamp: cand.registrationTimestamp,
+          isDirect: Boolean(cand.isDirect),
+          isDirectDeposited: cand.matrixSlots && cand.matrixSlots.length > 0,
+          isSpillover: !cand.isDirect,
+        };
+      };
+
+      // Sequentially fill positions 3 to 14 in strict BFS order:
+      for (let pos = 3; pos <= 14; pos++) {
+        // While candidate queue is empty and we have placed nodes to explore:
+        while (candidateQueue.length === 0 && exploreQueue.length > 0) {
+          const parent = exploreQueue.shift()!;
+          const children = await getDownlineDirects(parent);
+          for (const cand of children) {
+            const cAddr = cand.address.toLowerCase();
+            if (!placedSet.has(cAddr)) {
+              candidateQueue.push({ ...cand, isDirect: false });
+              placedSet.add(cAddr);
+            }
+          }
+        }
+
+        if (!nodesArray[pos - 1].filled && candidateQueue.length > 0) {
+          const cand = candidateQueue.shift()!;
+          nodesArray[pos - 1] = createNodeForPos(pos, cand);
+          exploreQueue.push(cand.address.toLowerCase());
+        } else if (nodesArray[pos - 1].filled) {
+          const existing = nodesArray[pos - 1].placedUser?.toLowerCase();
+          if (existing) {
+            placedSet.add(existing);
+            exploreQueue.push(existing);
+          }
         }
       }
 
@@ -1678,8 +1621,42 @@ export class MatrixService {
     const canonicalAddress = toCanonicalAddress(address);
     await syncUserFromChain(canonicalAddress).catch(() => {});
     try {
-      const user = await this.getOrCreateUser(canonicalAddress);
+      let user = await prisma.user.findUnique({
+        where: { address: canonicalAddress },
+        include: { matrixProfile: true, matrixSettings: true, matrixSlots: true }
+      });
+      if (!user) {
+        return {
+          address: canonicalAddress,
+          user: getFallbackProfile(canonicalAddress),
+          activeSlot: {
+            slotNumber: 1,
+            filledNodes: 0,
+            currentCycle: 1,
+            upgradeReserve: 0,
+          },
+          highestUnlockedSlot: 0,
+          level1Count: 0,
+          level2Count: 0,
+          level3Count: 0,
+          nextCommissionTarget: {
+            positionNumber: 1,
+            title: "Position #1",
+            description: "Direct matrix commission distribution",
+            reward: "Direct Distribution",
+          },
+          retopupState: {
+            hasCappedSlot: false,
+            cappedSlotNumber: null,
+            deadline: null,
+            hoursRemaining: 0,
+            isLocked: false,
+          },
+          recentActivities: [],
+        } as any;
+      }
 
+      const userProfile = await this.getUserProfile(canonicalAddress);
       const slots = await prisma.matrixSlot.findMany({
         where: { userAddress: canonicalAddress, isUnlocked: true },
         orderBy: { slotNumber: "desc" },
@@ -1766,14 +1743,14 @@ export class MatrixService {
 
       return {
         currentSlot: highestSlot,
-        totalEarnedTrob: livePrice > 0 ? Math.round((user.totalEarnings / livePrice) * 100) / 100 : user.totalEarnings,
-        totalEarnedUsd: user.totalEarnings,
-        availableWithdrawTrob: livePrice > 0 ? Math.round((user.availableBalance / livePrice) * 100) / 100 : user.availableBalance,
-        availableWithdrawUsd: user.availableBalance,
-        recyclesCount: user.recyclesCount,
+        totalEarnedTrob: livePrice > 0 ? Math.round((userProfile.totalEarnings / livePrice) * 100) / 100 : userProfile.totalEarnings,
+        totalEarnedUsd: userProfile.totalEarnings,
+        availableWithdrawTrob: livePrice > 0 ? Math.round((userProfile.availableBalance / livePrice) * 100) / 100 : userProfile.availableBalance,
+        availableWithdrawUsd: userProfile.availableBalance,
+        recyclesCount: userProfile.recyclesCount,
         trobPriceUsd: livePrice,
-        isQualified: user.isQualified ?? false,
-        activeDirectsCount: user.activeDirectsCount ?? 0,
+        isQualified: userProfile.isQualified ?? false,
+        activeDirectsCount: userProfile.activeDirectsCount ?? 0,
         activeSlotProgress: {
           slotNumber: activeSlot.slotNumber,
           filledNodes: filled,
@@ -1804,7 +1781,17 @@ export class MatrixService {
     period: "all" | "month" | "week" = "all",
     limit = 25
   ): Promise<MatrixLeaderboardEntryDTO[]> {
+    const vaultCanonical = VAULT_CONTRACT_CANONICAL;
     const profiles = await prisma.matrixProfile.findMany({
+      where: {
+        userAddress: {
+          notIn: [
+            vaultCanonical,
+            "0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee",
+            "0x7124b32b48786a13177f3bdc9620e7a48eb9c902",
+          ],
+        },
+      },
       orderBy: { totalEarnings: "desc" },
       take: limit,
       include: {
@@ -1829,11 +1816,11 @@ export class MatrixService {
       return {
         rank: idx + 1,
         address: p.userAddress,
-        userId: p.user?.userId || 0,
+        userId: p.user?.userId || idx + 1,
         username: p.username || `Operative #${p.user?.userId || idx + 1}`,
         avatarUrl: p.avatarUrl,
         totalEarned,
-        totalEarnedUsd: totalEarned * TROB_PRICE_USD,
+        totalEarnedUsd: totalEarned,
         directCount: p.user?.directReferralsCount || 0,
         highestSlot,
         rankTier: p.rankTier,
@@ -1897,7 +1884,7 @@ export class MatrixService {
         }),
         prisma.matrixTransaction.findMany({
           where: { userAddress: canonicalAddress },
-          select: { type: true, amount: true, status: true },
+          select: { type: true, amount: true, amountUsd: true, slotNumber: true, status: true },
         }),
       ]);
 
@@ -1906,31 +1893,46 @@ export class MatrixService {
       let pendingCount = 0;
 
       for (const t of allUserTxs) {
-        const amt = Number(t.amount);
+        // Enforce fixed protocol USD tier value ($30, $60, etc.) to never confuse native TROB tokens with USD
+        const rawAmt = Number(t.amount);
+        const slotVal = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30;
+        const usd = (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
+          ? Number(t.amountUsd)
+          : (rawAmt > 100 ? slotVal : (rawAmt > 0 ? rawAmt : slotVal));
+
         if (t.type === "WITHDRAWAL" || t.type === "SLOT_PURCHASE") {
-          totalOutflow += amt;
+          totalOutflow += usd;
         } else {
-          totalInflow += amt;
+          totalInflow += usd;
         }
         if (t.status === "PENDING") pendingCount++;
       }
 
-      const items: MatrixTransactionDTO[] = txs.map((t: any) => ({
-        id: t.id,
-        type: t.type,
-        slotNumber: t.slotNumber,
-        cycle: t.cycle,
-        position: t.position,
-        amount: Number(t.amount),
-        amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
-        token: t.token,
-        fromAddress: t.fromAddress,
-        toAddress: t.toAddress,
-        txHash: t.txHash,
-        status: t.status,
-        description: t.description,
-        timestamp: t.timestamp,
-      }));
+      const items: MatrixTransactionDTO[] = txs.map((t: any) => {
+        const rawAmt = Number(t.amount);
+        const slotVal = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30;
+        const usd = (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
+          ? Number(t.amountUsd)
+          : (rawAmt > 100 ? slotVal : (rawAmt > 0 ? rawAmt : slotVal));
+
+        return {
+          id: t.id,
+          type: t.type,
+          slotNumber: t.slotNumber,
+          cycle: t.cycle,
+          position: t.position,
+          amount: usd,
+          amountUsd: usd,
+          token: "USD",
+          trobAmount: rawAmt > 0 ? rawAmt : undefined,
+          fromAddress: t.fromAddress,
+          toAddress: t.toAddress,
+          txHash: t.txHash,
+          status: t.status,
+          description: t.description,
+          timestamp: t.timestamp,
+        };
+      });
 
       return {
         items,

@@ -489,8 +489,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             isFirstId ||
             (stored && (
               isDeployerAddress(stored) ||
-              stored === "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL" ||
-              stored === "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx"
+              stored === "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa" ||
+              stored.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902"
             ))
           ) {
             localStorage.removeItem("equora_sponsor");
@@ -972,8 +972,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         // 3. Cast SR Governance Vote if needed
         const alreadyVotedSr = Boolean(eligibility?.condition2?.srVote?.voted || eligibility?.condition2?.srVote?.actualPassed);
         if (!alreadyVotedSr) {
-          const rawSr = eligibility?.condition2?.srVote?.officialSrAddress || "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
-          const officialSr = rawSr.includes("K7S") ? "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY" : rawSr;
+          const isMainnet = process.env.NEXT_PUBLIC_IS_MAINNET === 'true';
+          const defaultSr = isMainnet ? "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY" : (process.env.NEXT_PUBLIC_OFFICIAL_SR_TESTNET_ADDRESS || "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5");
+          const rawSr = eligibility?.condition2?.srVote?.officialSrAddress || defaultSr;
+          const officialSr = rawSr.includes("K7S") ? defaultSr : rawSr;
           const votesToCast = Math.max(1, (targetEnergy + targetBandwidth));
 
           try {
@@ -1031,6 +1033,20 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Join Slot 1 On-Chain ($30 USD in native TROB coin)
   const handleActivateSlot1 = async () => {
+    // Check if wallet is already unlocked on-chain to prevent contract revert & TrobSafe error
+    try {
+      const existingStatus = await getOnChainSlotStatus(address, 1);
+      if (existingStatus && existingStatus.isUnlocked) {
+        toast.success("Already Active", "Your wallet is already active in Slot #01! Redirecting to dashboard...");
+        setIsSlot1Unlocked(true);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`equora_matrix_registered_${address.toLowerCase()}`, "true");
+        }
+        router.replace("/dashboard");
+        return;
+      }
+    } catch {}
+
     // For the genesis/1st member, always route to Protocol Vault — bypass sponsor validation
     const effectiveSponsor = isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress;
 

@@ -353,6 +353,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
         const w = await createFundedWallet(owner);
         await matrix.connect(w).joinSlot(1, matrixOwner.address);
       }
+      expect((await matrix.getSlotData(matrixOwner.address, 1)).filledNodes).to.equal(6n);
 
       // Record balances before P7
       const dl1BalBefore = await token.balanceOf(downline1.address);
@@ -512,7 +513,7 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
 
       // Check slot data for daoMember2 -> should be auto-unlocked with filledNodes = 1
       const vaultAddr = await vault.getAddress();
-      const slotData = await matrix.getSlotData(vaultAddr, 1);
+      const slotData = await matrix.getSlotData(daoMember2.address, 1);
       expect(slotData.isUnlocked).to.be.true;
       expect(slotData.filledNodes).to.equal(1n);
       expect(slotData.nodes[0]).to.equal(retailUser.address);

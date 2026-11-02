@@ -269,8 +269,8 @@ export class DaoService {
     // Direct On-Chain fallback if still 0
     if (memberCount === 0) {
       try {
-        const fullNode = servicesConfig.blockchain.rpcUrl || "https://fullnode-one.trobchain.com";
-        const daoHex = "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4";
+        const fullNode = servicesConfig.blockchain.rpcUrl;
+        const daoHex = (process.env.NEXT_PUBLIC_DAO_HEX || "41d2b5680da9913bdc7ebe8a00ed419ecb60b669c5").replace(/^0x/, "41").toLowerCase();
         const ocRes = await fetch(`${fullNode}/wallet/triggerconstantcontract`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -475,13 +475,9 @@ export class DaoService {
       }
       if (!hexOwner) return 0;
 
-      const rpcUrl =
-        process.env.FULLNODE_URL ||
-        process.env.RPC_URL ||
-        process.env.NEXT_PUBLIC_RPC_URL ||
-        "https://fullnode-one.trobchain.com";
+      const rpcUrl = servicesConfig.blockchain.rpcUrl;
       const daoHex = (
-        process.env.NEXT_PUBLIC_DAO_HEX || "419031dbc5faddd365a9b3d40ddc0c550ca0f369e4"
+        process.env.NEXT_PUBLIC_DAO_HEX || "41d2b5680da9913bdc7ebe8a00ed419ecb60b669c5"
       )
         .replace(/^0x/, "41")
         .toLowerCase();

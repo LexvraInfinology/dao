@@ -31,11 +31,11 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
       .catch(() => {});
   }, []);
 
-  const totalEarnedTrob = data?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (profile?.totalEarnings ? profile.totalEarnings / trobPrice : 0));
-  const totalEarnedUsd = data?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (totalEarnedTrob * trobPrice));
+  const totalEarnedUsd = data?.totalEarnedUsd ?? profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0);
+  const totalEarnedTrob = data?.totalEarnedTrob ?? profile?.totalEarningsTrob ?? (totalEarnedUsd > 0 && trobPrice > 0 ? totalEarnedUsd / trobPrice : 0);
 
-  const availableWithdrawTrob = data?.availableWithdrawTrob ?? (profile?.availableBalanceTrob ?? (profile?.availableBalance ? profile.availableBalance / trobPrice : 0));
-  const availableWithdrawUsd = data?.availableWithdrawUsd ?? (profile?.availableBalanceUsd ?? (availableWithdrawTrob * trobPrice));
+  const availableWithdrawUsd = data?.availableWithdrawUsd ?? profile?.availableBalanceUsd ?? (profile?.availableBalance ?? 0);
+  const availableWithdrawTrob = data?.availableWithdrawTrob ?? profile?.availableBalanceTrob ?? (availableWithdrawUsd > 0 && trobPrice > 0 ? availableWithdrawUsd / trobPrice : 0);
 
   const nextSlot = Math.min(currentSlot + 1, 12);
   const nextSlotStr = nextSlot.toString().padStart(2, "0");

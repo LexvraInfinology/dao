@@ -11,7 +11,7 @@ import {
   ProtocolPoolsPanel,
   OverviewTab,
 } from "@/components/dashboard";
-import { MatrixAccessGate } from "@/components/matrix";
+import { MatrixAccessGate, MatrixQualificationAlert } from "@/components/matrix";
 import {
   WalletConnectModal,
   WalletDropdown,
@@ -23,6 +23,7 @@ import { useMatrixUser } from "@/lib/useMatrixUser";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { getOnChainUserById, getOnChainUserByCode } from "@/lib/contracts";
 import { LayoutDashboard, Network, Layers } from "lucide-react";
 
 type TabId = "overview" | "matrix" | "pools";
@@ -400,6 +401,13 @@ export default function DashboardPage() {
                   14 Seats / Slot
                 </span>
               </div>
+
+              {/* Show qualification alert banner if user has fewer than 2 active directs */}
+              <MatrixQualificationAlert
+                isQualified={Boolean(profile?.isQualified ?? ((profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0) >= 2))}
+                activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
+                referralUrl={typeof window !== "undefined" && address ? `${window.location.origin}/?ref=${address}` : undefined}
+              />
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_295px] xl:grid-cols-[1fr_320px] gap-4 lg:gap-5">
                 <div className="min-w-0">

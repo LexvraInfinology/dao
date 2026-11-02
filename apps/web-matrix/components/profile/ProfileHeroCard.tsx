@@ -4,6 +4,7 @@ import React from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
+import { CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export interface ProfileHeroCardProps {
   copy?: (text: string) => void;
@@ -95,11 +96,11 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
             <>
               <div
                 onClick={() => copy(toTrobBase58(profile.sponsorAddress!))}
-                title="Click to copy Upline 1 (Sponsor) address"
+                title="Click to copy Direct Sponsor address"
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[11.5px] font-semibold text-blue-700 shadow-xs cursor-pointer hover:bg-blue-100 transition-colors"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
-                <span>Upline 1: {toTrobBase58(profile.sponsorAddress).slice(0, 5)}...{toTrobBase58(profile.sponsorAddress).slice(-4)}</span>
+                <span>Sponsor: {toTrobBase58(profile.sponsorAddress).slice(0, 5)}...{toTrobBase58(profile.sponsorAddress).slice(-4)}</span>
               </div>
               {profile?.upline2Address && profile.upline2Address !== "0x0000000000000000000000000000000000000000" && (
                 <div
@@ -114,12 +115,12 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
             </>
           ) : (
             <div
-              onClick={() => copy("TPQyyruMPLn1S7szNTGWBtB1Yv1Noc1BRX")}
+              onClick={() => copy("${toTrobBase58(CONTRACT_ADDRESSES.vault)}")}
               title="Root Upline: Protocol 4 Pools Vault (Click to copy)"
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[11.5px] font-semibold text-purple-700 shadow-xs cursor-pointer hover:bg-purple-100 transition-colors"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"/>
-              <span>Upline: 4 Protocol Pools (Vault: TPQyy...1BRX)</span>
+              <span>Upline: Protocol Vault (Apex Root)</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#86efac] text-[11.5px] font-semibold text-[#16a34a] shadow-xs">

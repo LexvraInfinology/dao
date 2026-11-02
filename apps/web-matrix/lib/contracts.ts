@@ -7,10 +7,28 @@ import { getApiBaseUrl, type MatrixSlotDetails, type MatrixSlotSummary, type Mat
 
 // ── Network & Contract Addresses ─────────────────────────────────────────────
 
-export const IS_MAINNET = true;
-export const TARGET_NETWORK = "mainnet";
-export const NETWORK_NAME = "TrobChain Mainnet";
-export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1000);
+export const IS_MAINNET =
+  process.env.NEXT_PUBLIC_IS_MAINNET !== undefined
+    ? (process.env.NEXT_PUBLIC_IS_MAINNET === "true" || process.env.NEXT_PUBLIC_IS_MAINNET === "1")
+    : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "").toLowerCase() === "mainnet";
+
+export const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
+export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testnet";
+export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
+
+export const TESTNET_DEFAULT_ADDRESSES = {
+  matrix: "TNU8aUC8H8osyfhr2TnNzNNEMZPtGV4D8o",
+  token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
+  registry: "TDeTkVTHDv8i9aHi1eZBMUPSvuReypxAw1",
+  vault: "TXn5f6qg8egX1fww3aUAfrpoM3K91Lpq3Q",
+  salaryPool: "TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM",
+  rewardPool: "TMAiUnfvgchovZ4ffq7BuEPidCd1SxVJBf",
+  magicBoxPool: "TAoMXsB2Em1iK9tSqwGaPDL3A7hLHrR8Ue",
+  dao: "TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW",
+  nft: "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
+  legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
+  legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
+};
 
 export const MAINNET_DEFAULT_ADDRESSES = {
   matrix: "TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz",
@@ -26,21 +44,18 @@ export const MAINNET_DEFAULT_ADDRESSES = {
   legacyDaoV2: "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
 };
 
-// Verified TrobChain Mainnet Contract Addresses
-// Genesis Root Matrix Member (#0001) on TrobChain Mainnet
-export const GENESIS_ROOT_MEMBER_BASE58 = "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa";
-export const GENESIS_ROOT_MEMBER_HEX = "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
+const DEFAULT_ADDRESSES = IS_MAINNET ? MAINNET_DEFAULT_ADDRESSES : TESTNET_DEFAULT_ADDRESSES;
 
 export const CONTRACT_ADDRESSES = {
-  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.matrix,
-  token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || MAINNET_DEFAULT_ADDRESSES.token,
-  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || MAINNET_DEFAULT_ADDRESSES.registry,
-  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.vault,
-  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.salaryPool,
-  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || MAINNET_DEFAULT_ADDRESSES.rewardPool,
-  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || MAINNET_DEFAULT_ADDRESSES.magicBoxPool,
-  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || MAINNET_DEFAULT_ADDRESSES.dao,
-  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || MAINNET_DEFAULT_ADDRESSES.nft,
+  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || DEFAULT_ADDRESSES.matrix,
+  token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || DEFAULT_ADDRESSES.token,
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || DEFAULT_ADDRESSES.registry,
+  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || DEFAULT_ADDRESSES.vault,
+  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || DEFAULT_ADDRESSES.salaryPool,
+  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || DEFAULT_ADDRESSES.rewardPool,
+  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || DEFAULT_ADDRESSES.magicBoxPool,
+  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || DEFAULT_ADDRESSES.dao,
+  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || DEFAULT_ADDRESSES.nft,
 };
 
 // ── Domain & Routing Configuration ──────────────────────────────────────────
@@ -57,17 +72,13 @@ export const DAO_URL =
     ? `${window.location.protocol}//${window.location.hostname}:3000`
     : `https://${DAO_DOMAIN}`);
 
-export const ACTIVE_RPC_URL =
-  process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
-  (process.env.NEXT_PUBLIC_RPC_URL && !process.env.NEXT_PUBLIC_RPC_URL.includes("testnet")
-    ? process.env.NEXT_PUBLIC_RPC_URL
-    : "https://fullnode-one.trobchain.com");
+export const ACTIVE_RPC_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one.trobchain.com")
+  : (process.env.NEXT_PUBLIC_TESTNET_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://fullnode-one-testnet.trobchain.com");
 
-export const EXPLORER_URL =
-  process.env.NEXT_PUBLIC_MAINNET_EXPLORER_URL ||
-  (process.env.NEXT_PUBLIC_EXPLORER_URL && !process.env.NEXT_PUBLIC_EXPLORER_URL.includes("testnet")
-    ? process.env.NEXT_PUBLIC_EXPLORER_URL
-    : "https://trobchain.com");
+export const EXPLORER_URL = IS_MAINNET
+  ? (process.env.NEXT_PUBLIC_MAINNET_EXPLORER_URL || process.env.NEXT_PUBLIC_EXPLORER_URL || "https://trobchain.com")
+  : (process.env.NEXT_PUBLIC_TESTNET_EXPLORER_URL || process.env.NEXT_PUBLIC_EXPLORER_URL || "https://testnet.trobchain.com");
 
 export const EXPLORER_API_URL =
   process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API_URL ||
@@ -199,6 +210,12 @@ export function toTrobBase58(addr?: string | null): string {
     return trimmed;
   }
 }
+
+// Genesis Root Matrix Member / Protocol Vault on TrobChain (Derived dynamically from .env.local)
+export const GENESIS_ROOT_MEMBER_BASE58 =
+  (process.env.NEXT_PUBLIC_GENESIS_ROOT_SPONSOR || "").trim() ||
+  toTrobBase58(CONTRACT_ADDRESSES.vault);
+export const GENESIS_ROOT_MEMBER_HEX = toHexAddress(GENESIS_ROOT_MEMBER_BASE58);
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 
@@ -558,7 +575,7 @@ export async function getOnChainSlotDetails(
   const param = coder.encode(["address", "uint256"], [userHex, slotNumber]).slice(2);
 
   let isUnlocked = slotNumber === 1;
-  let currentCycle = 1;
+  let currentCycle = isUnlocked ? 1 : 0;
   let filledNodes = 0;
   let nodes: string[] = Array(14).fill("0x0000000000000000000000000000000000000000");
   let slotEarned = BigInt(0);
@@ -577,38 +594,42 @@ export async function getOnChainSlotDetails(
           "0x" + raw
         );
         isUnlocked = Boolean(decoded[0]);
-        currentCycle = Number(decoded[1]) || 1;
-        filledNodes = Number(decoded[2]) || 0;
-        nodes = decoded[3] || nodes;
-        slotEarned = decoded[4] || BigInt(0);
+        currentCycle = isUnlocked ? (Number(decoded[1]) || 1) : 0;
+        filledNodes = isUnlocked ? (Number(decoded[2]) || 0) : 0;
+        nodes = isUnlocked && decoded[3] ? decoded[3] : nodes;
+        slotEarned = isUnlocked && decoded[4] ? decoded[4] : BigInt(0);
       }
     } catch (err) {
       console.warn("[OnChain] getSlotData fallback notice:", err);
     }
   }
 
-  const totalCycles = Number(currentCycle) || (isUnlocked ? 1 : 0);
-  const liveFilledNodes = Number(filledNodes);
+  const totalCycles = isUnlocked ? (Number(currentCycle) || 1) : 0;
+  const liveFilledNodes = isUnlocked ? Number(filledNodes) : 0;
 
   // Check how many completed cycle snapshots exist on-chain
   let snapshotCount = 0;
-  try {
-    const countRaw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "getCycleSnapshotCount(address,uint256)",
-      param
-    );
-    if (countRaw) {
-      snapshotCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
-    }
-  } catch {}
+  if (isUnlocked) {
+    try {
+      const countRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getCycleSnapshotCount(address,uint256)",
+        param
+      );
+      if (countRaw) {
+        snapshotCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
+      }
+    } catch {}
+  }
 
   // Determine which cycle to display (default to completed Cycle 1 if current cycle is 2 and has 0 nodes filled)
-  const effectiveCycle = targetCycle ?? (liveFilledNodes === 0 && snapshotCount > 0 ? 1 : totalCycles);
-  const isViewingSnapshot = effectiveCycle < totalCycles && snapshotCount >= effectiveCycle;
+  const effectiveCycle = isUnlocked
+    ? (targetCycle ?? (liveFilledNodes === 0 && snapshotCount > 0 ? 1 : totalCycles))
+    : 0;
+  const isViewingSnapshot = isUnlocked && effectiveCycle < totalCycles && snapshotCount >= effectiveCycle;
 
-  let displayNodes = nodes;
-  if (isViewingSnapshot) {
+  let displayNodes = isUnlocked ? nodes : Array(14).fill("0x0000000000000000000000000000000000000000");
+  if (isUnlocked && isViewingSnapshot) {
     try {
       const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, effectiveCycle - 1]).slice(2);
       const snapRaw = await queryTrobConstant(
@@ -625,7 +646,11 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  // Universal Hierarchical Downline Subtree Resolution for ANY Matrix Member
+  // Strict Top-to-Bottom, Left-to-Right (Breadth-First Balanced) Matrix Resolution
+  // 1. Direct referrals strictly fill Level 1 (Positions 1 & 2) first, qualifying the user.
+  // 2. All subsequent entrants (extra directs 3+, team downlines) fill sequentially Left-to-Right.
+  // 3. Level 2 (Pos 3, 4, 5, 6) MUST completely fill before Level 3 (Pos 7..14) receives any node,
+  //    guaranteeing that Position 6 is NEVER skipped or left empty while Pos 7 & 8 are filled.
   try {
     const uCanon = userHex.toLowerCase();
     const updatedNodes = [...displayNodes];
@@ -636,86 +661,87 @@ export async function getOnChainSlotDetails(
     if (hasEmpty && isUnlocked && !isViewingSnapshot) {
       const userDirects = await getDynamicDirects(uCanon);
 
-      // Level 1: Node 1 & Node 2
-      let pos1 = !isNodeEmpty(updatedNodes[0]) ? updatedNodes[0].toLowerCase() : (userDirects[0] || null);
-      let pos2 = !isNodeEmpty(updatedNodes[1]) ? updatedNodes[1].toLowerCase() : (userDirects[1] || null);
+      const isApex =
+        uCanon === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
+        uCanon === "0x5fd6266a07fa4ba10dd34e9a315edd47904b8823";
+      const isQualified = isApex || userDirects.length >= 2;
 
-      if (isNodeEmpty(updatedNodes[0]) && pos1) updatedNodes[0] = pos1;
-      if (isNodeEmpty(updatedNodes[1]) && pos2) updatedNodes[1] = pos2;
+      if (!isQualified) {
+        // User has NOT met the 2-direct referral requirement!
+        // Strictly only their first direct referral (if any) sits at Seat #1.
+        // Positions 2 through 14 remain strictly empty/locked!
+        // P3 CANNOT APPEAR until their 2nd direct referral activates Slot 1!
+        const singleDirect = userDirects[0] ? userDirects[0].toLowerCase() : null;
+        displayNodes = [
+          singleDirect || "0x0000000000000000000000000000000000000000",
+          ...Array(13).fill("0x0000000000000000000000000000000000000000"),
+        ];
+      } else {
+        // Level 1: Node 1 & Node 2 (User's first 2 Direct Referrals)
+        let pos1 = !isNodeEmpty(updatedNodes[0]) ? updatedNodes[0].toLowerCase() : (userDirects[0] || null);
+        let pos2 = !isNodeEmpty(updatedNodes[1]) ? updatedNodes[1].toLowerCase() : (userDirects[1] || null);
 
-      // Level 2: Children under Pos 1 (Pos 3 & Pos 4)
-      const pos1Directs = pos1 ? await getDynamicDirects(pos1) : [];
-      let p1Idx = 0;
-      if (isNodeEmpty(updatedNodes[2])) {
-        if (pos1Directs[p1Idx]) updatedNodes[2] = pos1Directs[p1Idx++];
-        else if (userDirects[2]) updatedNodes[2] = userDirects[2];
-      }
-      if (isNodeEmpty(updatedNodes[3])) {
-        if (pos1Directs[p1Idx]) updatedNodes[3] = pos1Directs[p1Idx++];
-        else if (userDirects[3]) updatedNodes[3] = userDirects[3];
-      }
+        if (isNodeEmpty(updatedNodes[0]) && pos1) updatedNodes[0] = pos1;
+        if (isNodeEmpty(updatedNodes[1]) && pos2) updatedNodes[1] = pos2;
 
-      // Level 2: Children under Pos 2 (Pos 5 & Pos 6)
-      const pos2Directs = pos2 ? await getDynamicDirects(pos2) : [];
-      let p2Idx = 0;
-      if (isNodeEmpty(updatedNodes[4])) {
-        if (pos2Directs[p2Idx]) updatedNodes[4] = pos2Directs[p2Idx++];
-        else if (userDirects[4]) updatedNodes[4] = userDirects[4];
-      }
-      if (isNodeEmpty(updatedNodes[5])) {
-        if (pos2Directs[p2Idx]) updatedNodes[5] = pos2Directs[p2Idx++];
-        else if (userDirects[5]) updatedNodes[5] = userDirects[5];
-      }
-
-      // Level 3: Children under Pos 3 (Pos 7 & Pos 8)
-      const pos3 = !isNodeEmpty(updatedNodes[2]) ? updatedNodes[2].toLowerCase() : null;
-      if (pos3) {
-        const pos3Directs = await getDynamicDirects(pos3);
-        let p3Idx = 0;
-        if (isNodeEmpty(updatedNodes[6]) && pos3Directs[p3Idx]) updatedNodes[6] = pos3Directs[p3Idx++];
-        if (isNodeEmpty(updatedNodes[7]) && pos3Directs[p3Idx]) updatedNodes[7] = pos3Directs[p3Idx++];
-      }
-
-      // Level 3: Children under Pos 4 (Pos 9 & Pos 10)
-      const pos4 = !isNodeEmpty(updatedNodes[3]) ? updatedNodes[3].toLowerCase() : null;
-      if (pos4) {
-        const pos4Directs = await getDynamicDirects(pos4);
-        let p4Idx = 0;
-        if (isNodeEmpty(updatedNodes[8])) {
-          if (pos4Directs[p4Idx]) updatedNodes[8] = pos4Directs[p4Idx++];
-          else if (pos1Directs[p1Idx]) updatedNodes[8] = pos1Directs[p1Idx++];
+        // Track already placed addresses to prevent double placement
+        const placedSet = new Set<string>();
+        if (uCanon) placedSet.add(uCanon);
+        for (const n of updatedNodes) {
+          if (!isNodeEmpty(n)) placedSet.add(n.toLowerCase());
         }
-        if (isNodeEmpty(updatedNodes[9])) {
-          if (pos4Directs[p4Idx]) updatedNodes[9] = pos4Directs[p4Idx++];
-          else if (pos1Directs[p1Idx]) updatedNodes[9] = pos1Directs[p1Idx++];
-        }
-      }
 
-      // Level 3: Children under Pos 5 (Pos 11 & Pos 12)
-      const pos5 = !isNodeEmpty(updatedNodes[4]) ? updatedNodes[4].toLowerCase() : null;
-      if (pos5) {
-        const pos5Directs = await getDynamicDirects(pos5);
-        let p5Idx = 0;
-        if (isNodeEmpty(updatedNodes[10])) {
-          if (pos5Directs[p5Idx]) updatedNodes[10] = pos5Directs[p5Idx++];
-          else if (pos2Directs[p2Idx]) updatedNodes[10] = pos2Directs[p2Idx++];
-        }
-        if (isNodeEmpty(updatedNodes[11])) {
-          if (pos5Directs[p5Idx]) updatedNodes[11] = pos5Directs[p5Idx++];
-          else if (pos2Directs[p2Idx]) updatedNodes[11] = pos2Directs[p2Idx++];
-        }
-      }
+        // True Breadth-First-Search (BFS) Balanced Top-to-Bottom, Left-to-Right Matrix Filling
+        // 1. Extra direct referrals of YOU (beyond first 2) are queued first
+        // 2. An exploreQueue tracks placed nodes in BFS order so their downlines fill empty slots sequentially
+        // 3. Positions 3 through 14 (indices 2 to 13) are filled strictly Left-to-Right without ANY gaps!
+        const candidateQueue: string[] = [];
 
-      // Level 3: Children under Pos 6 (Pos 13 & Pos 14)
-      const pos6 = !isNodeEmpty(updatedNodes[5]) ? updatedNodes[5].toLowerCase() : null;
-      if (pos6) {
-        const pos6Directs = await getDynamicDirects(pos6);
-        let p6Idx = 0;
-        if (isNodeEmpty(updatedNodes[12]) && pos6Directs[p6Idx]) updatedNodes[12] = pos6Directs[p6Idx++];
-        if (isNodeEmpty(updatedNodes[13]) && pos6Directs[p6Idx]) updatedNodes[13] = pos6Directs[p6Idx++];
-      }
+        // A) Extra Direct Referrals of YOU beyond the first 2 (Direct #3, #4, #5...)
+        for (let i = 2; i < userDirects.length; i++) {
+          const d = userDirects[i].toLowerCase();
+          if (!placedSet.has(d)) {
+            candidateQueue.push(d);
+            placedSet.add(d);
+          }
+        }
 
-      displayNodes = updatedNodes;
+        // Queue of placed nodes whose downlines will be explored in strict BFS order:
+        const exploreQueue: string[] = [];
+        for (const n of updatedNodes) {
+          if (!isNodeEmpty(n)) exploreQueue.push(n.toLowerCase());
+        }
+
+        // Sequentially fill positions 3 to 14 (indices 2 to 13) in strict BFS order:
+        for (let posIdx = 2; posIdx < 14; posIdx++) {
+          // While candidate queue is empty and we have placed nodes to explore:
+          while (candidateQueue.length === 0 && exploreQueue.length > 0) {
+            const parent = exploreQueue.shift()!;
+            const children = await getDynamicDirects(parent);
+            for (const ch of children) {
+              const chl = ch.toLowerCase();
+              if (!placedSet.has(chl)) {
+                candidateQueue.push(chl);
+                placedSet.add(chl);
+              }
+            }
+          }
+
+          if (isNodeEmpty(updatedNodes[posIdx]) && candidateQueue.length > 0) {
+            const nextCand = candidateQueue.shift()!;
+            updatedNodes[posIdx] = nextCand;
+            placedSet.add(nextCand);
+            exploreQueue.push(nextCand);
+          } else if (!isNodeEmpty(updatedNodes[posIdx])) {
+            // If node was already placed from on-chain data, ensure it's in exploreQueue to discover its downlines
+            const existing = updatedNodes[posIdx].toLowerCase();
+            placedSet.add(existing);
+            exploreQueue.push(existing);
+          }
+        }
+
+        displayNodes = updatedNodes;
+      }
     }
   } catch (err) {
     console.warn("[OnChain] Subtree projection notice:", err);
@@ -787,8 +813,9 @@ export async function getOnChainSlotDetails(
   const formattedNodes = [];
   let computedFilledCount = 0;
   for (let pos = 1; pos <= 14; pos++) {
-    const occupant = displayNodes[pos - 1];
+    const occupant = isUnlocked ? displayNodes[pos - 1] : null;
     const isFilled =
+      isUnlocked &&
       occupant &&
       occupant !== "0x0000000000000000000000000000000000000000" &&
       occupant !== "0x0";
@@ -803,9 +830,9 @@ export async function getOnChainSlotDetails(
     else if (pos === 7 || pos === 10) payoutType = "SPILLOVER_DOWNLINE1";
     else if (pos === 13) payoutType = "SPILLOVER_DOWNLINE2";
 
-    const realCode = onChainCodes[pos - 1] || null;
-    const realId = onChainIds[pos - 1] || null;
-    const meta = occupant ? memberMetaMap.get(occupant.toLowerCase()) : null;
+    const realCode = isUnlocked ? (onChainCodes[pos - 1] || null) : null;
+    const realId = isUnlocked ? (onChainIds[pos - 1] || null) : null;
+    const meta = isUnlocked && occupant ? memberMetaMap.get(occupant.toLowerCase()) : null;
 
     formattedNodes.push({
       position: pos,
@@ -831,41 +858,33 @@ export async function getOnChainSlotDetails(
   const rawEarnedTrob = Number(ethers.formatUnits(slotEarned, 6));
 
   // Determine true direct matrix USD earnings from paying positions (P3, P6, P8, P9, P11, P12)
-  const directPayingPositions = [3, 6, 8, 9, 11, 12];
-  const displayedPayingCount = directPayingPositions.filter((p) => {
-    const occ = displayNodes[p - 1];
-    return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
-  }).length;
-
-  const livePayingCount = directPayingPositions.filter((p) => {
-    const occ = nodes[p - 1];
-    return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
-  }).length;
-
   const slotCostUsd = getSlotCost(slotNumber);
-  const completedCycles = Math.max(0, totalCycles - 1);
-  // Lifetime earned: completed cycles (6 * cost) + live active cycle paying count
-  const lifetimePayingCount = (completedCycles * 6) + livePayingCount;
-  const totalEarnedUsd = isUnlocked ? lifetimePayingCount * slotCostUsd : 0;
-  const cycleEarnedUsd = displayedPayingCount * slotCostUsd;
+  const TROB_PRICE = 0.056;
+
+  // Use authoritative on-chain slot earnings from EquoraMatrix.sol (m.totalEarned)
+  // Evaluated in fixed protocol tier USD increments ($30 for Slot 1, $60 for Slot 2)
+  const slotP2PPayoutCount = rawEarnedTrob > 0 ? Math.max(1, Math.round(rawEarnedTrob / 1076)) : 0;
+  const totalEarnedUsd = isUnlocked && rawEarnedTrob > 0 ? slotP2PPayoutCount * slotCostUsd : 0;
+  const totalEarnedTrob = isUnlocked && rawEarnedTrob > 0 ? rawEarnedTrob : 0;
+  const cycleEarnedUsd = totalEarnedUsd;
 
   return {
     slotNumber,
     cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
-    isLive,
+    isLive: Boolean(isUnlocked && isLive),
     currentCycle: effectiveCycle,
     totalCycles,
     selectedCycle: effectiveCycle,
     snapshotCount,
-    isViewingSnapshot,
-    recyclesCount: Math.max(0, totalCycles - 1),
-    filledNodes: Math.max(Number(liveFilledNodes) || 0, computedFilledCount),
+    isViewingSnapshot: Boolean(isUnlocked && isViewingSnapshot),
+    recyclesCount: isUnlocked ? Math.max(0, totalCycles - 1) : 0,
+    filledNodes: isUnlocked ? Math.max(Number(liveFilledNodes) || 0, computedFilledCount) : 0,
     upgradeReserve: 0,
     cycleEarnedUsd,
-    totalEarned: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
-    totalEarnedUsd: totalEarnedUsd > 0 ? totalEarnedUsd : 0,
-    totalEarnedTrob: rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? Number((totalEarnedUsd / 0.03174).toFixed(2)) : 0),
+    totalEarned: totalEarnedUsd,
+    totalEarnedUsd: totalEarnedUsd,
+    totalEarnedTrob: totalEarnedTrob,
     nodes: formattedNodes,
   };
 }
@@ -939,10 +958,22 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
     param
   );
 
-  const [unlockedArr, cyclesArr, filledArr] = coder.decode(
-    ["bool[12]", "uint256[12]", "uint256[12]"],
-    "0x" + raw
-  );
+  if (!raw || raw.length < 64) {
+    return [];
+  }
+
+  let unlockedArr: any[], cyclesArr: any[], filledArr: any[];
+  try {
+    const decoded = coder.decode(
+      ["bool[12]", "uint256[12]", "uint256[12]"],
+      "0x" + raw
+    );
+    unlockedArr = decoded[0];
+    cyclesArr = decoded[1];
+    filledArr = decoded[2];
+  } catch {
+    return [];
+  }
 
   let liveArr: boolean[] = [];
   try {
@@ -1004,19 +1035,13 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
             ["bool", "uint256", "uint256", "address[14]", "uint256"],
             "0x" + slotRaw
           );
-          const cVal = Number(currentCycleVal) || 1;
-          const directPayoutPositions = [3, 6, 8, 9, 11, 12];
-          const filledPayingCount = directPayoutPositions.filter((p) => {
-            const occ = nodesVal[p - 1];
-            return occ && occ !== "0x0000000000000000000000000000000000000000" && occ !== "0x0";
-          }).length;
-          const activeCycleIncome = filledPayingCount * getSlotCost(s);
-          const totalEarnedForSlot = (Math.max(0, cVal - 1) * 6 * getSlotCost(s)) + activeCycleIncome;
-          if (totalEarnedForSlot > 0) {
-            result[s - 1].totalEarned = totalEarnedForSlot;
-            result[s - 1].totalEarnedUsd = totalEarnedForSlot;
-            result[s - 1].totalEarnedTrob = Number(ethers.formatUnits(slotEarnedVal, 6)) || (totalEarnedForSlot / 0.056);
-          }
+          const onChainSlotEarnedTrob = Number(ethers.formatUnits(slotEarnedVal, 6));
+          const sCost = getSlotCost(s);
+          const slotPayoutCount = onChainSlotEarnedTrob > 0 ? Math.max(1, Math.round(onChainSlotEarnedTrob / 1076)) : 0;
+          const slotEarnedUsd = onChainSlotEarnedTrob > 0 ? slotPayoutCount * sCost : 0;
+          result[s - 1].totalEarned = slotEarnedUsd;
+          result[s - 1].totalEarnedUsd = slotEarnedUsd;
+          result[s - 1].totalEarnedTrob = onChainSlotEarnedTrob;
         }
       }
     }
@@ -1082,11 +1107,12 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       boardEarnedTrob = Number(ethers.formatUnits(s1Earned, 6));
     } catch {}
   }
-  const TROB_PRICE = 0.056;
-  const effectiveEarnedUsd = totalEarned > 0
-    ? totalEarned * TROB_PRICE
-    : (boardEarnedTrob > 0 ? boardEarnedTrob * TROB_PRICE : 0);
-  const effectiveEarnedTrob = effectiveEarnedUsd / TROB_PRICE;
+  // Fixed protocol USD tier valuation: Each Slot 1 settlement is strictly $30.00 USD
+  // Protects against floating exchange rate confusion while keeping exact on-chain TROB tokens intact
+  const rawTrobEarned = totalEarned > 0 ? totalEarned : (boardEarnedTrob > 0 ? boardEarnedTrob : 0);
+  const slot1EstimatedP2PPayoutCount = rawTrobEarned > 0 ? Math.max(1, Math.round(rawTrobEarned / 1076)) : 0;
+  const effectiveEarnedUsd = rawTrobEarned > 0 ? slot1EstimatedP2PPayoutCount * 30.0 : 0;
+  const effectiveEarnedTrob = rawTrobEarned;
 
   let directReferralsCount = 0;
   let activeDirectsCount = 0;
@@ -1125,16 +1151,29 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   if (sponsorRaw) {
     const sp = coder.decode(["address"], "0x" + sponsorRaw)[0];
     if (sp && sp !== "0x0000000000000000000000000000000000000000") {
-      sponsorAddress = sp.toLowerCase();
+      // If the registry returns legacy root 0x7124b32b, dynamically redirect to the Protocol Vault from .env.local
+      if (sp.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
+        sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
+      } else {
+        sponsorAddress = sp.toLowerCase();
+      }
     }
   }
-  if (!sponsorAddress && joinedMeta?.sponsor) {
+  if (!sponsorAddress && joinedMeta?.sponsor && joinedMeta.sponsor.toLowerCase() !== "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
     sponsorAddress = joinedMeta.sponsor.toLowerCase();
   }
+  // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
+  if (!sponsorAddress) {
+    sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
+  }
+
+  const isVaultSponsor =
+    sponsorAddress === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
+    sponsorAddress === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902";
 
   let upline2Address: string | null = null;
   let sponsorCode: number | null = null;
-  if (sponsorAddress && sponsorAddress !== "0x5181d06090f16c9bffef71e2ccd7ed17f676aad9") {
+  if (sponsorAddress && !isVaultSponsor) {
     try {
       const up2Param = coder.encode(["address"], [sponsorAddress]).slice(2);
       const [up2Raw, sCode] = await Promise.all([
@@ -1143,7 +1182,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       ]);
       if (up2Raw) {
         const up2 = coder.decode(["address"], "0x" + up2Raw)[0];
-        if (up2 && up2 !== "0x0000000000000000000000000000000000000000") {
+        if (up2 && up2 !== "0x0000000000000000000000000000000000000000" && up2.toLowerCase() !== "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
           upline2Address = up2.toLowerCase();
         }
       }
@@ -1187,8 +1226,8 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       : 0;
   const rankNames = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
 
-  const availableBalanceUsd = availableBalance * TROB_PRICE;
-  const withdrawnTotalUsd = withdrawnTotal * TROB_PRICE;
+  const availableBalanceUsd = availableBalance * 0.03174;
+  const withdrawnTotalUsd = withdrawnTotal * 0.03174;
 
   return {
     address: userHex,
@@ -1200,8 +1239,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     telegram: null,
     twitter: null,
     sponsorAddress,
-    sponsorUserId: sponsorCode,
-    sponsorCode,
+    isVaultSponsor,
+    sponsorUserId: isVaultSponsor ? null : sponsorCode,
+    sponsorCode: isVaultSponsor ? null : sponsorCode,
     referralCode: userReferralCode,
     daoSeat,
     upline2Address,
@@ -1275,20 +1315,17 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
         localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
       }
       return true;
+    } else {
+      // Definitive check returned false: CLEAR stale localStorage cache so user sees /gate!
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(`equora_matrix_registered_${clean}`);
+        localStorage.removeItem(`equora_matrix_registered_${b58.toLowerCase()}`);
+        localStorage.removeItem(`equora_matrix_registered_${hex}`);
+      }
+      return false;
     }
   } catch (err) {
     console.warn("[isUserRegisteredInMatrix] Slot 1 check notice:", err);
-  }
-
-  // Fallback: check localStorage cache
-  if (typeof window !== "undefined") {
-    const cached =
-      localStorage.getItem(`equora_matrix_registered_${clean}`) === "true" ||
-      localStorage.getItem(`equora_matrix_registered_${b58.toLowerCase()}`) === "true" ||
-      localStorage.getItem(`equora_matrix_registered_${hex}`) === "true";
-    if (cached) {
-      return true;
-    }
   }
 
   return false;
@@ -1491,6 +1528,63 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
   const callValueSun = opts.callValueSun ?? 0;
 
   if (trob) {
+    // Method 0: Pre-build unsigned transaction directly via ACTIVE_RPC_URL (Testnet/Mainnet), then request signature
+    // This avoids "Node did not return an unsigned transaction" when TrobSafe internal node is mismatched
+    try {
+      const ownerTronHex = toTronHex(ownerBase58);
+      const contractTronHex = toTronHex(contractBase58);
+      const preRes = await fetch(`${ACTIVE_RPC_URL}/wallet/triggersmartcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: ownerTronHex,
+          contract_address: contractTronHex,
+          function_selector: opts.functionSelector,
+          parameter: opts.parameterHex,
+          call_value: callValueSun,
+          fee_limit: feeLimitSun,
+          visible: false,
+        }),
+      });
+      const preJson = await preRes.json();
+      if (preJson?.result?.result && preJson?.transaction) {
+        const signFn = trob.trx?.sign || trob.signTransaction || trob.sign || trob.signdata;
+        if (typeof signFn === "function") {
+          try {
+            const rawSigned = await signFn.call(trob.trx || trob, preJson.transaction);
+            const signedTx = Array.isArray(rawSigned) && rawSigned[1] ? rawSigned[1] : rawSigned;
+            if (signedTx && (signedTx.signature || signedTx.txID)) {
+              const bRes = await fetch(`${ACTIVE_RPC_URL}/wallet/broadcasttransaction`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(signedTx),
+              });
+              const bJson = await bRes.json();
+              if (bJson?.result || bJson?.txid) {
+                return String(bJson.txid || signedTx.txID || preJson.transaction.txID);
+              }
+            }
+          } catch (signErr: any) {
+            const msg = (signErr?.message || "").toLowerCase();
+            if (msg.includes("reject") || msg.includes("cancel") || msg.includes("declined") || msg.includes("denied")) {
+              throw new Error("Transaction rejected by user.");
+            }
+            console.warn("[callTrobContractOnChain] Direct sign notice, trying wallet provider:", signErr?.message || signErr);
+          }
+        }
+      }
+    } catch (preErr: any) {
+      if ((preErr?.message || "").includes("rejected")) throw preErr;
+      console.warn("[callTrobContractOnChain] Pre-build query notice:", preErr?.message || preErr);
+    }
+
+    const activeNetwork =
+      TARGET_NETWORK === "testnet" ||
+      contractBase58 === TESTNET_DEFAULT_ADDRESSES.matrix ||
+      ACTIVE_RPC_URL.includes("testnet")
+        ? "testnet"
+        : "mainnet";
+
     const payload = {
       contract_address: contractBase58,
       contractAddress: contractBase58,
@@ -1502,7 +1596,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
       callValue: callValueSun,
       owner_address: ownerBase58,
       ownerAddress: ownerBase58,
-      network: TARGET_NETWORK,
+      network: activeNetwork,
       visible: true,
     };
 
@@ -1615,7 +1709,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
     }
   }
 
-  throw new Error("TrobSafe transaction could not be completed. Please ensure your TrobSafe wallet is unlocked and connected to TrobChain Mainnet.");
+  throw new Error(`TrobSafe transaction could not be completed. Please ensure your TrobSafe wallet is unlocked and switched to ${NETWORK_NAME}.`);
 }
 
 /**
@@ -1943,11 +2037,6 @@ export async function joinSlotOnChain(
   userAddress?: string,
   callValueSun?: number
 ): Promise<string> {
-  const MAINNET_DEPLOYER_BASE58 = "TQh76DdPM5D13XbrhigNrbkjiSTvCBDLM8";
-  const MAINNET_DEPLOYER_HEX = "0xa17e4c0d50ab3f2ff2717c94002a45444c91b202";
-  const TESTNET_DEPLOYER_BASE58 = "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr";
-  const TESTNET_DEPLOYER_HEX = "0xec27e31ecfd2d5a35ba3817f394c8e763162b70f";
-
   let targetSponsor = (sponsorAddress || "").trim();
 
   // If a 5-digit numeric referral code was passed, resolve to wallet address
@@ -1985,7 +2074,8 @@ export async function joinSlotOnChain(
     !isValidAddress ||
     targetSponsor === "0x0000000000000000000000000000000000000000" ||
     targetSponsor === "410000000000000000000000000000000000000000" ||
-    isDeployerAddress(targetSponsor)
+    isDeployerAddress(targetSponsor) ||
+    hexCheck.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902"
   ) {
     targetSponsor = await getOnChainGenesisSponsor();
   }
@@ -2127,15 +2217,12 @@ import joinedMembersData from "./joinedMembers.json";
  */
 export function getOnChainJoinedTransactions(userAddress: string) {
   const cleanAddr = (userAddress || "").toLowerCase();
-  const SEAT1_ADDR = "0x67b282b09c3aac1b9fbff6b4ec14ea2b72573c02";
   const items: any[] = [];
 
   joinedMembersData.forEach((m: any, index: number) => {
-    const isUnderUser =
-      m.sponsor?.toLowerCase() === cleanAddr ||
-      (cleanAddr === SEAT1_ADDR && (m.positionFilled || m.sponsor?.toLowerCase() === SEAT1_ADDR));
-    const isDirectPayout = cleanAddr === SEAT1_ADDR && (m.positionFilled === 3 || m.positionFilled === 6);
-    const isUserJoin = m.evm.toLowerCase() === cleanAddr;
+    const isUnderUser = m.sponsor?.toLowerCase() === cleanAddr;
+    const isDirectPayout = isUnderUser && (m.positionFilled === 3 || m.positionFilled === 6);
+    const isUserJoin = m.evm?.toLowerCase() === cleanAddr;
 
     if (isUserJoin) {
       items.push({

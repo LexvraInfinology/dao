@@ -50,22 +50,22 @@ const MAINNET_DEFAULT_CONTRACTS = {
 };
 
 const TESTNET_DEFAULT_CONTRACTS = {
-  registry: "TKeCrXKwapKANsSNbe4vfX5qYbn1nrR19y",
-  token:    "TDJNzzyMvJ9xbB7TXgR7TTXDY47aAiLHit",
-  nft:      "TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm",
-  vesting:  "TGv4UiQmnFP2aNyEXQfRQgSwdZzieMKZBm",
-  dao:      "THMpusD2dp3icewyNQRWF64k4r2rJypE57",
-  matrix:   "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
-  vault:    "TPVc8M9XNea33qmTybYRZXYJL4axQscyHx",
-  salary:   "TUxdfGh3JTPLX2tUeb5wFDLxHbKJbc2DMK",
-  reward:   "TYoCKb3mS8rfwu9H9XyTaQJ8Y6tD27Krrt",
-  magicBox: "TCrFNXw2Ve777u4X3mgshQGnGUXnq4Majv",
+  registry: "TDeTkVTHDv8i9aHi1eZBMUPSvuReypxAw1",
+  token:    "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
+  nft:      "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
+  vesting:  "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
+  dao:      "TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW",
+  matrix:   "TNU8aUC8H8osyfhr2TnNzNNEMZPtGV4D8o",
+  vault:    "TXn5f6qg8egX1fww3aUAfrpoM3K91Lpq3Q",
+  salary:   "TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM",
+  reward:   "TMAiUnfvgchovZ4ffq7BuEPidCd1SxVJBf",
+  magicBox: "TAoMXsB2Em1iK9tSqwGaPDL3A7hLHrR8Ue",
 };
 
 const DEFAULT_CONTRACTS = IS_MAINNET ? MAINNET_DEFAULT_CONTRACTS : TESTNET_DEFAULT_CONTRACTS;
 
 export const config = {
-  chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? "1000" : "1000"), 10),
+  chainId: parseInt(process.env.CHAIN_ID || process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? "1000" : "1001"), 10),
   rpcUrl: IS_MAINNET
     ? (process.env.MAINNET_RPC_URL || (process.env.RPC_URL && !process.env.RPC_URL.includes("testnet") ? process.env.RPC_URL : "https://fullnode-one.trobchain.com"))
     : (process.env.TESTNET_RPC_URL || process.env.RPC_URL || "https://fullnode-one-testnet.trobchain.com"),

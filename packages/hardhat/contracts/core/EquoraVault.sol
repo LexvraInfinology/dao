@@ -14,7 +14,7 @@ import "../interfaces/IEquoraRegistry.sol";
  *   It splits the incoming TROB into 4 buckets:
  *
  *     35%  → Ecosystem & DAO Pool  (EquoraDAO — distributed to 100 Genesis DAO Seat holders)
- *     40%  → Royalty Pool           (EquoraSalaryPool / Leadership Royalty Pool — paid out on 11th of each month)
+ *     40%  → Royalty Pool           (EquoraRoyaltyPool / Leadership Royalty Pool — paid out on 11th of each month)
  *     10%  → Magic Blind Box       (EquoraMagicBox — quarterly shared lottery pool)
  *     15%  → Level Rewards         (EquoraRewardPool — instant one-time milestone payouts)
  *

@@ -290,7 +290,7 @@ export class BlockchainIndexer {
              )
              VALUES (
                gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-               0, 0, $2, 'trobchain-mainnet', 0, 'vacant', NOW(), NOW()
+               0, 0, $2, config.chainId === 1001 ? 'trobchain-testnet' : 'trobchain-mainnet', 0, 'vacant', NOW(), NOW()
              )
              ON CONFLICT (position) DO UPDATE
              SET status = 'vacant', "updatedAt" = NOW()`,
@@ -345,7 +345,7 @@ export class BlockchainIndexer {
            )
            VALUES (
              gen_random_uuid(), $1, $2, NOW(), 'onchain-live-synced', 1,
-             5357.14, 300, $2, 'trobchain-mainnet', $3, 'active', NOW(), NOW()
+             5357.14, 300, $2, config.chainId === 1001 ? 'trobchain-testnet' : 'trobchain-mainnet', $3, 'active', NOW(), NOW()
            )
            ON CONFLICT (position) DO UPDATE
            SET address = $1, "pushedAmountBtt" = $3, status = CASE WHEN "DaoMember".status = 'underfunded' THEN 'underfunded' ELSE 'active' END, "updatedAt" = NOW()`,

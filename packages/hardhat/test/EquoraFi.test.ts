@@ -109,7 +109,7 @@ describe("Equora.Fi — Full Protocol Suite", function () {
     it("fallback to root when invalid/unassigned sponsor code used", async () => {
       // 99999 is unassigned
       await registerUser(users[0], 99999);
-      expect(await registry.getSponsor(users[0].address)).to.equal(await vault.getAddress());
+      expect(await registry.getSponsor(users[0].address)).to.equal(await registry.getRoot());
     });
 
     it("should qualify user after exactly 2 direct referrals", async () => {

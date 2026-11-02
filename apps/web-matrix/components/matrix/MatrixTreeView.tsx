@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
-import { getOnChainQualification, getSlotCost } from "@/lib/contracts";
+import { getOnChainQualification, getSlotCost, CONTRACT_ADDRESSES, toHexAddress } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress as formatB58Address, toTrobBase58 } from "@/lib/format";
-import { ShieldCheck, AlertCircle, CheckCircle2, Check } from "lucide-react";
+import { ShieldCheck, AlertCircle, CheckCircle2, Check, Lock } from "lucide-react";
 
 export interface MatrixTreeViewProps {
   slotDetails?: MatrixSlotDetails | null;
@@ -22,8 +22,10 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const sponsor = profile?.sponsorAddress;
   const isVaultSponsor =
     !sponsor ||
-    sponsor.toLowerCase() === "0x5181d06090f16c9bffef71e2ccd7ed17f676aad9" ||
-    sponsor.toLowerCase() === "415181d06090f16c9bffef71e2ccd7ed17f676aad9";
+    Boolean(profile?.isVaultSponsor) ||
+    sponsor.toLowerCase() === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
+    sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+    (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor);
   const upline2 = profile?.upline2Address;
 
   const selectSlotStore = useMatrixStore((s) => s.selectSlot);
@@ -31,9 +33,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const slots = props.slots ?? storeSlots;
   const slotCost = getSlotCost(selectedSlotNumber);
-  const currentCycle = slotDetails?.currentCycle ?? 1;
-  const totalCycles = slotDetails?.totalCycles ?? currentCycle;
-  const nodes = slotDetails?.nodes ?? [];
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
+  const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked) : (selectedSlotNumber <= highestUnlockedSlot);
+  const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
+  const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;
+  const nodes = isSlotUnlocked ? (slotDetails?.nodes ?? []) : [];
 
   // Live on-chain qualification state
   const [qualification, setQualification] = useState<{ isQualified: boolean; activeDirectsCount: number }>({
@@ -51,8 +55,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     return nodes.find((n) => n.position === pos);
   };
 
-  const formatNodeAddress = (addr?: string | null, userId?: number | null) => {
+  const formatNodeAddress = (addr?: string | null, userId?: number | null, pos?: number) => {
     if (addr) return formatB58Address(addr);
+    if (pos === 4 || pos === 5 || pos === 14) return formatB58Address(toTrobBase58(CONTRACT_ADDRESSES.vault));
     if (userId) return `ID #${userId}`;
     return "-";
   };
@@ -74,10 +79,38 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
 
   const renderDesktopNode = (pos: number, widthClass = "w-[130px]") => {
     const node = getNode(pos);
-    const isFilled = !!node?.filled;
+    const isFilled = isSlotUnlocked && !!node?.filled;
     const isDirectNode = pos <= 2;
     const isDepositedDirect = isDirectNode && Boolean(node?.isDirectDeposited || isFilled);
     const roleInfo = getNodeRole(pos);
+
+    if (!isSlotUnlocked) {
+      return (
+        <div
+          key={pos}
+          onClick={() =>
+            toast.info(
+              `Slot #${String(selectedSlotNumber).padStart(2, "0")} is Locked`,
+              `Position #${pos} unlocks automatically at $0 out-of-pocket cost when Slot #${selectedSlotNumber - 1} completes.`
+            )
+          }
+          className={`${widthClass} border-dashed border-slate-200 bg-slate-50/70 text-slate-400 border rounded-xl p-2.5 sm:p-3 text-center shadow-xs transition-all cursor-not-allowed select-none opacity-60 hover:opacity-85`}
+          title={`Position #${pos} Locked (Slot #${selectedSlotNumber})`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] sm:text-[14px] font-extrabold text-slate-400">{pos}</span>
+            <span className="text-[9px] font-mono text-slate-400 font-semibold">
+              {roleInfo.label.split(" ")[0]}
+            </span>
+          </div>
+          <div className="text-[10px] text-slate-400 font-semibold flex items-center justify-center gap-1 mt-1">
+            <Lock className="w-2.5 h-2.5 text-slate-400" />
+            Locked
+          </div>
+          <div className="text-[10px] text-slate-400 mt-0.5">-</div>
+        </div>
+      );
+    }
 
     if (isFilled) {
       // Style based on contract node payout / qualification role
@@ -103,14 +136,16 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         statusLabel = "Spillover";
       }
 
+      const effectiveAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+
       return (
         <div
           onClick={() => {
             const recipient =
               pos === 1
-                ? "Upline 1 (Sponsor)"
+                ? "Level 1 Frontline (Direct #1)"
                 : pos === 2
-                ? "Upline 2 (Sponsor's Sponsor)"
+                ? "Level 1 Frontline (Direct #2)"
                 : pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12
                 ? "YOU (100% Direct)"
                 : pos === 7
@@ -121,8 +156,8 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 ? "Waterfall Downline"
                 : "4 Protocol Pools (Vault)";
 
-            if (node?.placedUser) {
-              navigator.clipboard?.writeText(toTrobBase58(node.placedUser));
+            if (effectiveAddr) {
+              navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
                 `Position #${pos} Settled ($${slotCost})`,
                 `Paid to: ${recipient} • Address copied!`
@@ -132,7 +167,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             }
           }}
           className={`${widthClass} ${bgClasses} rounded-xl p-2.5 sm:p-3 text-center transition-all cursor-pointer select-none`}
-          title={node?.placedUser ? `Click to copy: ${toTrobBase58(node.placedUser)}` : `Position #${pos} Filled`}
+          title={effectiveAddr ? `Click to copy: ${toTrobBase58(effectiveAddr)}` : `Position #${pos} Filled`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[13px] sm:text-[14px] font-extrabold">{pos}</span>
@@ -147,7 +182,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
           </div>
 
           <div className="text-[9.5px] font-mono mt-0.5 truncate opacity-90">
-            {formatNodeAddress(node?.placedUser, node?.userId)}
+            {formatNodeAddress(effectiveAddr, node?.userId, pos)}
           </div>
         </div>
       );
@@ -191,13 +226,40 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
 
   const renderLevel3Node = (pos: number) => {
     const node = getNode(pos);
-    const isFilled = !!node?.filled;
+    const isFilled = isSlotUnlocked && !!node?.filled;
     const roleInfo = getNodeRole(pos);
+
+    if (!isSlotUnlocked) {
+      return (
+        <div
+          key={pos}
+          onClick={() =>
+            toast.info(
+              `Slot #${String(selectedSlotNumber).padStart(2, "0")} is Locked`,
+              `Position #${pos} unlocks automatically at $0 out-of-pocket cost when Slot #${selectedSlotNumber - 1} completes.`
+            )
+          }
+          className="border-dashed border-slate-200 bg-slate-50/70 text-slate-400 border rounded-lg py-1.5 px-1 text-center shadow-xs transition-all cursor-not-allowed select-none opacity-60 hover:opacity-85"
+          title={`Position #${pos} Locked (Slot #${selectedSlotNumber})`}
+        >
+          <div className="text-[12px] font-bold text-slate-400">{pos}</div>
+          <div className="text-[8.5px] text-slate-400 font-semibold flex items-center justify-center gap-0.5 mt-0.5">
+            <Lock className="w-2.5 h-2.5 text-slate-400" />
+            <span>Locked</span>
+          </div>
+          <div className="text-[8px] text-slate-400 truncate opacity-70 mt-0.5">
+            {roleInfo.label.split(" ")[0]}
+          </div>
+        </div>
+      );
+    }
 
     if (isFilled) {
       let bg = "bg-[#2563eb] hover:bg-[#1d4ed8]";
       if (roleInfo.role === "POOL") bg = "bg-purple-700 hover:bg-purple-800";
       if (roleInfo.role === "SPILLOVER") bg = "bg-amber-600 hover:bg-amber-700";
+
+      const effectiveAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
 
       return (
         <div
@@ -214,8 +276,8 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 ? "Waterfall Downline"
                 : "4 Protocol Pools (Vault)";
 
-            if (node?.placedUser) {
-              navigator.clipboard?.writeText(toTrobBase58(node.placedUser));
+            if (effectiveAddr) {
+              navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
                 `Position #${pos} Settled ($${slotCost})`,
                 `Paid to: ${recipient} • Address copied!`
@@ -225,7 +287,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             }
           }}
           className={`${bg} text-white rounded-lg py-1.5 px-1 text-center shadow-xs transition-all cursor-pointer select-none`}
-          title={node?.placedUser ? `Click to copy: ${toTrobBase58(node.placedUser)}` : `Position ${pos} Filled`}
+          title={effectiveAddr ? `Click to copy: ${toTrobBase58(effectiveAddr)}` : `Position ${pos} Filled`}
         >
           <div className="text-[12px] font-bold text-white">{pos}</div>
           <div className="text-[8.5px] text-white/90 font-semibold flex items-center justify-center gap-0.5 mt-0.5">
@@ -233,8 +295,8 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             {roleInfo.role === "POOL" ? "Pool" : roleInfo.role === "SPILLOVER" ? "Spill" : "YOU"}
           </div>
           <div className="text-[9px] text-white/80 font-mono leading-none mt-0.5 truncate flex items-center justify-center">
-            {node?.placedUser ? (
-              `${toTrobBase58(node.placedUser).slice(0, 4)}`
+            {effectiveAddr ? (
+              `${toTrobBase58(effectiveAddr).slice(0, 4)}`
             ) : (
               <Check className="w-2.5 h-2.5 text-white/90" />
             )}
@@ -269,7 +331,12 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             <h2 className="text-[13.5px] sm:text-[14px] font-extrabold text-[#0f172a] uppercase tracking-wide">
               YOUR 14–NODE MATRIX (SLOT #{String(selectedSlotNumber).padStart(2, "0")} • ${slotCost})
             </h2>
-            {totalCycles > 1 ? (
+            {!isSlotUnlocked ? (
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10.5px] font-bold flex items-center gap-1">
+                <Lock className="w-3 h-3 text-slate-500" />
+                LOCKED TIER
+              </span>
+            ) : totalCycles > 1 ? (
               <div className="flex items-center gap-1 p-0.5 bg-[#eff6ff] rounded-lg border border-[#bfdbfe]">
                 <button
                   type="button"
@@ -301,7 +368,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             )}
           </div>
           <p className="text-[12px] text-[#64748b] mt-0.5">
-            Single-leg binary matrix engine governed by Solidity smart contracts. Instant on-chain payouts.
+            {!isSlotUnlocked
+              ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} is currently locked. Unlocks automatically at $0 cost.`
+              : "Single-leg binary matrix engine governed by Solidity smart contracts. Instant on-chain payouts."}
           </p>
         </div>
 
@@ -324,6 +393,32 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
           </div>
         </div>
       </div>
+
+      {/* ── LOCKED SLOT NOTIFICATION BANNER ── */}
+      {!isSlotUnlocked && (
+        <div className="mt-3.5 p-3 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-700 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0">
+              <Lock className="w-4 h-4 text-slate-600" />
+            </div>
+            <div>
+              <div className="text-[12.5px] font-extrabold text-slate-800">
+                Slot #{String(selectedSlotNumber).padStart(2, "0")} is Locked (${slotCost}.00 Tier)
+              </div>
+              <div className="text-[11.5px] text-slate-600 font-medium">
+                Automated $0 progression: Unlocks automatically when Slot #{Math.max(1, selectedSlotNumber - 1)} completes via P4 &amp; P5 reserve funds.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => selectSlotStore(highestUnlockedSlot, undefined, address || undefined)}
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
+          >
+            ← View Slot #{String(highestUnlockedSlot).padStart(2, "0")}
+          </button>
+        </div>
+      )}
 
       {/* ── ON-CHAIN QUALIFICATION STATUS BANNER ── */}
       <div className="mt-3.5">
@@ -392,7 +487,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   <div className="px-3.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Upline 1 (Sponsor):</span>
+                    <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Direct Sponsor:</span>
                     <span className="text-slate-800 font-mono text-[11px] font-bold">
                       {formatB58Address(toTrobBase58(sponsor))}
                     </span>
@@ -400,9 +495,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                   {upline2 && (
                     <div className="px-3.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1.5 shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Upline 2:</span>
+                      <span className="text-slate-400 uppercase text-[9px] font-bold tracking-wider">Upline:</span>
                       <span className="text-slate-800 font-mono text-[11px] font-bold">
-                        {upline2.toLowerCase() === "0x5181d06090f16c9bffef71e2ccd7ed17f676aad9"
+                        {upline2.toLowerCase() === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase()
                           ? "Protocol Pools (Vault)"
                           : formatB58Address(toTrobBase58(upline2))}
                       </span>
@@ -514,15 +609,15 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
               <div className="flex flex-col items-center gap-0.5 mb-1">
                 <div className="px-3 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[9px] font-bold flex items-center gap-1 shadow-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-slate-400 uppercase text-[8px]">Upline 1:</span>
+                  <span className="text-slate-400 uppercase text-[8px]">Direct Sponsor:</span>
                   <span className="text-slate-800 font-mono text-[9px]">{formatB58Address(toTrobBase58(sponsor))}</span>
                 </div>
                 {upline2 && (
                   <div className="px-3 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[9px] font-bold flex items-center gap-1 shadow-xs">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span className="text-slate-400 uppercase text-[8px]">Upline 2:</span>
+                    <span className="text-slate-400 uppercase text-[8px]">Upline:</span>
                     <span className="text-slate-800 font-mono text-[9px]">
-                      {upline2.toLowerCase() === "0x5181d06090f16c9bffef71e2ccd7ed17f676aad9"
+                      {upline2.toLowerCase() === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase()
                         ? "Protocol Pools"
                         : formatB58Address(toTrobBase58(upline2))}
                     </span>
@@ -542,13 +637,25 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
           <div className="z-10 flex justify-between w-[160px] mt-4">
             {[1, 2].map((pos) => {
               const node = getNode(pos);
-              const isDeposited = node?.isDirectDeposited || node?.filled;
+              const isDeposited = isSlotUnlocked && (node?.isDirectDeposited || node?.filled);
+              if (!isSlotUnlocked) {
+                return (
+                  <div
+                    key={pos}
+                    onClick={() => toast.info(`Slot #${selectedSlotNumber} Locked`, `Position #${pos} unlocks at $0 cost.`)}
+                    className="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 text-slate-400 flex items-center justify-center cursor-not-allowed shadow-xs"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                );
+              }
               return node?.filled ? (
                 <div
                   key={pos}
                   onClick={() => {
-                    if (node?.placedUser) {
-                      toast.copy(toTrobBase58(node.placedUser), `Position #${pos} Address`);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    if (targetAddr) {
+                      toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {
                       toast.info(`Position #${pos}`, "Filled direct position");
                     }
@@ -576,6 +683,17 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             {[3, 4, 5, 6].map((pos) => {
               const node = getNode(pos);
               const role = getNodeRole(pos);
+              if (!isSlotUnlocked) {
+                return (
+                  <div
+                    key={pos}
+                    onClick={() => toast.info(`Slot #${selectedSlotNumber} Locked`, `Position #${pos} unlocks at $0 cost.`)}
+                    className="w-7 h-7 rounded-full bg-slate-100 border border-slate-300 text-slate-400 flex items-center justify-center cursor-not-allowed shadow-xs"
+                  >
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  </div>
+                );
+              }
               let bg = "bg-[#2563eb]";
               if (role.role === "POOL") bg = "bg-purple-700";
 
@@ -583,8 +701,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div
                   key={pos}
                   onClick={() => {
-                    if (node?.placedUser) {
-                      toast.copy(toTrobBase58(node.placedUser), `Position #${pos} Address`);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    if (targetAddr) {
+                      toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {
                       toast.info(`Position #${pos}`, `Filled position (${role.label})`);
                     }
@@ -610,6 +729,15 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             {[7, 8, 9, 10, 11, 12, 13, 14].map((pos) => {
               const node = getNode(pos);
               const role = getNodeRole(pos);
+              if (!isSlotUnlocked) {
+                return (
+                  <div
+                    key={pos}
+                    className="w-3.5 h-3.5 rounded-full bg-slate-200 cursor-not-allowed"
+                    title={`Position ${pos}: Locked`}
+                  />
+                );
+              }
               let filledColor = "bg-[#2563eb]";
               if (role.role === "POOL") filledColor = "bg-purple-700";
               if (role.role === "SPILLOVER") filledColor = "bg-amber-600";
@@ -618,8 +746,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div
                   key={pos}
                   onClick={() => {
-                    if (node?.filled && node?.placedUser) {
-                      toast.copy(toTrobBase58(node.placedUser), `Position #${pos} Address`);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    if (node?.filled && targetAddr) {
+                      toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {
                       toast.info(`Position #${pos}`, node?.filled ? "Filled position" : `Open position in cycle #${currentCycle}`);
                     }

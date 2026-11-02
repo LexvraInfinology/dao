@@ -497,7 +497,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
         call_value:        callValueSun,
         fee_limit:         100_000_000,
         owner_address:     activeAddr,
-        network:           process.env.NEXT_PUBLIC_TARGET_NETWORK || 'mainnet',
+        network:           process.env.NEXT_PUBLIC_TARGET_NETWORK || (process.env.NEXT_PUBLIC_IS_MAINNET === 'true' ? 'mainnet' : 'testnet'),
       };
 
       let txId: string | null = null;
@@ -1174,7 +1174,7 @@ export function DaoAccessGate({ children }: DaoAccessGateProps) {
                           Equora_Fi SR Governance Vote
                         </span>
                         <span className="text-[10px] text-[#60739A] block truncate font-mono">
-                          {eligibility?.condition2.srVote.officialSrAddress || OFFICIAL_EQUORA_SR || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY'}
+                          {eligibility?.condition2.srVote.officialSrAddress || OFFICIAL_EQUORA_SR || (process.env.NEXT_PUBLIC_IS_MAINNET === 'true' ? 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY' : 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5')}
                         </span>
                       </div>
                     </div>

@@ -42,7 +42,10 @@ export const DEFAULT_NETWORK_PARAMS: NetworkResourceParams = {
   updatedAt: new Date().toISOString(),
 };
 
-export const OFFICIAL_EQUORA_SR = 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY';
+const isMainnet = process.env.IS_MAINNET === 'true' || process.env.NEXT_PUBLIC_IS_MAINNET === 'true' || (process.env.TARGET_NETWORK || '').toLowerCase() === 'mainnet';
+export const OFFICIAL_EQUORA_SR = isMainnet
+  ? (process.env.OFFICIAL_SR_MAINNET_ADDRESS || process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || 'TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY')
+  : (process.env.OFFICIAL_SR_TESTNET_ADDRESS || process.env.NEXT_PUBLIC_OFFICIAL_SR_TESTNET_ADDRESS || 'TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5');
 export const MIN_WALLET_CREATION_DATE = '2026-10-01T00:00:00.000Z';
 export const MIN_WALLET_CREATION_TIMESTAMP = new Date(MIN_WALLET_CREATION_DATE).getTime();
 

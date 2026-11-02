@@ -40,7 +40,15 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
     try {
       const data = await matrixApi.getLeaderboard(period, 50).catch(() => null);
       if (data && data.length > 0) {
-        set({ entries: data, loading: false });
+        const cleaned = data.filter((e) => {
+          const a = (e.address || '').toLowerCase();
+          return (
+            a !== '0x7124b32b48786a13177f3bdc9620e7a48eb9c902' &&
+            a !== 'tlhtkgsbruwfyv8mo6b4z3rrj1k1wlwzwa' &&
+            a !== '0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee'
+          );
+        });
+        set({ entries: cleaned, loading: false });
         return;
       }
     } catch {}

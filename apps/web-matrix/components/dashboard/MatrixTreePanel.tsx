@@ -208,6 +208,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     setSelectedSlot(sNum);
     setSelectedCycle(1);
     setLiveSlotData(null);
+    useMatrixStore.setState({ slotDetails: null });
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
     selectSlotStore(sNum, 1, active);
@@ -302,18 +303,39 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const isCurrentSlotUnlocked = activeSlotDetails
     ? Boolean(activeSlotDetails.isUnlocked || (selectedSlot <= effectiveHighestUnlocked))
     : (selectedSlot <= effectiveHighestUnlocked);
+
+  // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
+  const isSlot1Complete = Boolean(
+    activeSlotDetails?.prevSlotCompleted ||
+    (activeSlotDetails as any)?.isSlot1Completed ||
+    (activeSlotDetails as any)?.slot1FilledNodes >= 14 ||
+    slot1FilledCount >= 14 ||
+    (data?.recyclesCount && data.recyclesCount > 0) ||
+    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
+    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
+    (profile as any)?.isSlot1Complete
+  );
+
   const isCurrentSlotLive =
     selectedSlot === 1
       ? true
-      : Boolean(activeSlotDetails?.isLive || (selectedSlot === 2 && slot1FilledCount >= 14));
+      : Boolean(activeSlotDetails?.isLive || (selectedSlot === 2 && isSlot1Complete));
   const isSlotStandby = isCurrentSlotUnlocked && selectedSlot > 1 && !isCurrentSlotLive;
 
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedCycle ?? 1) : 0;
   const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
   const isViewingSnapshot = isCurrentSlotUnlocked && (activeSlotDetails?.isViewingSnapshot ?? (selectedCycle < totalCycles));
-  const nodes = isCurrentSlotUnlocked ? (activeSlotDetails?.nodes || data?.activeSlotProgress?.nodes || []) : [];
+  const nodes = isCurrentSlotUnlocked
+    ? (activeSlotDetails && activeSlotDetails.slotNumber === selectedSlot
+        ? (activeSlotDetails.nodes || [])
+        : (selectedSlot === 1 ? (data?.activeSlotProgress?.nodes || []) : []))
+    : [];
   const realFilledCount = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.filter((n: any) => n?.filled).length : 0;
-  const filledCount = realFilledCount > 0 ? realFilledCount : (isCurrentSlotUnlocked ? (activeSlotDetails?.filledNodes ?? (data?.activeSlotProgress?.filledNodes ?? 0)) : 0);
+  const filledCount = realFilledCount > 0
+    ? realFilledCount
+    : (isCurrentSlotUnlocked && activeSlotDetails?.slotNumber === selectedSlot
+        ? (activeSlotDetails?.filledNodes ?? 0)
+        : (selectedSlot === 1 ? (data?.activeSlotProgress?.filledNodes ?? 0) : 0));
 
   const isNodeFilled = (pos: number) => {
     if (!isCurrentSlotUnlocked) return false;

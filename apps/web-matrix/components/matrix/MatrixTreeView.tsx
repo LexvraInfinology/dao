@@ -29,8 +29,10 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const upline2 = profile?.upline2Address;
 
   const selectSlotStore = useMatrixStore((s) => s.selectSlot);
-  const slotDetails = props.slotDetails !== undefined ? props.slotDetails : storeSlotDetails;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
+  const slotDetails = props.slotDetails !== undefined
+    ? props.slotDetails
+    : (storeSlotDetails?.slotNumber === selectedSlotNumber ? storeSlotDetails : null);
   const slots = props.slots ?? storeSlots;
   const slotCost = getSlotCost(selectedSlotNumber);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
@@ -41,9 +43,21 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     (slotDetails?.slotNumber === 1 && ((slotDetails?.filledNodes ?? 0) >= 5 || (rawNodes[3]?.filled && rawNodes[4]?.filled)));
   const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
   const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked || (selectedSlotNumber <= effectiveHighestUnlocked)) : (selectedSlotNumber <= effectiveHighestUnlocked);
+
+  const isSlot1Complete = Boolean(
+    (slotDetails as any)?.prevSlotCompleted ||
+    (slotDetails as any)?.isSlot1Completed ||
+    (slotDetails as any)?.slot1FilledNodes >= 14 ||
+    (slotDetails?.slotNumber === 1 && (slotDetails?.filledNodes ?? 0) >= 14) ||
+    (slotDetails?.slotNumber === 1 && (slotDetails?.currentCycle ?? 1) > 1) ||
+    (profile as any)?.isSlot1Complete
+  );
+  const isSlotLive = selectedSlotNumber === 1 ? true : Boolean(slotDetails?.isLive || (selectedSlotNumber === 2 && isSlot1Complete));
+  const isSlotStandby = isSlotUnlocked && selectedSlotNumber > 1 && !isSlotLive;
+
   const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;
-  const nodes = isSlotUnlocked ? rawNodes : [];
+  const nodes = isSlotUnlocked && slotDetails?.slotNumber === selectedSlotNumber ? rawNodes : [];
 
   // Live on-chain qualification state
   const [qualification, setQualification] = useState<{ isQualified: boolean; activeDirectsCount: number }>({

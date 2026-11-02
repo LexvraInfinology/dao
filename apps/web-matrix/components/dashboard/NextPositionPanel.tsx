@@ -71,7 +71,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   // Determine active slot details from store or live query
   const details =
     (storeSlotDetails && storeSlotDetails.slotNumber === activeSlotNumber ? storeSlotDetails : null) ||
-    liveDetails;
+    (liveDetails && liveDetails.slotNumber === activeSlotNumber ? liveDetails : null);
 
   // Real filled nodes for current inspected cycle
   const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
@@ -81,10 +81,22 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const isSlot1Escalated =
     Boolean(profile?.isSlot2Reserved) ||
     highestUnlockedSlot >= 2 ||
-    (details?.slotNumber === 1 && (realFilledNodes >= 5 || (nodesList[3]?.filled && nodesList[4]?.filled)));
+    (storeSlotDetails?.slotNumber === 1 && ((storeSlotDetails?.filledNodes ?? 0) >= 5 || (storeSlotDetails?.nodes?.[3]?.filled && storeSlotDetails?.nodes?.[4]?.filled))) ||
+    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 5);
   const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
   const isSlotUnlocked = details ? Boolean(details.isUnlocked || (activeSlotNumber <= effectiveHighestUnlocked)) : (activeSlotNumber <= effectiveHighestUnlocked);
-  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive || (activeSlotNumber === 2 && ((details as any)?.slot1FilledNodes >= 14 || (profile as any)?.isSlot1Complete)));
+
+  const isSlot1Complete = Boolean(
+    (details as any)?.prevSlotCompleted ||
+    (details as any)?.isSlot1Completed ||
+    (details as any)?.slot1FilledNodes >= 14 ||
+    (data?.recyclesCount && data.recyclesCount > 0) ||
+    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
+    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
+    (profile as any)?.isSlot1Complete
+  );
+
+  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive || (activeSlotNumber === 2 && isSlot1Complete));
   const isSlotStandby = isSlotUnlocked && activeSlotNumber > 1 && !isSlotLive;
 
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;

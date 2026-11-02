@@ -607,7 +607,8 @@ export async function getOnChainSlotDetails(
   // Auto-Escalation Check (Node 4 & Node 5 in Slot N-1 auto-reserves and unlocks Slot N in Standby Mode at $0 out-of-pocket):
   let prevSlotCompleted = false;
   let prevSlotEscalated = false;
-  if (!isUnlocked && slotNumber > 1 && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+  let prevSlotFilledCount = 0;
+  if (slotNumber > 1 && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
     try {
       const prevParam = coder.encode(["address", "uint256"], [userHex, slotNumber - 1]).slice(2);
       const prevRaw = await queryTrobConstant(
@@ -625,10 +626,11 @@ export async function getOnChainSlotDetails(
         const prevNodes = prevDecoded[3] || [];
         const isP4 = prevNodes[3] && prevNodes[3] !== "0x0000000000000000000000000000000000000000";
         const isP5 = prevNodes[4] && prevNodes[4] !== "0x0000000000000000000000000000000000000000";
+        prevSlotFilledCount = prevFilled;
         if ((isP4 && isP5) || prevFilled >= 5 || prevCycle > 1 || prevFilled >= 14) {
           prevSlotEscalated = true;
           isUnlocked = true;
-          currentCycle = 1;
+          if (currentCycle === 0) currentCycle = 1;
         }
         if (prevFilled >= 14 || prevCycle > 1) {
           prevSlotCompleted = true;
@@ -636,8 +638,29 @@ export async function getOnChainSlotDetails(
       }
     } catch {}
 
-    // Dynamic subtree projection fallback
-    if (!isUnlocked && slotNumber === 2) {
+    // Check snapshots of previous slot (if > 0, at least 1 cycle completed)
+    if (!prevSlotCompleted) {
+      try {
+        const prevSnapParam = coder.encode(["address", "uint256"], [userHex, slotNumber - 1]).slice(2);
+        const prevCountRaw = await queryTrobConstant(
+          CONTRACT_ADDRESSES.matrix,
+          "getCycleSnapshotCount(address,uint256)",
+          prevSnapParam
+        );
+        if (prevCountRaw) {
+          const sCount = Number(coder.decode(["uint256"], "0x" + prevCountRaw)[0]);
+          if (sCount > 0) {
+            prevSlotCompleted = true;
+            prevSlotEscalated = true;
+            isUnlocked = true;
+            if (currentCycle === 0) currentCycle = 1;
+          }
+        }
+      } catch {}
+    }
+
+    // Dynamic subtree projection fallback for Slot 1 completion check:
+    if (!prevSlotCompleted && slotNumber === 2) {
       try {
         const uDirects = await getDynamicDirects(userHex.toLowerCase());
         if (uDirects.length >= 2) {
@@ -645,12 +668,15 @@ export async function getOnChainSlotDetails(
           for (const d of uDirects) {
             const ch = await getDynamicDirects(d.toLowerCase());
             totalCount += ch.length;
-            if (totalCount >= 5) break;
+            if (totalCount >= 14) break;
           }
           if (totalCount >= 5) {
-            isUnlocked = true;
-            currentCycle = 1;
             prevSlotEscalated = true;
+            isUnlocked = true;
+            if (currentCycle === 0) currentCycle = 1;
+          }
+          if (totalCount >= 14) {
+            prevSlotCompleted = true;
           }
         }
       } catch {}
@@ -711,7 +737,10 @@ export async function getOnChainSlotDetails(
       !addr || addr === "0x0000000000000000000000000000000000000000" || addr === "0x0";
 
     const hasEmpty = updatedNodes.some(isNodeEmpty);
-    if (hasEmpty && isUnlocked && !isViewingSnapshot) {
+    // Strict Breadth-First-Search (BFS) Balanced Matrix Resolution is ONLY applied to Slot 1.
+    // For higher slots (Slot 2+), nodes MUST only come from genuine on-chain placements or purchases,
+    // and NEVER artificially duplicate Slot 1 direct referrals or team downlines!
+    if (slotNumber === 1 && hasEmpty && isUnlocked && !isViewingSnapshot) {
       const userDirects = await getDynamicDirects(uCanon);
 
       const isApex =
@@ -938,6 +967,10 @@ export async function getOnChainSlotDetails(
     cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
     isLive: Boolean(isUnlocked && isLive),
+    isStandby: Boolean(isUnlocked && slotNumber > 1 && !isLive),
+    prevSlotCompleted: Boolean(prevSlotCompleted),
+    isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
+    slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
     currentCycle: effectiveCycle,
     totalCycles,
     selectedCycle: effectiveCycle,

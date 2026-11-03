@@ -38,3 +38,13 @@ for (const qrIndexPath of potentialPaths) {
 if (!patched) {
   console.log('ℹ️ [patch-qr] qr module not yet installed or not found.');
 }
+
+// Fix 3: Ensure @types/minimatch stub doesn't break TypeScript if installed by subdependencies
+const minimatchTypesPath = path.resolve(__dirname, '..', 'node_modules', '@types', 'minimatch');
+if (fs.existsSync(minimatchTypesPath)) {
+  const indexDts = path.join(minimatchTypesPath, 'index.d.ts');
+  if (!fs.existsSync(indexDts)) {
+    fs.writeFileSync(indexDts, 'export {};\n', 'utf8');
+    console.log('✅ [patch-qr] Created index.d.ts stub in @types/minimatch');
+  }
+}

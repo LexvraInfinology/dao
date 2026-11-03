@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails, getOnChainDirectMembers, toHexAddress, getSlotCost, EXPLORER_URL, APEX_LEADER_HEX } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getOnChainSlotDetails, getOnChainDirectMembers, toHexAddress, EXPLORER_URL, APEX_LEADER_HEX } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -529,7 +529,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         ? (directsCount === 0 ? 1 : 2)
         : (firstOpenPosIndex >= 0 ? firstOpenPosIndex + 1 : (filledCount < 14 ? filledCount + 1 : null)))
     : null;
-  const slotCost = getSlotCost(selectedSlot);
 
   // Node Component Render: Vibrant Blue & Green Active/Filled and Large Responsive Cards
   const renderTreeNode = (pos: number) => {
@@ -611,9 +610,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     let dynamicRole = cfg.role;
     if (cfg.type === "income") {
       if (filled) {
-        dynamicRole = isOwnerQualified ? `+$${slotCost} YOU` : `Pool (${directsCount}/2)`;
+        dynamicRole = isOwnerQualified ? `+$30 YOU` : `Pool (${directsCount}/2)`;
       } else {
-        dynamicRole = isOwnerQualified ? `+$${slotCost} YOU` : `+$${slotCost} (Req 2 Dir)`;
+        dynamicRole = isOwnerQualified ? `+$30 YOU` : `+$30 (Req 2 Dir)`;
       }
     } else if (isLockedUnqualified) {
       dynamicRole = "2 Directs Req.";
@@ -736,7 +735,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 {isViewingSnapshot ? (
                   <strong className="text-emerald-600">Cycle #{selectedCycle} Fulfilled Board (14/14 All Settled 🎉)</strong>
                 ) : (
-                  <span>${slotCost.toFixed(2)} P2P Settlement</span>
+                  <span>$30.00 P2P Settlement</span>
                 )}
               </>
             )}
@@ -820,7 +819,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           const isActive = selectedSlot === sNum;
           const isSlotUnlocked = sNum <= effectiveHighestUnlocked;
           const isCompleted = isSlotUnlocked && ((activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14) || (activeSlotDetails?.totalCycles && activeSlotDetails.totalCycles > 1 && sNum < activeSlotDetails.slotNumber));
-          const cost = getSlotCost(sNum);
           return (
             <button
               key={sNum}
@@ -935,7 +933,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-            <span className="font-semibold text-slate-700">+${slotCost} Direct Income</span>
+            <span className="font-semibold text-slate-700">+$30 Direct Income</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_#2563eb]" />
@@ -1102,7 +1100,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                       <span className="text-[9.5px] font-bold text-emerald-600 flex items-center gap-0.5">
                         <CheckCircle2 className="w-3 h-3" />
                         {cfg.type === "income"
-                          ? `+$${slotCost} (YOU)`
+                          ? `+$30 (YOU)`
                           : pos === 1
                           ? "Direct 1 (Pass-Up)"
                           : pos === 2
@@ -1267,12 +1265,12 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 <p className="text-slate-700 text-[11.5px] leading-relaxed">
                   {selectedNodeModal.type === "income"
                     ? isOwnerQualified
-                      ? `100% P2P instant settlement ($${slotCost.toFixed(2)} USD) directly into your wallet.`
+                      ? `100% P2P instant settlement ($30.00 USD) directly into your wallet.`
                       : `⚠️ 2-Direct Qualification Pending (${directsCount}/2 Directs): Per EquoraMatrix.sol rules, direct P2P income requires 2 active direct referrals. Because ${directsCount} direct is active, this settlement routed directly to the Protocol Pools Vault.`
                     : selectedNodeModal.pos === 1
-                    ? `Level 1 frontline seat. 100% P2P pass-through to matrix sponsor ($${slotCost.toFixed(2)} USD). Frontline seats qualify you for 100% Level 2 and Level 3 income.`
+                    ? `Level 1 frontline seat. 100% P2P pass-through to matrix sponsor ($30.00 USD). Frontline seats qualify you for 100% Level 2 and Level 3 income.`
                     : selectedNodeModal.pos === 2
-                    ? `Level 1 frontline seat. 100% P2P pass-through routes to upline 2 ($${slotCost.toFixed(2)} USD). Frontline seats satisfy your 2-direct qualification.`
+                    ? `Level 1 frontline seat. 100% P2P pass-through routes to upline 2 ($30.00 USD). Frontline seats satisfy your 2-direct qualification.`
                     : selectedNodeModal.desc}
                 </p>
               </div>
@@ -1390,7 +1388,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-slate-500 font-medium">Settled Amount:</span>
                       <span className="font-bold text-emerald-700">
-                        ${slotCost.toFixed(2)} USD (100% On-Chain)
+                        $30.00 USD (100% On-Chain)
                       </span>
                     </div>
 

@@ -22,7 +22,7 @@ export interface MatrixMember {
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore } from "@/lib/stores";
 import { formatAddress, formatDateSafe } from "@/lib/format";
-import { getSlotCost, CONTRACT_ADDRESSES } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export interface MatrixListViewProps {
   handleCopy?: (text: string) => void;
@@ -40,7 +40,7 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
   const slotDetails = props.slotDetails !== undefined ? props.slotDetails : storeSlotDetails;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
   const slots = props.slots ?? storeSlots;
-  const slotCost = getSlotCost(selectedSlotNumber);
+  const slotCost = 30; // Always $30 — single entry fee, no escalating rates
   const handleCopy = props.handleCopy ?? ((t: string) => navigator.clipboard?.writeText(t));
   const copied = props.copied ?? false;
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
@@ -119,7 +119,7 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3.5 border-b border-[#f1f5f9]">
         <div>
           <h2 className="text-[13.5px] sm:text-[14px] font-extrabold text-[#0f172a] uppercase tracking-wide">
-            YOUR MATRIX MEMBERS (SLOT #{String(selectedSlotNumber).padStart(2, "0")} • ${slotCost})
+            YOUR MATRIX MEMBERS (SLOT #{String(selectedSlotNumber).padStart(2, "0")})
           </h2>
           <p className="text-[12px] text-[#64748b] mt-0.5">
             View every position in your matrix and track its current status.

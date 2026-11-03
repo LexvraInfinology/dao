@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
-import { getOnChainQualification, getSlotCost, CONTRACT_ADDRESSES, toHexAddress } from "@/lib/contracts";
+import { getOnChainQualification, CONTRACT_ADDRESSES, toHexAddress } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress as formatB58Address, toTrobBase58 } from "@/lib/format";
 import { ShieldCheck, AlertCircle, CheckCircle2, Check, Lock } from "lucide-react";
@@ -34,7 +34,6 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     ? props.slotDetails
     : (storeSlotDetails?.slotNumber === selectedSlotNumber ? storeSlotDetails : null);
   const slots = props.slots ?? storeSlots;
-  const slotCost = getSlotCost(selectedSlotNumber);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
   const rawNodes = slotDetails?.nodes ?? [];
   const isSlot1Escalated =
@@ -86,7 +85,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const getNodeRole = (pos: number) => {
     if (pos <= 2) return { role: "DIRECT", label: `Direct Ref #${pos}` };
     if (pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12) {
-      return { role: "OWNER", label: `YOU (+$${slotCost})` };
+      return { role: "OWNER", label: `YOU (+$30)` };
     }
     if (pos === 4 || pos === 5 || pos === 14) {
       return {
@@ -141,7 +140,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       if (isDirectNode) {
         if (isDepositedDirect) {
           bgClasses = "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400";
-          statusLabel = `Active ($${slotCost})`;
+          statusLabel = `Active ($30)`;
           badgeColor = "bg-emerald-200";
         } else {
           bgClasses = "bg-amber-50 border-2 border-dashed border-amber-400 hover:bg-amber-100 text-amber-900";
@@ -179,11 +178,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             if (effectiveAddr) {
               navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
-                `Position #${pos} Settled ($${slotCost})`,
+                `Position #${pos} Settled ($30)`,
                 `Paid to: ${recipient} • Address copied!`
               );
             } else {
-              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($30)`);
             }
           }}
           className={`${widthClass} ${bgClasses} rounded-xl p-2.5 sm:p-3 text-center transition-all cursor-pointer select-none`}
@@ -299,11 +298,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             if (effectiveAddr) {
               navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
-                `Position #${pos} Settled ($${slotCost})`,
+                `Position #${pos} Settled ($30)`,
                 `Paid to: ${recipient} • Address copied!`
               );
             } else {
-              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($30)`);
             }
           }}
           className={`${bg} text-white rounded-lg py-1.5 px-1 text-center shadow-xs transition-all cursor-pointer select-none`}
@@ -349,7 +348,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-[13.5px] sm:text-[14px] font-extrabold text-[#0f172a] uppercase tracking-wide">
-              YOUR 14–NODE MATRIX (SLOT #{String(selectedSlotNumber).padStart(2, "0")} • ${slotCost})
+              YOUR 14–NODE MATRIX (SLOT #{String(selectedSlotNumber).padStart(2, "0")})
             </h2>
             {!isSlotUnlocked ? (
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10.5px] font-bold flex items-center gap-1">
@@ -397,11 +396,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         <div className="hidden sm:flex items-center gap-3 text-[11px] font-semibold text-[#64748b]">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-            <span>Active Direct (${slotCost})</span>
+            <span>Active Direct (+$30)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
-            <span>Owner (+${slotCost} YOU)</span>
+            <span>Owner (+$30 YOU)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-700" />
@@ -423,7 +422,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             </div>
             <div>
               <div className="text-[12.5px] font-extrabold text-slate-800">
-                Slot #{String(selectedSlotNumber).padStart(2, "0")} is Locked (${slotCost}.00 Tier)
+                Slot #{String(selectedSlotNumber).padStart(2, "0")} is Locked ($0 Out-of-Pocket)
               </div>
               <div className="text-[11.5px] text-slate-600 font-medium">
                 Automated $0 progression: Unlocks automatically when Slot #{Math.max(1, selectedSlotNumber - 1)} completes via P4 &amp; P5 reserve funds.

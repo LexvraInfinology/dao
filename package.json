@@ -39,6 +39,6 @@
     "turbo": "^2.11.2"
   },
   "devDependencies": {
-    "@types/minimatch": "^6.0.0"
+    
   }
 }

@@ -164,7 +164,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             </h3>
             <span className="text-[11px] font-bold text-slate-500">
               {!isSlotUnlocked
-                ? `$${cost.toFixed(2)} Tier • Awaiting Auto-Unlock`
+                ? `Slot #${String(activeSlotNumber).padStart(2, "0")} • Awaiting Auto-Unlock ($0 Out-of-Pocket)`
                 : isViewingSnapshot
                 ? `$${cost.toFixed(2)} Tier • Cycle #${currentCycle} All Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
@@ -320,7 +320,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
                     : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
                 }`}
               >
-                <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} (${nextTierCost}) Board in Tree</span>
+                <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} Board in Tree</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}

@@ -296,7 +296,7 @@ export function WalletConnectModal({
                       {eligibilityData?.condition2?.srVote?.voted ? (
                         <span className="text-emerald-600 font-bold">Voted ✓</span>
                       ) : (
-                        <span className="text-slate-400">Optional Gas Perk</span>
+                        <span className="text-amber-600 font-bold">Vote Required ✕</span>
                       )}
                     </span>
                   </div>

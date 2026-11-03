@@ -612,20 +612,34 @@ export async function syncOnChainMembersState(force = false): Promise<{
           dbMember.address.toLowerCase() !== b58Addr.toLowerCase()
         ) {
           // Member completed topup OR new user claimed seat!
-          await queryNeon(
-            `UPDATE "DaoMember"
-             SET address = $1,
-                 status = $2,
-                 "retopupDeadline" = $3,
-                 "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN 5357.14 ELSE "entryAmountBtt" END,
-                 "entryAmountUsdAtJoin" = 300,
-                 "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300.00 ELSE "totalDepositsUsd" END,
-                 "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE "totalDepositsCount" END,
-                 "pushedAmountBtt" = $4,
-                 "updatedAt" = NOW()
-             WHERE position = $5`,
-            [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
-          );
+          try {
+            await queryNeon(
+              `UPDATE "DaoMember"
+               SET address = $1,
+                   status = $2,
+                   "retopupDeadline" = $3,
+                   "entryAmountBtt" = CASE WHEN status = 'underfunded' THEN 5357.14 ELSE "entryAmountBtt" END,
+                   "entryAmountUsdAtJoin" = 300,
+                   "totalDepositsUsd" = CASE WHEN status = 'underfunded' THEN 300.00 ELSE "totalDepositsUsd" END,
+                   "totalDepositsCount" = CASE WHEN status = 'underfunded' THEN 1 ELSE "totalDepositsCount" END,
+                   "pushedAmountBtt" = $4,
+                   "updatedAt" = NOW()
+               WHERE position = $5`,
+              [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
+            );
+          } catch (updateErr: any) {
+            if (updateErr?.message?.includes("DaoMember_address_key") || updateErr?.code === "23505") {
+              await queryNeon(`DELETE FROM "DaoMember" WHERE LOWER(address) = LOWER($1) AND position != $2`, [b58Addr, position]).catch(() => {});
+              await queryNeon(
+                `UPDATE "DaoMember"
+                 SET address = $1, status = $2, "retopupDeadline" = $3, "pushedAmountBtt" = $4, "updatedAt" = NOW()
+                 WHERE position = $5`,
+                [b58Addr, memberEffectiveStatus, onChainDeadlineIso, totalEarnedTrob, position]
+              ).catch(() => {});
+            } else {
+              throw updateErr;
+            }
+          }
           await queryNeon(
             `UPDATE "User" SET "isQualified" = true WHERE LOWER(address) = LOWER($1)`,
             [b58Addr]

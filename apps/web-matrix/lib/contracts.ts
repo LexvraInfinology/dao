@@ -666,7 +666,7 @@ export async function getOnChainSlotDetails(
     : 0;
   const isViewingSnapshot = isUnlocked && effectiveCycle < totalCycles && snapshotCount >= effectiveCycle;
 
-  let displayNodes = isUnlocked ? nodes : Array(14).fill("0x0000000000000000000000000000000000000000");
+  let displayNodes = isUnlocked ? [...nodes] : Array(14).fill("0x0000000000000000000000000000000000000000");
   if (isUnlocked && isViewingSnapshot) {
     try {
       const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, effectiveCycle - 1]).slice(2);
@@ -681,6 +681,64 @@ export async function getOnChainSlotDetails(
       }
     } catch (err) {
       console.warn("[OnChain] Cycle snapshot query notice:", err);
+    }
+  } else if (isUnlocked && !isViewingSnapshot) {
+    // Dynamically traverse downline slot nodes on-chain to populate complete 14-seat tree
+    try {
+      const fetchDownlineNodes = async (downlineAddr: string): Promise<string[]> => {
+        if (!downlineAddr || downlineAddr === "0x0000000000000000000000000000000000000000" || downlineAddr === "0x0") {
+          return [];
+        }
+        try {
+          const dlHex = toHexAddress(downlineAddr);
+          const dlParam = coder.encode(["address", "uint256"], [dlHex, slotNumber]).slice(2);
+          const dlRaw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", dlParam);
+          if (dlRaw) {
+            const dlDecoded = coder.decode(["bool", "uint256", "uint256", "address[14]", "uint256"], "0x" + dlRaw);
+            return dlDecoded[3] || [];
+          }
+        } catch {}
+        return [];
+      };
+
+      const s1 = displayNodes[0];
+      const s2 = displayNodes[1];
+
+      const [s1Nodes, s2Nodes] = await Promise.all([
+        fetchDownlineNodes(s1),
+        fetchDownlineNodes(s2)
+      ]);
+
+      // Level 2 (Seats 3, 4 from Seat 1; Seats 5, 6 from Seat 2)
+      if ((!displayNodes[2] || displayNodes[2] === "0x0000000000000000000000000000000000000000") && s1Nodes[0]) {
+        displayNodes[2] = s1Nodes[0];
+      }
+      if ((!displayNodes[3] || displayNodes[3] === "0x0000000000000000000000000000000000000000") && s1Nodes[1]) {
+        displayNodes[3] = s1Nodes[1];
+      }
+      if ((!displayNodes[4] || displayNodes[4] === "0x0000000000000000000000000000000000000000") && s2Nodes[0]) {
+        displayNodes[4] = s2Nodes[0];
+      }
+      if ((!displayNodes[5] || displayNodes[5] === "0x0000000000000000000000000000000000000000") && s2Nodes[1]) {
+        displayNodes[5] = s2Nodes[1];
+      }
+
+      // Level 3 (seats 7..14 from seats 3..6)
+      const l2Parents = [displayNodes[2], displayNodes[3], displayNodes[4], displayNodes[5]];
+      const l2Nodes = await Promise.all(l2Parents.map(p => fetchDownlineNodes(p)));
+      for (let pIdx = 0; pIdx < 4; pIdx++) {
+        const leftIdx = 6 + pIdx * 2;
+        const rightIdx = leftIdx + 1;
+        const pSubNodes = l2Nodes[pIdx];
+        if ((!displayNodes[leftIdx] || displayNodes[leftIdx] === "0x0000000000000000000000000000000000000000") && pSubNodes[0]) {
+          displayNodes[leftIdx] = pSubNodes[0];
+        }
+        if ((!displayNodes[rightIdx] || displayNodes[rightIdx] === "0x0000000000000000000000000000000000000000") && pSubNodes[1]) {
+          displayNodes[rightIdx] = pSubNodes[1];
+        }
+      }
+    } catch (err) {
+      console.warn("[OnChain] Matrix tree downline sync notice:", err);
     }
   }
 

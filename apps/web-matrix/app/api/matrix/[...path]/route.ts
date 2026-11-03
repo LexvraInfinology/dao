@@ -437,7 +437,41 @@ export async function GET(
         });
       }
 
-      const nodes = buildNodes(sd.nodes, sd.filledNodes, slotCostUsd);
+      // Dynamic downline tree traversal for 14-seat visualization
+      const resolvedNodes = [...sd.nodes];
+      const ZERO = "0x0000000000000000000000000000000000000000";
+      try {
+        const fetchDownline = async (addr: string) => {
+          if (!addr || addr === ZERO) return [];
+          const res = await getSlotDataV2(addr, slotNumber);
+          return res?.nodes || [];
+        };
+
+        const [s1Nodes, s2Nodes] = await Promise.all([
+          fetchDownline(resolvedNodes[0]),
+          fetchDownline(resolvedNodes[1]),
+        ]);
+
+        if ((!resolvedNodes[2] || resolvedNodes[2] === ZERO) && s1Nodes[0]) resolvedNodes[2] = s1Nodes[0];
+        if ((!resolvedNodes[3] || resolvedNodes[3] === ZERO) && s1Nodes[1]) resolvedNodes[3] = s1Nodes[1];
+        if ((!resolvedNodes[4] || resolvedNodes[4] === ZERO) && s2Nodes[0]) resolvedNodes[4] = s2Nodes[0];
+        if ((!resolvedNodes[5] || resolvedNodes[5] === ZERO) && s2Nodes[1]) resolvedNodes[5] = s2Nodes[1];
+
+        const l2Parents = [resolvedNodes[2], resolvedNodes[3], resolvedNodes[4], resolvedNodes[5]];
+        const l2Downlines = await Promise.all(l2Parents.map(fetchDownline));
+        for (let pIdx = 0; pIdx < 4; pIdx++) {
+          const leftIdx = 6 + pIdx * 2;
+          const rightIdx = leftIdx + 1;
+          const pSub = l2Downlines[pIdx];
+          if ((!resolvedNodes[leftIdx] || resolvedNodes[leftIdx] === ZERO) && pSub[0]) resolvedNodes[leftIdx] = pSub[0];
+          if ((!resolvedNodes[rightIdx] || resolvedNodes[rightIdx] === ZERO) && pSub[1]) resolvedNodes[rightIdx] = pSub[1];
+        }
+      } catch (err) {
+        console.warn("[API Matrix] Downline resolution notice:", err);
+      }
+
+      const activeFilledCount = resolvedNodes.filter(n => n && n !== ZERO).length;
+      const nodes = buildNodes(resolvedNodes, Math.max(sd.filledNodes, activeFilledCount), slotCostUsd);
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
 
       return NextResponse.json({

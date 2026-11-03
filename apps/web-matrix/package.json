@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next start -p 3001",
+    "dev": "next dev -p 3001 --webpack",
     "dev:watch": "next dev -p 3001 --webpack",
     "build": "next build --webpack",
     "build:matrix": "next build --webpack",

@@ -413,6 +413,139 @@ export async function isUserMatrixQualified(address: string): Promise<boolean> {
   return activeCount >= 2;
 }
 
+
+export async function fetchOnChainSlotDetailsLive(
+  userAddress: string,
+  slotNumber: number,
+  targetCycle: number = 1
+): Promise<MatrixSlotDetailsDTO> {
+  const canonical = toCanonicalAddress(userAddress);
+  const ZERO = "0x0000000000000000000000000000000000000000";
+
+  async function queryContractSlot(addr: string) {
+    if (!addr || addr === ZERO) return null;
+    const cleanAddr = addr.startsWith("0x") ? addr.slice(2) : addr;
+    const param = cleanAddr.padStart(64, "0").toLowerCase() + BigInt(slotNumber).toString(16).padStart(64, "0");
+    try {
+      const res = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggerconstantcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: "410000000000000000000000000000000000000000",
+          contract_address: MATRIX_CONTRACT_HEX,
+          function_selector: "getSlotDataV2(address,uint256)",
+          parameter: param,
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+      });
+      const json: any = await res.json();
+      const raw = json.constant_result?.[0] || "";
+      if (!raw || raw.length < 1216) return null;
+      const chunks: string[] = [];
+      for (let i = 0; i < raw.length; i += 64) chunks.push(raw.slice(i, i + 64));
+      const isUnlocked = BigInt("0x" + chunks[0]) !== 0n;
+      const isLive = BigInt("0x" + chunks[1]) !== 0n;
+      const currentCycle = Number(BigInt("0x" + chunks[2]));
+      const filledNodes = Number(BigInt("0x" + chunks[3]));
+      const nodes: string[] = [];
+      for (let i = 0; i < 14; i++) {
+        nodes.push("0x" + chunks[4 + i].slice(24).toLowerCase());
+      }
+      const slotEarned = Number(BigInt("0x" + (chunks[18] || "0"))) / 1e6;
+      return { isUnlocked, isLive, currentCycle, filledNodes, nodes, slotEarned };
+    } catch {
+      return null;
+    }
+  }
+
+  const rootData = await queryContractSlot(canonical);
+  const isUnlocked = Boolean(rootData?.isUnlocked || slotNumber === 1);
+  const isLive = Boolean(rootData?.isLive || (slotNumber === 1 && isUnlocked));
+  const currentCycle = rootData?.currentCycle || targetCycle || 1;
+  const totalEarned = rootData?.slotEarned || 0;
+
+  const displayNodes = rootData?.nodes ? [...rootData.nodes] : Array(14).fill(ZERO);
+
+  if (isUnlocked) {
+    try {
+      const s1 = displayNodes[0];
+      const s2 = displayNodes[1];
+      const [s1Data, s2Data] = await Promise.all([
+        queryContractSlot(s1),
+        queryContractSlot(s2),
+      ]);
+
+      if ((!displayNodes[2] || displayNodes[2] === ZERO) && s1Data?.nodes?.[0]) displayNodes[2] = s1Data.nodes[0];
+      if ((!displayNodes[3] || displayNodes[3] === ZERO) && s1Data?.nodes?.[1]) displayNodes[3] = s1Data.nodes[1];
+      if ((!displayNodes[4] || displayNodes[4] === ZERO) && s2Data?.nodes?.[0]) displayNodes[4] = s2Data.nodes[0];
+      if ((!displayNodes[5] || displayNodes[5] === ZERO) && s2Data?.nodes?.[1]) displayNodes[5] = s2Data.nodes[1];
+
+      const l2Parents = [displayNodes[2], displayNodes[3], displayNodes[4], displayNodes[5]];
+      const l2Results = await Promise.all(l2Parents.map(queryContractSlot));
+      for (let pIdx = 0; pIdx < 4; pIdx++) {
+        const leftIdx = 6 + pIdx * 2;
+        const rightIdx = leftIdx + 1;
+        const pNodes = l2Results[pIdx]?.nodes;
+        if ((!displayNodes[leftIdx] || displayNodes[leftIdx] === ZERO) && pNodes?.[0]) displayNodes[leftIdx] = pNodes[0];
+        if ((!displayNodes[rightIdx] || displayNodes[rightIdx] === ZERO) && pNodes?.[1]) displayNodes[rightIdx] = pNodes[1];
+      }
+    } catch (err) {
+      console.warn("[MatrixService] Live on-chain downline traversal notice:", err);
+    }
+  }
+
+  const PAYOUT_TYPES = [
+    "UPLINE_1", "UPLINE_2",
+    "DIRECT", "DIRECT", "POOL", "POOL",
+    "DOWNLINE_P7", "DIRECT", "DIRECT", "DOWNLINE_P10", "DIRECT", "DIRECT",
+    "DOWNLINE_P13", "RECYCLE",
+  ];
+
+  let filledCount = 0;
+  const nodesArray = await Promise.all(
+    displayNodes.map(async (addr, i) => {
+      const pos = i + 1;
+      const isFilled = addr && addr !== ZERO;
+      if (isFilled) filledCount++;
+      let userId: number | null = null;
+      if (isFilled) {
+        try {
+          const code = await queryRegistryCodeOnChain(addr);
+          if (code) userId = code;
+        } catch {}
+      }
+      return {
+        position: pos,
+        level: getLevelForPosition(pos),
+        filled: isFilled,
+        placedUser: isFilled ? addr : null,
+        userId: userId,
+        payoutType: PAYOUT_TYPES[i] || "DIRECT",
+        recipientAddress: isFilled ? addr : null,
+        wasFallback: false,
+        amount: SLOT_COSTS[slotNumber] || 30,
+        timestamp: null,
+        isDirect: isFilled && pos <= 2,
+        isDirectDeposited: isFilled && pos <= 2,
+        isSpillover: isFilled && pos > 2,
+      };
+    })
+  );
+
+  return {
+    slotNumber,
+    cost: SLOT_COSTS[slotNumber] || 30,
+    isUnlocked,
+    isLive,
+    currentCycle,
+    recyclesCount: Math.max(0, currentCycle - 1),
+    filledNodes: Math.max(rootData?.filledNodes || 0, filledCount),
+    upgradeReserve: 0,
+    totalEarned,
+    nodes: nodesArray,
+  };
+}
+
 export class MatrixService {
   // ── USER LIFECYCLE & PROFILE ──────────────────────────────────────────────
 
@@ -709,6 +842,55 @@ export class MatrixService {
 
   async getUserSlots(address: string): Promise<MatrixSlotSummaryDTO[]> {
     const canonicalAddress = toCanonicalAddress(address);
+    try {
+      const cleanAddr = canonicalAddress.startsWith("0x") ? canonicalAddress.slice(2) : canonicalAddress;
+      const userHexParam = cleanAddr.padStart(64, "0").toLowerCase();
+      const onChainSlots = await Promise.all(
+        Array.from({ length: 12 }, async (_, i) => {
+          const slot = i + 1;
+          const param = userHexParam + BigInt(slot).toString(16).padStart(64, "0");
+          try {
+            const res = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggerconstantcontract`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                owner_address: "410000000000000000000000000000000000000000",
+                contract_address: MATRIX_CONTRACT_HEX,
+                function_selector: "getSlotDataV2(address,uint256)",
+                parameter: param,
+              }),
+              signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+            });
+            const json: any = await res.json();
+            const raw = json.constant_result?.[0] || "";
+            if (raw && raw.length >= 256) {
+              const isUnlocked = BigInt("0x" + raw.slice(0, 64)) !== 0n;
+              const isLive = BigInt("0x" + raw.slice(64, 128)) !== 0n;
+              const currentCycle = Number(BigInt("0x" + raw.slice(128, 192))) || 1;
+              const filledNodes = Number(BigInt("0x" + raw.slice(192, 256))) || 0;
+              const totalEarned = raw.length >= 1216 ? Number(BigInt("0x" + raw.slice(1152, 1216))) / 1e6 : 0;
+              return {
+                slotNumber: slot,
+                cost: SLOT_COSTS[slot] || 30,
+                isUnlocked: isUnlocked || slot === 1,
+                isLive: isLive || (slot === 1 && isUnlocked),
+                currentCycle,
+                recyclesCount: Math.max(0, currentCycle - 1),
+                filledNodes,
+                upgradeReserve: 0,
+                totalEarned,
+                unlockedAt: isUnlocked ? new Date().toISOString() : null,
+              };
+            }
+          } catch {}
+          return null;
+        })
+      );
+      const validSlots = onChainSlots.filter(Boolean) as MatrixSlotSummaryDTO[];
+      if (validSlots.length === 12) {
+        return validSlots;
+      }
+    } catch {}
     await syncUserFromChain(canonicalAddress).catch(() => {});
     try {
       const slots = await prisma.matrixSlot.findMany({
@@ -745,6 +927,15 @@ export class MatrixService {
     cycle?: number
   ): Promise<MatrixSlotDetailsDTO | null> {
     const canonicalAddress = toCanonicalAddress(address);
+    // Prioritize 100% on-chain blockchain live state
+    try {
+      const onChain = await fetchOnChainSlotDetailsLive(canonicalAddress, slotNumber, cycle || 1);
+      if (onChain && onChain.isUnlocked) {
+        return onChain;
+      }
+    } catch (chainErr) {
+      console.warn('[MatrixService] Live on-chain slot query notice:', chainErr);
+    }
 
     try {
       const slot = await prisma.matrixSlot.findUnique({
@@ -872,8 +1063,8 @@ export class MatrixService {
         nodes: nodesArray,
       };
     } catch (dbErr: any) {
-      console.warn(`[MatrixService] DB notice in getSlotDetails(${canonicalAddress}, ${slotNumber}), returning fallback:`, dbErr?.message || dbErr);
-      return getFallbackSlotDetails(slotNumber, cycle || 1);
+      console.warn(`[MatrixService] DB unreachable in getSlotDetails(${canonicalAddress}, ${slotNumber}), querying live blockchain:`, dbErr?.message || dbErr);
+      return fetchOnChainSlotDetailsLive(canonicalAddress, slotNumber, cycle || 1);
     }
   }
 

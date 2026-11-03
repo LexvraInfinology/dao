@@ -102,11 +102,11 @@ async function main() {
   const coder = new ethers.AbiCoder();
 
   // ── ADDRESSES ──────────────────────────────────────────────────────────────
-  const matrixHex  = "41bb16ec48859ae2696dbd04368e3fe73bcd0ef393"; // newly deployed
-  const vaultHex   = "415a1e20075ad6574d540b5a04f3bdb3cbc47b73b2";
-  const registryHex= "419f559d68ea7019f34bf1401e658fbb724d123845";
-  const daoHex     = "41a84cb945ad0431057656f3c5def53ab4f209ed3f";
-  const nftHex     = "4146d47f289988f31644eb5c7de1867c731e30b04b";
+  const matrixHex  = "41afedb7886ddf932acb2c91f7ed080b493d5fb18f"; // TS1S2VRXYn8KzCQDYL6JweJVNczCSK3xro
+  const vaultHex   = "41c1908d6771577efa1743eb786f23da81316f396d"; // TTcgakpSHzR3nSy7Q9XsR2KkpfsJCmeUYT
+  const registryHex= "41218156202edd1294f681a04955f83573755edb4b"; // TD2NEqnkgoAk3t3jZAg9gkZUnEXdqyzgxT
+  const daoHex     = "41ee2a9da2fcc066e656545c8db093648d46b61bf2"; // TXgWsi97pCGR7Wwqou7731RvcYugcsMtXR
+  const nftHex     = "4149e8bddaeb8261485af772677ebebafae019358f"; // TGi19EXR2J2DsHioNomCBCWRLp71wG4j9s
   const matrixBase58 = hexToBase58(matrixHex);
 
   console.log(`\n🔗 Wiring EquoraMatrix: ${matrixBase58} (${matrixHex})`);

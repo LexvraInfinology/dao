@@ -259,7 +259,7 @@ export function ProtocolPoolsPanel({
               The 4 Closed-Loop Protocol Pools
             </h2>
             <p className="text-[12px] sm:text-[13px] text-[#657895] mt-0.5 max-w-2xl">
-              P4, P5 ($60) &amp; P14 ($30) deposits along with unqualified downline spillover stream automatically into 4 autonomous protocol streams.
+              P4, P5 &amp; P14 protocol pool contributions along with unqualified downline spillover stream automatically into 4 autonomous protocol streams.
             </p>
           </div>
 

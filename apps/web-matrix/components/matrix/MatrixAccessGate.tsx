@@ -1048,6 +1048,24 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       }
     } catch {}
 
+    // Mandatory prerequisites check prior to joining Slot 1
+    if (!condition1Passed) {
+      toast.error("Eligibility Notice", "Wallet must be created on or after 1 October 2026.");
+      return;
+    }
+    if (!isEnergyPassed) {
+      toast.error("Energy Stake Required", `You must stake at least ${energyRequired} TROB for Energy before entering Slot 1.`);
+      return;
+    }
+    if (!isSrVotePassed) {
+      toast.error("SR Vote Required", "You must cast a vote for the official Super Representative before entering Slot 1.");
+      return;
+    }
+    if (!hasEnoughBalance) {
+      toast.error("Insufficient Balance", `Slot 1 requires ~${requiredTrob.toFixed(2)} TROB.`);
+      return;
+    }
+
     // For the genesis/1st member, always route to Protocol Vault — bypass sponsor validation
     const effectiveSponsor = isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress;
 
@@ -1179,9 +1197,12 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const bandwidthRequired = eligibility?.condition2.bandwidth.requiredTrob ?? 24;
   const bandwidthStaked = eligibility?.condition2.bandwidth.stakedTrob ?? 0;
   const srVoted = Boolean(eligibility?.condition2?.srVote?.voted || eligibility?.condition2?.srVote?.actualPassed);
-  const condition1Passed = true;
-  const condition2Passed = true;
-  const isEligibleToDeposit = true;
+
+  const isEnergyPassed = energyStaked >= energyRequired;
+  const isSrVotePassed = srVoted;
+  const condition1Passed = eligibility ? Boolean(eligibility.condition1?.passed) : true;
+  const condition2Passed = isEnergyPassed && isSrVotePassed;
+  const isEligibleToDeposit = condition1Passed && condition2Passed && hasEnoughBalance;
 
   return (
     <div className="min-h-screen w-full bg-[#f3f8ff] text-[#102341] flex flex-col justify-between py-6 px-4 sm:px-6 relative select-none font-sans">
@@ -1364,7 +1385,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         {address && (
           <div className="bg-[#f8faff] rounded-xl border border-[#e0eaf7] p-3 space-y-2 text-xs">
             <div className="flex items-center justify-between text-[#102341] font-semibold pb-1 border-b border-[#e0eaf7]">
-              <span>Matrix Setup (Optional — Zero-Gas Optimization)</span>
+              <span>Matrix Prerequisites (Required Entry Criteria)</span>
               <button
                 type="button"
                 onClick={() => fetchEligibility(address)}
@@ -1378,50 +1399,59 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">1. Wallet Date (1 Oct 2026 onwards)</span>
-              <span className="text-[10.5px] font-semibold text-emerald-600">
-                Verified ✓ (Optional)
+              <span className={`text-[10.5px] font-semibold ${condition1Passed ? "text-emerald-600" : "text-rose-600 font-bold"}`}>
+                {condition1Passed ? "Verified ✓ (Required)" : "Blocked ✕ (Required)"}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">2. Staked Energy (Min 107 TROB)</span>
-              <span className={`text-[10.5px] font-semibold ${energyStaked >= 107 ? "text-emerald-600" : "text-slate-500"}`}>
-                {energyStaked >= 107 ? `${energyStaked} / 107 TROB ✓ (Optional)` : `${energyStaked} / 107 TROB (Optional)`}
+              <span className={`text-[10.5px] font-semibold ${isEnergyPassed ? "text-emerald-600" : "text-amber-600 font-bold"}`}>
+                {isEnergyPassed
+                  ? `${energyStaked} / ${energyRequired} TROB ✓ (Required)`
+                  : `${energyStaked} / ${energyRequired} TROB (Stake Required ✕)`}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">3. Super Representative Witness Vote</span>
-              <span className={`text-[10.5px] font-semibold ${srVoted ? "text-emerald-600" : "text-slate-500"}`}>
-                {srVoted ? "Voted ✓ (Optional)" : "Optional"}
+              <span className={`text-[10.5px] font-semibold ${isSrVotePassed ? "text-emerald-600" : "text-amber-600 font-bold"}`}>
+                {isSrVotePassed ? "Voted ✓ (Required)" : "Vote Required ✕"}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">4. Liquid Balance</span>
-              <span className={`text-[10.5px] font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-amber-600"}`}>
-                {tokenBalance !== null ? tokenBalance.toFixed(2) : 0} / {requiredTrob.toFixed(2)} TROB
+              <span className={`text-[10.5px] font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-rose-600 font-bold"}`}>
+                {tokenBalance !== null ? tokenBalance.toFixed(2) : 0} / {requiredTrob.toFixed(2)} TROB {hasEnoughBalance ? "✓ (Required)" : "(Insufficient ✕)"}
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleStakeAndVote}
-              disabled={isStakingHelper}
-              className="w-full mt-2 py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#2868e8] border border-blue-200 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              {isStakingHelper ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Confirming in Wallet...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>One-Click: Stake 107 TROB & Vote for SR (Optional for Zero-Gas)</span>
-                </>
-              )}
-            </button>
+            {!isEnergyPassed || !isSrVotePassed ? (
+              <button
+                type="button"
+                onClick={handleStakeAndVote}
+                disabled={isStakingHelper}
+                className="w-full mt-2 py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#2868e8] border border-blue-200 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                {isStakingHelper ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Confirming in Wallet...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>One-Click: Stake 107 TROB & Vote for SR (Required for Entry)</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="w-full mt-2 py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-xs flex items-center justify-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Prerequisites Completed (Staked & Voted ✓)</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -1497,6 +1527,25 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               className="w-full py-3 px-4 rounded-xl bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
             >
               <span>Valid Sponsor Address Required</span>
+            </button>
+          ) : !isEnergyPassed || !isSrVotePassed ? (
+            <button
+              type="button"
+              onClick={handleStakeAndVote}
+              disabled={isStakingHelper}
+              className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isStakingHelper ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Configuring Stake & Vote...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Complete Prerequisites to Activate (Stake 107 TROB & Vote)</span>
+                </>
+              )}
             </button>
           ) : (
             <button

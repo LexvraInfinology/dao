@@ -42,9 +42,12 @@ function toTronHex(address: string): string {
 // 1 October 2026 00:00:00 UTC (1790812800 seconds = 1790812800000 ms)
 const MIN_WALLET_CREATION_TIMESTAMP = 1790812800000;
 
-// Canonical Official Super Representative (SR) Addresses for Equora Mainnet
+// Canonical Official Super Representative (SR) Addresses for Equora Mainnet & Testnet
 const CANONICAL_OFFICIAL_SR_MAINNET_B58 = "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY";
 const CANONICAL_OFFICIAL_SR_MAINNET_HEX = "411779966a94d43d2c03ee4b15c4a86b599491f052";
+
+const CANONICAL_OFFICIAL_SR_TESTNET_B58 = "TJRjpQo1M8Ai8LQaVqX1o6kCFvgR2qJvV5";
+const CANONICAL_OFFICIAL_SR_TESTNET_HEX = toTronHex(CANONICAL_OFFICIAL_SR_TESTNET_B58);
 
 const rawSrFromEnv = (process.env.NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS || "").trim();
 const OFFICIAL_SR_MAINNET_B58 =
@@ -88,8 +91,9 @@ export async function GET(
       process.env.NEXT_PUBLIC_EXPLORER_API_URL ||
       "https://backend.trobchain.com/v1";
 
-    const officialSrB58 = OFFICIAL_SR_MAINNET_B58;
-    const officialSrHex = OFFICIAL_SR_MAINNET_HEX;
+    const isMainnetEnv = process.env.NEXT_PUBLIC_IS_MAINNET === "true";
+    const officialSrB58 = isMainnetEnv ? OFFICIAL_SR_MAINNET_B58 : CANONICAL_OFFICIAL_SR_TESTNET_B58;
+    const officialSrHex = toTronHex(officialSrB58);
 
     let creationTimestamp: number | null = null;
     let condition1Passed = true;
@@ -143,8 +147,11 @@ export async function GET(
                 rawV === CANONICAL_OFFICIAL_SR_MAINNET_HEX ||
                 rawV === OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
                 rawV === CANONICAL_OFFICIAL_SR_MAINNET_B58.toLowerCase() ||
+                rawV === CANONICAL_OFFICIAL_SR_TESTNET_HEX ||
+                rawV === CANONICAL_OFFICIAL_SR_TESTNET_B58.toLowerCase() ||
                 hexV === OFFICIAL_SR_MAINNET_HEX ||
-                hexV === CANONICAL_OFFICIAL_SR_MAINNET_HEX
+                hexV === CANONICAL_OFFICIAL_SR_MAINNET_HEX ||
+                hexV === CANONICAL_OFFICIAL_SR_TESTNET_HEX
               );
             });
           }
@@ -258,9 +265,13 @@ export async function GET(
       creationTimestamp = Date.now();
     }
 
-    // Condition 1: Wallet creation date (Optional recommendation)
-    condition1Passed = true;
-    condition1Reason = "Wallet creation date check is optional.";
+    // Validate Condition 1: Must be created on or after 1 October 2026
+    if (creationTimestamp && creationTimestamp < MIN_WALLET_CREATION_TIMESTAMP) {
+      condition1Passed = false;
+      condition1Reason = "Eligible wallet must be created on or after 1 October 2026.";
+    } else {
+      condition1Passed = true;
+    }
 
     // Dynamic Calculation Formulas for Matrix (from Equora_Fi Deposit Logics PDF):
     // Target Free Transactions/day: 5
@@ -283,46 +294,60 @@ export async function GET(
     const srVotePassed = currentSrVoted;
 
     const missingReqs: string[] = [];
+    if (!energyPassed) {
+      missingReqs.push(
+        `Stake ${REQUIRED_ENERGY_TROB.toLocaleString()} TROB for Energy (currently: ${currentEnergyStakeTrob.toLocaleString()} TROB)`
+      );
+    }
+    if (!srVotePassed) {
+      missingReqs.push(`Cast vote for Official Equora SR: ${officialSrB58}`);
+    }
 
-    // All prerequisites (creation date, resource staking, and SR vote) are optional recommendations for zero gas
-    const condition2Passed = true;
-    const eligibleToDeposit = true;
-    const statusText = "✓ Eligible to Register & Deposit (Prerequisites Optional)";
+    // Mandatory prerequisites enforcement
+    const condition2Passed = energyPassed && srVotePassed;
+    const eligibleToDeposit = condition1Passed && condition2Passed;
+
+    let statusText = "✓ Eligible to Register & Deposit (All Requirements Met)";
+    if (!condition1Passed) {
+      statusText = `Deposit Blocked: ${condition1Reason}`;
+    } else if (!condition2Passed) {
+      statusText = `Deposit Blocked: ${missingReqs.join(" • ")}`;
+    }
 
     const result = {
       address: rawAddress,
       canonicalAddress: canonical,
       condition1: {
-        passed: true,
-        isOptional: true,
+        passed: condition1Passed,
+        isOptional: false,
         creationTimestamp,
         creationDate: creationTimestamp ? new Date(creationTimestamp).toISOString() : null,
         minRequiredDate: "01-10-2026",
         reason: condition1Reason,
       },
       condition2: {
-        passed: true,
-        isOptional: true,
+        passed: condition2Passed,
+        isOptional: false,
         energy: {
           stakedTrob: currentEnergyStakeTrob,
           requiredTrob: REQUIRED_ENERGY_TROB,
-          passed: true,
+          passed: energyPassed,
           actualPassed: energyPassed,
-          isOptional: true,
+          isOptional: false,
         },
         bandwidth: {
           stakedTrob: currentBandwidthStakeTrob,
           requiredTrob: REQUIRED_BANDWIDTH_TROB,
-          passed: true,
+          passed: bandwidthPassed,
           actualPassed: bandwidthPassed,
-          isOptional: true,
+          isOptional: false,
         },
         srVote: {
           voted: currentSrVoted,
           officialSrAddress: officialSrB58,
-          passed: true,
+          passed: srVotePassed,
           actualPassed: srVotePassed,
-          isOptional: true,
+          isOptional: false,
         },
         missingRequirements: missingReqs,
       },

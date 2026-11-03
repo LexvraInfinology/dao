@@ -11,7 +11,7 @@ const FULLNODE_URL =
 
 const MATRIX_HEX =
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
-  "41afedb7886ddf932acb2c91f7ed080b493d5fb18f"; // EquoraMatrix V3 fresh deploy
+  "41afedb7886ddf932acb2c91f7ed080b493d5fb18f"; // TS1S2VRXYn8KzCQDYL6JweJVNczCSK3xro
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers
@@ -135,28 +135,23 @@ async function getUserSlot(userEthHex: string, slot: number) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function getSlotDataV2(userEthHex: string, slot: number) {
   const params = encodeAddress(userEthHex) + encodeUint256(slot);
-  // getSlotDataV2 returns: bool, bool, uint256, uint256, address[14], uint256
+  // getSlotDataV2 returns: bool, bool, uint256, uint256, address[14], uint256 (19 32-byte words)
   const chunks = await callContract(MATRIX_HEX, "getSlotDataV2(address,uint256)", params);
-  if (chunks.length < 20) return null;
+  if (chunks.length < 19) return null;
 
-  const isUnlocked  = decodeBool(chunks[0]);
-  const isLive      = decodeBool(chunks[1]);
+  const isUnlocked   = decodeBool(chunks[0]);
+  const isLive       = decodeBool(chunks[1]);
   const currentCycle = Number(decodeUint256(chunks[2]));
   const filledNodes  = Number(decodeUint256(chunks[3]));
-  // chunks[4] = offset to array data, chunks[5] = array length (14)
-  // chunks[6..19] = 14 addresses
+
+  // chunks[4..17] = 14 addresses (fixed-size array address[14])
   const nodes: string[] = [];
-  const arrOffset = 4;
-  const arrLen = Number(decodeUint256(chunks[arrOffset + 1] || "000000000000000000000000000000000000000000000000000000000000000e"));
-  for (let i = 0; i < Math.min(14, arrLen); i++) {
-    const rawNode = chunks[arrOffset + 2 + i];
+  for (let i = 0; i < 14; i++) {
+    const rawNode = chunks[4 + i];
     nodes.push(rawNode ? decodeAddress(rawNode) : "0x0000000000000000000000000000000000000000");
   }
-  // pad to 14 if short
-  while (nodes.length < 14) nodes.push("0x0000000000000000000000000000000000000000");
 
-  const earnedChunk = chunks[arrOffset + 2 + 14] || "";
-  const slotEarned = decodeUint256(earnedChunk);
+  const slotEarned = decodeUint256(chunks[18] || "");
 
   return { isUnlocked, isLive, currentCycle, filledNodes, nodes, slotEarned };
 }

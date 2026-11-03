@@ -892,7 +892,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     function _routeP7(
         address matrixOwner,
-        address /* placedUser */,
+        address placedUser,
         uint256 slot,
         uint256 cycle,
         uint256 cost
@@ -900,12 +900,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         uint8 s = uint8(slot);
         address dl1 = userSlots[matrixOwner][slot].nodes[0];
 
-        // Strict Left Leg Downline 1 Isolation (No cross-fallback to DL2)
+        // Strict Left Leg Downline 1 Spillover Cascade (Deep-Searching Hybrid Engine)
         if (dl1 != address(0) && isMatrixQualified(dl1)) {
             p7PaidRecipient[matrixOwner][slot][cycle] = dl1;
             emit SpilloverResolved(matrixOwner, dl1, 7, false);
-            _pushMatrixPayment(dl1, cost);
-            emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 7);
+            _cascadeDownline(dl1, placedUser, slot, cost, 1);
         } else {
             _forwardToVault(matrixOwner, cost);
             emit SpilloverResolved(matrixOwner, vaultContract, 7, true);
@@ -916,7 +915,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     function _routeP10(
         address matrixOwner,
-        address /* placedUser */,
+        address placedUser,
         uint256 slot,
         uint256 cycle,
         uint256 cost
@@ -924,11 +923,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         uint8 s = uint8(slot);
         address dl2 = userSlots[matrixOwner][slot].nodes[1];
 
-        // Strict Right Leg Downline 2 Isolation (No cross-fallback to DL1)
+        // Strict Right Leg Downline 2 Spillover Cascade (Deep-Searching Hybrid Engine)
         if (dl2 != address(0) && isMatrixQualified(dl2)) {
             emit SpilloverResolved(matrixOwner, dl2, 10, false);
-            _pushMatrixPayment(dl2, cost);
-            emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 10);
+            _cascadeDownline(dl2, placedUser, slot, cost, 1);
         } else {
             _forwardToVault(matrixOwner, cost);
             emit SpilloverResolved(matrixOwner, vaultContract, 10, true);

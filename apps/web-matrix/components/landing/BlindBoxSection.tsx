@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { getOnChainProtocolPoolsStats, ProtocolPoolsStats, CONTRACT_ADDRESSES, EXPLORER_URL } from "@/lib/contracts";
-import joinedMembersData from "@/lib/joinedMembers.json";
 
 export function BlindBoxSection() {
   const [stats, setStats] = useState<ProtocolPoolsStats | null>(null);
@@ -38,10 +37,7 @@ export function BlindBoxSection() {
   const effectivePoolTrob = Math.max(magicPoolTrob, vaultRoutedTrob);
   const effectivePoolUsd = effectivePoolTrob * TROB_PRICE;
 
-  const eligibleCount = Math.max(
-    stats?.magicBoxPool?.eligibleUsersCount ?? 0,
-    joinedMembersData.length
-  );
+  const eligibleCount = stats?.magicBoxPool?.eligibleUsersCount ?? 0;
 
   const targetUsd = 500;
   const progressPercent = Math.min(
@@ -380,3 +376,4 @@ export function BlindBoxSection() {
     </section>
   );
 }
+

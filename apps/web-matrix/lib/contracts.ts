@@ -542,22 +542,6 @@ export async function getDynamicDirects(sponsorAddr: string): Promise<string[]> 
     console.warn("[OnChainDirects] Query notice for", canon, err);
   }
 
-  // 2. Fallback to joinedMembers.json if on-chain returned 0 (e.g. offline mock testing)
-  try {
-    const allMembers: any[] = joinedMembersData as any[];
-    if (Array.isArray(allMembers)) {
-      const matched = allMembers
-        .filter((m) => m.sponsor && m.sponsor.toLowerCase() === canon)
-        .sort((a, b) => a.memberNumber - b.memberNumber)
-        .map((m) => m.evm?.toLowerCase())
-        .filter(Boolean);
-      if (matched.length > 0) {
-        dynamicDirectsCache.set(canon, { directs: matched, timestamp: Date.now() });
-        return matched;
-      }
-    }
-  } catch {}
-
   dynamicDirectsCache.set(canon, { directs: [], timestamp: Date.now() });
   return [];
 }
@@ -722,16 +706,7 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  // Build lookup map from joinedMembers.json for rich labels & Base58 addresses
-  const memberMetaMap = new Map<string, any>();
-  try {
-    const joinedList: any[] = joinedMembersData as any[];
-    for (const j of joinedList) {
-      if (j.evm) memberMetaMap.set(j.evm.toLowerCase(), j);
-      if (j.base58) memberMetaMap.set(j.base58, j);
-    }
-  } catch {}
-
+  
   // Fetch real on-chain 5-digit member codes and member IDs if available
   let onChainCodes: number[] = [];
   let onChainIds: number[] = [];
@@ -759,15 +734,7 @@ export async function getOnChainSlotDetails(
         occupant !== "0x0000000000000000000000000000000000000000" &&
         occupant !== "0x0";
       if (isFilled && (!onChainCodes[idx] || onChainCodes[idx] === 0)) {
-        const meta = memberMetaMap.get(occupant.toLowerCase());
-        if (meta?.memberNumber) {
-          onChainCodes[idx] = meta.memberNumber;
-        } else {
-          try {
-            const c = await getOnChainCodeByUser(occupant);
-            if (c) onChainCodes[idx] = c;
-          } catch {}
-        }
+        try { const c = await getOnChainCodeByUser(occupant); if (c) onChainCodes[idx] = c; } catch {}
       }
     })
   );
@@ -794,23 +761,23 @@ export async function getOnChainSlotDetails(
 
     const realCode = isUnlocked ? (onChainCodes[pos - 1] || null) : null;
     const realId = isUnlocked ? (onChainIds[pos - 1] || null) : null;
-    const meta = isUnlocked && occupant ? memberMetaMap.get(occupant.toLowerCase()) : null;
+    
 
     formattedNodes.push({
       position: pos,
       level: pos <= 2 ? 1 : pos <= 6 ? 2 : 3,
       filled: Boolean(isFilled),
       placedUser: isFilled ? occupant.toLowerCase() : null,
-      base58: meta?.base58 || (isFilled ? toTrobBase58(occupant) : null),
-      label: meta?.label || meta?.name || (isFilled ? `Member #${pos + 1}` : null),
-      userId: realId || meta?.memberNumber || (isFilled ? parseInt(occupant.slice(2, 6), 16) || pos : null),
-      code: realCode || meta?.memberNumber || null,
+      base58: isFilled ? toTrobBase58(occupant) : null,
+      label: isFilled ? (realCode ? `Member #${realCode}` : `Member #${pos + 1}`) : null,
+      userId: realId || (isFilled ? parseInt(occupant.slice(2, 6), 16) || pos : null),
+      code: realCode || null,
       payoutType,
       recipientAddress: isFilled ? userHex : null,
       wasFallback: false,
       amount: getSlotCost(slotNumber),
-      timestamp: meta?.timestamp || (isFilled ? new Date().toISOString() : null),
-      txHash: meta?.txHash || null,
+      timestamp: isFilled ? new Date().toISOString() : null,
+      txHash: null,
       isDirect: pos <= 2,
       isDirectDeposited: isFilled && pos <= 2,
       isSpillover: pos >= 7,
@@ -895,14 +862,7 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
       }
     } catch {}
 
-    if (activeDirectsCount === 0) {
-      try {
-        const records: any[] = require("./joinedMembers.json");
-        activeDirectsCount = records.filter(
-          (r: any) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
-        ).length;
-      } catch {}
-    }
+    
 
     if (!isQualified && activeDirectsCount >= 2) {
       isQualified = true;
@@ -1117,23 +1077,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     directReferralsCount = activeDirectsCount;
   }
 
-  // Load member records from joinedMembers.json for fallback validation
-  let joinedMeta: any = null;
-  let sponsoredDirectsCount = 0;
-  try {
-    const records: any[] = require("./joinedMembers.json");
-    if (Array.isArray(records)) {
-      joinedMeta = records.find((r) => r.evm && r.evm.toLowerCase() === userHex.toLowerCase());
-      sponsoredDirectsCount = records.filter(
-        (r) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
-      ).length;
-    }
-  } catch {}
-
-  if (activeDirectsCount === 0 && sponsoredDirectsCount > 0) {
-    activeDirectsCount = sponsoredDirectsCount;
-    directReferralsCount = sponsoredDirectsCount;
-  }
+  
 
   let isQualified = false;
   if (qualRaw) {
@@ -1155,10 +1099,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       }
     }
   }
-  if (!sponsorAddress && joinedMeta?.sponsor && !isDeployerAddress(joinedMeta.sponsor)) {
-    sponsorAddress = joinedMeta.sponsor.toLowerCase();
-  }
-  // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
+    // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
   if (!sponsorAddress) {
     sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
   }
@@ -1277,7 +1218,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     withdrawnTotalUsd,
     withdrawnTotalTrob: withdrawnTotal,
     recyclesCount: 0,
-    isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 || joinedMeta),
+    isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 ),
     joinedAt: onChainJoinedAt || (typeof window !== "undefined" ? localStorage.getItem(`equora_joined_at_${userHex}`) : null) || new Date().toISOString(),
   };
 }
@@ -1401,34 +1342,11 @@ export async function getOnChainDirectMembers(userAddress: string): Promise<any[
       }
     }
 
-    // Load rich records from joinedMembers.json
-    const memberMap = new Map<string, any>();
-    let joinedRecords: any[] = [];
-    try {
-      joinedRecords = require("./joinedMembers.json");
-      for (const r of joinedRecords) {
-        if (r.evm) memberMap.set(r.evm.toLowerCase(), r);
-        if (r.base58) memberMap.set(r.base58, r);
-      }
-    } catch {}
-
-    // If on-chain list was empty, resolve direct referrals from verified joinedMembers hierarchy
-    if (directs.length === 0 && Array.isArray(joinedRecords)) {
-      const sponsored = joinedRecords.filter(
-        (r) => r.sponsor && r.sponsor.toLowerCase() === userHex.toLowerCase()
-      );
-      if (sponsored.length > 0) {
-        directs = sponsored.map((s) => s.evm);
-      }
-    }
+    
 
     return directs.map((addr: string, idx: number) => {
-      const canonical = addr.toLowerCase();
-      const meta = memberMap.get(canonical);
-      const b58 = meta?.base58 || toTrobBase58(addr);
-      const username = meta?.label || meta?.name || `Operative ${b58.slice(0, 4)}...${b58.slice(-4)}`;
-      const joinedAt = meta?.timestamp || new Date().toISOString();
-      const userId = meta?.memberNumber || parseInt(addr.slice(2, 6), 16) || idx + 1;
+      const canonical = addr.toLowerCase(); const b58 = toTrobBase58(addr); const username = `Operative ${b58.slice(0, 4)}...${b58.slice(-4)}`; const joinedAt = new Date().toISOString();
+      const userId = parseInt(addr.slice(2, 6), 16) || idx + 1;
 
       return {
         address: b58,
@@ -1436,9 +1354,9 @@ export async function getOnChainDirectMembers(userAddress: string): Promise<any[
         userId,
         username,
         joinedAt,
-        activeSlots: meta?.slot || 1,
+        activeSlots: 1,
         totalContributed: 30, // $30 deposit per whitepaper
-        txHash: meta?.txHash || null,
+        txHash: null,
       };
     });
   } catch (err) {
@@ -2219,103 +2137,19 @@ export async function settleMonthlyRankRewardsOnChain(userAddress?: string): Pro
   });
 }
 
-import joinedMembersData from "./joinedMembers.json";
 
 /**
  * Returns verified real on-chain transaction history for a matrix operative.
  * Synthesized from real broadcasted testnet transactions.
  */
 export function getOnChainJoinedTransactions(userAddress: string) {
-  const cleanAddr = (userAddress || "").toLowerCase();
-  const items: any[] = [];
-
-  joinedMembersData.forEach((m: any, index: number) => {
-    const isUnderUser = m.sponsor?.toLowerCase() === cleanAddr;
-    const isDirectPayout = isUnderUser && (m.positionFilled === 3 || m.positionFilled === 6);
-    const isUserJoin = m.evm?.toLowerCase() === cleanAddr;
-
-    if (isUserJoin) {
-      items.push({
-        id: `tx-join-${m.memberNumber}`,
-        type: "SLOT_PURCHASE",
-        slotNumber: 1,
-        slotIndex: 1,
-        cycle: 1,
-        position: m.positionFilled || null,
-        amount: -30.0,
-        amountUsd: -30.0,
-        token: "TROB",
-        fromAddress: m.evm,
-        toAddress: CONTRACT_ADDRESSES.matrix,
-        txHash: m.txHash,
-        status: "Confirmed",
-        description: `Joined Slot 01 on TrobChain (535.71 TROB)`,
-        timestamp: m.timestamp || new Date().toISOString(),
-      });
-    }
-
-    if (isDirectPayout) {
-      items.push({
-        id: `tx-payout-${m.memberNumber}`,
-        type: "DIRECT_PAYOUT",
-        slotNumber: 1,
-        slotIndex: 1,
-        cycle: 1,
-        position: m.positionFilled,
-        amount: 30.0,
-        amountUsd: 30.0,
-        token: "TROB",
-        fromAddress: m.evm,
-        toAddress: cleanAddr,
-        txHash: m.txHash,
-        status: "Confirmed",
-        description: `Direct Owner Cashflow from Member ${m.memberNumber} (Position P${m.positionFilled})`,
-        timestamp: m.timestamp || new Date().toISOString(),
-      });
-    } else if (isUnderUser && !isUserJoin) {
-      items.push({
-        id: `tx-node-${m.memberNumber}`,
-        type: m.positionFilled === 4 || m.positionFilled === 5 ? "POOL_CONTRIBUTION" : "PLACEMENT",
-        slotNumber: 1,
-        slotIndex: 1,
-        cycle: 1,
-        position: m.positionFilled || null,
-        amount: 30.0,
-        amountUsd: 30.0,
-        token: "TROB",
-        fromAddress: m.evm,
-        toAddress: cleanAddr,
-        txHash: m.txHash,
-        status: "Confirmed",
-        description:
-          m.positionFilled === 4 || m.positionFilled === 5
-            ? `Stage 1 Slot 2 Reserve Pool (Member ${m.memberNumber})`
-            : `Downline Placement (Member ${m.memberNumber})`,
-        timestamp: m.timestamp || new Date().toISOString(),
-      });
-    }
-  });
-
-  // Calculate inflow/outflow
-  let totalInflow = 0;
-  let totalOutflow = 0;
-  items.forEach((tx) => {
-    if (tx.amount > 0) totalInflow += tx.amount;
-    else totalOutflow += Math.abs(tx.amount);
-  });
-
   return {
-    items,
-    total: items.length,
+    items: [],
+    total: 0,
     page: 1,
-    limit: 30,
+    limit: 20,
     totalPages: 1,
-    stats: {
-      totalInflow,
-      totalOutflow,
-      pendingCount: 0,
-      netProfit: totalInflow - totalOutflow,
-    },
+    stats: { totalInflow: 0, totalOutflow: 0, pendingCount: 0, netProfit: 0 },
   };
 }
 
@@ -2667,3 +2501,8 @@ export async function getOnChainUserTransactions(userAddress: string) {
     },
   };
 }
+
+
+
+
+

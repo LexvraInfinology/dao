@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, User, Coins, RotateCcw, ExternalLink } from "lucide-react";
 import { getOnChainSlotDetails, NETWORK_NAME, EXPLORER_URL } from "@/lib/contracts";
-import joinedMembersData from "@/lib/joinedMembers.json";
 import { formatAddress } from "@/lib/format";
 
 interface MatrixActivityRow {
@@ -41,63 +40,7 @@ export function ActivitySection() {
   const [mounted, setMounted] = useState(false);
 
   // Generate verified on-chain activity stream from actual members and cashflow events
-  const activities: MatrixActivityRow[] = useMemo(() => {
-    const rows: MatrixActivityRow[] = [];
-    const reversed = [...joinedMembersData].reverse();
-
-    reversed.forEach((m: any, idx: number) => {
-      const addr = m.base58 ? formatAddress(m.base58) : `Member #${m.memberNumber}`;
-      const timeAgo = timeAgoLabel(m.timestamp);
-
-      // 1. Direct Cashflow payout events for P3 and P6
-      if (m.positionFilled === 3 || m.positionFilled === 6 || m.memberNumber === 4 || m.memberNumber === 7 || m.memberNumber === 9 || m.memberNumber === 12 || m.memberNumber === 14) {
-        rows.push({
-          id: `payout-${m.txHash}-${idx}`,
-          title: "Direct Cashflow Payout",
-          subtitle: `+$30.00 USD settled instantly • ${addr}`,
-          highlight: "+$30.00 USD",
-          highlightColor: "text-[#12B76A]",
-          timeAgo,
-          memberId: `#${m.memberNumber}`,
-          txHash: m.txHash,
-          iconEl: <Coins className="w-4 h-4 text-[#12B76A]" />,
-          iconBg: "bg-[#ECFDF5] border border-[#A7F3D0]/60",
-        });
-      }
-
-      // 2. Member Joined / Slot 1 Activated
-      rows.push({
-        id: `join-${m.txHash}-${idx}`,
-        title: `Member #${m.memberNumber} Joined`,
-        subtitle: `Slot 1 Activated • ${addr}`,
-        highlight: "$30.00 USD",
-        highlightColor: "text-[#155EEF]",
-        timeAgo,
-        memberId: `#${m.memberNumber}`,
-        txHash: m.txHash,
-        iconEl: <User className="w-4 h-4 text-[#155EEF]" />,
-        iconBg: "bg-[#EFF6FF] border border-[#BFDBFE]/50",
-      });
-
-      // 3. Auto-Upgrade Reserve for P4 and P5
-      if (m.positionFilled === 4 || m.positionFilled === 5 || m.memberNumber === 5 || m.memberNumber === 6 || m.memberNumber === 11) {
-        rows.push({
-          id: `reserve-${m.txHash}-${idx}`,
-          title: "Auto-Upgrade Reserve",
-          subtitle: `$30.00 USD allocated to Slot 2 • ${addr}`,
-          highlight: "$30.00 USD",
-          highlightColor: "text-[#7C3AED]",
-          timeAgo,
-          memberId: `Slot 2`,
-          txHash: m.txHash,
-          iconEl: <RotateCcw className="w-4 h-4 text-[#7C3AED]" />,
-          iconBg: "bg-[#F5F3FF] border border-[#DDD6FE]/60",
-        });
-      }
-    });
-
-    return rows.slice(0, 5);
-  }, []);
+  const activities: MatrixActivityRow[] = [];
 
   useEffect(() => {
     setMounted(true);
@@ -160,45 +103,10 @@ export function ActivitySection() {
 
               {/* Activity rows — Sheer pills: solid white on left for legibility, crystal-clear on right so pointing hand shows cleanly */}
               <div className="space-y-1.5 sm:space-y-2 pt-2 sm:pt-3">
-                {activities.map((item) => {
-                  const explorerUrl = `${EXPLORER_URL}/#/transaction/${item.txHash}`;
-                  return (
-                    <div
-                      key={item.id}
-                      className="activity-row-mobile py-2 min-[360px]:py-2.5 sm:py-3 flex items-center justify-between gap-2 min-[360px]:gap-3 sm:gap-4 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl transition-all shadow-[0_2px_8px_rgba(15,23,42,0.02)]"
-                    >
-                      <div className="flex items-center gap-2 min-[360px]:gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-                        <div className={`w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs ${item.iconBg}`}>
-                          {item.iconEl}
-                        </div>
-                        <div className="min-w-0 space-y-0.5 flex-1">
-                          <div className="text-xs sm:text-sm md:text-base font-bold text-[#0B132B] truncate tracking-tight [text-shadow:0_1px_1px_rgba(255,255,255,0.8)]">
-                            {item.title}
-                          </div>
-                          <div className="text-[10px] sm:text-xs text-[#0F172A] font-semibold truncate font-mono sm:font-sans [text-shadow:0_1px_1px_rgba(255,255,255,0.8)]">
-                            {item.subtitle}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0 min-w-[62px] min-[360px]:min-w-[72px] sm:min-w-[85px] pl-1.5 sm:pl-3 flex flex-col items-end">
-                        <a
-                          href={explorerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`text-xs sm:text-sm md:text-base font-black tabular-nums tracking-tight whitespace-nowrap px-1 rounded bg-white/70 sm:bg-transparent inline-flex items-center gap-0.5 hover:underline ${item.highlightColor}`}
-                          title="View on TrobScan"
-                        >
-                          <span>{item.highlight}</span>
-                          <ExternalLink className="w-2.5 h-2.5 opacity-60 inline" />
-                        </a>
-                        <span className="text-[9px] sm:text-[10px] text-[#1E293B] font-bold tabular-nums whitespace-nowrap">
-                          {item.timeAgo}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  <p className="font-semibold text-slate-700">Connecting to TrobChain Layer-1...</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Live transaction blocks stream as new activations settle on-chain.</p>
+                </div>
               </div>
 
               {/* Card footer */}
@@ -221,3 +129,5 @@ export function ActivitySection() {
     </section>
   );
 }
+
+

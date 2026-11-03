@@ -1143,9 +1143,6 @@ export class MatrixService {
           if (dl1 && dl1Qualified) {
             recipient = dl1;
             payoutType = "SPILLOVER_DOWNLINE1";
-          } else if (dl2 && dl2Qualified) {
-            recipient = dl2;
-            payoutType = "SPILLOVER_DOWNLINE2";
           } else {
             recipient = "0xProtocolPools_EquoraVault";
             payoutType = "PROTOCOL_POOL";
@@ -1171,12 +1168,9 @@ export class MatrixService {
           const dl1Qualified = dl1 ? await isUserMatrixQualified(dl1) : false;
           const dl2Qualified = dl2 ? await isUserMatrixQualified(dl2) : false;
 
-          if (dl2 && dl2Qualified && dl2.toLowerCase() !== alreadyPaidAtP7) {
+          if (dl2 && dl2Qualified) {
             recipient = dl2;
             payoutType = "SPILLOVER_DOWNLINE2";
-          } else if (dl1 && dl1Qualified && dl1.toLowerCase() !== alreadyPaidAtP7) {
-            recipient = dl1;
-            payoutType = "SPILLOVER_DOWNLINE1";
           } else {
             recipient = "0xProtocolPools_EquoraVault";
             payoutType = "PROTOCOL_POOL";

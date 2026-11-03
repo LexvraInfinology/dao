@@ -105,7 +105,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "Row 1 Team Spill",
     type: "downline",
     parentPos: 3,
-    desc: "Spillover reward distributed to eligible first-row team downline.",
+    desc: "Left-leg frontline spillover. 100% P2P pass-through routes directly to Downline 1 (Node #1) if qualified ($30).",
   },
   8: {
     pos: 8,
@@ -132,7 +132,7 @@ export const SEAT_METAS: Record<number, SeatMeta> = {
     fullRole: "Downline 2 Team Spill",
     type: "downline",
     parentPos: 4,
-    desc: "Spillover reward distributed to eligible second-row team downline (Node 2).",
+    desc: "Right-leg frontline spillover. 100% P2P pass-through routes directly to Downline 2 (Node #2) if qualified ($30).",
   },
   11: {
     pos: 11,

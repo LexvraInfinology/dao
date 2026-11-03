@@ -14,10 +14,6 @@ importers:
       turbo:
         specifier: ^2.11.2
         version: 2.11.2
-    devDependencies:
-      '@types/minimatch':
-        specifier: ^6.0.0
-        version: 6.0.0
 
   apps/api:
     dependencies:
@@ -291,6 +287,9 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.7
         version: 9.0.10
+      '@types/node':
+        specifier: ^20.17.6
+        version: 20.19.43
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -300,6 +299,9 @@ importers:
       siwe:
         specifier: ^2.3.2
         version: 2.3.2(ethers@6.17.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
       viem:
         specifier: ^2.21.53
         version: 2.56.8(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5)
@@ -307,12 +309,6 @@ importers:
       '@equora/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
-      '@types/node':
-        specifier: ^20.17.6
-        version: 20.19.43
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
 
   packages/trpc:
     dependencies:

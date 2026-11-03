@@ -837,9 +837,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               }`}
             >
               <span>Slot #{String(sNum).padStart(2, "0")}</span>
-              <span className={`text-[10px] font-semibold ${isActive ? "text-slate-200" : "text-slate-400"}`}>
-                (${cost})
-              </span>
               {isCompleted ? (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-200" title="Completed 14/14" />
               ) : isSlotUnlocked ? (
@@ -863,7 +860,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div>
               <span className="text-xs font-bold text-emerald-950 block">
-                🎉 Next Slot #02 ($60) Unlocked in Standby Mode!
+                🎉 Next Slot #02 Unlocked in Standby Mode!
               </span>
               <span className="text-[11px] text-emerald-800 font-medium">
                 Auto-reserved at $0 out-of-pocket via Positions #4 &amp; #5. Live team placements will begin once your Slot #01 board completes all 14 positions ({slot1FilledCount}/14 filled).
@@ -890,7 +887,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div>
               <span className="text-xs font-bold text-blue-950 block">
-                Slot #{String(selectedSlot).padStart(2, "0")} is Unlocked in Standby Mode (${slotCost}.00 Tier)
+                Slot #{String(selectedSlot).padStart(2, "0")} is Unlocked in Standby Mode ($0 Out-of-Pocket)
               </span>
               <span className="text-[11px] text-blue-700 font-medium">
                 Auto-reserved at $0 out-of-pocket via Slot #{selectedSlot - 1} (P4 &amp; P5). Live team placements will begin once your Slot #{selectedSlot - 1} board completes all 14 positions.
@@ -916,7 +913,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div>
               <span className="text-xs font-bold text-slate-900 block">
-                Slot #{String(selectedSlot).padStart(2, "0")} is Locked (${slotCost}.00 Tier)
+                Slot #{String(selectedSlot).padStart(2, "0")} is Locked ($0 Out-of-Pocket)
               </span>
               <span className="text-[11px] text-slate-600 font-medium">
                 Automated progression ($0 out-of-pocket): Unlocks automatically when your Slot #{Math.max(1, selectedSlot - 1)} board completes all 14 positions (via P4 &amp; P5 auto-reserve funds).

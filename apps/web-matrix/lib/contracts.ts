@@ -440,8 +440,7 @@ export async function getOnChainTotalMembers(): Promise<number> {
   return 0;
 }
 export function getSlotCost(slotNumber: number): number {
-  const n = Math.max(1, Math.min(12, Number(slotNumber) || 1));
-  return 30 * Math.pow(2, n - 1);
+  return 30;
 }
 
 /**
@@ -449,14 +448,16 @@ export function getSlotCost(slotNumber: number): number {
  * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
  */
 export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
-  // 1. Fetch live market price directly from official TrobChain market backend or local proxies
+  // 1. Fetch live market price directly from local same-origin proxies (avoids browser CORS)
   let livePrice = 0;
   const endpoints = [
-    "https://backend.trobchain.com/v1/market/price",
-    "/api/trob-market/price",
     "/api/price/trob",
     "/api/price",
+    "/api/trob-market/price",
   ];
+  if (typeof window === "undefined") {
+    endpoints.push("https://backend.trobchain.com/v1/market/price");
+  }
   for (const ep of endpoints) {
     try {
       const res = await fetch(ep, { cache: "no-store" });

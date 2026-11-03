@@ -38,12 +38,9 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl =
-      process.env.API_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === "production"
-        ? "https://api.equorafidao.com"
-        : "http://127.0.0.1:4000");
+    const isVercel = process.env.VERCEL === "1";
+    const rawBackend = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+    const isLocalhost = !rawBackend || rawBackend.includes("localhost") || rawBackend.includes("127.0.0.1");
 
     const rewritesList = [
       {
@@ -52,10 +49,16 @@ const nextConfig: NextConfig = {
       },
     ];
 
-    if (backendUrl) {
+    // Only proxy /api/matrix to external host if explicitly configured and NOT localhost on Vercel
+    if (rawBackend && !isLocalhost) {
       rewritesList.unshift({
         source: "/api/matrix/:path*",
-        destination: `${backendUrl.replace(/\/+$/, "")}/api/matrix/:path*`,
+        destination: `${rawBackend.replace(/\/+$/, "")}/api/matrix/:path*`,
+      });
+    } else if (!isVercel && process.env.NODE_ENV !== "production") {
+      rewritesList.unshift({
+        source: "/api/matrix/:path*",
+        destination: "http://127.0.0.1:4000/api/matrix/:path*",
       });
     }
 

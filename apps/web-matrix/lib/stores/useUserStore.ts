@@ -94,6 +94,11 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   setAddress: (newAddress: string) => {
     const clean = newAddress ? normalizeTo0x(newAddress) : "";
+    const current = get().address;
+    if (clean && current && clean.toLowerCase() === current.toLowerCase()) {
+      // Address is already active. Do NOT wipe profile/eligibility to prevent jittering/flicker!
+      return;
+    }
     if (clean) {
       setStoredUserAddress(clean);
     } else {

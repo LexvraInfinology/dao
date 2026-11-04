@@ -155,6 +155,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // Action states
   const [isJoining, setIsJoining] = useState(false);
+  const isJoiningRef = React.useRef(false);
+  isJoiningRef.current = isJoining;
+  const initialCheckDoneRef = React.useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -455,7 +458,12 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   useEffect(() => {
     let isMounted = true;
     const resolveSponsor = async () => {
-      setResolvingSponsor(true);
+      if (isJoiningRef.current) return;
+      if (sponsorStatus.isValid && sponsorAddress && !/^\d{5}$/.test(sponsorAddress)) {
+        // Keep current valid sponsor, do not trigger button flicker
+      } else {
+        setResolvingSponsor(true);
+      }
       try {
         let resolved = "";
         let isCustomFound = false;
@@ -672,20 +680,27 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   useEffect(() => {
     wakeUpExtension();
     const tryAutoConnect = async () => {
+      if (isJoiningRef.current) return;
       if (typeof window !== "undefined" && localStorage.getItem("equora_wallet_explicit_disconnect") === "true") {
         return;
       }
       const authorized = getInjectedAuthorizedAccount();
       if (authorized && authorized.startsWith("0x")) {
-        setAddress(authorized);
+        const cur = useUserStore.getState().address;
+        if (!cur || cur.toLowerCase() !== authorized.toLowerCase()) {
+          setAddress(authorized);
+        }
         return;
       }
       if (hasTrobSafeProvider()) {
         try {
           const connected = await connectInjectedWallet();
           if (connected && connected.startsWith("0x")) {
-            setAddress(connected);
-            toast.success("Wallet Connected", `Active: ${formatAddress(connected)}`);
+            const cur = useUserStore.getState().address;
+            if (!cur || cur.toLowerCase() !== connected.toLowerCase()) {
+              setAddress(connected);
+              toast.success("Wallet Connected", `Active: ${formatAddress(connected)}`);
+            }
           }
         } catch {}
       }
@@ -715,6 +730,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     // Direct inpage bridge broadcast listener (ignoring self-dispatched wakeups to avoid message echo storms)
     const handleInpageMessage = (event: MessageEvent) => {
       if (typeof window === "undefined" || event.source !== window) return;
+      if (isJoiningRef.current) return;
       const data = event.data;
       if (!data) return;
       if (
@@ -771,6 +787,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
   // 5. Verify Real On-Chain Slot 1 Status & Live Balance
   const verifyAccess = useCallback(async () => {
+    if (isJoiningRef.current) return;
     if (!address) {
       setCheckingStatus(false);
       setIsSlot1Unlocked(false);
@@ -779,7 +796,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       return;
     }
 
-    setCheckingStatus(true);
+    if (!initialCheckDoneRef.current) {
+      setCheckingStatus(true);
+    }
     setActionError(null);
 
     // Fast path: check on-chain registration status
@@ -825,6 +844,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     } catch (err: any) {
       console.warn("[MatrixGate] On-chain check error:", err);
     } finally {
+      initialCheckDoneRef.current = true;
       setCheckingStatus(false);
     }
   }, [address, fetchEligibility, isStandaloneGate, router]);
@@ -1498,6 +1518,15 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 </a>
               </div>
             </div>
+          ) : isJoining ? (
+            <button
+              type="button"
+              disabled
+              className="w-full py-3 px-4 rounded-xl bg-[#2868e8] text-white text-sm font-semibold shadow-xs flex items-center justify-center gap-2 cursor-wait"
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Confirming in Wallet...</span>
+            </button>
           ) : !hasEnoughBalance ? (
             <button
               type="button"

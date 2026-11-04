@@ -96,13 +96,13 @@ export function ReferralLinkCard({
             </span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
-                isQualified || directsCount >= 2
+                directsCount >= 2
                   ? "bg-[#e8fbf5] text-[#0e9f79] border border-[#c3f0e0]"
                   : "bg-[#fff6df] text-[#b97a17] border border-[#fae2ab]"
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              {isQualified || directsCount >= 2 ? "Qualified (100% Yield)" : "Need 2 Directs"}
+              {directsCount >= 2 ? "Qualified (100% Yield)" : "Need 2 Directs"}
             </span>
             {daoSeat && daoSeat >= 1 && daoSeat <= 100 && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] flex items-center gap-1">

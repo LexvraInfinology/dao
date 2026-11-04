@@ -245,7 +245,7 @@ export function WalletDropdown() {
                 {profile?.isRegistered ? `${profile?.highestUnlockedSlot || 1} / 12 Slots` : "Not Registered"}
               </div>
               <div className="text-[9.5px] text-emerald-600 font-bold mt-0.5">
-                {profile?.isQualified ? "100% Yield Qualified" : "On-Chain Verified"}
+                {profile?.activeDirectsCount && profile.activeDirectsCount >= 2 ? "100% Yield Qualified" : "Needs 2 Directs"}
               </div>
             </div>
           </div>

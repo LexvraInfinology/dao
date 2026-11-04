@@ -20,6 +20,7 @@ import {
   ProtocolNotificationsModal,
 } from "@/components/common";
 import { useMatrixUser } from "@/lib/useMatrixUser";
+import { useMatrixStore } from "@/lib/stores";
 import { matrixApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
@@ -47,6 +48,14 @@ export default function DashboardPage() {
   }, []);
 
   const { address, changeAddress, disconnect, dashboard, profile, refreshAll, loading } = useMatrixUser();
+  const directMembers = useMatrixStore((s) => s.directMembers);
+  const activeDirectsCount = Math.max(
+    profile?.activeDirectsCount ?? 0,
+    profile?.directReferralsCount ?? 0,
+    dashboard?.activeDirectsCount ?? 0,
+    directMembers?.length ?? 0
+  );
+  const isQualified = activeDirectsCount >= 2;
 
   if (!mounted || (loading && !dashboard)) {
     return (
@@ -366,15 +375,10 @@ export default function DashboardPage() {
 
               <ReferralLinkCard
                 address={address}
-                directsCount={
-                  dashboard?.activeDirectsCount ??
-                  profile?.activeDirectsCount ??
-                  profile?.directReferralsCount ??
-                  0
-                }
+                directsCount={activeDirectsCount}
                 sponsorAddress={profile?.sponsorAddress}
                 upline2Address={profile?.upline2Address}
-                isQualified={profile?.isQualified ?? (profile?.directReferralsCount ?? 0) >= 2}
+                isQualified={isQualified}
                 referralCode={profile?.referralCode}
                 joinedAt={profile?.joinedAt}
                 daoSeat={profile?.daoSeat || (profile?.userId && profile.userId <= 100 ? profile.userId : undefined)}
@@ -402,10 +406,10 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              {/* Show qualification alert banner if user has fewer than 2 active directs */}
+              {/* Show qualification alert banner: strictly 2 active directs required */}
               <MatrixQualificationAlert
-                isQualified={Boolean(profile?.isQualified ?? ((profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0) >= 2))}
-                activeDirectsCount={profile?.activeDirectsCount ?? profile?.directReferralsCount ?? 0}
+                isQualified={isQualified}
+                activeDirectsCount={activeDirectsCount}
                 referralUrl={typeof window !== "undefined" && address ? `${window.location.origin}/?ref=${address}` : undefined}
               />
 

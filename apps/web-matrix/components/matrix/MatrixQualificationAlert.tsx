@@ -18,7 +18,9 @@ export function MatrixQualificationAlert({
   const [copied, setCopied] = useState(false);
   const count = Math.max(0, activeDirectsCount);
   const needed = Math.max(0, 2 - count);
-  const progressPercent = isQualified ? 100 : Math.min(100, Math.round((count / 2) * 100));
+  // STRICT RULE: User is ONLY qualified if active directs count >= 2
+  const strictlyQualified = count >= 2;
+  const progressPercent = strictlyQualified ? 100 : Math.min(100, Math.round((count / 2) * 100));
 
   const handleCopy = () => {
     if (!referralUrl) {
@@ -30,7 +32,7 @@ export function MatrixQualificationAlert({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (isQualified) {
+  if (strictlyQualified) {
     return (
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/70 to-white border border-emerald-300/80 p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -89,7 +91,7 @@ export function MatrixQualificationAlert({
                 Qualification Status: {count} / 2 Active Directs
               </span>
               <span className="text-[11.5px] font-bold text-amber-800">
-                {needed} more active referral{needed > 1 ? "s" : ""} needed
+                {needed} more active referral{needed > 1 ? "s" : ""} needed (2 Required)
               </span>
             </div>
             <h4 className="text-[14px] sm:text-[15.5px] font-extrabold text-slate-900 mt-1">

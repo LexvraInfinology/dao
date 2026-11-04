@@ -844,18 +844,6 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
     const coder = new ethers.AbiCoder();
     const param = coder.encode(["address"], [userHex]).slice(2);
 
-    let isQualified = false;
-    try {
-      const qualRaw = await queryTrobConstant(
-        CONTRACT_ADDRESSES.matrix,
-        "isMatrixQualified(address)",
-        param
-      );
-      if (qualRaw) {
-        isQualified = Boolean(coder.decode(["bool"], "0x" + qualRaw)[0]);
-      }
-    } catch {}
-
     let activeDirectsCount = 0;
     try {
       const countRaw = await queryTrobConstant(
@@ -868,11 +856,8 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
       }
     } catch {}
 
-    
-
-    if (!isQualified && activeDirectsCount >= 2) {
-      isQualified = true;
-    }
+    // Strict qualification requirement: Must have at least 2 active direct referrals
+    const isQualified = activeDirectsCount >= 2;
 
     return { isQualified, activeDirectsCount };
   } catch (err) {
@@ -1061,13 +1046,8 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 
   
 
-  let isQualified = false;
-  if (qualRaw) {
-    isQualified = Boolean(coder.decode(["bool"], "0x" + qualRaw)[0]);
-  }
-  if (!isQualified && activeDirectsCount >= 2) {
-    isQualified = true;
-  }
+  // Strict qualification requirement: Must have at least 2 active direct referrals
+  const isQualified = activeDirectsCount >= 2;
 
   let sponsorAddress: string | null = null;
   if (sponsorRaw) {

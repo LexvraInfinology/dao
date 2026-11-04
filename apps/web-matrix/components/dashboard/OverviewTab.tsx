@@ -32,12 +32,12 @@ export function OverviewTab({
       (profile?.totalEarnings ?? 0));
   const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (totalEarnedUsd / 0.056));
 
-  const directsCount =
-    dashboard?.activeDirectsCount ??
-    profile?.activeDirectsCount ??
-    profile?.directReferralsCount ??
-    0;
-  const isQualified = profile?.isQualified ?? directsCount >= 2;
+  const directsCount = Math.max(
+    dashboard?.activeDirectsCount ?? 0,
+    profile?.activeDirectsCount ?? 0,
+    profile?.directReferralsCount ?? 0
+  );
+  const isQualified = directsCount >= 2;
 
   const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? 0;
   const currentRank = profile?.rankName || "NONE";
@@ -146,9 +146,11 @@ export function OverviewTab({
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
             {directsCount} Directs
           </div>
-          <div className="text-[10.5px] text-[#0e9f79] font-bold mt-1.5 truncate flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0e9f79]" />
-            {isQualified ? "Qualified • 100% P2P Yield" : `${Math.max(0, 2 - directsCount)} more to qualify`}
+          <div className={`text-[10.5px] font-bold mt-1.5 truncate flex items-center gap-1 ${
+            isQualified ? "text-[#0e9f79]" : "text-amber-600"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isQualified ? "bg-[#0e9f79]" : "bg-amber-500 animate-pulse"}`} />
+            {isQualified ? "Qualified • 100% P2P Yield" : `${Math.max(0, 2 - directsCount)} more to qualify (2 Required)`}
           </div>
         </div>
 
@@ -268,7 +270,7 @@ export function OverviewTab({
           <div className="pt-2.5 border-t border-[#edf2f8] mt-3.5 flex items-center justify-between text-[11px]">
             <span className="text-[#657895] font-medium">Income eligibility:</span>
             <span className="px-2.5 py-0.5 rounded-full bg-[#e8fbf5] text-[#138261] border border-[#bbf7d0] font-black text-[10.5px]">
-              {isQualified ? "Active & Qualified (100% Payouts)" : "Needs 2 Direct Referrals"}
+              {isQualified ? "Active & Qualified (100% Payouts)" : "Needs 2 Direct Referrals (Unqualified)"}
             </span>
           </div>
         </div>

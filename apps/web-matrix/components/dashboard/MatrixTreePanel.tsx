@@ -497,12 +497,14 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     (Boolean(APEX_LEADER_HEX) && targetHex === APEX_LEADER_HEX) ||
     targetHex === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
 
-  const directsCount =
-    directMembersList.length > 0
-      ? directMembersList.length
-      : (profile?.activeDirectsCount ?? profile?.directReferralsCount ?? data?.activeDirectsCount ?? 0);
+  const directsCount = Math.max(
+    directMembersList.length,
+    profile?.activeDirectsCount ?? 0,
+    profile?.directReferralsCount ?? 0,
+    data?.activeDirectsCount ?? 0
+  );
 
-  const isOwnerQualified = isApexRoot || directsCount >= 2;
+  const isOwnerQualified = directsCount >= 2;
 
   const firstOpenPosIndex = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.findIndex((n: any) => !n?.filled) : -1;
   const nextUpcomingPos = isCurrentSlotUnlocked && !isSlotStandby
@@ -1127,7 +1129,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                 : "bg-amber-100 text-amber-800 border-amber-300"
             }`}>
-              {isOwnerQualified ? "100% Yield Qualified" : `${Math.max(0, 2 - directsCount)} More Direct to Qualify`}
+              {isOwnerQualified ? "100% Yield Qualified" : `${Math.max(0, 2 - directsCount)} More Direct to Qualify (2 Required)`}
             </span>
           </div>
 

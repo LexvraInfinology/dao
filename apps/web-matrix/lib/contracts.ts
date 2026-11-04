@@ -2592,7 +2592,3 @@ export async function getOnChainUserTransactions(userAddress: string) {
   };
 }
 
-
-
-
-

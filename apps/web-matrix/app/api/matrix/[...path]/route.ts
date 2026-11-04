@@ -295,96 +295,97 @@ async function getRegistryUserId(userEthHex: string): Promise<number | null> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamic downline tree traversal for 14-seat visualization
+// Fetch authoritative 14-node tree with 5-digit member codes & user IDs directly on-chain
 // ─────────────────────────────────────────────────────────────────────────────
-async function resolveSlot14Nodes(ethHex: string, slotNumber: number, initialNodes: string[]): Promise<string[]> {
-  const resolvedNodes = [...initialNodes];
+async function getSlotNodesWithCodesOnChain(userEthHex: string, slotNumber: number) {
+  const params = encodeAddress(userEthHex) + encodeUint256(slotNumber);
+  const chunks = await callContract(MATRIX_HEX, "getSlotNodesWithCodes(address,uint256)", params);
   const ZERO = "0x0000000000000000000000000000000000000000";
-  try {
-    const fetchDownline = async (addr: string) => {
-      if (!addr || addr === ZERO || addr === "0x0") return [];
-      const res = await getSlotDataV2(addr, slotNumber);
-      return res?.nodes || [];
-    };
 
-    const [s1Nodes, s2Nodes] = await Promise.all([
-      fetchDownline(resolvedNodes[0]),
-      fetchDownline(resolvedNodes[1]),
-    ]);
+  const nodeAddresses: string[] = [];
+  const nodeCodes: number[] = [];
+  const nodeMemberIds: number[] = [];
 
-    if ((!resolvedNodes[2] || resolvedNodes[2] === ZERO) && s1Nodes[0]) resolvedNodes[2] = s1Nodes[0];
-    if ((!resolvedNodes[3] || resolvedNodes[3] === ZERO) && s1Nodes[1]) resolvedNodes[3] = s1Nodes[1];
-    if ((!resolvedNodes[4] || resolvedNodes[4] === ZERO) && s2Nodes[0]) resolvedNodes[4] = s2Nodes[0];
-    if ((!resolvedNodes[5] || resolvedNodes[5] === ZERO) && s2Nodes[1]) resolvedNodes[5] = s2Nodes[1];
-
-    const l2Parents = [resolvedNodes[2], resolvedNodes[3], resolvedNodes[4], resolvedNodes[5]];
-    const l2Downlines = await Promise.all(l2Parents.map(fetchDownline));
-    for (let pIdx = 0; pIdx < 4; pIdx++) {
-      const leftIdx = 6 + pIdx * 2;
-      const rightIdx = leftIdx + 1;
-      const pSub = l2Downlines[pIdx];
-      if ((!resolvedNodes[leftIdx] || resolvedNodes[leftIdx] === ZERO) && pSub[0]) resolvedNodes[leftIdx] = pSub[0];
-      if ((!resolvedNodes[rightIdx] || resolvedNodes[rightIdx] === ZERO) && pSub[1]) resolvedNodes[rightIdx] = pSub[1];
+  if (chunks && chunks.length >= 42) {
+    for (let i = 0; i < 14; i++) {
+      const rawAddr = chunks[i];
+      nodeAddresses.push(rawAddr ? decodeAddress(rawAddr) : ZERO);
+      const rawCode = chunks[14 + i];
+      nodeCodes.push(rawCode ? Number(decodeUint256(rawCode)) : 0);
+      const rawId = chunks[28 + i];
+      nodeMemberIds.push(rawId ? Number(decodeUint256(rawId)) : 0);
     }
-  } catch (err) {
-    console.warn("[API Matrix] Downline resolution notice:", err);
+  } else {
+    // Fallback query to getSlotDataV2 if getSlotNodesWithCodes was unparsed
+    const sd = await getSlotDataV2(userEthHex, slotNumber);
+    for (let i = 0; i < 14; i++) {
+      nodeAddresses.push(sd?.nodes?.[i] || ZERO);
+      nodeCodes.push(0);
+      nodeMemberIds.push(0);
+    }
   }
-  return resolvedNodes;
+
+  return { nodeAddresses, nodeCodes, nodeMemberIds };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Build node list for a slot (filled / unfilled, payout metadata, real on-chain codes)
+// Build node list for a slot from authentic smart contract data
 // ─────────────────────────────────────────────────────────────────────────────
 async function buildNodes(
-  nodes: string[],
-  filledNodes: number,
-  slotCostUsd: number
+  nodeAddresses: string[],
+  nodeCodes: number[] = [],
+  nodeMemberIds: number[] = [],
+  slotCostUsd: number = 30
 ) {
   const ZERO = "0x0000000000000000000000000000000000000000";
   const NODE_LEVELS = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3]; // 14 nodes
   const PAYOUT_TYPES = [
     "UPLINE_1", "UPLINE_2",
-    "DIRECT", "DIRECT", "POOL", "POOL",
+    "DIRECT", "POOL", "POOL", "DIRECT",
     "DOWNLINE_P7", "DIRECT", "DIRECT", "DOWNLINE_P10", "DIRECT", "DIRECT",
     "DOWNLINE_P13", "RECYCLE",
   ];
 
-  return Promise.all(Array.from({ length: 14 }, async (_, i) => {
-    const addr = nodes[i] || ZERO;
-    const filled = addr !== ZERO && addr !== "0x0";
-    let base58 = null;
-    let code: number | null = null;
-    let userId: number | null = null;
-    let label: string | null = null;
+  return Promise.all(
+    Array.from({ length: 14 }, async (_, i) => {
+      const addr = nodeAddresses[i] || ZERO;
+      const filled = addr !== ZERO && addr !== "0x0";
+      let base58: string | null = null;
+      let code: number | null = nodeCodes[i] && nodeCodes[i] > 0 ? nodeCodes[i] : null;
+      let userId: number | null = nodeMemberIds[i] && nodeMemberIds[i] > 0 ? nodeMemberIds[i] : null;
+      let label: string | null = null;
 
-    if (filled) {
-      base58 = hexToTronBase58(addr);
-      const [realCode, realId] = await Promise.all([
-        getRegistryCode(addr).catch(() => null),
-        getRegistryUserId(addr).catch(() => null),
-      ]);
-      code = realCode;
-      userId = realId;
-      const shortB58 = base58 && base58.length > 10 ? `${base58.slice(0, 6)}...${base58.slice(-4)}` : base58 || addr;
-      label = realCode ? `Member #${realCode}` : (realId ? `Member #${realId}` : shortB58);
-    }
+      if (filled) {
+        base58 = hexToTronBase58(addr);
+        if (!code || !userId) {
+          const [realCode, realId] = await Promise.all([
+            !code ? getRegistryCode(addr).catch(() => null) : Promise.resolve(code),
+            !userId ? getRegistryUserId(addr).catch(() => null) : Promise.resolve(userId),
+          ]);
+          if (realCode) code = realCode;
+          if (realId) userId = realId;
+        }
+        const shortB58 = base58 && base58.length > 10 ? `${base58.slice(0, 6)}...${base58.slice(-4)}` : base58 || addr;
+        label = code ? `Member #${code}` : (userId ? `Member #${userId}` : shortB58);
+      }
 
-    return {
-      position:        i + 1,
-      level:           NODE_LEVELS[i] || 3,
-      filled,
-      placedUser:      filled ? addr : null,
-      base58,
-      code,
-      userId,
-      label,
-      payoutType:      PAYOUT_TYPES[i] || "DIRECT",
-      recipientAddress: filled ? addr : null,
-      wasFallback:     false,
-      amount:          slotCostUsd,
-      timestamp:       null,
-    };
-  }));
+      return {
+        position:        i + 1,
+        level:           NODE_LEVELS[i] || 3,
+        filled,
+        placedUser:      filled ? addr : null,
+        base58,
+        code,
+        userId,
+        label,
+        payoutType:      PAYOUT_TYPES[i] || "DIRECT",
+        recipientAddress: filled ? addr : null,
+        wasFallback:     false,
+        amount:          slotCostUsd,
+        timestamp:       null,
+      };
+    })
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -481,9 +482,9 @@ export async function GET(
       let activeSlotNodes: any[] = [];
       let activeFilledCount = 0;
       if (slot1 && slot1.isUnlocked) {
-        const resolvedNodes = await resolveSlot14Nodes(ethHex, 1, slot1.nodes);
-        activeFilledCount = resolvedNodes.filter(n => n && n !== "0x0000000000000000000000000000000000000000" && n !== "0x0").length;
-        activeSlotNodes = await buildNodes(resolvedNodes, activeFilledCount, 30);
+        const { nodeAddresses, nodeCodes, nodeMemberIds } = await getSlotNodesWithCodesOnChain(ethHex, 1);
+        activeSlotNodes = await buildNodes(nodeAddresses, nodeCodes, nodeMemberIds, 30);
+        activeFilledCount = activeSlotNodes.filter(n => n.filled).length;
       }
 
       return NextResponse.json({
@@ -503,7 +504,7 @@ export async function GET(
           sponsorAddress: sponsor,
           activeSlotProgress: slot1 && slot1.isUnlocked ? {
             slotNumber: 1,
-            filledNodes: Math.max(slot1.filledNodes, activeFilledCount),
+            filledNodes: slot1.filledNodes || activeFilledCount,
             totalNodes: 14,
             cycle: slot1.currentCycle,
             upgradeReserve: 0,
@@ -582,11 +583,14 @@ export async function GET(
       const trobPriceUsd = trobPriceUsd6 / 1_000_000;
       const slotCostUsd = 30;
 
-      const sd = await getSlotDataV2(ethHex, slotNumber);
+      const [sd, nodesWithCodes] = await Promise.all([
+        getSlotDataV2(ethHex, slotNumber),
+        getSlotNodesWithCodesOnChain(ethHex, slotNumber),
+      ]);
 
       if (!sd) {
         // fallback empty
-        const emptyNodes = await buildNodes([], 0, slotCostUsd);
+        const emptyNodes = await buildNodes([], [], [], slotCostUsd);
         return NextResponse.json({
           success: true,
           data: {
@@ -600,11 +604,14 @@ export async function GET(
         });
       }
 
-      // Dynamic downline tree traversal for 14-seat visualization
-      const resolvedNodes = await resolveSlot14Nodes(ethHex, slotNumber, sd.nodes);
-      const ZERO = "0x0000000000000000000000000000000000000000";
-      const activeFilledCount = resolvedNodes.filter(n => n && n !== ZERO && n !== "0x0").length;
-      const nodes = await buildNodes(resolvedNodes, Math.max(sd.filledNodes, activeFilledCount), slotCostUsd);
+      // Exact smart contract 14-seat board and member codes directly on-chain
+      const nodes = await buildNodes(
+        nodesWithCodes.nodeAddresses,
+        nodesWithCodes.nodeCodes,
+        nodesWithCodes.nodeMemberIds,
+        slotCostUsd
+      );
+      const activeFilledCount = nodes.filter(n => n.filled).length;
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
 
       return NextResponse.json({
@@ -617,7 +624,7 @@ export async function GET(
           currentCycle: sd.currentCycle,
           totalCycles: sd.currentCycle,
           snapshotCount: 0,
-          filledNodes: Math.max(sd.filledNodes, activeFilledCount),
+          filledNodes: sd.filledNodes || activeFilledCount,
           nodes,
           totalEarned: Number(sd.slotEarned),
           totalEarnedTrob,

@@ -590,6 +590,12 @@ export async function syncOnChainMembersState(force = false): Promise<{
           );
         }
 
+        // Clear any conflicting row that holds this address at a different seat
+        await queryNeon(
+          `UPDATE "DaoMember" SET address = NULL WHERE LOWER(address) = LOWER($1) AND position != $2`,
+          [b58Addr, position]
+        ).catch(() => {});
+
         await queryNeon(
           `INSERT INTO "DaoMember" (
              id, address, position, "joinedAt", "txHash", "blockNumber",
@@ -613,6 +619,12 @@ export async function syncOnChainMembersState(force = false): Promise<{
         ) {
           // Member completed topup OR new user claimed seat!
           try {
+            // Clear any conflicting row holding this address at a different seat
+            await queryNeon(
+              `UPDATE "DaoMember" SET address = NULL WHERE LOWER(address) = LOWER($1) AND position != $2`,
+              [b58Addr, position]
+            ).catch(() => {});
+
             await queryNeon(
               `UPDATE "DaoMember"
                SET address = $1,

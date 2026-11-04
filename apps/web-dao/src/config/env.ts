@@ -51,26 +51,26 @@ export const OFFICIAL_SR = IS_MAINNET ? OFFICIAL_SR_MAINNET : OFFICIAL_SR_TESTNE
 // DAO Contract Address & Hex (TrobChain Testnet by default)
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
-  (IS_MAINNET ? 'TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2' : 'TBf9Vw7TJoptyzMZEKQYsKK9Ei3GQGYnto');
+  (IS_MAINNET ? 'TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2' : 'TEh2X5NgisqALBEcjTxDrwDE97njFvMHf3');
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  (IS_MAINNET ? '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4' : '411285d73ead563b7c07f908ce2b1408d6e836c8b8');
+  (IS_MAINNET ? '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4' : '4133c939246c012f3e1f1c0829f2d7db92a2e2550b');
 
 // Matrix Contract Address (TrobChain Testnet by default)
 export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
-  (IS_MAINNET ? 'TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV' : 'TB4V7VuvkB3mavbLBkEXPmm9pooX5eKJfA');
+  (IS_MAINNET ? 'TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV' : 'TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H');
 
 // Vault Contract Address (TrobChain Testnet by default)
 export const ACTIVE_VAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-  (IS_MAINNET ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TTbKnsxHwGiG9u5cvq5TKZMd56TqEtpLCJ');
+  (IS_MAINNET ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TBq3nvGgycW13zyr9KAazizPfFVgVd1n63');
 
 // Registry Contract Address (TrobChain Testnet by default)
 export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
-  (IS_MAINNET ? 'TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj' : 'TG1Jm7BC37CiUm9WKGSM7r57k3BVo5Z5ND');
+  (IS_MAINNET ? 'TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj' : 'TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i');
 
 // Token Contract Address (TrobChain Testnet by default)
 export const ACTIVE_TOKEN_CONTRACT_ADDRESS =

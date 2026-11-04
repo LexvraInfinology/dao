@@ -12,11 +12,11 @@ const FULLNODE_URL =
 
 const MATRIX_HEX =
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
-  "41afedb7886ddf932acb2c91f7ed080b493d5fb18f"; // TS1S2VRXYn8KzCQDYL6JweJVNczCSK3xro
+  "41e82088dfa79e87b02b88ccdf055c11234b081ec2"; // TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H
 
 const REGISTRY_HEX =
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
-  "41218156202edd1294f681a04955f83573755edb4b"; // TD2NEqnkgoAk3t3jZAg9gkZUnEXdqyzgxT
+  "4168686de05c0776cf5ffae505743d4b980c23baa3"; // TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers

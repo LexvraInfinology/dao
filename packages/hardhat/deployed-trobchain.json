@@ -68,6 +68,12 @@
       "addressBase58": "TEh2X5NgisqALBEcjTxDrwDE97njFvMHf3",
       "addressHex": "4133c939246c012f3e1f1c0829f2d7db92a2e2550b",
       "txHash": "0x1813ba8f96bbae53f5ff60925bcd10cbc4158b5b4396b70811d0bf87d0f30668"
+    },
+    "EquoraRoyaltyPool": {
+      "name": "EquoraRoyaltyPool",
+      "addressBase58": "TGXPhgitUhfGzbR8Kqwej3jbz8ciN46bao",
+      "addressHex": "4147e6ff6e205098276635506911ef4a7d946812a4",
+      "txHash": "0x55c3fd5807356b573750944e915dff4afa623f1a1dc57de521170595ab687c78"
     }
   },
   "updatedAt": "2026-11-04T12:00:07.288Z"

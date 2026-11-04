@@ -1175,14 +1175,6 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
             nextMSlot.isLive = true;
 
-            // Dynamic Follow-Me Placement:
-            // This upgraded user is placed into their sponsor's nextSlot board!
-            // The first team members to upgrade dynamically fill Seat 1, Seat 2, Seat 3...
-            address sponsorAddr = registry.getSponsor(user);
-            if (sponsorAddr != address(0) && sponsorAddr != user && sponsorAddr != owner()) {
-                _placeUserInMatrix(user, nextSlot, baseSlotCost);
-            }
-
             emit SlotAutoActivated(user, uint8(slot), uint8(nextSlot), block.timestamp);
             emit SlotActivatedForEarning(user, uint8(nextSlot), block.timestamp);
         } else if (slot == TOTAL_SLOTS) {

@@ -76,3 +76,4 @@ const file2 = path.resolve(__dirname, "../packages/hardhat/contracts-flattened/E
 patchMatrixFile(file1);
 patchMatrixFile(file2);
 console.log("Finished patching EquoraMatrix files.");
+

@@ -347,7 +347,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     const txHash = n?.txHash || null;
     const metaLabel = n?.label || (n?.code ? `Member #${n.code}` : (n?.userId ? `Member #${n.userId}` : formatAddress(occupantBase58)));
     const code = n?.code ? `#${n.code}` : (n?.userId ? `#${n.userId}` : formatAddress(occupantBase58));
-    return { filled: true, label: metaLabel, code, address: occupantBase58, txHash, metaLabel };
+    return { filled: true, label: metaLabel, code, address: occupantBase58, txHash, metaLabel, recipientAddress: n?.recipientAddress || null, payoutType: n?.payoutType || null };
   };
 
   const sponsor = profile?.sponsorAddress || data?.sponsorAddress;
@@ -1276,61 +1276,34 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               {getNodeInfo(selectedNodeModal.pos).filled ? (() => {
                 const nodeInfo = getNodeInfo(selectedNodeModal.pos);
                 const vaultB58 = toTrobBase58(CONTRACT_ADDRESSES.vault);
-                let recipientLabel = "YOU (Matrix Owner)";
-                let recipientWallet = address ? toTrobBase58(address) : vaultB58;
+                const userB58 = address ? toTrobBase58(address) : "";
+                const onChainRecip = nodeInfo.recipientAddress ? toTrobBase58(nodeInfo.recipientAddress) : null;
+                const isVault = !onChainRecip || onChainRecip === vaultB58 || onChainRecip.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase();
 
-                if (selectedNodeModal.type === "income") {
-                  if (isOwnerQualified) {
-                    recipientLabel = "YOU (Matrix Owner — 100% Direct P2P)";
-                    recipientWallet = address ? toTrobBase58(address) : vaultB58;
-                  } else {
-                    recipientLabel = `4 Protocol Pools (Vault — ${directsCount}/2 Directs)`;
-                    recipientWallet = vaultB58;
-                  }
-                } else if (selectedNodeModal.pos === 1) {
-                  const isUp1Qualified = Boolean(profile?.isUpline1Qualified);
-                  const up1Addr = profile?.sponsorAddress || data?.sponsorAddress;
-                  const isUp1Vault = !up1Addr || up1Addr.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase();
+                let recipientLabel = "YOU (Direct P2P Settlement)";
+                let recipientWallet = userB58 || vaultB58;
 
-                  if (isUp1Qualified && !isUp1Vault) {
-                    recipientLabel = "Upline 1 (Level 1 Pass-Up)";
-                    recipientWallet = toTrobBase58(up1Addr);
-                  } else {
-                    recipientLabel = `4 Protocol Pools (Vault — Upline Unqualified ${profile?.upline1DirectsCount ?? 0}/2)`;
-                    recipientWallet = vaultB58;
-                  }
-                } else if (selectedNodeModal.pos === 2) {
-                  const isUp2Qualified = Boolean(profile?.isUpline2Qualified);
-                  const up2Addr = profile?.upline2Address;
-                  const isUp2Vault = !up2Addr || up2Addr.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase();
-
-                  if (isUp2Qualified && !isUp2Vault) {
-                    recipientLabel = "Upline 2 (Level 1 Pass-Up)";
-                    recipientWallet = toTrobBase58(up2Addr);
-                  } else {
-                    recipientLabel = `4 Protocol Pools (Vault — Upline 2 Fallback)`;
-                    recipientWallet = vaultB58;
-                  }
-                } else if (selectedNodeModal.pos === 7) {
-                  recipientLabel = "Downline 1 (Node 1 Spillover)";
-                  const d1Addr = nodes[0]?.placedUser || nodes[0]?.base58;
-                  recipientWallet = d1Addr ? toTrobBase58(d1Addr) : vaultB58;
-                } else if (selectedNodeModal.pos === 10) {
-                  recipientLabel = "Downline 2 (Node 2 Spillover)";
-                  const d2Addr = nodes[1]?.placedUser || nodes[1]?.base58;
-                  recipientWallet = d2Addr ? toTrobBase58(d2Addr) : vaultB58;
-                } else if (selectedNodeModal.pos === 13) {
-                  recipientLabel = "Waterfall (Nodes 3, 4, 5, 6)";
-                  recipientWallet = vaultB58;
-                } else if (selectedNodeModal.pos === 5) {
-                  recipientLabel = "Pools + Slot Reserve";
-                  recipientWallet = vaultB58;
-                } else if (selectedNodeModal.pos === 14) {
-                  recipientLabel = "Pools + Cycle Recycle";
-                  recipientWallet = vaultB58;
-                } else {
+                if (isVault) {
                   recipientLabel = "4 Protocol Pools (Vault)";
                   recipientWallet = vaultB58;
+                } else if (userB58 && onChainRecip === userB58) {
+                  recipientLabel = "YOU (Matrix Owner — 100% Direct P2P)";
+                  recipientWallet = userB58;
+                } else if (selectedNodeModal.pos === 1) {
+                  recipientLabel = "Upline 1 (Level 1 Pass-Up)";
+                  recipientWallet = onChainRecip;
+                } else if (selectedNodeModal.pos === 2) {
+                  recipientLabel = "Upline 2 (Level 1 Pass-Up)";
+                  recipientWallet = onChainRecip;
+                } else if (selectedNodeModal.pos === 7) {
+                  recipientLabel = "Downline 1 (Spillover P2P)";
+                  recipientWallet = onChainRecip;
+                } else if (selectedNodeModal.pos === 10) {
+                  recipientLabel = "Downline 2 (Spillover P2P)";
+                  recipientWallet = onChainRecip;
+                } else {
+                  recipientLabel = "Settlement Recipient";
+                  recipientWallet = onChainRecip;
                 }
 
                 return (

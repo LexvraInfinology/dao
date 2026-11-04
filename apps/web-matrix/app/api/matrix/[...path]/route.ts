@@ -298,13 +298,34 @@ async function getRegistryUserId(userEthHex: string): Promise<number | null> {
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchRawNodesWithCodes(userEthHex: string, slotNumber: number) {
   const params = encodeAddress(userEthHex) + encodeUint256(slotNumber);
-  const chunks = await callContract(MATRIX_HEX, "getSlotNodesWithCodes(address,uint256)", params);
   const ZERO = "0x0000000000000000000000000000000000000000";
 
   const nodeAddresses: string[] = [];
   const nodeCodes: number[] = [];
   const nodeMemberIds: number[] = [];
+  const payoutRecipients: string[] = [];
+  const payoutTypes: number[] = [];
 
+  // Try getSlotNodesDetail first (returns 5 14-element arrays: addresses, codes, ids, recipients, types)
+  const detailChunks = await callContract(MATRIX_HEX, "getSlotNodesDetail(address,uint256)", params);
+  if (detailChunks && detailChunks.length >= 70) {
+    for (let i = 0; i < 14; i++) {
+      const rawAddr = detailChunks[i];
+      nodeAddresses.push(rawAddr ? decodeAddress(rawAddr) : ZERO);
+      const rawCode = detailChunks[14 + i];
+      nodeCodes.push(rawCode ? Number(decodeUint256(rawCode)) : 0);
+      const rawId = detailChunks[28 + i];
+      nodeMemberIds.push(rawId ? Number(decodeUint256(rawId)) : 0);
+      const rawRecip = detailChunks[42 + i];
+      payoutRecipients.push(rawRecip ? decodeAddress(rawRecip) : ZERO);
+      const rawType = detailChunks[56 + i];
+      payoutTypes.push(rawType ? Number(decodeUint256(rawType)) : 0);
+    }
+    return { nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes };
+  }
+
+  // Fallback to getSlotNodesWithCodes
+  const chunks = await callContract(MATRIX_HEX, "getSlotNodesWithCodes(address,uint256)", params);
   if (chunks && chunks.length >= 42) {
     for (let i = 0; i < 14; i++) {
       const rawAddr = chunks[i];
@@ -313,6 +334,8 @@ async function fetchRawNodesWithCodes(userEthHex: string, slotNumber: number) {
       nodeCodes.push(rawCode ? Number(decodeUint256(rawCode)) : 0);
       const rawId = chunks[28 + i];
       nodeMemberIds.push(rawId ? Number(decodeUint256(rawId)) : 0);
+      payoutRecipients.push(ZERO);
+      payoutTypes.push(0);
     }
   } else {
     // Fallback query to getSlotDataV2 if getSlotNodesWithCodes was unparsed
@@ -321,10 +344,12 @@ async function fetchRawNodesWithCodes(userEthHex: string, slotNumber: number) {
       nodeAddresses.push(sd?.nodes?.[i] || ZERO);
       nodeCodes.push(0);
       nodeMemberIds.push(0);
+      payoutRecipients.push(ZERO);
+      payoutTypes.push(0);
     }
   }
 
-  return { nodeAddresses, nodeCodes, nodeMemberIds };
+  return { nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes };
 }
 
 async function getSlotNodesWithCodesOnChain(userEthHex: string, slotNumber: number) {
@@ -339,6 +364,8 @@ async function buildNodes(
   nodeAddresses: string[],
   nodeCodes: number[] = [],
   nodeMemberIds: number[] = [],
+  payoutRecipients: string[] = [],
+  payoutTypes: number[] = [],
   slotCostUsd: number = 30
 ) {
   const ZERO = "0x0000000000000000000000000000000000000000";
@@ -373,6 +400,11 @@ async function buildNodes(
         label = code ? `Member #${code}` : (userId ? `Member #${userId}` : shortB58);
       }
 
+      const rawRecip = payoutRecipients && payoutRecipients[i] ? payoutRecipients[i] : null;
+      const recipBase58 = rawRecip && rawRecip !== ZERO && rawRecip !== "0x0"
+        ? hexToTronBase58(rawRecip)
+        : null;
+
       return {
         position:        i + 1,
         level:           NODE_LEVELS[i] || 3,
@@ -383,7 +415,7 @@ async function buildNodes(
         userId,
         label,
         payoutType:      PAYOUT_TYPES[i] || "DIRECT",
-        recipientAddress: filled ? addr : null,
+        recipientAddress: recipBase58,
         wasFallback:     false,
         amount:          slotCostUsd,
         timestamp:       null,
@@ -492,8 +524,8 @@ export async function GET(
       let activeSlotNodes: any[] = [];
       let activeFilledCount = 0;
       if (slot1 && slot1.isUnlocked) {
-        const { nodeAddresses, nodeCodes, nodeMemberIds } = await getSlotNodesWithCodesOnChain(ethHex, 1);
-        activeSlotNodes = await buildNodes(nodeAddresses, nodeCodes, nodeMemberIds, 30);
+        const { nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes } = await getSlotNodesWithCodesOnChain(ethHex, 1);
+        activeSlotNodes = await buildNodes(nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes, 30);
         activeFilledCount = activeSlotNodes.filter(n => n.filled).length;
       }
 
@@ -602,7 +634,7 @@ export async function GET(
 
       if (!sd) {
         // fallback empty
-        const emptyNodes = await buildNodes([], [], [], slotCostUsd);
+        const emptyNodes = await buildNodes([], [], [], [], [], slotCostUsd);
         return NextResponse.json({
           success: true,
           data: {
@@ -621,6 +653,8 @@ export async function GET(
         nodesWithCodes.nodeAddresses,
         nodesWithCodes.nodeCodes,
         nodesWithCodes.nodeMemberIds,
+        nodesWithCodes.payoutRecipients,
+        nodesWithCodes.payoutTypes,
         slotCostUsd
       );
       const activeFilledCount = nodes.filter(n => n.filled).length;

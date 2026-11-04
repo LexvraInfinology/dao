@@ -34,10 +34,8 @@
       "txHash": "0xb941c8fe68846cdc06eea1d54a3cd503295d9f2f4f226830f1ce755c803054a8"
     },
     "EquoraMatrix": {
-      "name": "EquoraMatrix",
-      "addressBase58": "TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H",
-      "addressHex": "41e82088dfa79e87b02b88ccdf055c11234b081ec2",
-      "txHash": "0xcacb8c5e0113f0b879469da5397d715e72dda97580bf5668db64618cfa0bfc5c"
+      "addressHex": "417f4250630309ed5bf3064ce74917f21cda364054",
+      "addressBase58": "TMa6FzwGy6VFp5esEHQr814bpzYWiCRimU"
     },
     "EquoraDAOv2": {
       "name": "EquoraDAOv3",
@@ -76,5 +74,5 @@
       "txHash": "0x55c3fd5807356b573750944e915dff4afa623f1a1dc57de521170595ab687c78"
     }
   },
-  "updatedAt": "2026-11-04T12:00:07.288Z"
+  "updatedAt": "2026-11-04T14:51:52.151Z"
 }

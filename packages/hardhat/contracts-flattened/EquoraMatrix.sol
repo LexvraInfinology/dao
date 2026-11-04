@@ -364,14 +364,14 @@ interface IEquoraRegistry {
 // Original license: SPDX_License_Identifier: MIT
 pragma solidity ^0.8.20;
 /**
- * @title EquoraMatrix — V3 (Equora.Fi Aligned)
+ * @title EquoraMatrix ΓÇö V3 (Equora.Fi Aligned)
  * @dev 12-Slot, 14-Node Single-Leg Matrix Engine
  *
  * === BOARD VALUE & 100% AUTO-PROGRESSION MODEL =============================
- *   • Slot 1: $30 USD Entry (The ONLY slot a user ever pays from their wallet)
- *   • Slots 2 to 12: $0 Out-of-Pocket (100% Auto-Unlocked via Node 4 & Node 5)
- *   • Accounting Value per Node: $30 USD (Every node placement distributes $30)
- *   • Payout per 14-Node Completed Board: $180 USD (6 nodes × $30) to Slot Owner
+ *   ΓÇó Slot 1: $30 USD Entry (The ONLY slot a user ever pays from their wallet)
+ *   ΓÇó Slots 2 to 12: $0 Out-of-Pocket (100% Auto-Unlocked via Node 4 & Node 5)
+ *   ΓÇó Accounting Value per Node: $30 USD (Every node placement distributes $30)
+ *   ΓÇó Payout per 14-Node Completed Board: $180 USD (6 nodes ├ù $30) to Slot Owner
  *
  * === 14-NODE PAYOUT ROUTING ==================================================
  *  ALL CYCLES:
@@ -391,11 +391,11 @@ pragma solidity ^0.8.20;
  *   P14 -> Protocol Pools via EquoraVault
  *
  * Per-slot breakdown for Slot 1 (cost = 30 TROB per node, 14 nodes = 420 TROB):
- *   P1 + P2            = 60  TROB → Immediate Upline (2 × 30) (if qualified; else 4 Protocol Pools)
- *   P3+P6+P8+P9+P11+P12= 180 TROB → YOU (6 × 30)
- *   P4+P5+P14          = 90  TROB → Protocol Pools (3 × 30) (35% DAO, 40% Royalty, 15% Rewards, 10% Box)
- *   P7+P10             = 60  TROB → Downline 1 (2 × 30) (if qualified; else 4 Protocol Pools)
- *   P13                = 30  TROB → Downline 2 (1 × 30) (if qualified; else 4 Protocol Pools)
+ *   P1 + P2            = 60  TROB ΓåÆ Immediate Upline (2 ├ù 30) (if qualified; else 4 Protocol Pools)
+ *   P3+P6+P8+P9+P11+P12= 180 TROB ΓåÆ YOU (6 ├ù 30)
+ *   P4+P5+P14          = 90  TROB ΓåÆ Protocol Pools (3 ├ù 30) (35% DAO, 40% Royalty, 15% Rewards, 10% Box)
+ *   P7+P10             = 60  TROB ΓåÆ Downline 1 (2 ├ù 30) (if qualified; else 4 Protocol Pools)
+ *   P13                = 30  TROB ΓåÆ Downline 2 (1 ├ù 30) (if qualified; else 4 Protocol Pools)
  *   Total              = 420 TROB
  *
  * === QUALIFICATION ===========================================================
@@ -406,7 +406,7 @@ pragma solidity ^0.8.20;
  *   Slots 3,6,9,12 first cycle completion: Rank NFT minted (Alpha/Prime/Elite/Crown)
  *
  * === NULL KEY (Null Ownership) ===============================================
- *   After deployment wiring, renounceOwnership() is called — no admin can
+ *   After deployment wiring, renounceOwnership() is called ΓÇö no admin can
  *   ever pause, modify fees, or redirect funds.
  *
  * Security:
@@ -438,6 +438,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     /// @dev Safety minimum floor: 300 TROB (300 * 10^6 SUN). Prevents underfunded joins (1-5 TROB).
     uint256 public constant MIN_SLOT1_FLOOR      = 300 * 10 ** 6;  // 300 TROB floor ($30 at $0.10 max price)
     uint256 public constant MAX_UPLINE_DEPTH     = 12;
+    uint256 public constant MAX_CASCADE_DEPTH    = 12;
 
     uint256 public trobPriceUsd6                 = 56_000;       // Benchmark $0.056 USD (6 decimals, matches EquoraDAOv2)
     uint256 public baseSlotCost                  = 535_714_285;  // 535.714285 TROB in SUN ($30 USD at $0.056)
@@ -459,7 +460,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         UPLINE_1,
         UPLINE_2,
         OWNER_DIRECT,
-        PROTOCOL_POOL,    // P4, P5, P14 — forwarded to EquoraVault
+        PROTOCOL_POOL,    // P4, P5, P14 ΓÇö forwarded to EquoraVault
         SPILLOVER_DOWNLINE1,
         SPILLOVER_DOWNLINE2,
         CYCLE_COMPLETE
@@ -474,7 +475,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         bool        isLive;          // false when reserved via P4+P5; true when activated via P14 full board completion!
         uint256     currentCycle;    // starts at 1
         uint256     filledNodes;     // 0 to 14
-        address[14] nodes;           // ACTIVE cycle positions
+        address[14] nodes;           // ACTIVE cycle positions (occupants)
+        address[14] payoutRecipients;// on-chain recipient of payout for each of the 14 positions
+        uint8[14]   payoutTypes;     // on-chain payout type for each of the 14 positions
         uint256     totalEarned;     // lifetime owner income from this slot
     }
 
@@ -482,8 +485,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     ///      Once pushed, entries are never deleted or modified.
     struct MatrixCycleSnapshot {
         uint256     cycleNumber;
-        address[14] nodes;       // snapshot of positions at completion
-        uint256     completedAt; // block.timestamp
+        address[14] nodes;           // snapshot of positions at completion
+        address[14] payoutRecipients;// snapshot of payout recipients
+        uint8[14]   payoutTypes;     // snapshot of payout types
+        uint256     completedAt;     // block.timestamp
     }
 
     // -------------------------------------------------------------------------
@@ -500,8 +505,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // Optional launch delay to enforce the 21-day exclusive Genesis DAO phase
     uint256 public matrixLaunchTime;
 
-    // Genesis DAO contract — to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
+    // Genesis DAO contract ΓÇö to retrieve the Last Member who becomes the Root Matrix Owner on Day 22
     address public daoContract;
+
+    // Genesis Apex Root wallet address
+    address public genesisRoot;
 
     // -------------------------------------------------------------------------
     // Matrix State
@@ -610,6 +618,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     event BalanceWithdrawn(address indexed user, uint256 amount, uint256 timestamp);
     event VaultContractSet(address indexed vault);
     event DaoContractSet(address indexed dao);
+    event GenesisRootSet(address indexed root);
     event SlotReserved(
         address indexed user,
         uint8   indexed fromSlot,
@@ -636,6 +645,23 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     event TrobPriceUpdated(uint256 priceUsd6, uint256 newBaseCost, uint256 timestamp);
     event BaseSlotCostUpdated(uint256 newBaseCost, uint256 priceUsd6, uint256 timestamp);
     event PriceOracleSet(address indexed oracle);
+    event DownlineCascadeStep(
+        address indexed target,
+        address indexed placedUser,
+        uint8   slot,
+        uint8   position,
+        uint256 depth,
+        uint256 amount
+    );
+    event DownlineCascadeResolved(
+        address indexed target,
+        address indexed finalRecipient,
+        uint8   slot,
+        uint8   position,
+        uint256 depth,
+        uint256 amount,
+        string  reason
+    );
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -748,6 +774,63 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         emit DaoContractSet(_dao);
     }
 
+    function setGenesisRoot(address _root) external onlyOwner {
+        require(_root != address(0), "EquoraMatrix: invalid root");
+        genesisRoot = _root;
+        emit GenesisRootSet(_root);
+    }
+
+    /**
+     * @dev Seeds the Genesis Apex Root and Seat #1 (Node 1) on-chain.
+     *      _genesisRoot is set to Apex Root (#0001) with Slot 1 unlocked.
+     *      _node1User is placed directly in Seat #1 (nodes[0]) under Genesis Root.
+     *      Seat #2 (nodes[1]) is left open (address(0)) for the next natural entrant.
+     */
+    function seedGenesisEcosystem(address _genesisRoot, address _node1User) external onlyOwner {
+        require(_genesisRoot != address(0), "EquoraMatrix: invalid genesis root");
+        genesisRoot = _genesisRoot;
+
+        // 1. Setup Genesis Root Slot 1
+        userSlots[_genesisRoot][1].isUnlocked = true;
+        userSlots[_genesisRoot][1].isLive = true;
+        userSlots[_genesisRoot][1].currentCycle = 1;
+        highestSlot[_genesisRoot] = 1;
+
+        if (!registry.isRegistered(_genesisRoot)) {
+            try registry.registerUser(_genesisRoot, vaultContract) {} catch {}
+        }
+
+        // 2. Setup Node 1 User (_node1User) in Seat #1
+        if (_node1User != address(0)) {
+            if (!registry.isRegistered(_node1User)) {
+                try registry.registerUser(_node1User, _genesisRoot) {} catch {}
+            }
+
+            userSlots[_node1User][1].isUnlocked = true;
+            userSlots[_node1User][1].isLive = true;
+            userSlots[_node1User][1].currentCycle = 1;
+            highestSlot[_node1User] = 1;
+
+            // Place into Seat #1 (Position 1, index 0)
+            userSlots[_genesisRoot][1].nodes[0] = _node1User;
+            userSlots[_genesisRoot][1].filledNodes = 1;
+
+            if (!hasDirectReferralDeposited[_genesisRoot][_node1User]) {
+                hasDirectReferralDeposited[_genesisRoot][_node1User] = true;
+                activeDirectReferrals[_genesisRoot] = 1;
+                _activeDirectReferralsList[_genesisRoot].push(_node1User);
+                emit ActiveDirectReferralCounted(_genesisRoot, _node1User, 1, block.timestamp);
+            }
+
+            emit SlotJoined(_node1User, 1, baseSlotCost, _genesisRoot, block.timestamp);
+            emit PositionFilled(_genesisRoot, 1, 1, 1, _node1User, baseSlotCost);
+        }
+
+        emit GenesisRootSet(_genesisRoot);
+        emit SlotJoined(_genesisRoot, 1, baseSlotCost, vaultContract, block.timestamp);
+        emit TreeGraphStarted(_genesisRoot, 1, block.timestamp);
+    }
+
     function setContracts(
         address _token,
         address _registry,
@@ -843,8 +926,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function register(address sponsor) external returns (bool) {
         address validSponsor = sponsor;
-        if ((validSponsor == address(0) || validSponsor == owner()) && vaultContract != address(0)) {
-            validSponsor = vaultContract;
+        if (validSponsor == address(0) || validSponsor == owner() || validSponsor == vaultContract || validSponsor == address(this)) {
+            validSponsor = _getRootMatrixOwner();
         }
         return registry.registerUser(msg.sender, validSponsor);
     }
@@ -895,8 +978,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         // Register user on first join (slot 1) if not already registered
         if (!registry.isRegistered(msg.sender)) {
             address targetSponsor = sponsor;
-            if ((targetSponsor == address(0) || targetSponsor == owner()) && vaultContract != address(0)) {
-                targetSponsor = vaultContract;
+            if (targetSponsor == address(0) || targetSponsor == owner() || targetSponsor == vaultContract || targetSponsor == address(this)) {
+                targetSponsor = _getRootMatrixOwner();
             }
             registry.registerUser(msg.sender, targetSponsor);
         }
@@ -947,8 +1030,15 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      *      Otherwise falls back to registry.getRoot().
      */
     function _getRootMatrixOwner() internal view returns (address) {
-        if (vaultContract != address(0)) {
-            return vaultContract;
+        if (genesisRoot != address(0)) {
+            return genesisRoot;
+        }
+        address regRoot = address(0);
+        try registry.getRoot() returns (address r) {
+            regRoot = r;
+        } catch {}
+        if (regRoot != address(0)) {
+            return regRoot;
         }
         if (daoContract != address(0)) {
             try IEquoraDAOForMatrix(daoContract).getLastMember() returns (address lastDaoMember) {
@@ -957,326 +1047,344 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
                 }
             } catch {}
         }
-        return registry.getRoot();
+        return vaultContract;
     }
 
     /**
-     * @dev Find matrix owner (bubble up sponsor chain, max depth 12),
-     *      place new user in next available position, route payment.
-     *      A user's personal tree graph only starts receiving placements when they have
-     *      achieved 2 direct referrals eligibility with 30$ deposit each (or are the Genesis Root Matrix Owner).
-     *      If an upline in the chain has not met 2 direct referrals, the placement skips them
-     *      and bubbles up to an eligible upline sponsor or the root matrix owner.
+     * @dev Place new user in matrix upon slot activation.
+     *      Identifies the user\'s direct sponsor. If sponsor\'s slot is not unlocked yet,
+     *      bubbles up to the first unlocked upline (or root matrix owner).
+     *      Recursively executes placement into the board\'s next vacant seat (1..14).
      */
     function _placeUserInMatrix(address newUser, uint256 slot, uint256 cost) internal {
         address rootOwner = _getRootMatrixOwner();
-
         address sponsor = registry.getSponsor(newUser);
         if (sponsor == address(0) || sponsor == owner()) sponsor = rootOwner;
 
-        address matrixOwner = sponsor;
-        uint256 depth = 0;
-        while (
-            (!userSlots[matrixOwner][slot].isUnlocked ||
-             (slot > 1 && !userSlots[matrixOwner][slot].isLive) ||
-             (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) &&
-            depth < MAX_UPLINE_DEPTH
-        ) {
-            address up = registry.getSponsor(matrixOwner);
-            if (up == address(0) || up == matrixOwner || up == owner()) {
-                matrixOwner = rootOwner;
-                break;
-            }
-            matrixOwner = up;
-            depth++;
-        }
-
-        if (!userSlots[matrixOwner][slot].isUnlocked ||
-            (slot > 1 && !userSlots[matrixOwner][slot].isLive) ||
-            (matrixOwner != sponsor && !isMatrixQualified(matrixOwner) && matrixOwner != rootOwner)) {
-            matrixOwner = rootOwner;
-        }
-
         // Auto-activate slot for root matrix owner if not yet unlocked
-        if (matrixOwner == rootOwner && !userSlots[matrixOwner][slot].isUnlocked) {
-            userSlots[matrixOwner][slot].isUnlocked   = true;
-            userSlots[matrixOwner][slot].isLive       = true;
-            userSlots[matrixOwner][slot].currentCycle = 1;
-            userSlots[matrixOwner][slot].filledNodes  = 0;
-            if (slot > highestSlot[matrixOwner]) {
-                highestSlot[matrixOwner] = slot;
+        if (rootOwner != address(0) && !userSlots[rootOwner][slot].isUnlocked) {
+            userSlots[rootOwner][slot].isUnlocked   = true;
+            userSlots[rootOwner][slot].isLive       = true;
+            userSlots[rootOwner][slot].currentCycle = 1;
+            userSlots[rootOwner][slot].filledNodes  = 0;
+            if (slot > highestSlot[rootOwner]) {
+                highestSlot[rootOwner] = slot;
             }
-            emit SlotJoined(matrixOwner, slot, 0, address(0), block.timestamp);
-            emit TreeGraphStarted(matrixOwner, uint8(slot), block.timestamp);
+            emit SlotJoined(rootOwner, slot, 0, address(0), block.timestamp);
+            emit TreeGraphStarted(rootOwner, uint8(slot), block.timestamp);
         }
 
-        // If newUser is the root matrix owner, they have no upline tree above them to place into
-        if (matrixOwner == newUser) {
+        // If newUser is the root matrix owner, there is no upline tree to place into
+        if (newUser == rootOwner || newUser == address(0)) {
             return;
         }
 
-        MatrixSlot storage mSlot = userSlots[matrixOwner][slot];
-        uint256 position = mSlot.filledNodes + 1; // 1..14
-        mSlot.nodes[position - 1] = newUser;
+        // Sponsor is the primary board to receive this direct referral.
+        // If sponsor\'s slot is not unlocked yet, bubble up to first eligible upline.
+        address targetBoard = sponsor;
+        uint256 depth = 0;
+        while (
+            (!userSlots[targetBoard][slot].isUnlocked ||
+             (slot > 1 && !userSlots[targetBoard][slot].isLive)) &&
+            targetBoard != rootOwner &&
+            depth < MAX_UPLINE_DEPTH
+        ) {
+            address up = registry.getSponsor(targetBoard);
+            if (up == address(0) || up == targetBoard || up == owner()) {
+                targetBoard = rootOwner;
+                break;
+            }
+            targetBoard = up;
+            depth++;
+        }
+
+        if (!userSlots[targetBoard][slot].isUnlocked || (slot > 1 && !userSlots[targetBoard][slot].isLive)) {
+            targetBoard = rootOwner;
+        }
+
+        _executeBoardPlacement(targetBoard, newUser, slot, cost, 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Dynamic Recursive Board Placement & Action Engine
+    // -------------------------------------------------------------------------
+
+    /**
+     * @dev Core Recursive Matrix Placement & Dynamic Action Router.
+     *      Places placedUser into oardOwner\'s next vacant seat (1..14).
+     *      Executes that specific seat\'s economic rule.
+     *      If the seat is a Pass-Up (P1, P2) or Spillover (P7, P10, P13), it places the user
+     *      into the recipient\'s board in THEIR next vacant seat and executes THEIR action recursively!
+     *      Returns the address of the ultimate recipient who received the funds.
+     */
+    function _executeBoardPlacement(
+        address boardOwner,
+        address placedUser,
+        uint256 slot,
+        uint256 cost,
+        uint256 depth
+    ) internal returns (address recipient) {
+        if (boardOwner == address(0) || cost == 0 || depth > MAX_CASCADE_DEPTH) {
+            _forwardToVault(boardOwner, cost);
+            return vaultContract;
+        }
+
+        address rootOwner = _getRootMatrixOwner();
+        if (boardOwner == rootOwner && !userSlots[boardOwner][slot].isUnlocked) {
+            userSlots[boardOwner][slot].isUnlocked   = true;
+            userSlots[boardOwner][slot].isLive       = true;
+            userSlots[boardOwner][slot].currentCycle = 1;
+            userSlots[boardOwner][slot].filledNodes  = 0;
+            if (slot > highestSlot[boardOwner]) {
+                highestSlot[boardOwner] = slot;
+            }
+        }
+
+        MatrixSlot storage mSlot = userSlots[boardOwner][slot];
+        if (!mSlot.isUnlocked || (slot > 1 && !mSlot.isLive)) {
+            _forwardToVault(boardOwner, cost);
+            return vaultContract;
+        }
+
+        // 1. Determine next vacant seat (1..14)
+        uint256 vacantPos = mSlot.filledNodes + 1;
+        if (vacantPos > TREE_NODES) {
+            _completeCycle(boardOwner, slot);
+            vacantPos = 1;
+        }
+
+        // 2. Place user in board
+        mSlot.nodes[vacantPos - 1] = placedUser;
         mSlot.filledNodes++;
 
-        _routePayment(matrixOwner, newUser, slot, position, mSlot.currentCycle, cost);
-
-        if (mSlot.filledNodes == TREE_NODES) {
-            _completeCycle(matrixOwner, slot);
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Payment Router
-    // -------------------------------------------------------------------------
-    /**
-     * @dev Records a spillover placement on a downline's active board in their next available slot.
-     */
-    function _recordDownlinePlacement(address target, address placedUser, uint256 slot) internal {
-        if (target == address(0) || placedUser == address(0) || target == placedUser) return;
-        MatrixSlot storage tSlot = userSlots[target][slot];
-        if (!tSlot.isUnlocked || (slot > 1 && !tSlot.isLive)) return;
-
-        uint256 vacantPos = tSlot.filledNodes + 1;
-        if (vacantPos <= TREE_NODES) {
-            tSlot.nodes[vacantPos - 1] = placedUser;
-            tSlot.filledNodes++;
-            emit PositionFilled(target, uint8(slot), tSlot.currentCycle, uint8(vacantPos), placedUser, baseSlotCost);
-            if (tSlot.filledNodes == TREE_NODES) {
-                _completeCycle(target, slot);
-            }
-        }
-    }
-
-
-    /**
-     * @dev Route slot cost to correct recipient based on position.
-     *
-     *  P1  → Upline 1 (if qualified), else 4 Protocol Pools (EquoraVault)
-     *  P2  → Upline 2 (if qualified), else 4 Protocol Pools (EquoraVault)
-     *  P3, P6, P8, P9, P11, P12 → Slot Owner (direct income)
-     *  P4, P5, P14 → EquoraVault (Protocol Pools: 35% DAO, 40% Royalty, 15% Rewards, 10% Box)
-     *  P7, P10 → Downline 1 (if qualified), else 4 Protocol Pools (EquoraVault)
-     *  P13 → Downline 2 (if qualified), else 4 Protocol Pools (EquoraVault)
-     *
-     *  INVARIANT: . wei of cost is distributed — no silent sinks.
-     */
-    function _routePayment(
-        address matrixOwner,
-        address /*placedUser*/,
-        uint256 slot,
-        uint256 position,
-        uint256 cycle,
-        uint256 cost
-    ) internal {
         uint8 s = uint8(slot);
-        uint8 p = uint8(position);
+        uint8 p = uint8(vacantPos);
+        uint256 curCycle = mSlot.currentCycle;
 
-        emit PositionFilled(matrixOwner, s, cycle, p, matrixOwner, cost);
+        emit PositionFilled(boardOwner, s, curCycle, p, placedUser, cost);
 
-        if (position == 1) {
-            // P1 → Upline 1
-            address upline1 = registry.getSponsor(matrixOwner);
-            if (upline1 != address(0) && isMatrixQualified(upline1)) {
-                _pushMatrixPayment(upline1, cost);
-                emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
+        // 3. Dynamic Action Execution based on vacantPos
+        if (vacantPos == 1) {
+            // Level 1 Left Pass-Up -> Upline 1
+            address upline1 = registry.getSponsor(boardOwner);
+            if (upline1 == address(0) || upline1 == owner()) upline1 = rootOwner;
+
+            if (
+                boardOwner != rootOwner &&
+                upline1 != address(0) &&
+                upline1 != boardOwner &&
+                isMatrixQualified(upline1) &&
+                userSlots[upline1][slot].isUnlocked
+            ) {
+                // Pass-Up: placedUser lands in upline1\'s next vacant seat!
+                recipient = _executeBoardPlacement(upline1, placedUser, slot, cost, depth + 1);
+                mSlot.payoutRecipients[p - 1] = recipient;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.UPLINE_1);
+                emit DistributionExecuted(recipient, cost, PayoutType.UPLINE_1, s, curCycle, p);
             } else {
-                // Unqualified or missing upline -> routed directly to the 4 automated protocol pools!
-                _forwardToVault(matrixOwner, cost);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+                // Unqualified upline or top of tree -> funds divert 100% to 4 Protocol Pools
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
             }
 
-        } else if (position == 2) {
-            // P2 → Upline 2 (strictly distinct from Upline 1 and matrixOwner to prevent double payouts)
-            address up1     = registry.getSponsor(matrixOwner);
+        } else if (vacantPos == 2) {
+            // Level 1 Right Pass-Up -> Upline 2
+            address up1 = registry.getSponsor(boardOwner);
+            if (up1 == address(0) || up1 == owner()) up1 = rootOwner;
             address upline2 = (up1 != address(0)) ? registry.getSponsor(up1) : address(0);
-            uint256 depth = 0;
+            if (upline2 == address(0) || upline2 == owner()) upline2 = (up1 != rootOwner) ? rootOwner : address(0);
+
+            // Skip unqualified uplines
+            uint256 uDepth = 0;
             while (
-                (upline2 == up1 || upline2 == matrixOwner || !isMatrixQualified(upline2)) &&
+                (upline2 == up1 || upline2 == boardOwner || upline2 == owner() || !isMatrixQualified(upline2)) &&
                 upline2 != address(0) &&
-                depth < MAX_UPLINE_DEPTH
+                uDepth < MAX_UPLINE_DEPTH
             ) {
                 address nextUp = registry.getSponsor(upline2);
                 if (nextUp == address(0) || nextUp == upline2) {
-                    upline2 = address(0);
+                    upline2 = (up1 != rootOwner && boardOwner != rootOwner) ? rootOwner : address(0);
                     break;
                 }
                 upline2 = nextUp;
-                depth++;
+                uDepth++;
             }
 
-            if (upline2 != address(0) && upline2 != up1 && upline2 != matrixOwner && isMatrixQualified(upline2)) {
-                _pushMatrixPayment(upline2, cost);
-                emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
+            if (
+                boardOwner != rootOwner &&
+                upline2 != address(0) &&
+                upline2 != up1 &&
+                upline2 != boardOwner &&
+                isMatrixQualified(upline2) &&
+                userSlots[upline2][slot].isUnlocked
+            ) {
+                // Pass-Up: placedUser lands in upline2\'s next vacant seat!
+                recipient = _executeBoardPlacement(upline2, placedUser, slot, cost, depth + 1);
+                mSlot.payoutRecipients[p - 1] = recipient;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.UPLINE_2);
+                emit DistributionExecuted(recipient, cost, PayoutType.UPLINE_2, s, curCycle, p);
             } else {
-                // Unqualified, same sponsor, or missing upline -> routed directly to the 4 automated protocol pools!
-                _forwardToVault(matrixOwner, cost);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+                // Unqualified or top of tree -> funds divert 100% to 4 Protocol Pools
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
             }
 
         } else if (
-            position == 3  || position == 6  ||
-            position == 8  || position == 9  ||
-            position == 11 || position == 12
+            vacantPos == 3  || vacantPos == 6  ||
+            vacantPos == 8  || vacantPos == 9  ||
+            vacantPos == 11 || vacantPos == 12
         ) {
-            // P3, P6, P8, P9, P11, P12 → Owner direct income
-            // Strict 2 direct referrals requirement: if not yet qualified, route to protocol pools!
-            if (isMatrixQualified(matrixOwner)) {
-                _creditOwner(matrixOwner, slot, cost);
-                emit DistributionExecuted(matrixOwner, cost, PayoutType.OWNER_DIRECT, s, cycle, p);
+            // Direct Owner Income seats:
+            // Must have strict 2 active direct referrals (or be Root Owner)
+            if (isMatrixQualified(boardOwner)) {
+                _creditOwner(boardOwner, slot, cost);
+                recipient = boardOwner;
+                mSlot.payoutRecipients[p - 1] = boardOwner;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.OWNER_DIRECT);
+                emit DistributionExecuted(boardOwner, cost, PayoutType.OWNER_DIRECT, s, curCycle, p);
             } else {
-                _forwardToVault(matrixOwner, cost);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-                emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
             }
 
-        } else if (position == 4 || position == 5 || position == 14) {
-            // P4, P5, P14 → Protocol Pools via EquoraVault (35% Ecosystem & DAO Pool, 40% Royalty Pool, 15% Level Rewards, 10% Magic Blind Box)
-            _forwardToVault(matrixOwner, cost);
-            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, p);
-            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, p, block.timestamp);
+        } else if (vacantPos == 4 || vacantPos == 5 || vacantPos == 14) {
+            // Protocol Pools via EquoraVault (35% DAO, 40% Royalty, 15% Level Rewards, 10% Blind Box)
+            _forwardToVault(boardOwner, cost);
+            recipient = vaultContract;
+            mSlot.payoutRecipients[p - 1] = vaultContract;
+            mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
+            emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
 
-            // Two-Stage Tier Escalation (Stage 1):
-            // 4th and 5th node fund protocol pools automatically ($0 out-of-pocket).
-            // At position 5, the next slot is UNLOCKED & RESERVED in standby mode.
-            // It does NOT start earning or accepting placements yet until this board completes all 14 nodes!
-            if (position == 5 && slot < TOTAL_SLOTS) {
+            // Position 5: Two-Stage Tier Escalation (Stage 1) - reserve next slot in standby mode
+            if (vacantPos == 5 && slot < TOTAL_SLOTS) {
                 uint256 nextSlot = slot + 1;
-                if (!userSlots[matrixOwner][nextSlot].isUnlocked) {
-                    userSlots[matrixOwner][nextSlot].isUnlocked   = true;
-                    userSlots[matrixOwner][nextSlot].isLive       = false; // RESERVED STANDBY
-                    userSlots[matrixOwner][nextSlot].currentCycle = 1;
-                    userSlots[matrixOwner][nextSlot].filledNodes  = 0;
-                    if (nextSlot > highestSlot[matrixOwner]) {
-                        highestSlot[matrixOwner] = nextSlot;
+                if (!userSlots[boardOwner][nextSlot].isUnlocked) {
+                    userSlots[boardOwner][nextSlot].isUnlocked   = true;
+                    userSlots[boardOwner][nextSlot].isLive       = false; // RESERVED STANDBY
+                    userSlots[boardOwner][nextSlot].currentCycle = 1;
+                    userSlots[boardOwner][nextSlot].filledNodes  = 0;
+                    if (nextSlot > highestSlot[boardOwner]) {
+                        highestSlot[boardOwner] = nextSlot;
                     }
-                    emit SlotReserved(matrixOwner, s, uint8(nextSlot), block.timestamp);
+                    emit SlotReserved(boardOwner, s, uint8(nextSlot), block.timestamp);
                 }
             }
 
-        } else if (position == 7 || position == 10 || position == 13) {
-            _routeDownlineSpillover(matrixOwner, slot, position, cycle, cost);
-        }
-    }
+            // Position 14: Two-Stage Tier Escalation (Stage 2) & Complete Cycle
+            if (vacantPos == 14) {
+                _completeCycle(boardOwner, slot);
+            }
 
-    /**
-     * @dev Route downline spillover positions (P7, P10, P13).
-     *      - P7: Targets Node 1 first. If unqualified -> fallback to Node 2. If neither -> pools.
-     *      - P10: Targets Node 2 second. Anti-double payout prevents paying either node twice.
-     *      - P13: Option B queue scan across downline's downlines (Nodes 3, 4, 5, 6).
-     *             Splits equally among qualified candidates. If none -> pools.
-     */
-    function _routeDownlineSpillover(
-        address matrixOwner,
-        uint256 slot,
-        uint256 position,
-        uint256 cycle,
-        uint256 cost
-    ) internal {
-        if (position == 7) {
-            _routeP7(matrixOwner, slot, cycle, cost);
-        } else if (position == 10) {
-            _routeP10(matrixOwner, slot, cycle, cost);
-        } else if (position == 13) {
-            _routeP13(matrixOwner, placedUser, slot, cycle, cost);
-        }
-    }
-
-    function _routeP7(
-        address matrixOwner,
-        address placedUser,
-        uint256 slot,
-        uint256 cycle,
-        uint256 cost
-    ) internal {
-        uint8 s = uint8(slot);
-        address dl1 = userSlots[matrixOwner][slot].nodes[0];
-
-        // P7: Direct $30 Payout to Downline 1 (P1) if qualified + Placement in their blank slot
-        if (dl1 != address(0) && isMatrixQualified(dl1)) {
-            p7PaidRecipient[matrixOwner][slot][cycle] = dl1;
-            emit SpilloverResolved(matrixOwner, dl1, 7, false);
-            _pushMatrixPayment(dl1, cost);
-            emit DistributionExecuted(dl1, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 7);
-            _recordDownlinePlacement(dl1, placedUser, slot);
-        } else {
-            _forwardToVault(matrixOwner, cost);
-            emit SpilloverResolved(matrixOwner, vaultContract, 7, true);
-            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 7);
-            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 7, block.timestamp);
-        }
-    }
-
-    function _routeP10(
-        address matrixOwner,
-        address placedUser,
-        uint256 slot,
-        uint256 cycle,
-        uint256 cost
-    ) internal {
-        uint8 s = uint8(slot);
-        address dl2 = userSlots[matrixOwner][slot].nodes[1];
-
-        // P10: Direct $30 Payout to Downline 2 (P2) if qualified + Placement in their blank slot
-        if (dl2 != address(0) && isMatrixQualified(dl2)) {
-            emit SpilloverResolved(matrixOwner, dl2, 10, false);
-            _pushMatrixPayment(dl2, cost);
-            emit DistributionExecuted(dl2, cost, PayoutType.SPILLOVER_DOWNLINE2, s, cycle, 10);
-            _recordDownlinePlacement(dl2, placedUser, slot);
-        } else {
-            _forwardToVault(matrixOwner, cost);
-            emit SpilloverResolved(matrixOwner, vaultContract, 10, true);
-            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 10);
-            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 10, block.timestamp);
-        }
-    }
-
-    function _routeP13(
-        address matrixOwner,
-        address placedUser,
-        uint256 slot,
-        uint256 cycle,
-        uint256 cost
-    ) internal {
-        uint8 s = uint8(slot);
-        address dl1 = userSlots[matrixOwner][slot].nodes[0];
-        address dl2 = userSlots[matrixOwner][slot].nodes[1];
-
-        // Loop across Level 2 downlines: P3 (idx 2), P4 (idx 3), P5 (idx 4), P6 (idx 5)
-        // Find the FIRST ELIGIBLE downline to fill their blank spot
-        address target = address(0);
-        for (uint256 i = 2; i <= 5; i++) {
-            address candidate = userSlots[matrixOwner][slot].nodes[i];
+        } else if (vacantPos == 7) {
+            // Spillover Downline 1 (Node 1 of boardOwner\'s tree)
+            address dl1 = mSlot.nodes[0];
             if (
-                candidate != address(0) &&
-                candidate != matrixOwner &&
-                candidate != dl1 &&
-                candidate != dl2 &&
-                isMatrixQualified(candidate) &&
-                userSlots[candidate][slot].isUnlocked &&
-                (slot == 1 || userSlots[candidate][slot].isLive) &&
-                userSlots[candidate][slot].filledNodes < TREE_NODES
+                dl1 != address(0) &&
+                dl1 != boardOwner &&
+                isMatrixQualified(dl1) &&
+                userSlots[dl1][slot].isUnlocked
             ) {
-                target = candidate;
-                break;
+                p7PaidRecipient[boardOwner][slot][curCycle] = dl1;
+                emit SpilloverResolved(boardOwner, dl1, 7, false);
+                // Spillover: lands in dl1\'s next vacant seat!
+                recipient = _executeBoardPlacement(dl1, placedUser, slot, cost, depth + 1);
+                mSlot.payoutRecipients[p - 1] = recipient;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.SPILLOVER_DOWNLINE1);
+                emit DistributionExecuted(recipient, cost, PayoutType.SPILLOVER_DOWNLINE1, s, curCycle, 7);
+            } else {
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit SpilloverResolved(boardOwner, vaultContract, 7, true);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, 7);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, 7, block.timestamp);
+            }
+
+        } else if (vacantPos == 10) {
+            // Spillover Downline 2 (Node 2 of boardOwner\'s tree)
+            address dl2 = mSlot.nodes[1];
+            if (
+                dl2 != address(0) &&
+                dl2 != boardOwner &&
+                isMatrixQualified(dl2) &&
+                userSlots[dl2][slot].isUnlocked
+            ) {
+                emit SpilloverResolved(boardOwner, dl2, 10, false);
+                // Spillover: lands in dl2\'s next vacant seat!
+                recipient = _executeBoardPlacement(dl2, placedUser, slot, cost, depth + 1);
+                mSlot.payoutRecipients[p - 1] = recipient;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.SPILLOVER_DOWNLINE2);
+                emit DistributionExecuted(recipient, cost, PayoutType.SPILLOVER_DOWNLINE2, s, curCycle, 10);
+            } else {
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit SpilloverResolved(boardOwner, vaultContract, 10, true);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, 10);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, 10, block.timestamp);
+            }
+
+        } else if (vacantPos == 13) {
+            // Waterfall across Level 2 Downlines (Nodes 3, 4, 5, 6)
+            address dl1 = mSlot.nodes[0];
+            address dl2 = mSlot.nodes[1];
+            address target = address(0);
+            for (uint256 i = 2; i <= 5; i++) {
+                address candidate = mSlot.nodes[i];
+                if (
+                    candidate != address(0) &&
+                    candidate != boardOwner &&
+                    candidate != dl1 &&
+                    candidate != dl2 &&
+                    isMatrixQualified(candidate) &&
+                    userSlots[candidate][slot].isUnlocked &&
+                    (slot == 1 || userSlots[candidate][slot].isLive) &&
+                    userSlots[candidate][slot].filledNodes < TREE_NODES
+                ) {
+                    target = candidate;
+                    break;
+                }
+            }
+
+            if (target != address(0)) {
+                emit SpilloverResolved(boardOwner, target, 13, false);
+                // Waterfall spillover: lands in candidate\'s next vacant seat!
+                recipient = _executeBoardPlacement(target, placedUser, slot, cost, depth + 1);
+                mSlot.payoutRecipients[p - 1] = recipient;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.SPILLOVER_DOWNLINE1);
+                emit DistributionExecuted(recipient, cost, PayoutType.SPILLOVER_DOWNLINE1, s, curCycle, 13);
+            } else {
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit SpilloverResolved(boardOwner, vaultContract, 13, true);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, 13);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, 13, block.timestamp);
             }
         }
 
-        if (target != address(0)) {
-            emit SpilloverResolved(matrixOwner, target, 13, false);
-            _pushMatrixPayment(target, cost);
-            emit DistributionExecuted(target, cost, PayoutType.SPILLOVER_DOWNLINE1, s, cycle, 13);
-            _recordDownlinePlacement(target, placedUser, slot);
-        } else {
-            // No eligible Level 2 downline -> 100% routes to Protocol Pools
-            _forwardToVault(matrixOwner, cost);
-            emit SpilloverResolved(matrixOwner, vaultContract, 13, true);
-            emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, cycle, 13);
-            emit ProtocolPoolFunded(matrixOwner, cost, s, cycle, 13, block.timestamp);
+        // 4. Complete cycle if 14 nodes reached (and not already completed in position 14)
+        if (mSlot.filledNodes == TREE_NODES && vacantPos != 14) {
+            _completeCycle(boardOwner, slot);
         }
+
+        return recipient;
     }
 
     // -------------------------------------------------------------------------
@@ -1380,6 +1488,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         snap.completedAt = block.timestamp;
         for (uint256 i = 0; i < TREE_NODES; i++) {
             snap.nodes[i] = mSlot.nodes[i];
+            snap.payoutRecipients[i] = mSlot.payoutRecipients[i];
+            snap.payoutTypes[i] = mSlot.payoutTypes[i];
         }
         cycleSnapshots[user][slot].push(snap);
 
@@ -1388,6 +1498,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         mSlot.filledNodes = 0;
         for (uint256 i = 0; i < TREE_NODES; i++) {
             mSlot.nodes[i] = address(0);
+            mSlot.payoutRecipients[i] = address(0);
+            mSlot.payoutTypes[i] = 0;
         }
 
         totalRecycles++;
@@ -1407,21 +1519,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
             nextMSlot.isLive = true;
 
-            // Seed Level 1 of Next Slot with P4 and P5 users if nextSlot has 0 filled nodes
-            if (nextMSlot.filledNodes == 0) {
-                address p4User = snap.nodes[3]; // P4 is index 3
-                address p5User = snap.nodes[4]; // P5 is index 4
-
-                if (p4User != address(0) && p4User != user) {
-                    nextMSlot.nodes[0] = p4User;
-                    nextMSlot.filledNodes = 1;
-                    emit PositionFilled(user, uint8(nextSlot), nextMSlot.currentCycle, 1, p4User, baseSlotCost);
-                }
-                if (p5User != address(0) && p5User != user) {
-                    nextMSlot.nodes[1] = p5User;
-                    nextMSlot.filledNodes = (nextMSlot.filledNodes == 1) ? 2 : 1;
-                    emit PositionFilled(user, uint8(nextSlot), nextMSlot.currentCycle, uint8(nextMSlot.filledNodes), p5User, baseSlotCost);
-                }
+            // Dynamic Follow-Me Placement:
+            // This upgraded user is placed into their sponsor's nextSlot board!
+            // The first team members to upgrade dynamically fill Seat 1, Seat 2, Seat 3...
+            address sponsorAddr = registry.getSponsor(user);
+            if (sponsorAddr != address(0) && sponsorAddr != user && sponsorAddr != owner()) {
+                _placeUserInMatrix(user, nextSlot, baseSlotCost);
             }
 
             emit SlotAutoActivated(user, uint8(slot), uint8(nextSlot), block.timestamp);
@@ -1438,7 +1541,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             emit MatrixRecycled(user, 1, userSlots[user][1].currentCycle, block.timestamp);
         }
 
-        // 4. Milestone: Slots 3,6,9,12 on first cycle → mint Rank NFT
+        // 4. Milestone: Slots 3,6,9,12 on first cycle ΓåÆ mint Rank NFT
         if ((slot == 3 || slot == 6 || slot == 9 || slot == 12) && completedCycle == 1) {
             _awardMilestoneNFT(user, slot);
         }
@@ -1446,7 +1549,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
     /**
      * @dev Award milestone rank NFT on first cycle completion of key slots.
-     *      Slot 3 → ALPHA, Slot 6 → PRIME, Slot 9 → ELITE, Slot 12 → CROWN
+     *      Slot 3 ΓåÆ ALPHA, Slot 6 ΓåÆ PRIME, Slot 9 ΓåÆ ELITE, Slot 12 ΓåÆ CROWN
      */
     function _awardMilestoneNFT(address user, uint256 slot) internal {
         IEquoraNFT.Rank rank;
@@ -1577,6 +1680,26 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      * @dev Returns the 14 nodes of a user's slot tree graph along with their 5-digit member codes and member IDs.
      *      As members register & deposit in the matrix, their IDs are shown on their sponsor's graph!
      */
+    function getSlotNodesDetail(address user, uint256 slot) external view returns (
+        address[14] memory nodeAddresses,
+        uint32[14]  memory nodeCodes,
+        uint256[14] memory nodeMemberIds,
+        address[14] memory payoutRecipients,
+        uint8[14]   memory payoutTypes
+    ) {
+        MatrixSlot storage m = userSlots[user][slot];
+        nodeAddresses    = m.nodes;
+        payoutRecipients = m.payoutRecipients;
+        payoutTypes      = m.payoutTypes;
+        for (uint256 i = 0; i < TREE_NODES; i++) {
+            address nodeAddr = m.nodes[i];
+            if (nodeAddr != address(0)) {
+                nodeCodes[i]     = registry.getCodeByUser(nodeAddr);
+                nodeMemberIds[i] = registry.getUserId(nodeAddr);
+            }
+        }
+    }
+
     function getSlotNodesWithCodes(address user, uint256 slot) external view returns (
         address[14] memory nodeAddresses,
         uint32[14]  memory nodeCodes,

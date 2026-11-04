@@ -207,12 +207,13 @@ async function main() {
   console.log(`   NFT:      ${nftHex}`);
 
   // ── 1. Deploy Fresh EquoraMatrix ──────────────────────────────────────────
+  const zeroAddress = "0x0000000000000000000000000000000000000000";
   const matrixParams = coder.encode(
     ["address", "address", "address"],
     [
-      "0x" + tokenHex.slice(2),
-      "0x" + vaultHex.slice(2),
+      zeroAddress,
       "0x" + registryHex.slice(2),
+      "0x" + nftHex.slice(2),
     ]
   );
   const matrix = await deployContractToTrob(

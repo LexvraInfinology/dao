@@ -17,7 +17,7 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H",
+  matrix: "TMa6FzwGy6VFp5esEHQr814bpzYWiCRimU",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
   registry: "TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i",
   vault: "TBq3nvGgycW13zyr9KAazizPfFVgVd1n63",
@@ -238,6 +238,7 @@ export const MATRIX_ABI = [
   "function joinSlot(uint256 slot, address sponsor) external payable",
   "function isMatrixQualified(address user) external view returns (bool)",
   "function getSlotData(address user, uint256 slot) external view returns (bool isUnlocked, uint256 currentCycle, uint256 filledNodes, address[14] nodes, uint256 slotEarned)",
+  "function getSlotNodesDetail(address user, uint256 slot) external view returns (address[14] nodeAddresses, uint32[14] nodeCodes, uint256[14] nodeMemberIds, address[14] payoutRecipients, uint8[14] payoutTypes)",
   "function withdraw(uint256 amount) external",
   "function userBalance(address user) external view returns (uint256)",
   "function totalEarned(address user) external view returns (uint256)",
@@ -693,26 +694,46 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  // Fetch real on-chain 5-digit member codes, member IDs, and authoritative nodes directly from smart contract storage
+  // Fetch real on-chain 5-digit member codes, member IDs, authoritative nodes, and live payout recipients
   let onChainCodes: number[] = [];
   let onChainIds: number[] = [];
+  let onChainRecipients: string[] = [];
+  let onChainPayoutTypes: number[] = [];
   try {
-    const nodesWithCodesRaw = await queryTrobConstant(
+    const detailRaw = await queryTrobConstant(
       CONTRACT_ADDRESSES.matrix,
-      "getSlotNodesWithCodes(address,uint256)",
+      "getSlotNodesDetail(address,uint256)",
       param
     );
-    if (nodesWithCodesRaw) {
-      const [decodedAddresses, codesDecoded, idsDecoded] = coder.decode(
-        ["address[14]", "uint32[14]", "uint256[14]"],
-        "0x" + nodesWithCodesRaw
+    if (detailRaw) {
+      const [decodedAddresses, codesDecoded, idsDecoded, recipientsDecoded, typesDecoded] = coder.decode(
+        ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
+        "0x" + detailRaw
       );
       if (!isViewingSnapshot && decodedAddresses && decodedAddresses.length === 14) {
-        // Direct, authoritative on-chain nodes straight from smart contract storage
         displayNodes = [...decodedAddresses];
       }
       onChainCodes = codesDecoded.map((c: any) => Number(c));
       onChainIds = idsDecoded.map((id: any) => Number(id));
+      onChainRecipients = recipientsDecoded.map((r: any) => String(r));
+      onChainPayoutTypes = typesDecoded.map((t: any) => Number(t));
+    } else {
+      const nodesWithCodesRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "getSlotNodesWithCodes(address,uint256)",
+        param
+      );
+      if (nodesWithCodesRaw) {
+        const [decodedAddresses, codesDecoded, idsDecoded] = coder.decode(
+          ["address[14]", "uint32[14]", "uint256[14]"],
+          "0x" + nodesWithCodesRaw
+        );
+        if (!isViewingSnapshot && decodedAddresses && decodedAddresses.length === 14) {
+          displayNodes = [...decodedAddresses];
+        }
+        onChainCodes = codesDecoded.map((c: any) => Number(c));
+        onChainIds = idsDecoded.map((id: any) => Number(id));
+      }
     }
   } catch {}
 
@@ -768,6 +789,10 @@ export async function getOnChainSlotDetails(
 
     const realCode = isUnlocked ? (onChainCodes[pos - 1] || null) : null;
     const realId = isUnlocked ? (onChainIds[pos - 1] || null) : null;
+    const rawRecip = isFilled && onChainRecipients[pos - 1] ? onChainRecipients[pos - 1] : null;
+    const realRecipBase58 = rawRecip && rawRecip !== "0x0000000000000000000000000000000000000000" && rawRecip !== "0x0"
+      ? toTrobBase58(rawRecip)
+      : (pos === 4 || pos === 5 || pos === 14 ? toTrobBase58(CONTRACT_ADDRESSES.vault) : null);
 
     formattedNodes.push({
       position: pos,
@@ -779,7 +804,7 @@ export async function getOnChainSlotDetails(
       userId: realId || null,
       code: realCode || null,
       payoutType,
-      recipientAddress: isFilled ? userHex : null,
+      recipientAddress: realRecipBase58,
       wasFallback: false,
       amount: getSlotCost(slotNumber),
       timestamp: isFilled ? new Date().toISOString() : null,

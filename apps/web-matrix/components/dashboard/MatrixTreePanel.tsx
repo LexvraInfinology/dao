@@ -1246,15 +1246,30 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   Settlement Flow
                 </span>
                 <p className="text-slate-700 text-[11.5px] leading-relaxed">
-                  {selectedNodeModal.type === "income"
-                    ? isOwnerQualified
-                      ? `100% P2P instant settlement ($30.00 USD) directly into your wallet.`
-                      : `⚠️ 2-Direct Qualification Pending (${directsCount}/2 Directs): Per EquoraMatrix.sol rules, direct P2P income requires 2 active direct referrals. Because ${directsCount} direct is active, this settlement routed directly to the Protocol Pools Vault.`
-                    : selectedNodeModal.pos === 1
-                    ? `Level 1 frontline seat. 100% P2P pass-through to matrix sponsor ($30.00 USD). Frontline seats qualify you for 100% Level 2 and Level 3 income.`
-                    : selectedNodeModal.pos === 2
-                    ? `Level 1 frontline seat. 100% P2P pass-through routes to upline 2 ($30.00 USD). Frontline seats satisfy your 2-direct qualification.`
-                    : selectedNodeModal.desc}
+                  {(() => {
+                    if (selectedNodeModal.type === "income") {
+                      if (isOwnerQualified) {
+                        return "100% P2P instant settlement ($30.00 USD) directly into your wallet.";
+                      }
+                      return `⚠️ 2-Direct Qualification Pending (${directsCount}/2 Directs): Per EquoraMatrix.sol rules, direct P2P income requires 2 active direct referrals. Because you have ${directsCount} active direct, this settlement routed directly to the Protocol Pools Vault.`;
+                    }
+                    if (selectedNodeModal.pos === 1) {
+                      if (profile?.isUpline1Qualified) {
+                        return "Level 1 frontline seat. 100% P2P pass-through to matrix sponsor ($30.00 USD). Frontline seats qualify you for 100% Level 2 and Level 3 income.";
+                      }
+                      const up1 = profile?.sponsorAddress || data?.sponsorAddress;
+                      const up1Fmt = up1 ? formatAddress(toTrobBase58(up1)) : "Protocol Vault";
+                      const up1Directs = profile?.upline1DirectsCount ?? 0;
+                      return `⚠️ Upline 1 Pass-Up Fallback: Level 1 frontline pass-up routes to Upline 1 (${up1Fmt}). Because Upline 1 has fewer than 2 active direct referrals on-chain (${up1Directs}/2 Directs), this $30 settlement was automatically directed to the 4 Community Protocol Pools (Vault).`;
+                    }
+                    if (selectedNodeModal.pos === 2) {
+                      if (profile?.isUpline2Qualified) {
+                        return "Level 1 frontline seat. 100% P2P pass-through routes to upline 2 ($30.00 USD). Frontline seats satisfy your 2-direct qualification.";
+                      }
+                      return "⚠️ Upline 2 Pass-Up Fallback: Upline 2 is either unqualified (< 2 directs) or apex protocol root. This $30 settlement was automatically directed to the 4 Community Protocol Pools (Vault).";
+                    }
+                    return selectedNodeModal.desc;
+                  })()}
                 </p>
               </div>
 
@@ -1273,13 +1288,29 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     recipientWallet = vaultB58;
                   }
                 } else if (selectedNodeModal.pos === 1) {
-                  recipientLabel = "Upline Sponsor (Level 1 Pass-Up)";
-                  recipientWallet = profile?.sponsorAddress
-                    ? toTrobBase58(profile.sponsorAddress)
-                    : (data?.sponsorAddress ? toTrobBase58(data.sponsorAddress) : vaultB58);
+                  const isUp1Qualified = Boolean(profile?.isUpline1Qualified);
+                  const up1Addr = profile?.sponsorAddress || data?.sponsorAddress;
+                  const isUp1Vault = !up1Addr || up1Addr.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase();
+
+                  if (isUp1Qualified && !isUp1Vault) {
+                    recipientLabel = "Upline 1 (Level 1 Pass-Up)";
+                    recipientWallet = toTrobBase58(up1Addr);
+                  } else {
+                    recipientLabel = `4 Protocol Pools (Vault — Upline Unqualified ${profile?.upline1DirectsCount ?? 0}/2)`;
+                    recipientWallet = vaultB58;
+                  }
                 } else if (selectedNodeModal.pos === 2) {
-                  recipientLabel = "Upline 2 (Level 1 Pass-Up)";
-                  recipientWallet = profile?.upline2Address ? toTrobBase58(profile.upline2Address) : vaultB58;
+                  const isUp2Qualified = Boolean(profile?.isUpline2Qualified);
+                  const up2Addr = profile?.upline2Address;
+                  const isUp2Vault = !up2Addr || up2Addr.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase();
+
+                  if (isUp2Qualified && !isUp2Vault) {
+                    recipientLabel = "Upline 2 (Level 1 Pass-Up)";
+                    recipientWallet = toTrobBase58(up2Addr);
+                  } else {
+                    recipientLabel = `4 Protocol Pools (Vault — Upline 2 Fallback)`;
+                    recipientWallet = vaultB58;
+                  }
                 } else if (selectedNodeModal.pos === 7) {
                   recipientLabel = "Downline 1 (Node 1 Spillover)";
                   const d1Addr = nodes[0]?.placedUser || nodes[0]?.base58;

@@ -82,6 +82,10 @@ export interface MatrixUserProfile {
   daoSeat?: number | null;
   upline2Address?: string | null;
   isVaultSponsor?: boolean;
+  isUpline1Qualified?: boolean;
+  upline1DirectsCount?: number;
+  isUpline2Qualified?: boolean;
+  upline2DirectsCount?: number;
   directReferralsCount: number;
   activeDirectsCount?: number;
   isQualified?: boolean;

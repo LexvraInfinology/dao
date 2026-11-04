@@ -1072,21 +1072,45 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 
   let upline2Address: string | null = null;
   let sponsorCode: number | null = null;
+  let isUpline1Qualified = false;
+  let upline1DirectsCount = 0;
+  let isUpline2Qualified = false;
+  let upline2DirectsCount = 0;
+
   if (sponsorAddress && !isVaultSponsor) {
     try {
-      const up2Param = coder.encode(["address"], [sponsorAddress]).slice(2);
-      const [up2Raw, sCode] = await Promise.all([
-        queryTrobConstant(CONTRACT_ADDRESSES.registry, "getSponsor(address)", up2Param).catch(() => null),
+      const up1Param = coder.encode(["address"], [sponsorAddress]).slice(2);
+      const [up2Raw, sCode, up1DirectsRaw] = await Promise.all([
+        queryTrobConstant(CONTRACT_ADDRESSES.registry, "getSponsor(address)", up1Param).catch(() => null),
         getOnChainCodeByUser(sponsorAddress).catch(() => null),
+        queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getActiveDirectReferralsCount(address)", up1Param).catch(() => null),
       ]);
+      if (sCode) sponsorCode = sCode;
+      if (up1DirectsRaw) {
+        upline1DirectsCount = Number(coder.decode(["uint256"], "0x" + up1DirectsRaw)[0]);
+        isUpline1Qualified = upline1DirectsCount >= 2;
+      }
       if (up2Raw) {
         const up2 = coder.decode(["address"], "0x" + up2Raw)[0];
         if (up2 && up2 !== "0x0000000000000000000000000000000000000000" && !isDeployerAddress(up2)) {
           upline2Address = up2.toLowerCase();
+          try {
+            const up2Param = coder.encode(["address"], [upline2Address]).slice(2);
+            const up2DirectsRaw = await queryTrobConstant(
+              CONTRACT_ADDRESSES.matrix,
+              "getActiveDirectReferralsCount(address)",
+              up2Param
+            ).catch(() => null);
+            if (up2DirectsRaw) {
+              upline2DirectsCount = Number(coder.decode(["uint256"], "0x" + up2DirectsRaw)[0]);
+              isUpline2Qualified = upline2DirectsCount >= 2;
+            }
+          } catch {}
         }
       }
-      if (sCode) sponsorCode = sCode;
-    } catch {}
+    } catch (upErr) {
+      console.warn("[OnChain] Upline resolution notice:", upErr);
+    }
   }
 
   let userReferralCode: number | null = null;

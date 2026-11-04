@@ -246,7 +246,7 @@ async function getTrobPrice(): Promise<number> {
 // Read userSponsor from registry via upline mapping in Matrix
 // ─────────────────────────────────────────────────────────────────────────────
 async function getSponsor(userEthHex: string): Promise<string | null> {
-  const chunks = await callContract(MATRIX_HEX, "userUpline(address)", encodeAddress(userEthHex));
+  const chunks = await callContract(REGISTRY_HEX, "getSponsor(address)", encodeAddress(userEthHex));
   if (!chunks[0]) return null;
   const addr = decodeAddress(chunks[0]);
   return addr === "0x0000000000000000000000000000000000000000" ? null : addr;
@@ -482,6 +482,12 @@ export async function GET(
       const totalEarnedUsd  = totalEarnedTrob * trobPriceUsd;
       const balanceTrob     = Number(await getUserBalance(ethHex)) / 1_000_000;
       const sponsor         = await getSponsor(ethHex).catch(() => null);
+      let upline1Directs = 0;
+      let isUpline1Qualified = false;
+      if (sponsor && sponsor !== "0x0000000000000000000000000000000000000000") {
+        upline1Directs = await getActiveDirects(sponsor).catch(() => 0);
+        isUpline1Qualified = upline1Directs >= 2;
+      }
 
       let activeSlotNodes: any[] = [];
       let activeFilledCount = 0;
@@ -506,6 +512,8 @@ export async function GET(
           isQualified: qualified,
           activeDirectsCount: directs,
           sponsorAddress: sponsor,
+          isUpline1Qualified,
+          upline1DirectsCount: upline1Directs,
           activeSlotProgress: slot1 && slot1.isUnlocked ? {
             slotNumber: 1,
             filledNodes: Math.max(slot1.filledNodes || 0, activeFilledCount),

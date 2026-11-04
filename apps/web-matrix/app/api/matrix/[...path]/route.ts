@@ -13,6 +13,10 @@ const MATRIX_HEX =
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   "41afedb7886ddf932acb2c91f7ed080b493d5fb18f"; // TS1S2VRXYn8KzCQDYL6JweJVNczCSK3xro
 
+const REGISTRY_HEX =
+  process.env.NEXT_PUBLIC_REGISTRY_HEX ||
+  "41218156202edd1294f681a04955f83573755edb4b"; // TD2NEqnkgoAk3t3jZAg9gkZUnEXdqyzgxT
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -260,6 +264,39 @@ function buildNodes(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Registry query helpers
+// ─────────────────────────────────────────────────────────────────────────────
+async function getRegistryUser(userEthHex: string) {
+  const params = encodeAddress(userEthHex);
+  const chunks = await callContract(REGISTRY_HEX, "getUser(address)", params);
+  if (chunks.length < 6) return null;
+  return {
+    isRegistered: decodeBool(chunks[0]),
+    sponsor: decodeAddress(chunks[1]),
+    regTime: decodeUint256(chunks[2]),
+    directsCount: Number(decodeUint256(chunks[3])),
+    id: Number(decodeUint256(chunks[4])),
+    code: Number(decodeUint256(chunks[5])),
+  };
+}
+
+async function getRegistryCode(userEthHex: string): Promise<number | null> {
+  const params = encodeAddress(userEthHex);
+  const chunks = await callContract(REGISTRY_HEX, "getCodeByUser(address)", params);
+  if (!chunks[0]) return null;
+  const c = Number(decodeUint256(chunks[0]));
+  return c >= 10000 && c <= 99999 ? c : null;
+}
+
+async function getRegistryUserId(userEthHex: string): Promise<number | null> {
+  const params = encodeAddress(userEthHex);
+  const chunks = await callContract(REGISTRY_HEX, "getUserId(address)", params);
+  if (!chunks[0]) return null;
+  const id = Number(decodeUint256(chunks[0]));
+  return id > 0 ? id : null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET handler
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(
@@ -274,12 +311,13 @@ export async function GET(
       const ethHex = toEthHex(path[1]);
       const tronHex = toTronHex(path[1]);
 
-      const [directs, qualified, stats, sponsor, slot1] = await Promise.all([
+      const [directs, qualified, stats, sponsor, slot1, regUser] = await Promise.all([
         getActiveDirects(ethHex),
         isQualified(ethHex),
         getUserStats(ethHex),
         getSponsor(ethHex).catch(() => null),
         getUserSlot(ethHex, 1),
+        getRegistryUser(ethHex).catch(() => null),
       ]);
 
       const trobPriceUsd6 = await getTrobPrice();
@@ -294,7 +332,9 @@ export async function GET(
         data: {
           address: ethHex,
           canonicalAddress: tronHex,
-          username: `Member #${ethHex.slice(2, 6).toUpperCase()}`,
+          username: regUser?.id ? `Operative #${regUser.id}` : (regUser?.code ? `Member #${regUser.code}` : `Member #${ethHex.slice(2, 6).toUpperCase()}`),
+          userId: regUser?.id || null,
+          referralCode: regUser?.code || null,
           avatarUrl: null,
           bio: null,
           telegram: null,
@@ -336,7 +376,7 @@ export async function GET(
         getActiveDirects(ethHex),
         isQualified(ethHex),
         getUserStats(ethHex),
-        getUserSlot(ethHex, 1),
+        getSlotDataV2(ethHex, 1),
         getTrobPrice(),
       ]);
 
@@ -362,16 +402,19 @@ export async function GET(
           isQualified: qualified,
           activeDirectsCount: directs,
           sponsorAddress: sponsor,
-          activeSlotProgress: slot1 ? {
-            slotNumber: 1,
-            filledNodes: slot1.filledNodes,
-            totalNodes: 14,
-            cycle: slot1.currentCycle,
-            upgradeReserve: 0,
-            level1Filled: Math.min(slot1.filledNodes, 2),
-            level2Filled: Math.max(0, Math.min(slot1.filledNodes - 2, 4)),
-            level3Filled: Math.max(0, Math.min(slot1.filledNodes - 6, 8)),
-          } : {
+          activeSlotProgress: slot1 ? (() => {
+            const s1Nodes: string[] = slot1.nodes || [];
+            return {
+              slotNumber: 1,
+              filledNodes: Math.max(slot1.filledNodes, s1Nodes.filter((n: string) => n && n !== "0x0000000000000000000000000000000000000000").length),
+              totalNodes: 14,
+              cycle: slot1.currentCycle,
+              upgradeReserve: 0,
+              level1Filled: Math.min(slot1.filledNodes, 2),
+              level2Filled: Math.max(0, Math.min(slot1.filledNodes - 2, 4)),
+              level3Filled: Math.max(0, Math.min(slot1.filledNodes - 6, 8)),
+            };
+          })() : {
             slotNumber: 1, filledNodes: 0, totalNodes: 14, cycle: 1,
             upgradeReserve: 0, level1Filled: 0, level2Filled: 0, level3Filled: 0,
           },
@@ -484,7 +527,7 @@ export async function GET(
           currentCycle: sd.currentCycle,
           totalCycles: sd.currentCycle,
           snapshotCount: 0,
-          filledNodes: sd.filledNodes,
+          filledNodes: Math.max(sd.filledNodes, activeFilledCount),
           nodes,
           totalEarned: Number(sd.slotEarned),
           totalEarnedTrob,

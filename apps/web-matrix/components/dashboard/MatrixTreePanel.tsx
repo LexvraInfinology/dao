@@ -349,23 +349,13 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       return { filled: false, label: "Available", code: null, address: null, txHash: null, metaLabel: null };
     }
     const occupantAddr = n?.placedUser || n?.base58 || null;
-    let occupantBase58 = n?.base58 || (occupantAddr ? toTrobBase58(occupantAddr) : null);
-    if (!occupantBase58) {
-      if (pos === 4 || pos === 5 || pos === 14 || SEAT_METAS[pos]?.type === "pool") {
-        occupantBase58 = toTrobBase58(CONTRACT_ADDRESSES.vault);
-      } else if (pos === 1) {
-        occupantBase58 = profile?.sponsorAddress || data?.sponsorAddress ? toTrobBase58(profile?.sponsorAddress || data?.sponsorAddress) : toTrobBase58(CONTRACT_ADDRESSES.vault);
-      } else if (pos === 2) {
-        occupantBase58 = profile?.upline2Address ? toTrobBase58(profile.upline2Address) : toTrobBase58(CONTRACT_ADDRESSES.vault);
-      } else if (SEAT_METAS[pos]?.type === "income") {
-        occupantBase58 = address ? toTrobBase58(address) : toTrobBase58(CONTRACT_ADDRESSES.vault);
-      } else {
-        occupantBase58 = toTrobBase58(CONTRACT_ADDRESSES.vault);
-      }
+    if (!occupantAddr || occupantAddr === "0x0000000000000000000000000000000000000000" || occupantAddr === "0x0") {
+      return { filled: false, label: "Available", code: null, address: null, txHash: null, metaLabel: null };
     }
+    const occupantBase58 = n?.base58 || toTrobBase58(occupantAddr);
     const txHash = n?.txHash || null;
-    const metaLabel = n?.label || (n?.code ? `Member #${n.code}` : `Member #${pos + 1}`);
-    const code = n?.code ? `#${n.code}` : `P${pos}`;
+    const metaLabel = n?.label || (n?.code ? `Member #${n.code}` : (n?.userId ? `Member #${n.userId}` : formatAddress(occupantBase58)));
+    const code = n?.code ? `#${n.code}` : (n?.userId ? `#${n.userId}` : formatAddress(occupantBase58));
     return { filled: true, label: metaLabel, code, address: occupantBase58, txHash, metaLabel };
   };
 
@@ -662,7 +652,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </span>
 
         <span className="text-[9px] sm:text-[9.5px] font-bold text-slate-400 truncate max-w-full px-0.5">
-          {filled ? (node.code || `Member #${pos + 1}`) : statusText}
+          {filled ? (node.code || (node.address ? formatAddress(node.address) : "Filled")) : statusText}
         </span>
       </button>
     );
@@ -1335,7 +1325,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Seat Occupant:</span>
                         <span className="font-bold text-slate-900">
-                          {nodeInfo.label || `Member #${selectedNodeModal.pos}`}
+                          {nodeInfo.label || "Available Position"}
                         </span>
                       </div>
                       {nodeInfo.address && (

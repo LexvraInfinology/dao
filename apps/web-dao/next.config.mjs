@@ -1,17 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: [
-    "*.trycloudflare.com",
-    "*.loca.lt",
-    "*.ngrok-free.app",
-    "*.ngrok-free.dev",
-    "*.ngrok.io",
-    "*.ngrok.app",
-    "*.ngrok.dev",
-    "grainless-nontexturally-dell.ngrok-free.dev",
-    "localhost:*",
-    "127.0.0.1:*",
-  ],
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "*.trycloudflare.com",
+        "*.loca.lt",
+        "*.ngrok-free.app",
+        "*.ngrok-free.dev",
+        "*.ngrok.io",
+        "*.ngrok.app",
+        "*.ngrok.dev",
+        "grainless-nontexturally-dell.ngrok-free.dev",
+        "localhost:*",
+        "127.0.0.1:*",
+      ],
+    },
+  },
   reactStrictMode: true,
   optimizeFonts: false,
   images: {

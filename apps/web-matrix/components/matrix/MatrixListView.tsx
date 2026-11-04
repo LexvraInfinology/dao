@@ -68,8 +68,8 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
       const node = isUnlocked ? slotDetails.nodes.find((n) => n.position === posNum) : null;
       const posStr = String(posNum).padStart(2, "0");
       if (node && node.filled) {
-        const addr = node.placedUser || (node as any)?.base58 || (posNum === 4 || posNum === 5 || posNum === 14 ? CONTRACT_ADDRESSES.vault : "");
-        const shortAddr = addr ? formatAddress(addr) : `Member #${posNum}`;
+        const addr = node.placedUser || (node as any)?.base58 || "";
+        const shortAddr = addr ? formatAddress(addr) : "Open";
         const joinedDate = formatDateSafe(node.timestamp, "On-Chain Active");
         return {
           pos: posStr,

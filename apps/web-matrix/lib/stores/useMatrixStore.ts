@@ -281,7 +281,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
               const action = isP2P ? "COMMISSION_RECEIVED" : "MEMBER_JOINED";
               const title = isP2P
                 ? `P2P Direct Yield Received (+$30.00)`
-                : `Seat P${pos} Activated (${n.label || `Member #${pos + 1}`})`;
+                : `Seat P${pos} Activated (${n.label || (n.code ? `Member #${n.code}` : `Position #${pos}`)})`;
 
               return {
                 id: `onchain-pos-${pos}`,

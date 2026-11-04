@@ -24,16 +24,6 @@ function formatDuration(totalSec: number) {
   return `${h.toString().padStart(2, "0")}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
 }
 
-// Generate a fallback non-sequential 5-digit code like 56321 from wallet address
-function get5DigitCode(addr: string): number {
-  if (!addr) return 56321;
-  let hash = 0;
-  for (let i = 0; i < addr.length; i++) {
-    hash = (hash * 31 + addr.charCodeAt(i)) >>> 0;
-  }
-  const code = 10000 + (hash % 89999);
-  return code === 10000 ? 56321 : code;
-}
 
 export function ReferralLinkCard({
   address,
@@ -150,7 +140,7 @@ export function ReferralLinkCard({
   }, [address, propReferralCode]);
 
   const base58Addr = address ? toTrobBase58(address) : "";
-  const referralCode = onChainCode || (address ? get5DigitCode(address) : 56321);
+  const referralCode = onChainCode || (propReferralCode ? Number(propReferralCode) : null);
   const referralUrl = base58Addr ? `${origin}/?ref=${base58Addr}` : `${origin}/`;
 
   const handleCopyLink = () => {

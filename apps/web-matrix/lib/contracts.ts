@@ -211,6 +211,14 @@ export function toTrobBase58(addr?: string | null): string {
   }
 }
 
+/** Formats an address into short base58 (e.g. TJhwjg...ckjq) */
+export function formatAddress(addr?: string | null): string {
+  if (!addr) return "";
+  const b58 = toTrobBase58(addr);
+  if (!b58 || b58.length <= 10) return b58 || addr;
+  return `${b58.slice(0, 6)}...${b58.slice(-4)}`;
+}
+
 // Genesis Root Matrix Member / Protocol Vault on TrobChain (Derived dynamically from .env.local)
 export const GENESIS_ROOT_MEMBER_BASE58 =
   (process.env.NEXT_PUBLIC_GENESIS_ROOT_SPONSOR || "").trim() ||
@@ -784,15 +792,32 @@ export async function getOnChainSlotDetails(
     }
   } catch {}
 
-  // Ensure any filled node without code is resolved via on-chain registry or joinedMembers
+  // Ensure any filled node resolves their true on-chain code and on-chain member ID directly from Registry
   await Promise.all(
     displayNodes.map(async (occupant: string, idx: number) => {
       const isFilled =
         occupant &&
         occupant !== "0x0000000000000000000000000000000000000000" &&
         occupant !== "0x0";
-      if (isFilled && (!onChainCodes[idx] || onChainCodes[idx] === 0)) {
-        try { const c = await getOnChainCodeByUser(occupant); if (c) onChainCodes[idx] = c; } catch {}
+      if (isFilled) {
+        const promises: Promise<any>[] = [];
+        if (!onChainCodes[idx] || onChainCodes[idx] === 0) {
+          promises.push(
+            getOnChainCodeByUser(occupant).then((c) => {
+              if (c) onChainCodes[idx] = c;
+            }).catch(() => {})
+          );
+        }
+        if (!onChainIds[idx] || onChainIds[idx] === 0) {
+          promises.push(
+            getOnChainUserId(occupant).then((id) => {
+              if (id) onChainIds[idx] = id;
+            }).catch(() => {})
+          );
+        }
+        if (promises.length > 0) {
+          await Promise.all(promises);
+        }
       }
     })
   );
@@ -819,7 +844,6 @@ export async function getOnChainSlotDetails(
 
     const realCode = isUnlocked ? (onChainCodes[pos - 1] || null) : null;
     const realId = isUnlocked ? (onChainIds[pos - 1] || null) : null;
-    
 
     formattedNodes.push({
       position: pos,
@@ -827,8 +851,8 @@ export async function getOnChainSlotDetails(
       filled: Boolean(isFilled),
       placedUser: isFilled ? occupant.toLowerCase() : null,
       base58: isFilled ? toTrobBase58(occupant) : null,
-      label: isFilled ? (realCode ? `Member #${realCode}` : `Member #${pos + 1}`) : null,
-      userId: realId || (isFilled ? parseInt(occupant.slice(2, 6), 16) || pos : null),
+      label: isFilled ? (realCode ? `Member #${realCode}` : (realId ? `Member #${realId}` : formatAddress(occupant))) : null,
+      userId: realId || null,
       code: realCode || null,
       payoutType,
       recipientAddress: isFilled ? userHex : null,
@@ -1188,20 +1212,26 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   let userReferralCode: number | null = null;
   let daoSeat: number | null = null;
   let onChainJoinedAt: string | null = null;
+  let onChainUserId: number | null = null;
   try {
-    const [code, seat, userRaw] = await Promise.all([
+    const [code, seat, realId, userRaw] = await Promise.all([
       getOnChainCodeByUser(userHex).catch(() => null),
       getOnChainDaoSeat(userHex).catch(() => 0),
+      getOnChainUserId(userHex).catch(() => null),
       queryTrobConstant(CONTRACT_ADDRESSES.registry, "getUser(address)", coder.encode(["address"], [userHex]).slice(2)).catch(() => null),
     ]);
     if (code) userReferralCode = code;
     if (seat && seat >= 1 && seat <= 100) daoSeat = seat;
+    if (realId) onChainUserId = realId;
     if (userRaw) {
       try {
         const dec = coder.decode(["bool", "address", "uint256", "uint256", "uint256", "uint32"], "0x" + userRaw);
         const regTime = Number(dec[2]);
         if (regTime > 0) {
           onChainJoinedAt = new Date(regTime * 1000).toISOString();
+        }
+        if (!onChainUserId && Number(dec[4]) > 0) {
+          onChainUserId = Number(dec[4]);
         }
       } catch {}
     }
@@ -1240,8 +1270,12 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   return {
     address: userHex,
     base58Address: toTrobBase58(userHex),
-    userId: parseInt(userHex.slice(2, 6), 16) || 1,
-    username: `Operative ${userHex.slice(2, 6).toUpperCase()}`,
+    userId: onChainUserId || (userReferralCode ? userReferralCode : null),
+    username: onChainUserId
+      ? `Operative #${onChainUserId}`
+      : userReferralCode
+      ? `Member #${userReferralCode}`
+      : `Member ${toTrobBase58(userHex).slice(0, 6)}...`,
     avatarUrl: null,
     bio: isQualified ? "Qualified Matrix Leader (2+ Directs)" : "Matrix Member",
     telegram: null,
@@ -1402,21 +1436,30 @@ export async function getOnChainDirectMembers(userAddress: string): Promise<any[
 
     
 
-    return directs.map((addr: string, idx: number) => {
-      const canonical = addr.toLowerCase(); const b58 = toTrobBase58(addr); const username = `Operative ${b58.slice(0, 4)}...${b58.slice(-4)}`; const joinedAt = new Date().toISOString();
-      const userId = parseInt(addr.slice(2, 6), 16) || idx + 1;
+    const resolvedDirects = await Promise.all(
+      directs.map(async (addr: string) => {
+        const canonical = addr.toLowerCase();
+        const b58 = toTrobBase58(addr);
+        const [uId, uCode] = await Promise.all([
+          getOnChainUserId(addr).catch(() => null),
+          getOnChainCodeByUser(addr).catch(() => null),
+        ]);
+        const username = uId ? `Operative #${uId}` : (uCode ? `Member #${uCode}` : `Operative ${b58.slice(0, 4)}...${b58.slice(-4)}`);
 
-      return {
-        address: b58,
-        evmAddress: canonical,
-        userId,
-        username,
-        joinedAt,
-        activeSlots: 1,
-        totalContributed: 30, // $30 deposit per whitepaper
-        txHash: null,
-      };
-    });
+        return {
+          address: b58,
+          evmAddress: canonical,
+          userId: uId || null,
+          referralCode: uCode || null,
+          username,
+          joinedAt: new Date().toISOString(),
+          activeSlots: 1,
+          totalContributed: 30, // $30 deposit per whitepaper
+          txHash: null,
+        };
+      })
+    );
+    return resolvedDirects;
   } catch (err) {
     console.warn("[OnChain] Directs fetch error:", err);
     return [];
@@ -1977,6 +2020,40 @@ export async function getOnChainCodeByUser(userAddress: string): Promise<number 
     }
   } catch (err) {
     console.warn(`[getOnChainCodeByUser] address ${userAddress} query notice:`, err);
+  }
+  return null;
+}
+
+const onChainUserIdCache = new Map<string, number>();
+
+/**
+ * Resolves a user's wallet address to their true on-chain Member ID via EquoraRegistry.sol getUserId(address).
+ * Strictly zero mock, zero synthetic IDs.
+ */
+export async function getOnChainUserId(userAddress: string): Promise<number | null> {
+  if (!userAddress) return null;
+  const userHex = toHexAddress(userAddress).toLowerCase();
+  if (!userHex || userHex === "0x0000000000000000000000000000000000000000") return null;
+  if (onChainUserIdCache.has(userHex)) {
+    return onChainUserIdCache.get(userHex)!;
+  }
+  try {
+    const coder = new ethers.AbiCoder();
+    const param = coder.encode(["address"], [userHex]).slice(2);
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.registry,
+      "getUserId(address)",
+      param
+    );
+    if (raw && typeof raw === "string") {
+      const id = Number(coder.decode(["uint256"], "0x" + raw)[0]);
+      if (id > 0) {
+        onChainUserIdCache.set(userHex, id);
+        return id;
+      }
+    }
+  } catch (err) {
+    console.warn(`[getOnChainUserId] address ${userAddress} query notice:`, err);
   }
   return null;
 }

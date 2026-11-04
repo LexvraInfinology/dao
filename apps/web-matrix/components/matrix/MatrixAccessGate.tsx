@@ -162,12 +162,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // Genesis DAO Seat from URL query (if referred from DAO)
   const [daoSeat, setDaoSeat] = useState<number | null>(null);
 
-  const isRootWallet = Boolean(
-    address &&
-    (toTrobBase58(address) === GENESIS_ROOT_MEMBER_BASE58 ||
-      address.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
-  );
-  const isFirstMember = isRootWallet || totalMembers === 0 || daoSeat === 1;
+  const isRootWallet = false;
+  const isFirstMember = totalMembers === 0 || daoSeat === 1;
 
   // Dynamic $30.00 USD entry cost based on live TrobChain oracle
   const [slotCostSun, setSlotCostSun] = useState<number>(882508678);
@@ -231,7 +227,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
-    const isFirstId = isRootWallet || totalMembers === 0 || daoSeat === 1;
+    const isFirstId = totalMembers === 0 || daoSeat === 1;
 
     if (!cleaned) {
       if (isFirstId) {
@@ -786,8 +782,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     setCheckingStatus(true);
     setActionError(null);
 
-    // Fast path: if wallet is already known to be registered or is root member
-    const knownRegistered = isRootWallet || (await isUserRegisteredInMatrix(address));
+    // Fast path: check on-chain registration status
+    const knownRegistered = await isUserRegisteredInMatrix(address);
     if (knownRegistered) {
       setIsSlot1Unlocked(true);
       setCheckingStatus(false);

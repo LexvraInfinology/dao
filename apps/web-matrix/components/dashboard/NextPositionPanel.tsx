@@ -77,14 +77,10 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
   const realFilledNodes = nodesList.filter((n: any) => n?.filled).length;
 
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
-  const isSlot1Escalated =
-    Boolean(profile?.isSlot2Reserved) ||
-    highestUnlockedSlot >= 2 ||
-    (storeSlotDetails?.slotNumber === 1 && ((storeSlotDetails?.filledNodes ?? 0) >= 5 || (storeSlotDetails?.nodes?.[3]?.filled && storeSlotDetails?.nodes?.[4]?.filled))) ||
-    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 5);
-  const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
-  const isSlotUnlocked = details ? Boolean(details.isUnlocked || (activeSlotNumber <= effectiveHighestUnlocked)) : (activeSlotNumber <= effectiveHighestUnlocked);
+  const isUserRegistered = Boolean(profile?.isRegistered);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? (isUserRegistered ? 1 : 0));
+  const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
+  const isSlotUnlocked = details ? Boolean(details.isUnlocked) : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked);
 
   const isSlot1Complete = Boolean(
     (details as any)?.prevSlotCompleted ||

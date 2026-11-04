@@ -244,11 +244,8 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
         const availableWithdrawUsd = totalEarnedUsd;
         const availableWithdrawTrob = totalEarnedTrob;
         const filledCount = onChainDetails?.filledNodes ?? 0;
-        const s1Nodes = onChainDetails?.nodes || [];
-        const isP4 = Boolean(s1Nodes[3]?.filled);
-        const isP5 = Boolean(s1Nodes[4]?.filled);
-        const isS1Escalated = (isP4 && isP5) || filledCount >= 5 || Boolean(onChainProf?.isSlot2Reserved) || (onChainProf?.highestUnlockedSlot ?? 1) >= 2;
-        const effectiveHighestSlot = Math.max(onChainProf?.highestUnlockedSlot || 1, isS1Escalated ? 2 : 1);
+        const isUserRegistered = Boolean(onChainProf?.isRegistered);
+        const effectiveHighestSlot = isUserRegistered ? (onChainProf?.highestUnlockedSlot || 1) : 0;
 
         const onChainDashboard: MatrixDashboardOverview = {
           address: addr,

@@ -34,14 +34,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     ? props.slotDetails
     : (storeSlotDetails?.slotNumber === selectedSlotNumber ? storeSlotDetails : null);
   const slots = props.slots ?? storeSlots;
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 1;
+  const isUserRegistered = Boolean(profile?.isRegistered);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? 0;
   const rawNodes = slotDetails?.nodes ?? [];
-  const isSlot1Escalated =
-    Boolean(profile?.isSlot2Reserved) ||
-    highestUnlockedSlot >= 2 ||
-    (slotDetails?.slotNumber === 1 && ((slotDetails?.filledNodes ?? 0) >= 5 || (rawNodes[3]?.filled && rawNodes[4]?.filled)));
-  const effectiveHighestUnlocked = Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1);
-  const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked || (selectedSlotNumber <= effectiveHighestUnlocked)) : (selectedSlotNumber <= effectiveHighestUnlocked);
+  const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
+  const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked) : (isUserRegistered && selectedSlotNumber <= effectiveHighestUnlocked);
 
   const isSlot1Complete = Boolean(
     (slotDetails as any)?.prevSlotCompleted ||

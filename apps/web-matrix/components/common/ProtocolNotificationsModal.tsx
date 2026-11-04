@@ -39,11 +39,11 @@ export function ProtocolNotificationsModal({
       ? [
           {
             id: "notif-slot2-unlocked",
-            title: "🎉 Next Slot #02 ($60) Unlocked in Standby Mode!",
+            title: "🎉 Next Slot #02 ($60) Activated!",
             description:
-              "Positions #4 and #5 on your Slot #01 board have automatically reserved Slot #02 ($60 Tier) at $0 out-of-pocket! Your Slot #02 board is now open. Live placements will begin once your Slot #01 board finishes all 14 positions.",
+              "Your Slot #02 ($60 Tier) board is active on-chain for dynamic follow-me upgrades and team placements.",
             category: "pool" as const,
-            timestamp: "Auto-Reserved via P4 + P5",
+            timestamp: "Active On-Chain",
             badge: "SLOT 2 OPENED",
             badgeColor: "bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]",
             link: "/dashboard",

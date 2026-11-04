@@ -158,7 +158,7 @@ function getFallbackSlotDetails(slotNumber: number, cycle: number = 1): MatrixSl
   return {
     slotNumber,
     cost: SLOT_COSTS[slotNumber] || 0,
-    isUnlocked: slotNumber === 1,
+    isUnlocked: false,
     currentCycle: cycle,
     recyclesCount: 0,
     filledNodes: 0,
@@ -459,40 +459,12 @@ export async function fetchOnChainSlotDetailsLive(
   }
 
   const rootData = await queryContractSlot(canonical);
-  const isUnlocked = Boolean(rootData?.isUnlocked || slotNumber === 1);
-  const isLive = Boolean(rootData?.isLive || (slotNumber === 1 && isUnlocked));
-  const currentCycle = rootData?.currentCycle || targetCycle || 1;
+  const isUnlocked = Boolean(rootData?.isUnlocked);
+  const isLive = Boolean(rootData?.isLive);
+  const currentCycle = rootData?.currentCycle || (isUnlocked ? 1 : 0);
   const totalEarned = rootData?.slotEarned || 0;
 
   const displayNodes = rootData?.nodes ? [...rootData.nodes] : Array(14).fill(ZERO);
-
-  if (isUnlocked) {
-    try {
-      const s1 = displayNodes[0];
-      const s2 = displayNodes[1];
-      const [s1Data, s2Data] = await Promise.all([
-        queryContractSlot(s1),
-        queryContractSlot(s2),
-      ]);
-
-      if ((!displayNodes[2] || displayNodes[2] === ZERO) && s1Data?.nodes?.[0]) displayNodes[2] = s1Data.nodes[0];
-      if ((!displayNodes[3] || displayNodes[3] === ZERO) && s1Data?.nodes?.[1]) displayNodes[3] = s1Data.nodes[1];
-      if ((!displayNodes[4] || displayNodes[4] === ZERO) && s2Data?.nodes?.[0]) displayNodes[4] = s2Data.nodes[0];
-      if ((!displayNodes[5] || displayNodes[5] === ZERO) && s2Data?.nodes?.[1]) displayNodes[5] = s2Data.nodes[1];
-
-      const l2Parents = [displayNodes[2], displayNodes[3], displayNodes[4], displayNodes[5]];
-      const l2Results = await Promise.all(l2Parents.map(queryContractSlot));
-      for (let pIdx = 0; pIdx < 4; pIdx++) {
-        const leftIdx = 6 + pIdx * 2;
-        const rightIdx = leftIdx + 1;
-        const pNodes = l2Results[pIdx]?.nodes;
-        if ((!displayNodes[leftIdx] || displayNodes[leftIdx] === ZERO) && pNodes?.[0]) displayNodes[leftIdx] = pNodes[0];
-        if ((!displayNodes[rightIdx] || displayNodes[rightIdx] === ZERO) && pNodes?.[1]) displayNodes[rightIdx] = pNodes[1];
-      }
-    } catch (err) {
-      console.warn("[MatrixService] Live on-chain downline traversal notice:", err);
-    }
-  }
 
   const PAYOUT_TYPES = [
     "UPLINE_1", "UPLINE_2",
@@ -737,9 +709,8 @@ export class MatrixService {
 
       const profile = user.matrixProfile;
       const slot1 = user.matrixSlots?.find((s) => s.slotNumber === 1);
-      const isSlot1Escalated = Boolean(slot1 && slot1.filledNodes >= 5);
       const dbHighestSlot = user.matrixSlots[0]?.slotNumber ?? 0;
-      const highestSlot = Math.max(dbHighestSlot, isSlot1Escalated ? 2 : 1);
+      const highestSlot = dbHighestSlot;
 
       // Team count and active qualification calculation (parallelized)
       const [directTeamCount, activeDirectsCount] = await Promise.all([
@@ -1031,24 +1002,8 @@ export class MatrixService {
 
       const dynamicFilledCount = nodesArray.filter(n => n.filled).length;
 
-      // Auto-escalation & live status for Slot 2:
-      let isUnlocked = Boolean(slot?.isUnlocked || slotNumber === 1);
-      let isLive = Boolean(slot?.isUnlocked || slotNumber === 1);
-      if (slotNumber === 2) {
-        try {
-          const s1 = await prisma.matrixSlot.findUnique({
-            where: { userAddress_slotNumber: { userAddress: canonicalAddress, slotNumber: 1 } },
-          });
-          if (s1 && (s1.filledNodes >= 5 || s1.recyclesCount > 0)) {
-            isUnlocked = true;
-          }
-          if (s1 && (s1.filledNodes >= 14 || s1.recyclesCount > 0)) {
-            isLive = true;
-          } else {
-            isLive = false;
-          }
-        } catch {}
-      }
+      let isUnlocked = Boolean(slot?.isUnlocked);
+      let isLive = Boolean((slot as any)?.isLive ?? slot?.isUnlocked);
 
       return {
         slotNumber,

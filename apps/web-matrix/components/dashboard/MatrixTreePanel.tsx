@@ -284,25 +284,16 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       (n?.placedUser && n.placedUser !== "0x0000000000000000000000000000000000000000" && n.placedUser !== "0x0") ||
       (n?.base58 && n.base58 !== "-" && n.base58.length > 5)
     );
-  const isP4Occupied = isNodeOccupied(slot1Nodes[3]);
-  const isP5Occupied = isNodeOccupied(slot1Nodes[4]);
   const slot1FilledCount =
     (activeSlotDetails?.slotNumber === 1 ? (activeSlotDetails?.filledNodes ?? (activeSlotDetails?.nodes ? activeSlotDetails.nodes.filter((n: any) => n?.filled).length : 0)) : 0) ||
     (data?.activeSlotProgress?.filledNodes ?? 0);
-  const isSlot1Escalated =
-    (isP4Occupied && isP5Occupied) ||
-    slot1FilledCount >= 5 ||
-    Boolean(profile?.isSlot2Reserved) ||
-    highestUnlockedSlot >= 2;
-
-  const effectiveHighestUnlocked = Math.max(
-    highestUnlockedSlot,
-    isSlot1Escalated ? 2 : 1
-  );
+  const isUserRegistered = Boolean(profile?.isRegistered);
+  const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
+  const isSlot1Escalated = highestUnlockedSlot >= 2;
 
   const isCurrentSlotUnlocked = activeSlotDetails
-    ? Boolean(activeSlotDetails.isUnlocked || (selectedSlot <= effectiveHighestUnlocked))
-    : (selectedSlot <= effectiveHighestUnlocked);
+    ? Boolean(activeSlotDetails.isUnlocked)
+    : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked);
 
   // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
   const isSlot1Complete = Boolean(
@@ -848,10 +839,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div>
               <span className="text-xs font-bold text-emerald-950 block">
-                🎉 Next Slot #02 Unlocked in Standby Mode!
+                🎉 Next Slot #02 Activated!
               </span>
               <span className="text-[11px] text-emerald-800 font-medium">
-                Auto-reserved at $0 out-of-pocket via Positions #4 &amp; #5. Live team placements will begin once your Slot #01 board completes all 14 positions ({slot1FilledCount}/14 filled).
+                Your Slot #02 is active on-chain for dynamic follow-me upgrades and team placements ({slot1FilledCount}/14 filled).
               </span>
             </div>
           </div>

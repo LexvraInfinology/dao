@@ -578,8 +578,8 @@ export async function getOnChainSlotDetails(
   const coder = new ethers.AbiCoder();
   const param = coder.encode(["address", "uint256"], [userHex, slotNumber]).slice(2);
 
-  let isUnlocked = slotNumber === 1;
-  let currentCycle = isUnlocked ? 1 : 0;
+  let isUnlocked = false;
+  let currentCycle = 0;
   let filledNodes = 0;
   let nodes: string[] = Array(14).fill("0x0000000000000000000000000000000000000000");
   let slotEarned = BigInt(0);
@@ -607,10 +607,7 @@ export async function getOnChainSlotDetails(
       console.warn("[OnChain] getSlotData fallback notice:", err);
     }
   }
-
-  // Auto-Escalation Check (Node 4 & Node 5 in Slot N-1 auto-reserves and unlocks Slot N in Standby Mode at $0 out-of-pocket):
   let prevSlotCompleted = false;
-  let prevSlotEscalated = false;
   let prevSlotFilledCount = 0;
   if (slotNumber > 1 && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
     try {
@@ -626,42 +623,13 @@ export async function getOnChainSlotDetails(
           "0x" + prevRaw
         );
         const prevFilled = Number(prevDecoded[2]) || 0;
-        const prevCycle = Number(prevDecoded[1]) || 0;
-        const prevNodes = prevDecoded[3] || [];
-        const isP4 = prevNodes[3] && prevNodes[3] !== "0x0000000000000000000000000000000000000000";
-        const isP5 = prevNodes[4] && prevNodes[4] !== "0x0000000000000000000000000000000000000000";
         prevSlotFilledCount = prevFilled;
-        if ((isP4 && isP5) || prevFilled >= 5 || prevCycle > 1 || prevFilled >= 14) {
-          prevSlotEscalated = true;
-          isUnlocked = true;
-          if (currentCycle === 0) currentCycle = 1;
-        }
+        const prevCycle = Number(prevDecoded[1]) || 0;
         if (prevFilled >= 14 || prevCycle > 1) {
           prevSlotCompleted = true;
         }
       }
     } catch {}
-
-    // Check snapshots of previous slot (if > 0, at least 1 cycle completed)
-    if (!prevSlotCompleted) {
-      try {
-        const prevSnapParam = coder.encode(["address", "uint256"], [userHex, slotNumber - 1]).slice(2);
-        const prevCountRaw = await queryTrobConstant(
-          CONTRACT_ADDRESSES.matrix,
-          "getCycleSnapshotCount(address,uint256)",
-          prevSnapParam
-        );
-        if (prevCountRaw) {
-          const sCount = Number(coder.decode(["uint256"], "0x" + prevCountRaw)[0]);
-          if (sCount > 0) {
-            prevSlotCompleted = true;
-            prevSlotEscalated = true;
-            isUnlocked = true;
-            if (currentCycle === 0) currentCycle = 1;
-          }
-        }
-      } catch {}
-    }
   }
 
   const totalCycles = isUnlocked ? (Number(currentCycle) || 1) : 0;
@@ -964,15 +932,6 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
     const cost = getSlotCost(i);
     const recycles = Math.max(0, cycle - 1);
 
-    // Auto-escalation checks: If previous slot has Node 4 & Node 5 filled or cycle > 1 or filled >= 5:
-    if (i > 1 && !isUnlocked && result[i - 2]) {
-      const prevSlot: any = result[i - 2];
-      if (prevSlot.filledNodes >= 5 || prevSlot.recyclesCount > 0) {
-        isUnlocked = true;
-        isLive = prevSlot.filledNodes >= 14 || prevSlot.recyclesCount > 0;
-      }
-    }
-
     // Each completed cycle fulfilled 14 nodes and yielded 6 direct P2P payments (6 * cost)
     // Slot 1: 1 * 6 * $30 = $180.00
     // Slot 2: 1 * 6 * $60 = $360.00
@@ -1075,7 +1034,6 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   // Determine live matrix board earnings & Auto-escalation from Slot 1 data
   let boardEarnedTrob = 0;
   let slot1FilledCount = 0;
-  let isSlot1Escalated = false;
   let isSlot1Complete = false;
   if (slot1Raw) {
     try {
@@ -1085,27 +1043,13 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       );
       slot1FilledCount = Number(s1Filled) || 0;
       const cNum = Number(s1Cycle) || 1;
-      const isP4 = s1Nodes && s1Nodes[3] && s1Nodes[3] !== "0x0000000000000000000000000000000000000000";
-      const isP5 = s1Nodes && s1Nodes[4] && s1Nodes[4] !== "0x0000000000000000000000000000000000000000";
-      if ((isP4 && isP5) || slot1FilledCount >= 5 || cNum > 1 || slot1FilledCount >= 14) {
-        isSlot1Escalated = true;
-      }
       if (slot1FilledCount >= 14 || cNum > 1) {
         isSlot1Complete = true;
       }
       boardEarnedTrob = Number(ethers.formatUnits(s1Earned, 6));
     } catch {}
   }
-
-  // If Slot 1 has P4 and P5 filled, Slot 2 is automatically unlocked in standby mode
-  if (isSlot1Escalated && highestUnlockedSlot < 2) {
-    highestUnlockedSlot = 2;
-  }
-  // Fixed protocol USD tier valuation: Each Slot 1 settlement is strictly $30.00 USD
-  // Protects against floating exchange rate confusion while keeping exact on-chain TROB tokens intact
   const rawTrobEarned = totalEarned > 0 ? totalEarned : (boardEarnedTrob > 0 ? boardEarnedTrob : 0);
-  const slot1EstimatedP2PPayoutCount = rawTrobEarned > 0 ? Math.max(1, Math.round(rawTrobEarned / 1076)) : 0;
-  const effectiveEarnedUsd = rawTrobEarned > 0 ? slot1EstimatedP2PPayoutCount * 30.0 : 0;
   const effectiveEarnedTrob = rawTrobEarned;
 
   let directReferralsCount = 0;
@@ -1222,6 +1166,8 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
 
   const availableBalanceUsd = availableBalance * livePrice;
   const withdrawnTotalUsd = withdrawnTotal * livePrice;
+  const effectiveEarnedUsd = effectiveEarnedTrob * livePrice;
+  const cleanHighestSlot = isRegistered ? Math.max(highestUnlockedSlot, 1) : 0;
 
   return {
     address: userHex,
@@ -1243,19 +1189,19 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     referralCode: userReferralCode,
     daoSeat,
     upline2Address,
-    directReferralsCount,
-    activeDirectsCount,
-    isQualified,
-    teamCount: directReferralsCount,
-    rankTier,
-    rankName: rankNames[rankTier],
-    currentSlot: currentActiveSlot, // Currently active, live playable slot (Slot 1)
-    highestUnlockedSlot: Math.max(highestUnlockedSlot, isSlot1Escalated ? 2 : 1),
-    isSlot2Reserved: isSlot1Escalated || highestUnlockedSlot >= 2,
+    directReferralsCount: isRegistered ? directReferralsCount : 0,
+    activeDirectsCount: isRegistered ? activeDirectsCount : 0,
+    isQualified: isRegistered && isQualified,
+    teamCount: isRegistered ? directReferralsCount : 0,
+    rankTier: isRegistered ? rankTier : 0,
+    rankName: isRegistered ? rankNames[rankTier] : "NONE",
+    currentSlot: cleanHighestSlot > 0 ? cleanHighestSlot : 1,
+    highestUnlockedSlot: cleanHighestSlot,
+    isSlot2Reserved: cleanHighestSlot >= 2,
     isSlot1Complete,
-    totalEarnings: effectiveEarnedUsd, // Exact on-chain board earnings ($60.00 USD)
+    totalEarnings: effectiveEarnedUsd,
     totalEarningsUsd: effectiveEarnedUsd,
-    totalEarningsTrob: effectiveEarnedTrob, // Exact raw TROB (1071.43)
+    totalEarningsTrob: effectiveEarnedTrob,
     directEarnings: effectiveEarnedUsd,
     matrixEarnings: effectiveEarnedUsd,
     poolEarnings: 0,
@@ -1266,7 +1212,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     withdrawnTotalUsd,
     withdrawnTotalTrob: withdrawnTotal,
     recyclesCount: 0,
-    isRegistered: Boolean(isRegistered || (highestUnlockedSlot >= 1 && highestUnlockedSlot <= 12) || boardEarnedTrob > 0 ),
+    isRegistered: Boolean(isRegistered),
     joinedAt: onChainJoinedAt || (typeof window !== "undefined" ? localStorage.getItem(`equora_joined_at_${userHex}`) : null) || new Date().toISOString(),
   };
 }
@@ -1288,21 +1234,8 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
     return false;
   }
 
-  // Genesis Root Member is always registered by definition
   const b58 = toTrobBase58(userAddress);
   const hex = toHexAddress(userAddress).toLowerCase();
-  const isRoot =
-    b58 === GENESIS_ROOT_MEMBER_BASE58 ||
-    hex === GENESIS_ROOT_MEMBER_HEX.toLowerCase();
-
-  if (isRoot) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
-      localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
-      localStorage.setItem(`equora_matrix_registered_${hex}`, "true");
-    }
-    return true;
-  }
 
   // Authoritative on-chain Slot 1 status in EquoraMatrix contract
   try {

@@ -242,7 +242,7 @@ export function WalletDropdown() {
                 Active Progression
               </div>
               <div className="text-[13px] font-black text-[#0f172a] mt-0.5 truncate">
-                {profile?.highestUnlockedSlot || profile?.isSlot2Reserved ? `${Math.max(profile?.highestUnlockedSlot || 1, profile?.isSlot2Reserved ? 2 : 1)} / 12 Slots` : "Slot #01 Active"}
+                {profile?.isRegistered ? `${profile?.highestUnlockedSlot || 1} / 12 Slots` : "Not Registered"}
               </div>
               <div className="text-[9.5px] text-emerald-600 font-bold mt-0.5">
                 {profile?.isQualified ? "100% Yield Qualified" : "On-Chain Verified"}

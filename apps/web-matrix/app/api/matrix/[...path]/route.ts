@@ -329,68 +329,8 @@ async function fetchRawNodesWithCodes(userEthHex: string, slotNumber: number) {
 }
 
 async function getSlotNodesWithCodesOnChain(userEthHex: string, slotNumber: number) {
-  const ZERO = "0x0000000000000000000000000000000000000000";
-  const root = await fetchRawNodesWithCodes(userEthHex, slotNumber);
-  const nodeAddresses = [...root.nodeAddresses];
-  const nodeCodes = [...root.nodeCodes];
-  const nodeMemberIds = [...root.nodeMemberIds];
-
-  const s1 = nodeAddresses[0];
-  const s2 = nodeAddresses[1];
-
-  // If Seat 1 or Seat 2 exist, query their on-chain 2x3 downline nodes to populate Level 2 & Level 3
-  const [s1Data, s2Data] = await Promise.all([
-    s1 && s1 !== ZERO ? fetchRawNodesWithCodes(s1, slotNumber) : null,
-    s2 && s2 !== ZERO ? fetchRawNodesWithCodes(s2, slotNumber) : null,
-  ]);
-
-  // Level 2 (Seats 3, 4 from Seat 1; Seats 5, 6 from Seat 2)
-  if ((!nodeAddresses[2] || nodeAddresses[2] === ZERO) && s1Data?.nodeAddresses[0] && s1Data.nodeAddresses[0] !== ZERO) {
-    nodeAddresses[2] = s1Data.nodeAddresses[0];
-    nodeCodes[2] = s1Data.nodeCodes[0] || 0;
-    nodeMemberIds[2] = s1Data.nodeMemberIds[0] || 0;
-  }
-  if ((!nodeAddresses[3] || nodeAddresses[3] === ZERO) && s1Data?.nodeAddresses[1] && s1Data.nodeAddresses[1] !== ZERO) {
-    nodeAddresses[3] = s1Data.nodeAddresses[1];
-    nodeCodes[3] = s1Data.nodeCodes[1] || 0;
-    nodeMemberIds[3] = s1Data.nodeMemberIds[1] || 0;
-  }
-  if ((!nodeAddresses[4] || nodeAddresses[4] === ZERO) && s2Data?.nodeAddresses[0] && s2Data.nodeAddresses[0] !== ZERO) {
-    nodeAddresses[4] = s2Data.nodeAddresses[0];
-    nodeCodes[4] = s2Data.nodeCodes[0] || 0;
-    nodeMemberIds[4] = s2Data.nodeMemberIds[0] || 0;
-  }
-  if ((!nodeAddresses[5] || nodeAddresses[5] === ZERO) && s2Data?.nodeAddresses[1] && s2Data.nodeAddresses[1] !== ZERO) {
-    nodeAddresses[5] = s2Data.nodeAddresses[1];
-    nodeCodes[5] = s2Data.nodeCodes[1] || 0;
-    nodeMemberIds[5] = s2Data.nodeMemberIds[1] || 0;
-  }
-
-  // Level 3 (Seats 7..14 from Seats 3..6)
-  const l2Parents = [nodeAddresses[2], nodeAddresses[3], nodeAddresses[4], nodeAddresses[5]];
-  const l2Results = await Promise.all(
-    l2Parents.map(p => (p && p !== ZERO ? fetchRawNodesWithCodes(p, slotNumber) : null))
-  );
-
-  for (let pIdx = 0; pIdx < 4; pIdx++) {
-    const leftIdx = 6 + pIdx * 2;
-    const rightIdx = leftIdx + 1;
-    const sub = l2Results[pIdx];
-    if (sub) {
-      if ((!nodeAddresses[leftIdx] || nodeAddresses[leftIdx] === ZERO) && sub.nodeAddresses[0] && sub.nodeAddresses[0] !== ZERO) {
-        nodeAddresses[leftIdx] = sub.nodeAddresses[0];
-        nodeCodes[leftIdx] = sub.nodeCodes[0] || 0;
-        nodeMemberIds[leftIdx] = sub.nodeMemberIds[0] || 0;
-      }
-      if ((!nodeAddresses[rightIdx] || nodeAddresses[rightIdx] === ZERO) && sub.nodeAddresses[1] && sub.nodeAddresses[1] !== ZERO) {
-        nodeAddresses[rightIdx] = sub.nodeAddresses[1];
-        nodeCodes[rightIdx] = sub.nodeCodes[1] || 0;
-        nodeMemberIds[rightIdx] = sub.nodeMemberIds[1] || 0;
-      }
-    }
-  }
-
-  return { nodeAddresses, nodeCodes, nodeMemberIds };
+  // Authoritative smart contract storage query: strictly 100% on-chain data, zero synthetic downline crawler
+  return fetchRawNodesWithCodes(userEthHex, slotNumber);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -660,8 +600,8 @@ export async function GET(
           success: true,
           data: {
             slotNumber, cost: slotCostUsd,
-            isUnlocked: slotNumber === 1, isLive: slotNumber === 1,
-            currentCycle: 1, totalCycles: 1, filledNodes: 0, snapshotCount: 0,
+            isUnlocked: false, isLive: false,
+            currentCycle: 0, totalCycles: 0, filledNodes: 0, snapshotCount: 0,
             nodes: emptyNodes,
             totalEarned: 0, totalEarnedTrob: 0, totalEarnedUsd: 0,
             _source: "onchain_empty",

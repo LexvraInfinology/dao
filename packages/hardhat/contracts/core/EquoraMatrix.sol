@@ -887,8 +887,22 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             vacantPos == 11 || vacantPos == 12
         ) {
             // Direct Owner Income seats:
-            // Must have strict 2 active direct referrals (or be Root Owner)
-            if (isMatrixQualified(boardOwner)) {
+            // If boardOwner is the Root Address / Genesis Apex / Protocol Vault / Owner:
+            // 100% routes directly to EquoraVault for the 4 Protocol Pools!
+            if (
+                boardOwner == rootOwner ||
+                boardOwner == genesisRoot ||
+                boardOwner == vaultContract ||
+                boardOwner == owner() ||
+                boardOwner == address(this)
+            ) {
+                _forwardToVault(boardOwner, cost);
+                recipient = vaultContract;
+                mSlot.payoutRecipients[p - 1] = vaultContract;
+                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
+                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
+                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
+            } else if (isMatrixQualified(boardOwner)) {
                 _creditOwner(boardOwner, slot, cost);
                 recipient = boardOwner;
                 mSlot.payoutRecipients[p - 1] = boardOwner;
@@ -1043,10 +1057,20 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function _pushMatrixPayment(address recipient, uint256 amount) internal {
         if (recipient == address(0) || amount == 0) return;
-        // The deployer/owner key must NEVER act as a payout sink. Forward to Vault instead!
-        if (recipient == owner() && vaultContract != address(0)) {
-            _forwardToVault(recipient, amount);
-            return;
+        address rootOwner = _getRootMatrixOwner();
+        // The root address, genesis root, deployer/owner, or vault must NEVER hold payout in Matrix.
+        // Forward 100% to EquoraVault for the 4 Protocol Pools!
+        if (
+            recipient == owner() ||
+            recipient == genesisRoot ||
+            recipient == rootOwner ||
+            recipient == vaultContract ||
+            recipient == address(this)
+        ) {
+            if (vaultContract != address(0)) {
+                _forwardToVault(recipient, amount);
+                return;
+            }
         }
         totalEarned[recipient] += amount;
 
@@ -1071,7 +1095,14 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function _creditOwner(address matrixOwner, uint256 slot, uint256 amount) internal {
         userSlots[matrixOwner][slot].totalEarned += amount;
-        if (matrixOwner == vaultContract || matrixOwner == owner()) {
+        address rootOwner = _getRootMatrixOwner();
+        if (
+            matrixOwner == vaultContract ||
+            matrixOwner == owner() ||
+            matrixOwner == genesisRoot ||
+            matrixOwner == rootOwner ||
+            matrixOwner == address(this)
+        ) {
             _forwardToVault(matrixOwner, amount);
         } else {
             _pushMatrixPayment(matrixOwner, amount);
@@ -1087,7 +1118,6 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         totalPoolForwarded += amount;
 
         if (vaultContract == address(0)) {
-            // Safety fallback before wiring: push to matrix owner temporarily
             _pushMatrixPayment(matrixOwner, amount);
             return;
         }
@@ -1110,9 +1140,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             } catch {}
         }
 
-        if (!ok) {
-            _pushMatrixPayment(matrixOwner, amount);
-        }
+        require(ok, "EquoraMatrix: Vault deposit failed");
     }
 
     /**

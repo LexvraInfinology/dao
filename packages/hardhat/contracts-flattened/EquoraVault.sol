@@ -254,6 +254,7 @@ contract EquoraVault is ReentrancyGuard {
 
     // Authorized callers for routePoolDeposit (EquoraMatrix)
     address public matrixContract;
+    address public deployer;
 
     // ─── Global Stats ──────────────────────────────────────────────────────────
 
@@ -308,6 +309,7 @@ contract EquoraVault is ReentrancyGuard {
         require(_registry     != address(0), "EquoraVault: Invalid registry");
         paymentToken = IERC20(_paymentToken);
         registry     = IEquoraRegistry(_registry);
+        deployer     = msg.sender;
     }
 
     // ─── One-Time Initialization ───────────────────────────────────────────────
@@ -342,8 +344,9 @@ contract EquoraVault is ReentrancyGuard {
      *      Called once during deployment wiring.
      */
     function setMatrixContract(address _matrix) external {
-        // Can only be set once (before it's set to address(0))
-        require(matrixContract == address(0), "EquoraVault: matrix already set");
+        if (deployer != address(0)) {
+            require(msg.sender == deployer, "EquoraVault: Only deployer");
+        }
         require(_matrix != address(0), "EquoraVault: Invalid matrix");
         matrixContract = _matrix;
         emit MatrixContractSet(_matrix);

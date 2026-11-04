@@ -98,6 +98,8 @@ __pycache__/
 scratch_*.png
 *.zip
 *.node
+cloudflared.exe
+
 *.mov
 *.mp4
 *.pdf

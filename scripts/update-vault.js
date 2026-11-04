@@ -30,3 +30,4 @@ const path = require('path');
   fs.writeFileSync(filePath, c, 'utf8');
   console.log(`Updated EquoraVault in ${relPath}`);
 });
+

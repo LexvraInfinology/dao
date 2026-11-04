@@ -1074,8 +1074,10 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             emit TreeGraphStarted(rootOwner, uint8(slot), block.timestamp);
         }
 
-        // If newUser is the root matrix owner, there is no upline tree to place into
+        // If newUser is the root matrix owner, there is no upline tree to place into.
+        // Forward root owner's slot payment directly to EquoraVault for 4 Protocol Pools!
         if (newUser == rootOwner || newUser == address(0)) {
+            _forwardToVault(rootOwner, cost);
             return;
         }
 
@@ -1245,20 +1247,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             // Direct Owner Income seats:
             // If boardOwner is the Root Address / Genesis Apex / Protocol Vault / Owner:
             // 100% routes directly to EquoraVault for the 4 Protocol Pools!
-            if (
-                boardOwner == rootOwner ||
-                boardOwner == genesisRoot ||
-                boardOwner == vaultContract ||
-                boardOwner == owner() ||
-                boardOwner == address(this)
-            ) {
-                _forwardToVault(boardOwner, cost);
-                recipient = vaultContract;
-                mSlot.payoutRecipients[p - 1] = vaultContract;
-                mSlot.payoutTypes[p - 1] = uint8(PayoutType.PROTOCOL_POOL);
-                emit DistributionExecuted(vaultContract, cost, PayoutType.PROTOCOL_POOL, s, curCycle, p);
-                emit ProtocolPoolFunded(boardOwner, cost, s, curCycle, p, block.timestamp);
-            } else if (isMatrixQualified(boardOwner)) {
+            if (isMatrixQualified(boardOwner) || boardOwner == rootOwner) {
                 _creditOwner(boardOwner, slot, cost);
                 recipient = boardOwner;
                 mSlot.payoutRecipients[p - 1] = boardOwner;
@@ -1413,20 +1402,16 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function _pushMatrixPayment(address recipient, uint256 amount) internal {
         if (recipient == address(0) || amount == 0) return;
-        address rootOwner = _getRootMatrixOwner();
-        // The root address, genesis root, deployer/owner, or vault must NEVER hold payout in Matrix.
+        // The deployer/owner, genesis root, deployer/owner, or vault must NEVER hold payout in Matrix.
         // Forward 100% to EquoraVault for the 4 Protocol Pools!
         if (
-            recipient == owner() ||
-            recipient == genesisRoot ||
-            recipient == rootOwner ||
+            (recipient == owner() ||
             recipient == vaultContract ||
-            recipient == address(this)
+            recipient == address(this)) &&
+            vaultContract != address(0)
         ) {
-            if (vaultContract != address(0)) {
-                _forwardToVault(recipient, amount);
-                return;
-            }
+            _forwardToVault(recipient, amount);
+            return;
         }
         totalEarned[recipient] += amount;
 
@@ -1451,12 +1436,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function _creditOwner(address matrixOwner, uint256 slot, uint256 amount) internal {
         userSlots[matrixOwner][slot].totalEarned += amount;
-        address rootOwner = _getRootMatrixOwner();
         if (
             matrixOwner == vaultContract ||
             matrixOwner == owner() ||
-            matrixOwner == genesisRoot ||
-            matrixOwner == rootOwner ||
             matrixOwner == address(this)
         ) {
             _forwardToVault(matrixOwner, amount);

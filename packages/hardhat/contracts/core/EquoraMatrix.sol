@@ -673,6 +673,13 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (genesisRoot != address(0)) {
             return genesisRoot;
         }
+        address regRoot = address(0);
+        try registry.getRoot() returns (address r) {
+            regRoot = r;
+        } catch {}
+        if (regRoot != address(0)) {
+            return regRoot;
+        }
         if (daoContract != address(0)) {
             try IEquoraDAOForMatrix(daoContract).getLastMember() returns (address lastDaoMember) {
                 if (lastDaoMember != address(0)) {
@@ -680,7 +687,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
                 }
             } catch {}
         }
-        return registry.getRoot();
+        return vaultContract;
     }
 
     /**
@@ -721,7 +728,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         }
 
         // Auto-activate slot for root matrix owner if not yet unlocked
-        if (matrixOwner == rootOwner && !userSlots[matrixOwner][slot].isUnlocked) {
+        if (matrixOwner != address(0) && matrixOwner == rootOwner && !userSlots[matrixOwner][slot].isUnlocked) {
             userSlots[matrixOwner][slot].isUnlocked   = true;
             userSlots[matrixOwner][slot].isLive       = true;
             userSlots[matrixOwner][slot].currentCycle = 1;
@@ -733,8 +740,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             emit TreeGraphStarted(matrixOwner, uint8(slot), block.timestamp);
         }
 
-        // If newUser is the root matrix owner, they have no upline tree above them to place into
-        if (matrixOwner == newUser) {
+        // If newUser is the root matrix owner or matrixOwner is null, there is no upline tree to place into
+        if (matrixOwner == newUser || matrixOwner == address(0)) {
             return;
         }
 
@@ -804,6 +811,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             if (upline1 != address(0) && upline1 != matrixOwner && upline1 != owner() && isMatrixQualified(upline1)) {
                 _pushMatrixPayment(upline1, cost);
                 emit DistributionExecuted(upline1, cost, PayoutType.UPLINE_1, s, cycle, p);
+                _recordDownlinePlacement(upline1, placedUser, slot);
             } else {
                 // Unqualified or missing upline -> routed directly to the 4 automated protocol pools!
                 _forwardToVault(matrixOwner, cost);
@@ -833,6 +841,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             if (upline2 != address(0) && upline2 != up1 && upline2 != matrixOwner && isMatrixQualified(upline2)) {
                 _pushMatrixPayment(upline2, cost);
                 emit DistributionExecuted(upline2, cost, PayoutType.UPLINE_2, s, cycle, p);
+                _recordDownlinePlacement(upline2, placedUser, slot);
             } else {
                 // Unqualified, same sponsor, or missing upline -> routed directly to the 4 automated protocol pools!
                 _forwardToVault(matrixOwner, cost);
@@ -1267,21 +1276,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             }
             nextMSlot.isLive = true;
 
-            // Seed Level 1 of Next Slot with P4 and P5 users if nextSlot has 0 filled nodes
-            if (nextMSlot.filledNodes == 0) {
-                address p4User = snap.nodes[3]; // P4 is index 3
-                address p5User = snap.nodes[4]; // P5 is index 4
-
-                if (p4User != address(0) && p4User != user) {
-                    nextMSlot.nodes[0] = p4User;
-                    nextMSlot.filledNodes = 1;
-                    emit PositionFilled(user, uint8(nextSlot), nextMSlot.currentCycle, 1, p4User, baseSlotCost);
-                }
-                if (p5User != address(0) && p5User != user) {
-                    nextMSlot.nodes[1] = p5User;
-                    nextMSlot.filledNodes = (nextMSlot.filledNodes == 1) ? 2 : 1;
-                    emit PositionFilled(user, uint8(nextSlot), nextMSlot.currentCycle, uint8(nextMSlot.filledNodes), p5User, baseSlotCost);
-                }
+            // Dynamic Follow-Me Placement:
+            // This upgraded user is placed into their sponsor's nextSlot board!
+            // The first team members to upgrade dynamically fill Seat 1, Seat 2, Seat 3...
+            address sponsorAddr = registry.getSponsor(user);
+            if (sponsorAddr != address(0) && sponsorAddr != user && sponsorAddr != owner()) {
+                _placeUserInMatrix(user, nextSlot, baseSlotCost);
             }
 
             emit SlotAutoActivated(user, uint8(slot), uint8(nextSlot), block.timestamp);

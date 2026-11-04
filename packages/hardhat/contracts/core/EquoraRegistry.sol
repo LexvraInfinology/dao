@@ -87,26 +87,27 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
      * @param _root The genesis/root wallet address (platform founder's wallet)
      */
     constructor(address _root) Ownable(msg.sender) {
-        require(_root != address(0), "EquoraRegistry: Invalid root");
-        root = _root;
+        if (_root != address(0)) {
+            root = _root;
 
-        // Auto-register root as user #1 with a fixed code 10000
-        totalUsers++;
-        _nonce++;
-        uint32 rootCode = CODE_MIN; // 10000 reserved for root
-        _users[_root] = User({
-            isRegistered:          true,
-            sponsor:               address(0),
-            registrationTimestamp: block.timestamp,
-            directReferralsCount:  0,
-            id:                    totalUsers,
-            referralCode:          rootCode
-        });
-        codeToUser[rootCode] = _root;
-        userToCode[_root]    = rootCode;
-        userList.push(_root);
+            // Auto-register root as user #1 with fixed code 10000
+            totalUsers++;
+            _nonce++;
+            uint32 rootCode = CODE_MIN; // 10000 reserved for root
+            _users[_root] = User({
+                isRegistered:          true,
+                sponsor:               address(0),
+                registrationTimestamp: block.timestamp,
+                directReferralsCount:  0,
+                id:                    totalUsers,
+                referralCode:          rootCode
+            });
+            codeToUser[rootCode] = _root;
+            userToCode[_root]    = rootCode;
+            userList.push(_root);
 
-        emit UserRegistered(_root, address(0), totalUsers, rootCode, block.timestamp);
+            emit UserRegistered(_root, address(0), totalUsers, rootCode, block.timestamp);
+        }
     }
 
     // ─── Admin ────────────────────────────────────────────────────────────────
@@ -141,9 +142,19 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         if (user == address(0)) revert InvalidUser();
         if (_users[user].isRegistered) revert AlreadyRegistered();
 
-        address fallbackRoot = root;
-        address validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user && sponsor != owner()) ? sponsor : fallbackRoot;
-        uint32 newCode = _generateUniqueCode(user);
+        address validSponsor;
+        uint32 newCode;
+
+        if (root == address(0)) {
+            // First organic user dynamically becomes Genesis Apex Root (#10000)
+            root = user;
+            validSponsor = address(0);
+            newCode = CODE_MIN; // 10000
+        } else {
+            address fallbackRoot = root;
+            validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user && sponsor != owner()) ? sponsor : fallbackRoot;
+            newCode = _generateUniqueCode(user);
+        }
 
         totalUsers++;
         _users[user] = User({
@@ -155,8 +166,10 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
             referralCode:          newCode
         });
 
-        _users[validSponsor].directReferralsCount++;
-        _directReferrals[validSponsor].push(user);
+        if (validSponsor != address(0)) {
+            _users[validSponsor].directReferralsCount++;
+            _directReferrals[validSponsor].push(user);
+        }
         codeToUser[newCode] = user;
         userToCode[user]    = newCode;
         userList.push(user);
@@ -172,11 +185,19 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         if (user == address(0)) revert InvalidUser();
         if (_users[user].isRegistered) revert AlreadyRegistered();
 
-        // Resolve sponsor from code
-        address sponsor = _resolveSponsor(sponsorCode, user);
+        address sponsor;
+        uint32 newCode;
 
-        // Generate unique 5-digit code for this new user
-        uint32 newCode = _generateUniqueCode(user);
+        if (root == address(0)) {
+            // First organic user dynamically becomes Genesis Apex Root (#10000)
+            root = user;
+            sponsor = address(0);
+            newCode = CODE_MIN; // 10000
+        } else {
+            // Resolve sponsor from code
+            sponsor = _resolveSponsor(sponsorCode, user);
+            newCode = _generateUniqueCode(user);
+        }
 
         totalUsers++;
         _users[user] = User({
@@ -188,8 +209,10 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
             referralCode:          newCode
         });
 
-        _users[sponsor].directReferralsCount++;
-        _directReferrals[sponsor].push(user);
+        if (sponsor != address(0)) {
+            _users[sponsor].directReferralsCount++;
+            _directReferrals[sponsor].push(user);
+        }
         codeToUser[newCode] = user;
         userToCode[user]    = newCode;
         userList.push(user);

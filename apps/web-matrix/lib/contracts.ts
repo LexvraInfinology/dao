@@ -17,15 +17,15 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TS1S2VRXYn8KzCQDYL6JweJVNczCSK3xro",
+  matrix: "TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
-  registry: "TD2NEqnkgoAk3t3jZAg9gkZUnEXdqyzgxT",
-  vault: "TTcgakpSHzR3nSy7Q9XsR2KkpfsJCmeUYT",
-  salaryPool: "TEmpFpWXwScVdi4aizg8uw6N5JApRvHcuR",
-  rewardPool: "TAdKjsLLsGJtZo1uds8KzYwX79dTaJqBdn",
-  magicBoxPool: "TCnQTLMmrcqTGsN6bpGg6itXqsJMGphMxp",
-  dao: "TXgWsi97pCGR7Wwqou7731RvcYugcsMtXR",
-  nft: "TGi19EXR2J2DsHioNomCBCWRLp71wG4j9s",
+  registry: "TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i",
+  vault: "TBq3nvGgycW13zyr9KAazizPfFVgVd1n63",
+  salaryPool: "TGXPhgitUhfGzbR8Kqwej3jbz8ciN46bao",
+  rewardPool: "TCtvo5RKeFgtHtVkfiC5sMRLQYmZuSRQzN",
+  magicBoxPool: "TBwAa7yPSgJorwiHfEJSgX89VU5zckzuWe",
+  dao: "TEh2X5NgisqALBEcjTxDrwDE97njFvMHf3",
+  nft: "TMsiNLijDK29Un4yJsjReNMgTskhcSwuXv",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
   legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
 };
@@ -740,75 +740,8 @@ export async function getOnChainSlotDetails(
         "0x" + nodesWithCodesRaw
       );
       if (!isViewingSnapshot && decodedAddresses && decodedAddresses.length === 14) {
+        // Direct, authoritative on-chain nodes straight from smart contract storage
         displayNodes = [...decodedAddresses];
-
-        // 2x3 on-chain downline tree traversal from smart contract
-        const ZERO = "0x0000000000000000000000000000000000000000";
-        const fetchDownlineData = async (addr: string) => {
-          if (!addr || addr === ZERO || addr === "0x0") return null;
-          try {
-            const dlHex = toHexAddress(addr);
-            const dlParam = coder.encode(["address", "uint256"], [dlHex, slotNumber]).slice(2);
-            const dlRaw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotNodesWithCodes(address,uint256)", dlParam);
-            if (dlRaw) {
-              const [dlAddrs, dlCodes, dlIds] = coder.decode(["address[14]", "uint32[14]", "uint256[14]"], "0x" + dlRaw);
-              return { dlAddrs, dlCodes: dlCodes.map(Number), dlIds: dlIds.map(Number) };
-            }
-          } catch {}
-          return null;
-        };
-
-        const s1 = displayNodes[0];
-        const s2 = displayNodes[1];
-
-        const [s1Data, s2Data] = await Promise.all([
-          s1 && s1 !== ZERO ? fetchDownlineData(s1) : null,
-          s2 && s2 !== ZERO ? fetchDownlineData(s2) : null,
-        ]);
-
-        if ((!displayNodes[2] || displayNodes[2] === ZERO) && s1Data?.dlAddrs[0] && s1Data.dlAddrs[0] !== ZERO) {
-          displayNodes[2] = s1Data.dlAddrs[0];
-          onChainCodes[2] = s1Data.dlCodes[0] || 0;
-          onChainIds[2] = s1Data.dlIds[0] || 0;
-        }
-        if ((!displayNodes[3] || displayNodes[3] === ZERO) && s1Data?.dlAddrs[1] && s1Data.dlAddrs[1] !== ZERO) {
-          displayNodes[3] = s1Data.dlAddrs[1];
-          onChainCodes[3] = s1Data.dlCodes[1] || 0;
-          onChainIds[3] = s1Data.dlIds[1] || 0;
-        }
-        if ((!displayNodes[4] || displayNodes[4] === ZERO) && s2Data?.dlAddrs[0] && s2Data.dlAddrs[0] !== ZERO) {
-          displayNodes[4] = s2Data.dlAddrs[0];
-          onChainCodes[4] = s2Data.dlCodes[0] || 0;
-          onChainIds[4] = s2Data.dlIds[0] || 0;
-        }
-        if ((!displayNodes[5] || displayNodes[5] === ZERO) && s2Data?.dlAddrs[1] && s2Data.dlAddrs[1] !== ZERO) {
-          displayNodes[5] = s2Data.dlAddrs[1];
-          onChainCodes[5] = s2Data.dlCodes[1] || 0;
-          onChainIds[5] = s2Data.dlIds[1] || 0;
-        }
-
-        const l2Parents = [displayNodes[2], displayNodes[3], displayNodes[4], displayNodes[5]];
-        const l2Results = await Promise.all(
-          l2Parents.map(p => (p && p !== ZERO ? fetchDownlineData(p) : null))
-        );
-
-        for (let pIdx = 0; pIdx < 4; pIdx++) {
-          const leftIdx = 6 + pIdx * 2;
-          const rightIdx = leftIdx + 1;
-          const sub = l2Results[pIdx];
-          if (sub) {
-            if ((!displayNodes[leftIdx] || displayNodes[leftIdx] === ZERO) && sub.dlAddrs[0] && sub.dlAddrs[0] !== ZERO) {
-              displayNodes[leftIdx] = sub.dlAddrs[0];
-              onChainCodes[leftIdx] = sub.dlCodes[0] || 0;
-              onChainIds[leftIdx] = sub.dlIds[0] || 0;
-            }
-            if ((!displayNodes[rightIdx] || displayNodes[rightIdx] === ZERO) && sub.dlAddrs[1] && sub.dlAddrs[1] !== ZERO) {
-              displayNodes[rightIdx] = sub.dlAddrs[1];
-              onChainCodes[rightIdx] = sub.dlCodes[1] || 0;
-              onChainIds[rightIdx] = sub.dlIds[1] || 0;
-            }
-          }
-        }
       }
       onChainCodes = codesDecoded.map((c: any) => Number(c));
       onChainIds = idsDecoded.map((id: any) => Number(id));

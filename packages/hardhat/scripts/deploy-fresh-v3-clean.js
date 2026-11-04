@@ -214,7 +214,8 @@ async function main() {
   const tokenHex = deployed.contracts.EquoraToken ? deployed.contracts.EquoraToken.addressHex : "412488a09ab364a64fd31da9a3a979bee8cf85f5f6";
 
   // 1. Deploy Fresh EquoraRegistry (System Anchor: Deployer address as initial fallback root)
-  const regParams = coder.encode(["address"], [deployer.evmAddress]);
+  // Dynamic Organic Root: zeroAddress so first organic user becomes Apex Root
+  const regParams = coder.encode(["address"], [zeroAddress]);
   const registry = await deployContractToTrob(
     "EquoraRegistry",
     "artifacts/contracts/core/EquoraRegistry.sol/EquoraRegistry.json",

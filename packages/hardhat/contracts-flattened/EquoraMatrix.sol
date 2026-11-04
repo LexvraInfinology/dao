@@ -1273,13 +1273,14 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
                 uint256 nextSlot = slot + 1;
                 if (!userSlots[boardOwner][nextSlot].isUnlocked) {
                     userSlots[boardOwner][nextSlot].isUnlocked   = true;
-                    userSlots[boardOwner][nextSlot].isLive       = false; // RESERVED STANDBY
+                    userSlots[boardOwner][nextSlot].isLive       = true; // Live & active for organic team placements
                     userSlots[boardOwner][nextSlot].currentCycle = 1;
                     userSlots[boardOwner][nextSlot].filledNodes  = 0;
                     if (nextSlot > highestSlot[boardOwner]) {
                         highestSlot[boardOwner] = nextSlot;
                     }
-                    emit SlotReserved(boardOwner, s, uint8(nextSlot), block.timestamp);
+                    emit SlotAutoActivated(boardOwner, uint8(slot), uint8(nextSlot), block.timestamp);
+                    emit SlotActivatedForEarning(boardOwner, uint8(nextSlot), block.timestamp);
                 }
             }
 
@@ -1508,7 +1509,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         // 3. Two-Stage Tier Escalation (Stage 2):
         // When completing any slot < TOTAL_SLOTS, the next slot activates live,
-        // and P4 and P5 from this completed cycle seed Level 1 (P1 & P2) of the next slot!
+        // Positions 1..14 fill organically from active referrals & team upgrades checking upline 1 and upline 2.
+        // No old nodes are pre-filled or copied from previous slots.
         if (slot < TOTAL_SLOTS) {
             uint256 nextSlot = slot + 1;
             MatrixSlot storage nextMSlot = userSlots[user][nextSlot];

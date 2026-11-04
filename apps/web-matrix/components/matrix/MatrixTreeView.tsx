@@ -49,7 +49,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
     (profile as any)?.isSlot1Complete
   );
   const isSlotLive = selectedSlotNumber === 1 ? true : Boolean(slotDetails?.isLive || (selectedSlotNumber === 2 && isSlot1Complete));
-  const isSlotStandby = isSlotUnlocked && selectedSlotNumber > 1 && !isSlotLive;
+  const isSlotStandby = false;
 
   const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;

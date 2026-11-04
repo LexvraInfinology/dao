@@ -17,7 +17,7 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TMa6FzwGy6VFp5esEHQr814bpzYWiCRimU",
+  matrix: "TL59XfGKHLNGrR1CvacmWnAjqkc624eRvH",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
   registry: "TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i",
   vault: "TBq3nvGgycW13zyr9KAazizPfFVgVd1n63",
@@ -676,7 +676,7 @@ export async function getOnChainSlotDetails(
   }
 
   // Check if slot is live and accepting placements on-chain
-  let isLive = slotNumber === 1 ? Boolean(isUnlocked) : false;
+  let isLive = Boolean(isUnlocked);
   try {
     const liveRaw = await queryTrobConstant(
       CONTRACT_ADDRESSES.matrix,
@@ -836,7 +836,7 @@ export async function getOnChainSlotDetails(
     cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
     isLive: Boolean(isUnlocked && isLive),
-    isStandby: Boolean(isUnlocked && slotNumber > 1 && !isLive),
+    isStandby: false,
     prevSlotCompleted: Boolean(prevSlotCompleted),
     isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,

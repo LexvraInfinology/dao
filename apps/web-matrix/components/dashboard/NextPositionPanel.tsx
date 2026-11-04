@@ -92,8 +92,8 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     (profile as any)?.isSlot1Complete
   );
 
-  const isSlotLive = activeSlotNumber === 1 ? true : Boolean(details?.isLive || (activeSlotNumber === 2 && isSlot1Complete));
-  const isSlotStandby = isSlotUnlocked && activeSlotNumber > 1 && !isSlotLive;
+  const isSlotLive = Boolean(isSlotUnlocked);
+  const isSlotStandby = false;
 
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
   const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
@@ -192,29 +192,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         </div>
 
         {/* Next Open Position Spotlight */}
-        {isSlotStandby ? (
-          <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white mb-3.5 space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="flex items-center gap-1.5 text-blue-900">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                <span>Standby Tier Reserved</span>
-              </span>
-              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-extrabold border border-blue-300">
-                $0 Paid via P4 &amp; P5
-              </span>
-            </div>
-            <p className="text-[11.5px] font-medium text-blue-800 leading-relaxed">
-              Slot #{String(activeSlotNumber).padStart(2, "0")} is reserved in Standby mode! Team placements will activate automatically once your Slot #{activeSlotNumber - 1} completes all 14 positions.
-            </p>
-            <button
-              type="button"
-              onClick={() => selectSlot(activeSlotNumber - 1)}
-              className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
-            >
-              ← Back to Active Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Board
-            </button>
-          </div>
-        ) : !isSlotUnlocked ? (
+        {!isSlotUnlocked ? (
           <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/80 mb-3.5">
             <div className="flex items-center justify-between text-[11px] font-bold mb-1">
               <span className="flex items-center gap-1.5 text-slate-700">

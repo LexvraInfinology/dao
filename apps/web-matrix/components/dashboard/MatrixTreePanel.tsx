@@ -307,11 +307,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     (profile as any)?.isSlot1Complete
   );
 
-  const isCurrentSlotLive =
-    selectedSlot === 1
-      ? true
-      : Boolean(activeSlotDetails?.isLive || (selectedSlot === 2 && isSlot1Complete));
-  const isSlotStandby = isCurrentSlotUnlocked && selectedSlot > 1 && !isCurrentSlotLive;
+  const isCurrentSlotLive = Boolean(isCurrentSlotUnlocked);
+  const isSlotStandby = false;
 
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedCycle ?? 1) : 0;
   const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
@@ -855,32 +852,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           >
             <span>View Slot #02 Board</span>
             <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* ───────────────── STANDBY TIER BANNER (P4+P5 Auto-Reserved) ───────────────── */}
-      {isSlotStandby && (
-        <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-white border border-blue-200 text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-blue-950 block">
-                Slot #{String(selectedSlot).padStart(2, "0")} is Unlocked in Standby Mode ($0 Out-of-Pocket)
-              </span>
-              <span className="text-[11px] text-blue-700 font-medium">
-                Auto-reserved at $0 out-of-pocket via Slot #{selectedSlot - 1} (P4 &amp; P5). Live team placements will begin once your Slot #{selectedSlot - 1} board completes all 14 positions.
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleSelectSlot(selectedSlot - 1)}
-            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
-          >
-            ← View Active Slot #{String(selectedSlot - 1).padStart(2, "0")}
           </button>
         </div>
       )}

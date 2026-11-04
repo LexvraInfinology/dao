@@ -42,7 +42,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
   const progressionLevels =
     slots && slots.length > 0
       ? slots.map((s) => {
-          const isStandby = Boolean(s.isUnlocked && s.isLive === false);
+          const isStandby = false;
           const cost = s.cost || (30 * Math.pow(2, s.slotNumber - 1));
           const earned = (s.totalEarnedUsd !== undefined && s.totalEarnedUsd > 0)
             ? s.totalEarnedUsd

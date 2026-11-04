@@ -39,7 +39,11 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
 
   const nextSlot = Math.min(currentSlot + 1, 12);
   const nextSlotStr = nextSlot.toString().padStart(2, "0");
-  const filledNodes = data?.activeSlotProgress?.filledNodes ?? 0;
+  const storeSlotDetails = useMatrixStore((s) => s.slotDetails);
+  const realFilledCount = storeSlotDetails?.nodes?.filter((n: any) => n?.filled).length;
+  const filledNodes = (typeof realFilledCount === 'number' && realFilledCount > 0)
+    ? realFilledCount
+    : (data?.activeSlotProgress?.filledNodes ?? storeSlotDetails?.filledNodes ?? 0);
   const percentFilled = Math.round((filledNodes / 14) * 100);
 
   return (

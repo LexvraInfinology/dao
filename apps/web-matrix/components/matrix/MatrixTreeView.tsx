@@ -76,7 +76,6 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
 
   const formatNodeAddress = (addr?: string | null, userId?: number | null, pos?: number) => {
     if (addr) return formatB58Address(addr);
-    if (pos === 4 || pos === 5 || pos === 14) return formatB58Address(toTrobBase58(CONTRACT_ADDRESSES.vault));
     if (userId) return `ID #${userId}`;
     return "-";
   };
@@ -155,7 +154,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         statusLabel = "Spillover";
       }
 
-      const effectiveAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+      const effectiveAddr = node?.placedUser || (node as any)?.base58 || null;
 
       return (
         <div
@@ -278,7 +277,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       if (roleInfo.role === "POOL") bg = "bg-purple-700 hover:bg-purple-800";
       if (roleInfo.role === "SPILLOVER") bg = "bg-amber-600 hover:bg-amber-700";
 
-      const effectiveAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+      const effectiveAddr = node?.placedUser || (node as any)?.base58 || null;
 
       return (
         <div
@@ -672,7 +671,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div
                   key={pos}
                   onClick={() => {
-                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || null;
                     if (targetAddr) {
                       toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {
@@ -720,7 +719,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div
                   key={pos}
                   onClick={() => {
-                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || null;
                     if (targetAddr) {
                       toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {
@@ -765,7 +764,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <div
                   key={pos}
                   onClick={() => {
-                    const targetAddr = node?.placedUser || (node as any)?.base58 || (pos === 4 || pos === 5 || pos === 14 ? CONTRACT_ADDRESSES.vault : null);
+                    const targetAddr = node?.placedUser || (node as any)?.base58 || null;
                     if (node?.filled && targetAddr) {
                       toast.copy(toTrobBase58(targetAddr), `Position #${pos} Address`);
                     } else {

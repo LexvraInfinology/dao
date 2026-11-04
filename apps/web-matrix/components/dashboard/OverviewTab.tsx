@@ -206,7 +206,7 @@ export function OverviewTab({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-black text-[13.5px] text-[#102341] truncate">
-                    #{profile?.userId || "25948"} • {profile?.username || (address ? formatAddress(toTrobBase58(address)) : "EQUORA Operative")}
+                    {profile?.userId ? `#${profile.userId} • ` : profile?.referralCode ? `Member #${profile.referralCode} • ` : ""}{profile?.username || (address ? formatAddress(toTrobBase58(address)) : "EQUORA Operative")}
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-[#e8fbf5] text-[#138261] text-[9.5px] font-extrabold uppercase">
                     Active

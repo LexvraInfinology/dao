@@ -4,10 +4,8 @@ import React, { useState, useEffect } from "react";
 import { getOnChainSlotDetails, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
 export function MatrixMechanismSection() {
-  const [filledNodes, setFilledNodes] = useState<number>(3);
-  const [nodesData, setNodesData] = useState<boolean[]>([
-    true, true, true, false, false, false, false, false, false, false, false, false, false, false
-  ]);
+  const [filledNodes, setFilledNodes] = useState<number>(0);
+  const [nodesData, setNodesData] = useState<boolean[]>(Array(14).fill(false));
 
   // Real-time on-chain polling every 4 seconds without flicker
   useEffect(() => {

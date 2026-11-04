@@ -271,13 +271,13 @@ const IS_MAINNET_SVC = process.env.IS_MAINNET === "true" || process.env.NEXT_PUB
 const MATRIX_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   process.env.MATRIX_HEX ||
-  (IS_MAINNET_SVC ? "411a5f193d5b9654282fed67931d9123c00da9c879" : "418919e11e219e81d9f510947f9d4f9e9ac04f4cc6");
+  (IS_MAINNET_SVC ? "411a5f193d5b9654282fed67931d9123c00da9c879" : "41afedb7886ddf932acb2c91f7ed080b493d5fb18f");
 const REGISTRY_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   process.env.REGISTRY_HEX ||
-  (IS_MAINNET_SVC ? "411a7f29b91424fd6715c5048b458dcf7beeeaeebc" : "412854e95c847472bb7130baf5f3d9363dcee5fe18");
+  (IS_MAINNET_SVC ? "411a7f29b91424fd6715c5048b458dcf7beeeaeebc" : "41218156202edd1294f681a04955f83573755edb4b");
 const VAULT_CONTRACT_CANONICAL =
-  toCanonicalAddress(process.env.NEXT_PUBLIC_VAULT_ADDRESS || process.env.VAULT_ADDRESS || "0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee");
+  toCanonicalAddress(process.env.NEXT_PUBLIC_VAULT_ADDRESS || process.env.VAULT_ADDRESS || "0xc1908d6771577efa1743eb786f23da81316f396d");
 const TROB_RPC_ENDPOINT =
   process.env.RPC_URL ||
   process.env.FULLNODE_URL ||
@@ -2593,113 +2593,6 @@ export class MatrixService {
   async seedMatrixDevData(userAddress: string): Promise<void> {
     const canonical = userAddress.toLowerCase();
     await this.getOrCreateUser(canonical);
-
-    // Unlock slots 1, 2, 3, 4
-    for (let slot = 1; slot <= 4; slot++) {
-      await prisma.matrixSlot.upsert({
-        where: { userAddress_slotNumber: { userAddress: canonical, slotNumber: slot } },
-        update: {
-          isUnlocked: true,
-          filledNodes: slot === 1 ? 11 : slot === 2 ? 6 : slot === 3 ? 2 : 0,
-          currentCycle: 1,
-          totalEarned: (SLOT_COSTS[slot] || 30) * 3,
-        },
-        create: {
-          userAddress: canonical,
-          slotNumber: slot,
-          isUnlocked: true,
-          filledNodes: slot === 1 ? 11 : slot === 2 ? 6 : slot === 3 ? 2 : 0,
-          currentCycle: 1,
-          totalEarned: (SLOT_COSTS[slot] || 30) * 3,
-        },
-      });
-    }
-
-    // Update profile earnings
-    await prisma.matrixProfile.update({
-      where: { userAddress: canonical },
-      data: {
-        totalEarnings: 142.50,
-        directEarnings: 45.00,
-        matrixEarnings: 75.00,
-        poolEarnings: 22.50,
-        availableBalance: 87.50,
-        withdrawnTotal: 55.00,
-        recyclesCount: 1,
-      },
-    }).catch(() => {});
-
-    // Create 3 dummy direct members
-    const dummyAddresses = [
-      "0x3b1c8f94d0e28a57193c726b4859a01234567890",
-      "0x7c4e12a95f82b3d64019e58273614950abcdef01",
-      "0x9f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c0d2e4f6a",
-    ];
-
-    for (let i = 0; i < dummyAddresses.length; i++) {
-      const addr = dummyAddresses[i];
-      const existing = await prisma.user.findUnique({ where: { address: addr } });
-      if (!existing) {
-        const highestUser = await prisma.user.findFirst({
-          orderBy: { userId: "desc" },
-          select: { userId: true },
-        });
-        const nextId = (highestUser?.userId ?? 0) + 1;
-
-        const dummyUser = await prisma.user.create({
-          data: {
-            address: addr,
-            userId: nextId,
-            sponsorAddress: canonical,
-            registrationTimestamp: new Date(Date.now() - (i + 1) * 86400000),
-            matrixProfile: {
-              create: {
-                username: `Cipher_${i + 1}`,
-                totalEarnings: (i + 1) * 60,
-              },
-            },
-          },
-        });
-
-        // Place into slot 1
-        await prisma.matrixPlacement.create({
-          data: {
-            matrixOwnerAddress: canonical,
-            placedUserAddress: addr,
-            slotNumber: 1,
-            position: i + 1,
-            cycle: 1,
-            payoutType: i === 0 ? "UPLINE_1" : "UPLINE_2",
-            recipientAddress: canonical,
-            wasFallback: false,
-            amount: 30,
-            txHash: `0xseedtx${i}00000000000000000000000000000000000000000000000000000000`,
-            blockNumber: BigInt(1000 + i),
-            timestamp: new Date(Date.now() - (i + 1) * 3600000),
-          },
-        }).catch(() => {});
-      }
-    }
-
-    // Create activity records
-    const sampleActs = [
-      { action: "MEMBER_JOINED", title: "New Member Joined", description: "Slot #01 filled by 0x3b1...7890", amount: 30, slot: 1 },
-      { action: "REWARD_RECEIVED", title: "Reward Received", description: "+$30.00 direct distribution", amount: 30, slot: 1 },
-      { action: "CYCLE_COMPLETED", title: "Cycle Completed", description: "Slot #01 cycle completed & recycled", amount: 60, slot: 1 },
-    ];
-
-    for (const act of sampleActs) {
-      await prisma.matrixActivity.create({
-        data: {
-          userAddress: canonical,
-          action: act.action,
-          title: act.title,
-          description: act.description,
-          slotNumber: act.slot,
-          amount: act.amount,
-        },
-      }).catch(() => {});
-    }
   }
 }
 

@@ -326,8 +326,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
   const isViewingSnapshot = isCurrentSlotUnlocked && (activeSlotDetails?.isViewingSnapshot ?? (selectedCycle < totalCycles));
   const nodes = isCurrentSlotUnlocked
-    ? (activeSlotDetails && activeSlotDetails.slotNumber === selectedSlot
-        ? (activeSlotDetails.nodes || [])
+    ? (activeSlotDetails && activeSlotDetails.slotNumber === selectedSlot && Array.isArray(activeSlotDetails.nodes) && activeSlotDetails.nodes.length > 0
+        ? activeSlotDetails.nodes
         : (selectedSlot === 1 ? (data?.activeSlotProgress?.nodes || []) : []))
     : [];
   const realFilledCount = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.filter((n: any) => n?.filled).length : 0;

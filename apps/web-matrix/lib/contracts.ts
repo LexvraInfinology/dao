@@ -284,7 +284,7 @@ export async function queryTrobConstant(
   const timer = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const res = await fetch(`${ACTIVE_RPC_URL}/wallet/triggersmartcontract`, {
+    const res = await fetch(`${ACTIVE_RPC_URL}/wallet/triggerconstantcontract`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -560,8 +560,22 @@ export async function getOnChainSlotDetails(
   slotNumber: number,
   targetCycle?: number
 ): Promise<any> {
-  const coder = new ethers.AbiCoder();
   const userHex = toHexAddress(userAddress);
+
+  // Fast internal API check in browser runtime to avoid browser CORS/rate-limiting
+  if (typeof window !== "undefined" && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const res = await fetch(`/api/matrix/slots/${userHex}/${slotNumber}${targetCycle ? `?cycle=${targetCycle}` : ""}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data && Array.isArray(json.data.nodes) && json.data.nodes.length === 14) {
+          return json.data;
+        }
+      }
+    } catch {}
+  }
+
+  const coder = new ethers.AbiCoder();
   const param = coder.encode(["address", "uint256"], [userHex, slotNumber]).slice(2);
 
   let isUnlocked = slotNumber === 1;
@@ -2569,7 +2583,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
             token: "USD",
             fromAddress: senderB58,
             toAddress: "You",
-            txHash: `0x${ethers.keccak256(ethers.toUtf8Bytes(userHex + "-reward-p" + pos)).slice(2, 66)}`,
+            txHash: node.txHash || null,
             status: "COMPLETED",
             description: `Matrix Position #${pos} P2P Settlement (+ $30.00 USD)`,
             timestamp: node.timestamp || new Date().toISOString(),
@@ -2590,7 +2604,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
         token: "USD",
         fromAddress: "You",
         toAddress: "System",
-        txHash: `0x${ethers.keccak256(ethers.toUtf8Bytes(userHex + "-slot-1")).slice(2, 66)}`,
+        txHash: null,
         status: "COMPLETED",
         description: "Unlocked Matrix Slot #01 for $30.00 USD",
         timestamp: new Date().toISOString(),
@@ -2612,7 +2626,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
         token: "USD",
         fromAddress: "You",
         toAddress: "System",
-        txHash: `0x${ethers.keccak256(ethers.toUtf8Bytes(userHex + "-slot-2")).slice(2, 66)}`,
+        txHash: null,
         status: "COMPLETED",
         description: "Unlocked Matrix Slot #02 for $60.00 USD",
         timestamp: new Date().toISOString(),

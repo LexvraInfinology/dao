@@ -52,16 +52,11 @@ const nextConfig: NextConfig = {
       },
     ];
 
-    // Only proxy /api/matrix to external host if explicitly configured and NOT localhost on Vercel
+    // External API proxying only if explicitly configured
     if (rawBackend && !isLocalhost) {
       rewritesList.unshift({
         source: "/api/matrix/:path*",
         destination: `${rawBackend.replace(/\/+$/, "")}/api/matrix/:path*`,
-      });
-    } else if (!isVercel && process.env.NODE_ENV !== "production") {
-      rewritesList.unshift({
-        source: "/api/matrix/:path*",
-        destination: "http://127.0.0.1:4000/api/matrix/:path*",
       });
     }
 

@@ -753,13 +753,6 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         if (regRoot != address(0)) {
             return regRoot;
         }
-        if (daoContract != address(0)) {
-            try IEquoraDAOForMatrix(daoContract).getLastMember() returns (address lastDaoMember) {
-                if (lastDaoMember != address(0)) {
-                    return lastDaoMember;
-                }
-            } catch {}
-        }
         return vaultContract;
     }
 

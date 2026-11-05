@@ -17,15 +17,15 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TJBFbSsB4YotorQUbtbzfjmaGMKvpGWgCa",
+  matrix: "TSVnyi3gM6QQrH4is8nNFJjJyQbjSrUohK",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
-  registry: "TUBmjwBQ5qhtT1VwpicQVPhQPR1axFDGRd",
-  vault: "TCLxCPbsdaYz8yMzPBg5CrTX16niG2h8yD",
-  salaryPool: "TEGUxjFUHvS1bDHqNM6YNcjDDattEMHxWw",
-  rewardPool: "TKSWrM6HsYB2RoDAgm3WJkeGj5ZY4dYMbp",
-  magicBoxPool: "THpjj7kpYok3nvZeK8ZrBcd4MjTv9c6TnT",
-  dao: "TVt7Z46aN4q8LnQGkvdaGKvdYStAakeKGo",
-  nft: "TUoXTFw41G5saZt9NXzZu7avDz59t6986M",
+  registry: "TVV5TzCddJ2EwvpGUEnJzyvYe4QUkDq2m2",
+  vault: "TL6jaVYwfstQeeyHEyweJwUrr5dVn15TB9",
+  salaryPool: "TXEEJQFhcQMExeL8hkKysGPuiWLTXD38RW",
+  rewardPool: "TL9m6b69Sz9Hmr6iCgqPYfbQezQZbGZvqn",
+  magicBoxPool: "TCyNumUHc7mrvZcULQzXVtMecm7UuX7Ni5",
+  dao: "TWmgPJhGGnELtUWtGcUF7iYTp4VqkJBuQY",
+  nft: "TPZyHq1jBcj9s6LPwN16uFHpkecDfto2mi",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
   legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
 };

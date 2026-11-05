@@ -146,10 +146,15 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         uint32 newCode;
 
         if (root == address(0)) {
-            // First organic user dynamically becomes Genesis Apex Root (#10000)
-            root = user;
-            validSponsor = address(0);
-            newCode = CODE_MIN; // 10000
+            // First organic user entering through Matrix platform dynamically becomes Genesis Apex Root (#10000)
+            if (msg.sender == matrixContract || msg.sender == owner()) {
+                root = user;
+                validSponsor = address(0);
+                newCode = CODE_MIN; // 10000
+            } else {
+                // DAO or other caller before Matrix entry cannot claim Genesis Root
+                return false;
+            }
         } else {
             address fallbackRoot = root;
             validSponsor = (sponsor != address(0) && _users[sponsor].isRegistered && sponsor != user && sponsor != owner()) ? sponsor : fallbackRoot;
@@ -189,10 +194,15 @@ contract EquoraRegistry is IEquoraRegistry, Ownable {
         uint32 newCode;
 
         if (root == address(0)) {
-            // First organic user dynamically becomes Genesis Apex Root (#10000)
-            root = user;
-            sponsor = address(0);
-            newCode = CODE_MIN; // 10000
+            // First organic user entering through Matrix platform dynamically becomes Genesis Apex Root (#10000)
+            if (msg.sender == matrixContract || msg.sender == owner()) {
+                root = user;
+                sponsor = address(0);
+                newCode = CODE_MIN; // 10000
+            } else {
+                // DAO or other caller before Matrix entry cannot claim Genesis Root
+                return false;
+            }
         } else {
             // Resolve sponsor from code
             sponsor = _resolveSponsor(sponsorCode, user);

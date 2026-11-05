@@ -10,11 +10,11 @@ const FULLNODE_URL =
   process.env.NEXT_PUBLIC_RPC_URL ||
   "https://fullnode-one-testnet.trobchain.com";
 
-const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "415a0829892cc8bba72a75a8e709938930fb70568c"; // TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H
+const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "41b54ada8dec142e077f90824fcf700a92456b4087"; // TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H
 
-const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "41c7d295c1f9394102497f2f253fb107d5ae52d71d"; // TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i
+const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "41d61094078cf1f538328f97dc62286b6346228458"; // TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i
 
-const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "412f24e5a730b8055b029d6d47092c3dbfa3fafe59"; // TDjun5J74ybWbpsQfUSXuzdZGoGsZGsKbY
+const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "41e931f71a740ab185e23b03f02c3b9c2f42bb42d7"; // TDjun5J74ybWbpsQfUSXuzdZGoGsZGsKbY
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers

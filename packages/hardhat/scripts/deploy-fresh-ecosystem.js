@@ -233,13 +233,13 @@ async function main() {
   if (!privKey) throw new Error("DEPLOYER_PRIVATE_KEY is missing in environment");
   const deployer = privateKeyToAddress(privKey);
 
-  const SEAT1_KEY = "d729c3fce80e3e831a7167efbe9e7b768f0bf8cb2ee4dfe87559208cb9a7a0a0";
-  const seat1 = privateKeyToAddress(SEAT1_KEY);
+  // No hardcoded seat1 / genesis root
+
 
   console.log(`======================================================`);
   console.log(`🌟 EQUORA PROTOCOL — COMPLETE FRESH ECOSYSTEM DEPLOYMENT`);
   console.log(`   Deployer: ${deployer.tronBase58} (${deployer.tronHex})`);
-  console.log(`   Root Seat 1: ${seat1.tronBase58} (${seat1.evmAddress})`);
+   console.log(`   Root: Pristine 0-member state (Genesis Root determined dynamically on first manual Matrix entry)`);
   console.log(`   Fullnode: ${FULLNODE_URL}`);
   console.log(`======================================================`);
 
@@ -252,7 +252,8 @@ async function main() {
   const tokenHex = deployed.contracts.EquoraToken.addressHex;
 
   // 1. Deploy Fresh EquoraRegistry (Root: Seat 1 Founder)
-  const regParams = coder.encode(["address"], [seat1.evmAddress]);
+  // 1. Deploy Fresh EquoraRegistry (Pristine: 0 users, root is address(0) until first manual Matrix entrant)
+  const regParams = coder.encode(["address"], [zeroAddress]);
   const registry = await deployContractToTrob(
     "EquoraRegistry",
     "artifacts/contracts/core/EquoraRegistry.sol/EquoraRegistry.json",

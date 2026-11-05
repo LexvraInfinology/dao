@@ -424,6 +424,65 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         emit GenesisRootSet(_root);
     }
 
+    function importUserSlotData(
+        address user,
+        uint256 slot,
+        bool isUnlocked,
+        bool isLive,
+        uint256 currentCycle,
+        uint256 filledNodes,
+        address[14] calldata nodes,
+        address[14] calldata payoutRecipients,
+        uint8[14] calldata payoutTypes
+    ) external onlyOwner {
+        MatrixSlot storage mSlot = userSlots[user][slot];
+        mSlot.isUnlocked = isUnlocked;
+        mSlot.isLive = isLive;
+        mSlot.currentCycle = currentCycle;
+        mSlot.filledNodes = filledNodes;
+        for (uint256 i = 0; i < TREE_NODES; i++) {
+            mSlot.nodes[i] = nodes[i];
+            mSlot.payoutRecipients[i] = payoutRecipients[i];
+            mSlot.payoutTypes[i] = payoutTypes[i];
+        }
+        if (slot > highestSlot[user]) {
+            highestSlot[user] = slot;
+        }
+    }
+
+    function importCycleSnapshot(
+        address user,
+        uint256 slot,
+        uint256 cycleNumber,
+        address[14] calldata nodes,
+        address[14] calldata payoutRecipients,
+        uint8[14] calldata payoutTypes,
+        uint256 completedAt
+    ) external onlyOwner {
+        MatrixCycleSnapshot memory snap;
+        snap.cycleNumber = cycleNumber;
+        snap.nodes = nodes;
+        snap.payoutRecipients = payoutRecipients;
+        snap.payoutTypes = payoutTypes;
+        snap.completedAt = completedAt;
+        cycleSnapshots[user][slot].push(snap);
+    }
+
+    function importUserStats(
+        address user,
+        uint256 directsCount,
+        uint256 totalEarnedSun,
+        uint256 balanceSun
+    ) external onlyOwner {
+        activeDirectReferrals[user] = directsCount;
+        totalEarned[user] = totalEarnedSun;
+        userBalance[user] = balanceSun;
+    }
+
+    function setTotalMembersCount(uint256 count) external onlyOwner {
+        totalMembers = count;
+    }
+
     /**
      * @dev Seeds the Genesis Apex Root and Seat #1 (Node 1) on-chain.
      *      _genesisRoot is set to Apex Root (#0001) with Slot 1 unlocked.
@@ -1407,6 +1466,31 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     ) {
         MatrixCycleSnapshot storage snap = cycleSnapshots[user][slot][index];
         return (snap.cycleNumber, snap.nodes, snap.completedAt);
+    }
+
+    function getCycleSnapshotDetail(address user, uint256 slot, uint256 index) external view returns (
+        uint256     cycleNumber,
+        address[14] memory nodeAddresses,
+        uint32[14]  memory nodeCodes,
+        uint256[14] memory nodeMemberIds,
+        address[14] memory payoutRecipients,
+        uint8[14]   memory payoutTypes,
+        uint256     completedAt
+    ) {
+        require(index < cycleSnapshots[user][slot].length, "EquoraMatrix: invalid snapshot index");
+        MatrixCycleSnapshot storage snap = cycleSnapshots[user][slot][index];
+        cycleNumber      = snap.cycleNumber;
+        nodeAddresses    = snap.nodes;
+        payoutRecipients = snap.payoutRecipients;
+        payoutTypes      = snap.payoutTypes;
+        completedAt      = snap.completedAt;
+        for (uint256 i = 0; i < TREE_NODES; i++) {
+            address nodeAddr = snap.nodes[i];
+            if (nodeAddr != address(0)) {
+                nodeCodes[i]     = registry.getCodeByUser(nodeAddr);
+                nodeMemberIds[i] = registry.getUserId(nodeAddr);
+            }
+        }
     }
 
     function getGlobalStats() external view returns (

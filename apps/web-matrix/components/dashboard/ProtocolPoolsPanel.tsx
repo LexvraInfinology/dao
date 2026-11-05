@@ -14,7 +14,9 @@ import {
   flushDaoPoolOnChain,
   NETWORK_NAME,
 } from "@/lib/contracts";
-import { useUserStore } from "@/lib/stores";
+import { useUserStore, useMatrixStore } from "@/lib/stores";
+import { MagicBlindBoxModal } from "@/components/modals/MagicBlindBoxModal";
+import { RankAchievedModal, RankTierName } from "@/components/modals/RankAchievedModal";
 import { toast } from "@/lib/toast";
 
 interface ProtocolPoolsPanelProps {
@@ -31,6 +33,17 @@ export function ProtocolPoolsPanel({
   const [claimableRewards, setClaimableRewards] = useState<UserClaimablePoolRewards | null>(null);
   const [claimingPool, setClaimingPool] = useState<string | null>(null);
   const [flushingDao, setFlushingDao] = useState(false);
+
+  // Live Rank Milestones from smart contract via store
+  const dashboard = useMatrixStore((s) => s.dashboard);
+  const rankMilestones = (dashboard as any)?.rankMilestones;
+  const milestones = rankMilestones?.milestones ?? 0;
+  const isAlphaAchieved = rankMilestones?.isAlphaAchieved ?? (milestones >= 42);
+  const isPrimeAchieved = rankMilestones?.isPrimeAchieved ?? (milestones >= 84);
+  const isEliteAchieved = rankMilestones?.isEliteAchieved ?? (milestones >= 126);
+  const isCrownAchieved = rankMilestones?.isCrownAchieved ?? (milestones >= 168);
+
+  const [selectedRankForModal, setSelectedRankForModal] = useState<RankTierName | null>(null);
 
   const refreshClaimable = React.useCallback(async () => {
     if (!userAddress) return;
@@ -189,54 +202,58 @@ export function ProtocolPoolsPanel({
     {
       level: 3,
       rank: "ALPHA",
+      tierKey: "ALPHA" as RankTierName,
       share: "10% Pool",
       imgClean: "/pools/alpha-card-clean.png",
       imgCover: "/pools/alpha-pool.jpg",
       accent: "from-sky-500 to-blue-700",
       border: "border-sky-500/40",
       glow: "hover:shadow-sky-500/30",
-      requirement: "Slot 3 Auto-Unlocked via P4+P5 on Slot 2 ($0 Cost)",
+      requirement: `42 Team Placements (Level 3 Depth) • ${milestones}/42 Completed`,
       benefits: "10% Monthly Leadership Royalty on 11th + Instant Milestone Bounty",
-      status: currentSlot >= 3 ? "ACHIEVED" : "IN PROGRESS",
+      status: isAlphaAchieved ? "ACHIEVED" : "IN PROGRESS",
     },
     {
       level: 6,
       rank: "PRIME",
+      tierKey: "PRIME" as RankTierName,
       share: "15% Pool",
       imgClean: "/pools/prime-card-clean.png",
       imgCover: "/pools/prime-pool.jpg",
       accent: "from-emerald-500 to-teal-700",
       border: "border-emerald-500/40",
       glow: "hover:shadow-emerald-500/30",
-      requirement: "Slot 6 Auto-Unlocked via P4+P5 on Slot 5 ($0 Cost)",
+      requirement: `84 Team Placements (Level 6 Depth) • ${milestones}/84 Completed`,
       benefits: "15% Monthly Regional Royalty on 11th + Instant Regional Bounty",
-      status: currentSlot >= 6 ? "ACHIEVED" : "IN PROGRESS",
+      status: isPrimeAchieved ? "ACHIEVED" : "IN PROGRESS",
     },
     {
       level: 9,
       rank: "ELITE",
+      tierKey: "ELITE" as RankTierName,
       share: "25% Pool",
       imgClean: "/pools/elite-card-clean.png",
       imgCover: "/pools/elite-pool.jpg",
       accent: "from-amber-500 to-orange-700",
       border: "border-amber-500/40",
       glow: "hover:shadow-amber-500/30",
-      requirement: "Slot 9 Auto-Unlocked via P4+P5 on Slot 8 ($0 Cost)",
+      requirement: `126 Team Placements (Level 9 Depth) • ${milestones}/126 Completed`,
       benefits: "25% Monthly Executive Royalty on 11th + Instant Executive Bounty",
-      status: currentSlot >= 9 ? "ACHIEVED" : "IN PROGRESS",
+      status: isEliteAchieved ? "ACHIEVED" : "IN PROGRESS",
     },
     {
       level: 12,
       rank: "CROWN APEX",
+      tierKey: "CROWN" as RankTierName,
       share: "50% Pool",
       imgClean: "/pools/crown-card-clean.png",
       imgCover: "/pools/crown-pool.jpg",
       accent: "from-purple-600 to-fuchsia-800",
       border: "border-purple-500/40",
       glow: "hover:shadow-purple-500/30",
-      requirement: "Slot 12 Auto-Unlocked via P4+P5 on Slot 11 ($0 Cost)",
+      requirement: `168 Team Placements (Level 12 Depth) • ${milestones}/168 Completed`,
       benefits: "50% Dominant Monthly Apex Royalty on 11th + Apex Milestone Bounty",
-      status: currentSlot >= 12 ? "ACHIEVED" : "IN PROGRESS",
+      status: isCrownAchieved ? "ACHIEVED" : "IN PROGRESS",
     },
   ];
 
@@ -378,7 +395,7 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  ${((poolStats ? (poolStats.dao.streamedTrob || poolStats.dao.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.35)) : 8601.13) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${((poolStats ? (poolStats.dao.streamedTrob || poolStats.dao.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.35)) : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Streamed</span>
               </div>
@@ -470,7 +487,7 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#7256d8]">
-                  ${((poolStats ? (poolStats.magicBoxPool.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.1)) : 2457.5) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${((poolStats ? (poolStats.magicBoxPool.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.1)) : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Pooled</span>
               </div>
@@ -566,7 +583,8 @@ export function ProtocolPoolsPanel({
             return (
               <div
                 key={card.level}
-                className="bg-white/80 hover:bg-white backdrop-blur-md rounded-3xl border border-[#e0eaf7] hover:border-[#2868e8]/30 p-3 sm:p-4 flex flex-col justify-between shadow-[0_6px_20px_rgba(35,82,140,0.04)] hover:shadow-[0_16px_36px_rgba(40,104,232,0.12)] hover:-translate-y-2 transition-all duration-300 group"
+                onClick={() => setSelectedRankForModal(card.tierKey)}
+                className="bg-white/80 hover:bg-white backdrop-blur-md rounded-3xl border border-[#e0eaf7] hover:border-[#2868e8]/30 p-3 sm:p-4 flex flex-col justify-between shadow-[0_6px_20px_rgba(35,82,140,0.04)] hover:shadow-[0_16px_36px_rgba(40,104,232,0.12)] hover:-translate-y-2 transition-all duration-300 group cursor-pointer"
               >
                 <div>
                   {/* Top Badge */}
@@ -631,92 +649,24 @@ export function ProtocolPoolsPanel({
         </div>
       </div>
 
-      {/* 3-Month Magic Blind Box Milestone Modal */}
-      {showBlindBoxModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1d39]/45 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg bg-white border border-[#e0eaf7] rounded-3xl p-6 sm:p-8 shadow-[0_25px_80px_rgba(5,26,64,0.2)] text-[#102341]">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowBlindBoxModal(false)}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#f4f8fe] hover:bg-[#e8f1ff] flex items-center justify-center text-[#657895] hover:text-[#102341] transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {/* Magic Blind Box Claim & Video Reveal Modal */}
+      <MagicBlindBoxModal
+        isOpen={showBlindBoxModal}
+        onClose={() => setShowBlindBoxModal(false)}
+        userAddress={userAddress || ""}
+        claimableAmountTrob={claimableRewards?.magicBoxClaimableTrob || 88.25}
+        claimableAmountUsd={(claimableRewards?.magicBoxClaimableTrob || 88.25) * 0.056}
+        onRewardClaimed={refreshClaimable}
+      />
 
-            {/* Header with Protocol Icon */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 mb-3 rounded-2xl bg-[#f0edff] border border-[#dcd6fa] flex items-center justify-center">
-                <svg className="w-8 h-8 text-[#7256d8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0edff] border border-[#dcd6fa] text-[#7256d8] text-[11px] font-black uppercase tracking-wider mb-2">
-                Protocol Pool 03 • 10% Reserve
-              </div>
-              <h3 className="text-2xl font-black tracking-tight text-[#102341]">
-                Quarterly Community Pool Milestone
-              </h3>
-              <p className="text-[13px] text-[#657895] mt-1.5 max-w-md">
-                Accessible strictly upon achieving the <span className="text-[#2868e8] font-bold">3-Month Protocol Milestone</span>. 10% of all matrix protocol liquidity is continuously pooled into this autonomous reward vault.
-              </p>
-            </div>
-
-            {/* 3-Month Countdown Card */}
-            <div className="mt-5 p-4 rounded-2xl bg-[#f8faff] border border-[#e0eaf7]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] uppercase tracking-wider text-[#657895] font-bold">
-                  Time Remaining to 3-Month Milestone
-                </span>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#fff6df] text-[#b97a17] border border-[#f3dba7]">
-                  LOCKED
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="p-2 rounded-xl bg-white border border-[#e0eaf7] shadow-2xs">
-                  <div className="text-xl sm:text-2xl font-black text-[#102341] font-mono">{milestoneCountdown.days}</div>
-                  <div className="text-[9px] text-[#657895] font-semibold uppercase">Days</div>
-                </div>
-                <div className="p-2 rounded-xl bg-white border border-[#e0eaf7] shadow-2xs">
-                  <div className="text-xl sm:text-2xl font-black text-[#102341] font-mono">{milestoneCountdown.hours}</div>
-                  <div className="text-[9px] text-[#657895] font-semibold uppercase">Hours</div>
-                </div>
-                <div className="p-2 rounded-xl bg-white border border-[#e0eaf7] shadow-2xs">
-                  <div className="text-xl sm:text-2xl font-black text-[#102341] font-mono">{milestoneCountdown.minutes}</div>
-                  <div className="text-[9px] text-[#657895] font-semibold uppercase">Mins</div>
-                </div>
-                <div className="p-2 rounded-xl bg-white border border-[#e0eaf7] shadow-2xs">
-                  <div className="text-xl sm:text-2xl font-black text-[#2868e8] font-mono">{milestoneCountdown.seconds}</div>
-                  <div className="text-[9px] text-[#657895] font-semibold uppercase">Secs</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Strict 1x Lifetime Rule Banner */}
-            <div className="mt-4 p-3 rounded-2xl bg-[#f0edff] border border-[#dcd6fa] text-left">
-              <div className="flex items-center gap-1.5 text-[11px] font-black text-[#7256d8] uppercase tracking-wider">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <span>Strict Lifetime Rule: 1x Per Wallet Forever</span>
-              </div>
-              <p className="text-[11.5px] text-[#4c3a88] mt-1 leading-relaxed">
-                Once a wallet receives a Magic Blind Box reward ($0.80 - $5.00), it is permanently recorded on-chain (<code className="font-mono text-[10px] bg-white/70 px-1 py-0.5 rounded">hasReceivedMagicBox = true</code>). In every subsequent quarterly cycle, rewards are distributed strictly to <strong>NEW active matrix operatives</strong> who haven&apos;t received one yet.
-              </p>
-            </div>
-
-            {/* Action Button */}
-            <div className="mt-5 flex gap-3">
-              <button
-                onClick={() => setShowBlindBoxModal(false)}
-                className="w-full py-3 rounded-xl bg-[#2868e8] hover:bg-[#1d55c7] text-white font-extrabold text-[13px] shadow-sm transition-all"
-              >
-                Acknowledge Milestone Rule
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Apex Rank Physics Drop Animation Modal */}
+      {selectedRankForModal && (
+        <RankAchievedModal
+          isOpen={true}
+          onClose={() => setSelectedRankForModal(null)}
+          rank={selectedRankForModal}
+          milestones={milestones}
+        />
       )}
     </div>
   );

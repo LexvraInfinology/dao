@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { RankAchievedModal, RankTierName } from "@/components/modals/RankAchievedModal";
 import Link from "next/link";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 import { MatrixDashboardOverview, MatrixUserProfile } from "@/lib/api";
@@ -41,6 +42,49 @@ export function OverviewTab({
 
   const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? 0;
   const currentRank = profile?.rankName || "NONE";
+
+  // Rank Milestones & Smart Contract Verification
+  const rankMilestones = (dashboard as any)?.rankMilestones;
+  const milestones = rankMilestones?.milestones ?? 0;
+  const isAlphaAchieved = rankMilestones?.isAlphaAchieved ?? (milestones >= 42);
+  const isPrimeAchieved = rankMilestones?.isPrimeAchieved ?? (milestones >= 84);
+  const isEliteAchieved = rankMilestones?.isEliteAchieved ?? (milestones >= 126);
+  const isCrownAchieved = rankMilestones?.isCrownAchieved ?? (milestones >= 168);
+
+  const [rankModalOpen, setRankModalOpen] = useState(false);
+  const [activeRankModal, setActiveRankModal] = useState<RankTierName>("ALPHA");
+
+  useEffect(() => {
+    if (!address) return;
+    const canon = address.toLowerCase();
+    if (isCrownAchieved && !localStorage.getItem(`equora_rank_achieved_seen_CROWN_${canon}`)) {
+      setActiveRankModal("CROWN");
+      setRankModalOpen(true);
+    } else if (isEliteAchieved && !localStorage.getItem(`equora_rank_achieved_seen_ELITE_${canon}`)) {
+      setActiveRankModal("ELITE");
+      setRankModalOpen(true);
+    } else if (isPrimeAchieved && !localStorage.getItem(`equora_rank_achieved_seen_PRIME_${canon}`)) {
+      setActiveRankModal("PRIME");
+      setRankModalOpen(true);
+    } else if (isAlphaAchieved && !localStorage.getItem(`equora_rank_achieved_seen_ALPHA_${canon}`)) {
+      setActiveRankModal("ALPHA");
+      setRankModalOpen(true);
+    }
+  }, [address, isAlphaAchieved, isPrimeAchieved, isEliteAchieved, isCrownAchieved]);
+
+  const handleCloseRankModal = () => {
+    if (address) {
+      localStorage.setItem(`equora_rank_achieved_seen_${activeRankModal}_${address.toLowerCase()}`, "true");
+    }
+    setRankModalOpen(false);
+  };
+
+  const nextTarget = !isAlphaAchieved ? 42 : !isPrimeAchieved ? 84 : !isEliteAchieved ? 126 : 168;
+  const nextRankName = !isAlphaAchieved ? "ALPHA" : !isPrimeAchieved ? "PRIME" : !isEliteAchieved ? "ELITE" : "CROWN";
+  const currentProgressPct = isCrownAchieved ? 100 : Math.min(100, Math.round((milestones / nextTarget) * 100));
+  const rankProgressLabel = isCrownAchieved
+    ? "168 / 168 (CROWN APEX Qualified 👑)"
+    : `${milestones} / ${nextTarget} to ${nextRankName} (${currentProgressPct}%)`;
 
   // Recent activity list
   const recentActivities = (dashboard?.recentActivity && dashboard.recentActivity.length > 0)
@@ -223,45 +267,64 @@ export function OverviewTab({
             <div className="mt-2.5">
               <div className="flex items-center justify-between text-[11px] text-[#586f8d] font-bold mb-1.5">
                 <span>Placements to Next Rank</span>
-                <span className="font-mono text-[#1e3f6c]">{isQualified ? "100% (Qualified)" : "0 / 42 to ALPHA"}</span>
+                <span className="font-mono text-[#1e3f6c]">{rankProgressLabel}</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[#edf3fb] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#2670ee] to-[#64c4ff] transition-all duration-500"
-                  style={{ width: isQualified ? "100%" : "33%" }}
+                  style={{ width: `${Math.max(4, currentProgressPct)}%` }}
                 />
               </div>
             </div>
 
-            {/* 4 Rank Steps (Exact simulator HTML styling with Lucide React icons) */}
+            {/* 4 Rank Steps (Connected to Smart Contract Milestones: 42, 84, 126, 168) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5">
-              <div className="border border-[#8db5ff] bg-[#f0f6ff] rounded-xl p-2 text-center flex flex-col items-center">
-                <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Medal className="w-3.5 h-3.5 text-blue-600" />
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
+                isAlphaAchieved ? "border-blue-500 bg-blue-50/80 shadow-xs ring-1 ring-blue-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+              }`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isAlphaAchieved ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-600"}`}>
+                  <Medal className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-[10px] font-black text-[#102341] mt-1">ALPHA</div>
-                <div className="text-[9px] text-[#7b8da7] mt-0.5">3 slots • 42 IDs</div>
+                <div className="text-[9px] font-semibold text-[#7b8da7] mt-0.5">
+                  {isAlphaAchieved ? "Qualified ✓" : `${milestones}/42 IDs`}
+                </div>
               </div>
-              <div className="border border-[#e5edf7] bg-[#fafcff] rounded-xl p-2 text-center flex flex-col items-center">
-                <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
-                  <Award className="w-3.5 h-3.5 text-indigo-600" />
+
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
+                isPrimeAchieved ? "border-emerald-500 bg-emerald-50/80 shadow-xs ring-1 ring-emerald-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+              }`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isPrimeAchieved ? "bg-emerald-600 text-white" : "bg-indigo-50 text-indigo-600"}`}>
+                  <Award className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-[10px] font-black text-[#102341] mt-1">PRIME</div>
-                <div className="text-[9px] text-[#7b8da7] mt-0.5">6 slots • 84 IDs</div>
+                <div className="text-[9px] font-semibold text-[#7b8da7] mt-0.5">
+                  {isPrimeAchieved ? "Qualified ✓" : `${milestones}/84 IDs`}
+                </div>
               </div>
-              <div className="border border-[#e5edf7] bg-[#fafcff] rounded-xl p-2 text-center flex flex-col items-center">
-                <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center">
-                  <Trophy className="w-3.5 h-3.5 text-amber-600" />
+
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
+                isEliteAchieved ? "border-amber-500 bg-amber-50/80 shadow-xs ring-1 ring-amber-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+              }`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isEliteAchieved ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-600"}`}>
+                  <Trophy className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-[10px] font-black text-[#102341] mt-1">ELITE</div>
-                <div className="text-[9px] text-[#7b8da7] mt-0.5">9 slots • 126 IDs</div>
+                <div className="text-[9px] font-semibold text-[#7b8da7] mt-0.5">
+                  {isEliteAchieved ? "Qualified ✓" : `${milestones}/126 IDs`}
+                </div>
               </div>
-              <div className="border border-purple-200 bg-purple-50/50 rounded-xl p-2 text-center flex flex-col items-center">
-                <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center shadow-xs">
-                  <Crown className="w-3.5 h-3.5 text-purple-600" />
+
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
+                isCrownAchieved ? "border-purple-500 bg-purple-50/80 shadow-xs ring-1 ring-purple-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+              }`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isCrownAchieved ? "bg-purple-600 text-white" : "bg-purple-100 text-purple-600"}`}>
+                  <Crown className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-[10px] font-black text-[#102341] mt-1">CROWN APEX</div>
-                <div className="text-[9px] text-[#7b8da7] mt-0.5">12 slots • 168 IDs</div>
+                <div className="text-[9px] font-semibold text-[#7b8da7] mt-0.5">
+                  {isCrownAchieved ? "Qualified ✓" : `${milestones}/168 IDs`}
+                </div>
               </div>
             </div>
           </div>
@@ -364,6 +427,13 @@ export function OverviewTab({
         </div>
       </div>
 
+      {/* Rank Milestone Celebration Modal */}
+      <RankAchievedModal
+        isOpen={rankModalOpen}
+        onClose={handleCloseRankModal}
+        rank={activeRankModal}
+        milestones={milestones}
+      />
     </div>
   );
 }

@@ -18,6 +18,10 @@ const REGISTRY_HEX =
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   "4168686de05c0776cf5ffae505743d4b980c23baa3"; // TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i
 
+const SALARY_POOL_HEX =
+  process.env.NEXT_PUBLIC_SALARY_POOL_HEX ||
+  "41235122ea44e4fa4418606d44b204e1bcfe397ad5"; // TDjun5J74ybWbpsQfUSXuzdZGoGsZGsKbY
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,6 +361,77 @@ async function getSlotNodesWithCodesOnChain(userEthHex: string, slotNumber: numb
   return fetchRawNodesWithCodes(userEthHex, slotNumber);
 }
 
+async function getCycleSnapshotCount(userEthHex: string, slotNumber: number): Promise<number> {
+  const params = encodeAddress(userEthHex) + encodeUint256(slotNumber);
+  const chunks = await callContract(MATRIX_HEX, "getCycleSnapshotCount(address,uint256)", params);
+  return chunks[0] ? Number(decodeUint256(chunks[0])) : 0;
+}
+
+async function getCycleSnapshotDetail(userEthHex: string, slotNumber: number, index: number) {
+  const params = encodeAddress(userEthHex) + encodeUint256(slotNumber) + encodeUint256(index);
+  const chunks = await callContract(MATRIX_HEX, "getCycleSnapshotDetail(address,uint256,uint256)", params);
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  if (!chunks || chunks.length < 71) return null;
+
+  const cycleNumber = Number(decodeUint256(chunks[0]));
+  const nodeAddresses: string[] = [];
+  const nodeCodes: number[] = [];
+  const nodeMemberIds: number[] = [];
+  const payoutRecipients: string[] = [];
+  const payoutTypes: number[] = [];
+
+  for (let i = 0; i < 14; i++) {
+    nodeAddresses.push(chunks[1 + i] ? decodeAddress(chunks[1 + i]) : ZERO);
+    nodeCodes.push(chunks[15 + i] ? Number(decodeUint256(chunks[15 + i])) : 0);
+    nodeMemberIds.push(chunks[29 + i] ? Number(decodeUint256(chunks[29 + i])) : 0);
+    payoutRecipients.push(chunks[43 + i] ? decodeAddress(chunks[43 + i]) : ZERO);
+    payoutTypes.push(chunks[57 + i] ? Number(decodeUint256(chunks[57 + i])) : 0);
+  }
+  const completedAt = chunks[71] ? Number(decodeUint256(chunks[71])) : 0;
+
+  return { cycleNumber, nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes, completedAt };
+}
+
+async function getUserRoyaltyTier(userEthHex: string) {
+  try {
+    const params = encodeAddress(userEthHex);
+    const [tierChunks, milestoneChunks] = await Promise.all([
+      callContract(SALARY_POOL_HEX, "getUserTier(address)", params),
+      callContract(SALARY_POOL_HEX, "userMilestones(address)", params),
+    ]);
+    const tierNumber = tierChunks[0] ? Number(decodeUint256(tierChunks[0])) : 0;
+    const milestones = milestoneChunks[0] ? Number(decodeUint256(milestoneChunks[0])) : 0;
+    const TIER_NAMES = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
+    return {
+      tierNumber,
+      tierName: TIER_NAMES[tierNumber] || "NONE",
+      milestones,
+      alphaThreshold: 42,
+      primeThreshold: 84,
+      eliteThreshold: 126,
+      crownThreshold: 168,
+      isAlphaAchieved: milestones >= 42 || tierNumber >= 1,
+      isPrimeAchieved: milestones >= 84 || tierNumber >= 2,
+      isEliteAchieved: milestones >= 126 || tierNumber >= 3,
+      isCrownAchieved: milestones >= 168 || tierNumber >= 4,
+    };
+  } catch {
+    return {
+      tierNumber: 0,
+      tierName: "NONE",
+      milestones: 0,
+      alphaThreshold: 42,
+      primeThreshold: 84,
+      eliteThreshold: 126,
+      crownThreshold: 168,
+      isAlphaAchieved: false,
+      isPrimeAchieved: false,
+      isEliteAchieved: false,
+      isCrownAchieved: false,
+    };
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Build node list for a slot from authentic smart contract data
 // ─────────────────────────────────────────────────────────────────────────────
@@ -490,6 +565,7 @@ export async function GET(
           highestUnlockedSlot: highestUnlocked || 1,
           currentSlot: highestUnlocked || 1,
           isSlot2Reserved: highestUnlocked >= 2,
+          rankMilestones: await getUserRoyaltyTier(ethHex),
           joinedAt: new Date().toISOString(),
           _source: "onchain",
         },
@@ -542,6 +618,7 @@ export async function GET(
           recyclesCount: 0,
           trobPriceUsd,
           isQualified: qualified,
+          rankMilestones: await getUserRoyaltyTier(ethHex),
           activeDirectsCount: directs,
           sponsorAddress: sponsor,
           isUpline1Qualified,
@@ -619,7 +696,7 @@ export async function GET(
       return NextResponse.json({ success: true, data: slots });
     }
 
-    // ── /api/matrix/slots/:address/:slotNumber (slot detail with nodes) ──────
+    // ── /api/matrix/slots/:address/:slotNumber (slot detail with nodes & multi-cycle snapshots) ──
     if (path[0] === "slots" && path[1] && path[2]) {
       const ethHex = toEthHex(path[1]);
       const slotNumber = Math.min(Math.max(parseInt(path[2], 10) || 1, 1), 12);
@@ -627,20 +704,24 @@ export async function GET(
       const trobPriceUsd = trobPriceUsd6 / 1_000_000;
       const slotCostUsd = 30;
 
-      const [sd, nodesWithCodes] = await Promise.all([
+      const cycleParam = req.nextUrl.searchParams.get("cycle");
+      const targetCycle = cycleParam ? parseInt(cycleParam, 10) : null;
+
+      const [sd, nodesWithCodes, snapshotCount] = await Promise.all([
         getSlotDataV2(ethHex, slotNumber),
         getSlotNodesWithCodesOnChain(ethHex, slotNumber),
+        getCycleSnapshotCount(ethHex, slotNumber),
       ]);
 
       if (!sd) {
-        // fallback empty
         const emptyNodes = await buildNodes([], [], [], [], [], slotCostUsd);
         return NextResponse.json({
           success: true,
           data: {
             slotNumber, cost: slotCostUsd,
             isUnlocked: false, isLive: false,
-            currentCycle: 0, totalCycles: 0, filledNodes: 0, snapshotCount: 0,
+            currentCycle: 0, selectedCycle: 1, totalCycles: 0, filledNodes: 0, snapshotCount: 0,
+            isViewingSnapshot: false,
             nodes: emptyNodes,
             totalEarned: 0, totalEarnedTrob: 0, totalEarnedUsd: 0,
             _source: "onchain_empty",
@@ -648,16 +729,42 @@ export async function GET(
         });
       }
 
-      // Exact smart contract 14-seat board and member codes directly on-chain
-      const nodes = await buildNodes(
-        nodesWithCodes.nodeAddresses,
-        nodesWithCodes.nodeCodes,
-        nodesWithCodes.nodeMemberIds,
-        nodesWithCodes.payoutRecipients,
-        nodesWithCodes.payoutTypes,
-        slotCostUsd
-      );
-      const activeFilledCount = nodes.filter(n => n.filled).length;
+      let nodes: any[] = [];
+      let isViewingSnapshot = false;
+      let selectedCycle = sd.currentCycle || 1;
+      let displayFilledCount = 0;
+
+      // Check if user is requesting a past completed cycle snapshot
+      if (targetCycle && targetCycle <= snapshotCount && targetCycle < (sd.currentCycle || 1)) {
+        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle - 1);
+        if (snapDetail) {
+          nodes = await buildNodes(
+            snapDetail.nodeAddresses,
+            snapDetail.nodeCodes,
+            snapDetail.nodeMemberIds,
+            snapDetail.payoutRecipients,
+            snapDetail.payoutTypes,
+            slotCostUsd
+          );
+          isViewingSnapshot = true;
+          selectedCycle = snapDetail.cycleNumber;
+          displayFilledCount = 14;
+        }
+      }
+
+      if (!isViewingSnapshot) {
+        nodes = await buildNodes(
+          nodesWithCodes.nodeAddresses,
+          nodesWithCodes.nodeCodes,
+          nodesWithCodes.nodeMemberIds,
+          nodesWithCodes.payoutRecipients,
+          nodesWithCodes.payoutTypes,
+          slotCostUsd
+        );
+        const activeFilledCount = nodes.filter((n) => n.filled).length;
+        displayFilledCount = Math.max(sd.filledNodes || 0, activeFilledCount);
+      }
+
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
 
       return NextResponse.json({
@@ -668,14 +775,16 @@ export async function GET(
           isUnlocked: sd.isUnlocked,
           isLive: sd.isLive,
           currentCycle: sd.currentCycle,
-          totalCycles: sd.currentCycle,
-          snapshotCount: 0,
-          filledNodes: Math.max(sd.filledNodes || 0, activeFilledCount),
+          selectedCycle,
+          totalCycles: Math.max(sd.currentCycle || 1, snapshotCount),
+          snapshotCount,
+          isViewingSnapshot,
+          filledNodes: displayFilledCount,
           nodes,
           totalEarned: Number(sd.slotEarned),
           totalEarnedTrob,
           totalEarnedUsd: totalEarnedTrob * trobPriceUsd,
-          _source: "onchain",
+          _source: isViewingSnapshot ? "onchain_snapshot" : "onchain",
         },
       });
     }

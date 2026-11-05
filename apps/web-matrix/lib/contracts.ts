@@ -17,7 +17,7 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TLceLDoecmKJpakaxooNzDyEwkphpCkqKp",
+  matrix: "TNVT6eeHFgdeQKXMYq9D2sFMeDHN3sjbkp",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
   registry: "TZDGqBb9GmF6SPDfUigXbFeYBTLcqD5oML",
   vault: "TXr6CbCQBKFqF33P9o95SwwnV8zQa8nG2V",

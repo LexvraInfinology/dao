@@ -28,6 +28,7 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { SlotUnlockedCelebrationModal } from "@/components/modals/SlotUnlockedCelebrationModal";
 
 export interface MatrixTreePanelProps {
   data?: MatrixDashboardOverview | null;
@@ -187,6 +188,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const [directMembersList, setDirectMembersList] = useState<any[]>([]);
   const [selectedNodeModal, setSelectedNodeModal] = useState<SeatMeta | null>(null);
   const [copiedAddr, setCopiedAddr] = useState(false);
+  const [celebrationModalOpen, setCelebrationModalOpen] = useState(false);
+  const [celebrationUnlockedSlot, setCelebrationUnlockedSlot] = useState<number>(2);
 
   const storeSelectedCycle = useMatrixStore((s) => s.selectedCycle);
 
@@ -310,6 +313,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const isCurrentSlotLive = Boolean(isCurrentSlotUnlocked);
   const isSlotStandby = false;
 
+
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedCycle ?? 1) : 0;
   const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
   const isViewingSnapshot = isCurrentSlotUnlocked && (activeSlotDetails?.isViewingSnapshot ?? (selectedCycle < totalCycles));
@@ -328,6 +332,32 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const isNodeFilled = (pos: number) => {
     if (!isCurrentSlotUnlocked) return false;
     return Boolean(nodes[pos - 1]?.filled);
+  };
+
+  // Check if P4 & P5 automated escalation fulfilled -> celebrate next slot unlock
+  useEffect(() => {
+    if (!address || !isCurrentSlotUnlocked) return;
+    const isP4P5Filled = Boolean(nodes[3]?.filled && nodes[4]?.filled);
+    const nextSlotNum = selectedSlot + 1;
+    if (nextSlotNum <= 12 && (isP4P5Filled || highestUnlockedSlot >= nextSlotNum)) {
+      const key = `equora_slot_unlocked_celebration_seen_${nextSlotNum}_${address.toLowerCase()}`;
+      if (!localStorage.getItem(key)) {
+        setCelebrationUnlockedSlot(nextSlotNum);
+        setCelebrationModalOpen(true);
+      }
+    }
+  }, [address, isCurrentSlotUnlocked, selectedSlot, nodes, highestUnlockedSlot]);
+
+  const handleCloseCelebrationModal = () => {
+    if (address) {
+      localStorage.setItem(`equora_slot_unlocked_celebration_seen_${celebrationUnlockedSlot}_${address.toLowerCase()}`, "true");
+    }
+    setCelebrationModalOpen(false);
+  };
+
+  const handleNavigateCelebratedSlot = (slotNum: number) => {
+    handleCloseCelebrationModal();
+    handleSelectSlot(slotNum);
   };
 
   const getNodeInfo = (pos: number) => {
@@ -661,41 +691,41 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               14 Seats / Slot
             </span>
 
-            {/* INTERACTIVE CYCLE TOGGLE PILLS */}
+            {/* INTERACTIVE INFINITE CYCLE TOGGLE PILLS */}
             {!isCurrentSlotUnlocked ? (
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
                 <Lock className="w-3 h-3 text-slate-500" />
                 Slot #{String(selectedSlot).padStart(2, "0")} Locked
               </span>
             ) : totalCycles > 1 ? (
-              <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => handleCycleChange(1)}
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                    selectedCycle === 1
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <span>Cycle 1</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  <span className="text-[9px] opacity-90">(14/14 Fulfilled 🏆)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCycleChange(2)}
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                    selectedCycle === 2
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <span>Cycle 2</span>
-                  <span className="text-[9px] opacity-90">
-                    (Active{selectedCycle === 2 ? `: ${filledCount}/14` : ""})
-                  </span>
-                </button>
+              <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200 max-w-full overflow-x-auto no-scrollbar">
+                {Array.from({ length: totalCycles }, (_, idx) => idx + 1).map((cNum) => {
+                  const isSelected = selectedCycle === cNum;
+                  const isFulfilledSnapshot = cNum < totalCycles;
+                  return (
+                    <button
+                      key={cNum}
+                      type="button"
+                      onClick={() => handleCycleChange(cNum)}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                        isSelected
+                          ? isFulfilledSnapshot
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "bg-blue-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                      }`}
+                    >
+                      <span>Cycle #{cNum}</span>
+                      {isFulfilledSnapshot ? (
+                        <span className="text-[9px] opacity-90">(14/14 Fulfilled 🏆)</span>
+                      ) : (
+                        <span className="text-[9px] opacity-90">
+                          (Active{isSelected ? `: ${filledCount}/14` : ""})
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
@@ -914,6 +944,24 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       </div>
 
       {/* ───────────────── TREE VISUALIZER CONTAINER (Large & Bold Binary Tree Layout) ───────────────── */}
+      {/* Snapshot Viewing Indicator Banner */}
+      {isViewingSnapshot && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 px-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold animate-fade-in shadow-2xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Viewing Archived Cycle #{selectedCycle} Snapshot • 14/14 Placements Fulfilled & Settled</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleCycleChange(totalCycles)}
+            className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex items-center gap-1 shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <span>Return to Live Cycle #{totalCycles}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {viewMode === "tree" ? (
         <div className="mt-3 bg-gradient-to-b from-[#f8fbff] to-white border border-[#d8e6f8] rounded-2xl p-3 sm:p-5 w-full min-w-0">
           {/* Mobile Pan / Swipe Hint */}
@@ -1433,6 +1481,14 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           </div>
         </div>
       )}
+      {/* P4/P5 Auto-Escalation Unlock Celebration Modal */}
+      <SlotUnlockedCelebrationModal
+        isOpen={celebrationModalOpen}
+        onClose={handleCloseCelebrationModal}
+        unlockedSlot={celebrationUnlockedSlot}
+        completedSlot={celebrationUnlockedSlot - 1}
+        onNavigateToSlot={handleNavigateCelebratedSlot}
+      />
     </div>
   );
 }

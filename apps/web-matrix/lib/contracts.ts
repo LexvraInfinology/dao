@@ -23,7 +23,7 @@ export const TESTNET_DEFAULT_ADDRESSES = {
   vault: "TL6jaVYwfstQeeyHEyweJwUrr5dVn15TB9",
   salaryPool: "TXEEJQFhcQMExeL8hkKysGPuiWLTXD38RW",
   rewardPool: "TL9m6b69Sz9Hmr6iCgqPYfbQezQZbGZvqn",
-  magicBoxPool: "TFVFJcD27qeQnqVLEpSiHt4zcMctomsxYQ",
+  magicBoxPool: "TWT4V3tCaAvQwU5nnw6E8B87S1myyXVApE",
   dao: "TWmgPJhGGnELtUWtGcUF7iYTp4VqkJBuQY",
   nft: "TPZyHq1jBcj9s6LPwN16uFHpkecDfto2mi",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
@@ -2445,22 +2445,44 @@ export interface UserClaimablePoolRewards {
 export interface UserMagicBoxStatus {
   canClaim: boolean;
   hasClaimed: boolean;
+  hasReceived: boolean;
   tier: number;
   tierName: string;
   prizeTrob: number;
   prizeUsd: number;
   round: number;
+  receivedAmountTrob: number;
+  receivedTier: number;
+  receivedTierName: string;
+  receivedQuarter: number;
+  receivedTimestamp: number;
+  receivedUsd: number;
+  isInCurrentQuarter: boolean;
+  userQuarterNumber: number;
+  activeQuarter: number;
+  timeRemainingSeconds: number;
 }
 
 export async function getUserMagicBoxStatus(userAddress?: string): Promise<UserMagicBoxStatus> {
   const fallback: UserMagicBoxStatus = {
     canClaim: false,
     hasClaimed: false,
+    hasReceived: false,
     tier: 0,
     tierName: "NONE",
     prizeTrob: 0,
     prizeUsd: 0,
     round: 0,
+    receivedAmountTrob: 0,
+    receivedTier: 0,
+    receivedTierName: "NONE",
+    receivedQuarter: 0,
+    receivedTimestamp: 0,
+    receivedUsd: 0,
+    isInCurrentQuarter: false,
+    userQuarterNumber: 0,
+    activeQuarter: 1,
+    timeRemainingSeconds: 0,
   };
   if (!userAddress) return fallback;
 
@@ -2469,48 +2491,59 @@ export async function getUserMagicBoxStatus(userAddress?: string): Promise<UserM
     const userHex = toHexAddress(userAddress);
     const param = coder.encode(["address"], [userHex]).slice(2);
 
-    const [claimRaw, hasClaimedRaw] = await Promise.all([
-      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getClaimableReward(address)", param).catch(() => null),
-      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "hasReceivedMagicBox(address)", param).catch(() => null),
-    ]);
+    const statusRaw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.magicBoxPool,
+      "getUserStatus(address)",
+      param
+    ).catch(() => null);
 
-    let canClaim = false;
-    let tier = 0;
-    let prizeTrob = 0;
-    let prizeUsd = 0;
-    let round = 0;
+    if (statusRaw) {
+      const dec = coder.decode(
+        ["bool", "uint256", "uint8", "uint256", "uint256", "uint256", "bool", "uint256", "uint256", "uint256"],
+        "0x" + statusRaw
+      );
+      const hasReceived = Boolean(dec[0]);
+      const receivedAmountTrob = Number(ethers.formatUnits(dec[1], 6));
+      const receivedTier = Number(dec[2]);
+      const receivedQuarter = Number(dec[3]);
+      const receivedTimestamp = Number(dec[4]);
+      const receivedUsd = Number(dec[5]) / 100;
+      const isInCurrentQuarter = Boolean(dec[6]);
+      const userQuarterNumber = Number(dec[7]);
+      const activeQuarter = Number(dec[8]);
+      const timeRemainingSeconds = Number(dec[9]);
 
-    if (claimRaw) {
-      const dec = coder.decode(["bool", "uint8", "uint256", "uint256", "uint256"], "0x" + claimRaw);
-      canClaim = Boolean(dec[0]);
-      tier = Number(dec[1]);
-      prizeTrob = Number(ethers.formatUnits(dec[2], 6));
-      prizeUsd = Number(dec[3]) / 100;
-      round = Number(dec[4]);
+      const tierNames = [
+        "None",
+        "Tier 1 (Common 85% — $0.50)",
+        "Tier 2 (Uncommon 10% — $0.80)",
+        "Tier 3 (Rare 3% — $1.20)",
+        "Tier 4 (Legendary 2% — $5.00)"
+      ];
+
+      return {
+        hasReceived,
+        hasClaimed: hasReceived,
+        canClaim: !hasReceived && timeRemainingSeconds === 0 && isInCurrentQuarter,
+        tier: receivedTier,
+        tierName: tierNames[receivedTier] || "None",
+        prizeTrob: receivedAmountTrob,
+        prizeUsd: receivedUsd,
+        round: receivedQuarter || activeQuarter,
+        receivedAmountTrob,
+        receivedTier,
+        receivedTierName: tierNames[receivedTier] || "None",
+        receivedQuarter,
+        receivedTimestamp,
+        receivedUsd,
+        isInCurrentQuarter,
+        userQuarterNumber,
+        activeQuarter,
+        timeRemainingSeconds,
+      };
     }
 
-    let hasClaimed = false;
-    if (hasClaimedRaw) {
-      hasClaimed = Boolean(coder.decode(["bool"], "0x" + hasClaimedRaw)[0]);
-    }
-
-    const tierNames = [
-      "None",
-      "Tier 1 (Common 85% — $0.50)",
-      "Tier 2 (Uncommon 10% — $0.80)",
-      "Tier 3 (Rare 3% — $1.20)",
-      "Tier 4 (Legendary 2% — $5.00)"
-    ];
-
-    return {
-      canClaim,
-      hasClaimed,
-      tier,
-      tierName: tierNames[tier] || "None",
-      prizeTrob,
-      prizeUsd,
-      round,
-    };
+    return fallback;
   } catch (err) {
     console.warn("[getUserMagicBoxStatus] error:", err);
     return fallback;

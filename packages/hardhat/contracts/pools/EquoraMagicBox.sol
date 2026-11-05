@@ -6,24 +6,30 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title EquoraMagicBox
- * @dev Shared Quarterly Pool with Weighted Random Lottery Distribution.
+ * @dev Autonomous Rolling Quarterly Pool with Automatic On-Chain Direct Push Payouts.
  *
  * === OVERVIEW =================================================================
- *   The Magic Blind Box is a shared pool accumulating 10% of ALL platform deposits.
- *   Every 3 months (quarterly), the entire pool is distributed to eligible users
- *   who joined in that quarter via a weighted random lottery.
+ *   The Magic Blind Box is an autonomous protocol pool accumulating 10% of platform deposits.
+ *   Every 3 months (quarterly), eligible new users who registered in that quarter receive
+ *   an AUTOMATIC ON-CHAIN DIRECT PUSH transfer of native TROB directly into their wallets.
+ *   Users do NOT have to click a frontend claim button to receive their payout —
+ *   the funds are already transferred on-chain upon quarterly settlement.
  *
- * === PRIZE TIERS (100% of eligible members accounted for) ====================
+ * === ROLLING QUARTERLY COHORT LOOPS ===========================================
+ *   1. Users registered in Quarter Q belong to Cohort Q.
+ *   2. When Quarter Q settles (after 3 months), all Cohort Q users are automatically paid on-chain.
+ *   3. Settlement immediately increments currentQuarter to Q+1 and restarts the 3-month timer.
+ *   4. Any new users registered after settlement automatically enter Cohort Q+1 for the next 3 months.
+ *   5. Strictly 1x lifetime gift per wallet: hasReceivedMagicBox[user] is permanent.
+ *      Past recipients can NEVER enter subsequent quarter cohorts.
+ *
+ * === PRIZE TIERS (100% of eligible cohort members accounted for) =============
  *   Tier 1 (Common)    — 85% of eligible users → each wins $0.50 in TROB
  *   Tier 2 (Uncommon)  — 10% of eligible users → each wins $0.80 in TROB
  *   Tier 3 (Rare)      —  3% of eligible users → each wins $1.20 in TROB
  *   Tier 4 (Legendary) —  2% of eligible users → each wins $5.00 in TROB
  *
- * === STRICT RULES ============================================================
- *   1. Strictly 1x lifetime gift per wallet ("once only for every user of matrix").
- *   2. Only new users joined in that quarter are eligible for that quarter's draw.
- *   3. Zero dropped members: rounding formula ensures t1 + t2 + t3 + t4 == total.
- *   4. O(1) gas deterministic claim mechanism prevents EVM block gas limit crashes.
+ *   Zero Dropped Users: Rounding formula ensures t1 + t2 + t3 + t4 == totalUsers.
  */
 contract EquoraMagicBox is ReentrancyGuard {
 
@@ -62,6 +68,7 @@ contract EquoraMagicBox is ReentrancyGuard {
         uint256 t2Trob;
         uint256 t3Trob;
         uint256 t4Trob;
+        uint256 totalPaidTrob;
         uint256 timestamp;
     }
 
@@ -73,16 +80,37 @@ contract EquoraMagicBox is ReentrancyGuard {
     address public matrixContract;
     address public registryContract;
 
+    // Rolling Quarterly Cohorts
+    uint256 public currentQuarter = 1;
+    uint256 public quarterStartTime;
+
+    mapping(uint256 => address[]) private _quarterUsers;
+    mapping(uint256 => mapping(address => bool)) public isUserInQuarter;
+    mapping(address => uint256) public userQuarter;
+
+    // Global registry of users
     address[] public eligibleUsers;
     mapping(address => bool) public isEligible;
     mapping(address => uint256) public userJoinedTimestamp;
-    mapping(address => bool) public hasReceivedMagicBox; // strictly one gift per wallet lifetime
-    mapping(address => uint256) public pendingReward;
-    mapping(uint256 => QuarterDraw) public draws; // round => QuarterDraw
 
-    uint256 public poolBalance;                  // total TROB ready for distribution
-    uint256 public totalDistributed;
-    uint256 public totalRecipientsCount;         // total unique wallets that received a gift
+    // Strictly 1x lifetime gift per wallet
+    mapping(address => bool) public hasReceivedMagicBox;
+
+    // On-Chain Auto-Push Settlement Records per User
+    mapping(address => uint256) public userReceivedAmount;    // in TROB (SUN, 6 decimals)
+    mapping(address => uint8)   public userReceivedTier;      // 1..4
+    mapping(address => uint256) public userReceivedQuarter;   // Quarter round #
+    mapping(address => uint256) public userReceivedTimestamp; // block.timestamp
+    mapping(address => uint256) public userReceivedUsdCents;  // 50, 80, 120, 500
+
+    // Fallback pull-claim if an auto-push transfer fails (e.g. strict contract wallet)
+    mapping(address => uint256) public pendingReward;
+
+    mapping(uint256 => QuarterDraw) public draws;
+
+    uint256 public poolBalance;                  // Total TROB ready for distribution
+    uint256 public totalDistributed;             // Total TROB pushed to wallets
+    uint256 public totalRecipientsCount;         // Total unique wallets that received a gift
     uint256 public distributionCount;
     uint256 public lastDistributionTimestamp;
 
@@ -95,7 +123,7 @@ contract EquoraMagicBox is ReentrancyGuard {
     // ─── Events ────────────────────────────────────────────────────────────────
 
     event PoolDeposit(uint256 amount, uint256 newPoolBalance, uint256 timestamp);
-    event EligibleUserAdded(address indexed user, uint256 totalEligible, uint256 timestamp);
+    event EligibleUserAdded(address indexed user, uint256 cohortSize, uint256 indexed quarter, uint256 timestamp);
     event QuarterlyDistribution(
         uint256 indexed round,
         bytes32 seed,
@@ -104,6 +132,27 @@ contract EquoraMagicBox is ReentrancyGuard {
         uint256 t2Count,
         uint256 t3Count,
         uint256 t4Count,
+        uint256 timestamp
+    );
+    event RewardAutoPushed(
+        address indexed recipient,
+        uint256 amountTrob,
+        uint8 tier,
+        uint256 indexed quarter,
+        uint256 timestamp
+    );
+    event PushFailedFallbackAvailable(
+        address indexed recipient,
+        uint256 amountTrob,
+        uint8 tier,
+        uint256 indexed quarter,
+        uint256 timestamp
+    );
+    event QuarterSettledAndAdvanced(
+        uint256 indexed settledQuarter,
+        uint256 indexed nextQuarter,
+        uint256 totalUsers,
+        uint256 totalPaidTrob,
         uint256 timestamp
     );
     event RewardClaimed(
@@ -135,6 +184,7 @@ contract EquoraMagicBox is ReentrancyGuard {
         paymentToken = IERC20(_paymentToken);
         vault        = _vault;
         deployer     = msg.sender;
+        quarterStartTime = block.timestamp;
     }
 
     receive() external payable {
@@ -191,64 +241,96 @@ contract EquoraMagicBox is ReentrancyGuard {
     }
 
     /**
-     * @dev Register a user as eligible for the quarterly draw.
+     * @dev Register a new user into the CURRENT rolling quarter cohort.
+     *      Strictly 1x lifetime gift: if user already received, they are never re-added.
      */
     function addEligibleUser(address user) external {
-        if (msg.sender != vault && msg.sender != deployer && msg.sender != matrixContract) revert Unauthorized();
-        if (isEligible[user]) return;
+        if (msg.sender != vault && msg.sender != deployer && msg.sender != matrixContract && msg.sender != registryContract) revert Unauthorized();
+        if (user == address(0)) return;
+        if (hasReceivedMagicBox[user]) return; // strictly 1x lifetime per wallet!
+        if (isUserInQuarter[currentQuarter][user]) return;
 
-        isEligible[user] = true;
-        userJoinedTimestamp[user] = block.timestamp;
-        eligibleUsers.push(user);
-        emit EligibleUserAdded(user, eligibleUsers.length, block.timestamp);
+        isUserInQuarter[currentQuarter][user] = true;
+        userQuarter[user] = currentQuarter;
+        _quarterUsers[currentQuarter].push(user);
+
+        if (!isEligible[user]) {
+            isEligible[user] = true;
+            userJoinedTimestamp[user] = block.timestamp;
+            eligibleUsers.push(user);
+        }
+
+        emit EligibleUserAdded(user, _quarterUsers[currentQuarter].length, currentQuarter, block.timestamp);
     }
 
     /**
-     * @dev Batch register users (used during initialization / migration).
+     * @dev Batch register users into the CURRENT rolling quarter cohort.
      */
     function batchAddEligibleUsers(address[] calldata users) external {
-        if (msg.sender != vault && msg.sender != deployer && msg.sender != matrixContract) revert Unauthorized();
+        if (msg.sender != vault && msg.sender != deployer && msg.sender != matrixContract && msg.sender != registryContract) revert Unauthorized();
         for (uint256 i = 0; i < users.length; i++) {
             address u = users[i];
-            if (u != address(0) && !isEligible[u]) {
-                isEligible[u] = true;
-                userJoinedTimestamp[u] = block.timestamp;
-                eligibleUsers.push(u);
-                emit EligibleUserAdded(u, eligibleUsers.length, block.timestamp);
+            if (u != address(0) && !hasReceivedMagicBox[u] && !isUserInQuarter[currentQuarter][u]) {
+                isUserInQuarter[currentQuarter][u] = true;
+                userQuarter[u] = currentQuarter;
+                _quarterUsers[currentQuarter].push(u);
+
+                if (!isEligible[u]) {
+                    isEligible[u] = true;
+                    userJoinedTimestamp[u] = block.timestamp;
+                    eligibleUsers.push(u);
+                }
+
+                emit EligibleUserAdded(u, _quarterUsers[currentQuarter].length, currentQuarter, block.timestamp);
             }
         }
     }
 
-    // ─── Quarterly Distribution ────────────────────────────────────────────────
+    // ─── Automatic On-Chain Push Quarterly Distribution ────────────────────────
 
     /**
-     * @dev Distribute the accumulated Magic Box pool to all eligible users
-     *      via weighted random lottery.
-     *      Callable permissionlessly on the 11th of every 3-month cycle.
+     * @dev Standard quarterly distribution trigger.
+     *      Calculates prize distribution and AUTOMATICALLY PUSHES native TROB
+     *      directly to every cohort member's wallet on-chain!
+     *      Then advances to the next quarter loop for upcoming new users.
      */
     function distributeQuarterly(uint256 seed) external nonReentrant {
         _checkDistributionWindow();
-        _executeQuarterlyDistribution(bytes32(seed));
+        _executeQuarterlyAutoPush(bytes32(seed));
     }
 
     /**
-     * @dev Direct bypass call for testing.
+     * @dev Direct bypass call for testing and demonstration.
      */
     function distributeQuarterlyBypass(uint256 seed) external nonReentrant {
         if (msg.sender != deployer && msg.sender != vault) revert Unauthorized();
-        _executeQuarterlyDistribution(bytes32(seed));
+        _executeQuarterlyAutoPush(bytes32(seed));
     }
 
-    function _executeQuarterlyDistribution(bytes32 seedInput) internal {
-        uint256 total = eligibleUsers.length;
-        if (total == 0 || poolBalance == 0) return;
+    /**
+     * @dev Core Automatic Push Engine:
+     *      1. Computes zero-lost-users tier breakdown (85% / 10% / 3% / 2%).
+     *      2. Evaluates each cohort user's deterministic prize.
+     *      3. DIRECTLY TRANSFERS native TROB into each user's wallet on-chain.
+     *      4. Marks hasReceivedMagicBox[user] = true (strictly 1x lifetime).
+     *      5. Advances currentQuarter++ and restarts the 3-month timer for new users!
+     */
+    function _executeQuarterlyAutoPush(bytes32 seedInput) internal {
+        uint256 q = currentQuarter;
+        uint256 total = _quarterUsers[q].length;
 
-        lastDistributionTimestamp = block.timestamp;
-        distributionCount++;
-        uint256 round = distributionCount;
+        // If no users in this cohort, simply advance to next quarter
+        if (total == 0) {
+            lastDistributionTimestamp = block.timestamp;
+            distributionCount++;
+            currentQuarter++;
+            quarterStartTime = block.timestamp;
+            emit QuarterSettledAndAdvanced(q, currentQuarter, 0, 0, block.timestamp);
+            return;
+        }
 
         // Zero-Lost-Users Rounding Formula:
-        // Half-up rounding on smaller tiers + Tier 1 takes remainder
+        // Half-up rounding on smaller tiers + Tier 1 takes exact remainder
         uint256 t4Count = (total * TIER4_USER_BPS + BPS_BASE / 2) / BPS_BASE;
         uint256 t3Count = (total * TIER3_USER_BPS + BPS_BASE / 2) / BPS_BASE;
         uint256 t2Count = (total * TIER2_USER_BPS + BPS_BASE / 2) / BPS_BASE;
@@ -275,7 +357,7 @@ contract EquoraMagicBox is ReentrancyGuard {
         uint256 totalRequired = (t1Trob * t1Count) + (t2Trob * t2Count) +
                                 (t3Trob * t3Count) + (t4Trob * t4Count);
 
-        // Scale down if pool is insufficient
+        // Scale down proportionally if pool balance is below theoretical requirement
         if (totalRequired > poolBalance && totalRequired > 0) {
             uint256 scale = (poolBalance * 1e18) / totalRequired;
             t1Trob = (t1Trob * scale) / 1e18;
@@ -286,17 +368,82 @@ contract EquoraMagicBox is ReentrancyGuard {
 
         bytes32 entropySeed = keccak256(abi.encodePacked(
             seedInput, block.timestamp, block.prevrandao, block.number,
-            total, round
+            total, q
         ));
 
-        uint256 startTime = round == 1 ? 0 : lastDistributionTimestamp - MIN_INTERVAL;
-        uint256 endTime = block.timestamp;
+        // AUTOMATIC ON-CHAIN DIRECT PUSH TRANSFER LOOP
+        uint256 totalPaid = 0;
+        uint256 successfulRecipients = 0;
 
-        draws[round] = QuarterDraw({
-            round: round,
+        for (uint256 i = 0; i < total; i++) {
+            address recipient = _quarterUsers[q][i];
+            if (recipient == address(0) || hasReceivedMagicBox[recipient]) continue;
+
+            uint256 roll = uint256(keccak256(abi.encodePacked(entropySeed, recipient, i))) % BPS_BASE;
+            uint8 tier;
+            uint256 prizeTrob;
+            uint256 prizeUsd;
+
+            if (roll < TIER4_USER_BPS) {
+                tier = 4;
+                prizeTrob = t4Trob;
+                prizeUsd = TIER4_USD_CENTS;
+            } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS) {
+                tier = 3;
+                prizeTrob = t3Trob;
+                prizeUsd = TIER3_USD_CENTS;
+            } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS + TIER2_USER_BPS) {
+                tier = 2;
+                prizeTrob = t2Trob;
+                prizeUsd = TIER2_USD_CENTS;
+            } else {
+                tier = 1;
+                prizeTrob = t1Trob;
+                prizeUsd = TIER1_USD_CENTS;
+            }
+
+            // Permanently mark user received (1x lifetime gift)
+            hasReceivedMagicBox[recipient] = true;
+            userReceivedAmount[recipient] = prizeTrob;
+            userReceivedTier[recipient] = tier;
+            userReceivedQuarter[recipient] = q;
+            userReceivedTimestamp[recipient] = block.timestamp;
+            userReceivedUsdCents[recipient] = prizeUsd;
+
+            // Direct On-Chain Push Transfer to user's wallet!
+            if (prizeTrob > 0 && address(this).balance >= prizeTrob) {
+                (bool sent, ) = payable(recipient).call{value: prizeTrob, gas: 100000}("");
+                if (sent) {
+                    totalPaid += prizeTrob;
+                    successfulRecipients++;
+                    emit RewardAutoPushed(recipient, prizeTrob, tier, q, block.timestamp);
+                } else {
+                    // Fallback safety: store in pendingReward so user can pull claim
+                    pendingReward[recipient] = prizeTrob;
+                    emit PushFailedFallbackAvailable(recipient, prizeTrob, tier, q, block.timestamp);
+                }
+            } else {
+                // If contract balance ran dry, record pending
+                pendingReward[recipient] = prizeTrob;
+                emit PushFailedFallbackAvailable(recipient, prizeTrob, tier, q, block.timestamp);
+            }
+        }
+
+        // Update contract accounting
+        totalDistributed += totalPaid;
+        totalRecipientsCount += successfulRecipients;
+        if (poolBalance >= totalPaid) {
+            poolBalance -= totalPaid;
+        } else {
+            poolBalance = 0;
+        }
+
+        // Record draw history
+        draws[q] = QuarterDraw({
+            round: q,
             seed: entropySeed,
-            startTime: startTime,
-            endTime: endTime,
+            startTime: quarterStartTime,
+            endTime: block.timestamp,
             totalUsers: total,
             t1Count: t1Count,
             t2Count: t2Count,
@@ -306,17 +453,33 @@ contract EquoraMagicBox is ReentrancyGuard {
             t2Trob: t2Trob,
             t3Trob: t3Trob,
             t4Trob: t4Trob,
+            totalPaidTrob: totalPaid,
             timestamp: block.timestamp
         });
 
         emit QuarterlyDistribution(
-            round,
+            q,
             entropySeed,
             total,
             t1Count,
             t2Count,
             t3Count,
             t4Count,
+            block.timestamp
+        );
+
+        // ADVANCE TO NEXT QUARTER ROLLING LOOP!
+        lastDistributionTimestamp = block.timestamp;
+        distributionCount++;
+        uint256 settledQuarter = q;
+        currentQuarter = q + 1;
+        quarterStartTime = block.timestamp;
+
+        emit QuarterSettledAndAdvanced(
+            settledQuarter,
+            currentQuarter,
+            total,
+            totalPaid,
             block.timestamp
         );
     }
@@ -341,123 +504,93 @@ contract EquoraMagicBox is ReentrancyGuard {
         return d;
     }
 
-    // ─── User Evaluation & Claim ───────────────────────────────────────────────
+    // ─── Fallback Pull Claim (Only for failed push or pending rewards) ──────────
 
     /**
-     * @dev Evaluate user's deterministic prize for a given round.
-     *      O(1) gas — runs without loops or storage writes.
-     */
-    function getUserQuarterPrize(address user, uint256 round) public view returns (
-        bool eligible,
-        bool claimed,
-        uint8 tier,
-        uint256 prizeTrob,
-        uint256 prizeUsdCents
-    ) {
-        if (round == 0 || round > distributionCount) return (false, false, 0, 0, 0);
-        QuarterDraw memory draw = draws[round];
-
-        eligible = isEligible[user];
-        claimed = hasReceivedMagicBox[user];
-
-        if (!eligible) return (false, claimed, 0, 0, 0);
-
-        uint256 roll = uint256(keccak256(abi.encodePacked(draw.seed, user))) % BPS_BASE;
-
-        if (roll < TIER4_USER_BPS) {
-            tier = 4;
-            prizeTrob = draw.t4Trob;
-            prizeUsdCents = TIER4_USD_CENTS;
-        } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS) {
-            tier = 3;
-            prizeTrob = draw.t3Trob;
-            prizeUsdCents = TIER3_USD_CENTS;
-        } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS + TIER2_USER_BPS) {
-            tier = 2;
-            prizeTrob = draw.t2Trob;
-            prizeUsdCents = TIER2_USD_CENTS;
-        } else {
-            tier = 1;
-            prizeTrob = draw.t1Trob;
-            prizeUsdCents = TIER1_USD_CENTS;
-        }
-    }
-
-    /**
-     * @dev View function for frontend to query claimable status for connected wallet.
-     */
-    function getClaimableReward(address user) external view returns (
-        bool canClaim,
-        uint8 tier,
-        uint256 prizeTrob,
-        uint256 prizeUsdCents,
-        uint256 round
-    ) {
-        if (!isEligible[user] || hasReceivedMagicBox[user] || distributionCount == 0) {
-            return (false, 0, 0, 0, 0);
-        }
-        round = distributionCount;
-        (bool eligible, bool claimed, uint8 t, uint256 pTrob, uint256 pUsd) = getUserQuarterPrize(user, round);
-        canClaim = eligible && !claimed && pTrob > 0;
-        tier = t;
-        prizeTrob = pTrob;
-        prizeUsdCents = pUsd;
-    }
-
-    /**
-     * @dev User claims their quarterly reward (Pull-based, O(1) gas).
-     *      Strictly ONE lifetime gift per wallet!
+     * @dev Fallback pull-claim if an auto-push transfer failed to credit.
      */
     function claimReward() external nonReentrant returns (uint256 claimedAmount) {
-        if (!isEligible[msg.sender]) revert NotEligible();
-        if (hasReceivedMagicBox[msg.sender]) revert AlreadyClaimed();
-        if (distributionCount == 0) revert NothingToClaim();
+        uint256 amount = pendingReward[msg.sender];
+        if (amount == 0) revert NothingToClaim();
 
-        uint256 round = distributionCount;
-        (bool eligible, bool claimed, uint8 tier, uint256 prizeTrob, ) = getUserQuarterPrize(msg.sender, round);
-        if (!eligible || claimed || prizeTrob == 0) revert NothingToClaim();
-
-        // Mark user claimed permanently (1x lifetime gift)
-        hasReceivedMagicBox[msg.sender] = true;
+        pendingReward[msg.sender] = 0;
+        totalDistributed += amount;
         totalRecipientsCount++;
-        totalDistributed += prizeTrob;
 
-        if (poolBalance >= prizeTrob) {
-            poolBalance -= prizeTrob;
+        if (poolBalance >= amount) {
+            poolBalance -= amount;
         } else {
             poolBalance = 0;
         }
 
-        bool ok = false;
-        if (address(this).balance >= prizeTrob) {
-            (bool sent, ) = payable(msg.sender).call{value: prizeTrob}("");
-            ok = sent;
-        }
-        if (!ok && address(paymentToken) != address(0)) {
-            try paymentToken.transfer(msg.sender, prizeTrob) returns (bool res) {
-                ok = res;
-            } catch {}
-        }
-        if (!ok) revert TransferFailed();
+        (bool sent, ) = payable(msg.sender).call{value: amount}("");
+        if (!sent) revert TransferFailed();
 
-        emit RewardClaimed(msg.sender, prizeTrob, tier, round, block.timestamp);
-        return prizeTrob;
+        emit RewardClaimed(msg.sender, amount, userReceivedTier[msg.sender], userReceivedQuarter[msg.sender], block.timestamp);
+        return amount;
     }
 
-    // ─── View Functions ────────────────────────────────────────────────────────
+    // ─── View Functions for Frontend & Diagnostics ─────────────────────────────
+
+    /**
+     * @dev Comprehensive view function returning all relevant status for a wallet in ONE call.
+     */
+    function getUserStatus(address user) external view returns (
+        bool hasReceived,
+        uint256 receivedAmount,
+        uint8 receivedTier,
+        uint256 receivedQuarter,
+        uint256 receivedTimestamp,
+        uint256 receivedUsdCents,
+        bool isInCurrentQuarter,
+        uint256 userQuarterNumber,
+        uint256 activeQuarter,
+        uint256 timeRemainingSeconds
+    ) {
+        hasReceived = hasReceivedMagicBox[user];
+        receivedAmount = userReceivedAmount[user];
+        receivedTier = userReceivedTier[user];
+        receivedQuarter = userReceivedQuarter[user];
+        receivedTimestamp = userReceivedTimestamp[user];
+        receivedUsdCents = userReceivedUsdCents[user];
+        isInCurrentQuarter = isUserInQuarter[currentQuarter][user];
+        userQuarterNumber = userQuarter[user];
+        activeQuarter = currentQuarter;
+
+        if (bypassTimerForTesting) {
+            timeRemainingSeconds = 0;
+        } else {
+            uint256 startTime = quarterStartTime > 0 ? quarterStartTime : lastDistributionTimestamp;
+            uint256 nextDraw = startTime + MIN_INTERVAL;
+            if (block.timestamp >= nextDraw) {
+                timeRemainingSeconds = 0;
+            } else {
+                timeRemainingSeconds = nextDraw - block.timestamp;
+            }
+        }
+    }
+
+    function getQuarterUsers(uint256 quarter) external view returns (address[] memory) {
+        return _quarterUsers[quarter];
+    }
+
+    function getQuarterUserCount(uint256 quarter) external view returns (uint256) {
+        return _quarterUsers[quarter].length;
+    }
 
     function getEligibleCount() external view returns (uint256) {
         return eligibleUsers.length;
     }
 
     function isEligibleForMagicBox(address user) external view returns (bool) {
-        return isEligible[user] && !hasReceivedMagicBox[user];
+        return !hasReceivedMagicBox[user] && (isUserInQuarter[currentQuarter][user] || isEligible[user]);
     }
 
     function getTimeUntilNextDraw() external view returns (uint256) {
         if (bypassTimerForTesting) return 0;
-        if (lastDistributionTimestamp == 0) return 0;
-        uint256 nextDraw = lastDistributionTimestamp + MIN_INTERVAL;
+        uint256 startTime = quarterStartTime > 0 ? quarterStartTime : lastDistributionTimestamp;
+        if (startTime == 0) return 0;
+        uint256 nextDraw = startTime + MIN_INTERVAL;
         if (block.timestamp >= nextDraw) return 0;
         return nextDraw - block.timestamp;
     }
@@ -466,9 +599,19 @@ contract EquoraMagicBox is ReentrancyGuard {
         uint256 balance,
         uint256 totalDist,
         uint256 rounds,
-        uint256 users,
+        uint256 totalRecipients,
+        uint256 activeQuarter,
+        uint256 currentCohortUsers,
         uint256 lastDist
     ) {
-        return (poolBalance, totalDistributed, distributionCount, eligibleUsers.length, lastDistributionTimestamp);
+        return (
+            poolBalance,
+            totalDistributed,
+            distributionCount,
+            totalRecipientsCount,
+            currentQuarter,
+            _quarterUsers[currentQuarter].length,
+            lastDistributionTimestamp
+        );
     }
 }

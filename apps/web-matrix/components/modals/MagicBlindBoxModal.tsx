@@ -140,25 +140,23 @@ export function MagicBlindBoxModal({
             </div>
           </div>
 
-          {/* Action Button */}
-          {claimedTx || liveStatus?.hasClaimed ? (
+          {/* Action Button / Settlement Notice */}
+          {claimedTx || liveStatus?.hasReceived || liveStatus?.hasClaimed ? (
             <div className="mt-6 flex flex-col gap-2">
               <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[13px] font-bold flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Reward Claim Confirmed On-Chain!</span>
+                  <span>Automatically Sent Directly to Your Wallet On-Chain!</span>
                 </div>
-                {claimedTx && (
-                  <span className="text-[10px] text-slate-500 font-mono truncate max-w-full">
-                    Tx: {claimedTx}
-                  </span>
-                )}
+                <span className="text-[11px] font-normal text-emerald-700 text-center">
+                  Quarter #{liveStatus?.receivedQuarter || 1} protocol distribution was directly pushed to your address. No claim required.
+                </span>
               </div>
               <button
                 onClick={onClose}
-                className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-[13px] hover:bg-slate-950 transition-colors"
+                className="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-black text-[13px] hover:bg-slate-950 transition-colors cursor-pointer"
               >
-                Close
+                Return to Dashboard
               </button>
             </div>
           ) : (

@@ -836,7 +836,7 @@ export async function getOnChainSlotDetails(
     cost: getSlotCost(slotNumber),
     isUnlocked: Boolean(isUnlocked),
     isLive: Boolean(isUnlocked && isLive),
-    isStandby: false,
+    isStandby: Boolean(slotNumber > 1 && isUnlocked && !prevSlotCompleted),
     prevSlotCompleted: Boolean(prevSlotCompleted),
     isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
@@ -2368,8 +2368,8 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     dao: {
       address: CONTRACT_ADDRESSES.dao,
       sharePercent: 35,
-      streamedTrob: totalRoutedFromMatrix * 0.35,
-      balanceTrob: 8601.134256,
+      streamedTrob: (totalRoutedFromMatrix + totalRoutedFromUsers) * 0.35,
+      balanceTrob: 0,
     },
     salaryPool: {
       address: CONTRACT_ADDRESSES.salaryPool,
@@ -2461,6 +2461,70 @@ export async function getUserClaimablePoolRewards(userAddress: string): Promise<
  * 100% Live On-Chain Transaction Ledger Generator
  * Reconstructs all verified matrix purchases and P2P payouts directly from smart contracts
  */
+export interface UserRankMilestones {
+  tierNumber: number;
+  tierName: string;
+  milestones: number;
+  alphaThreshold: number;
+  primeThreshold: number;
+  eliteThreshold: number;
+  crownThreshold: number;
+  isAlphaAchieved: boolean;
+  isPrimeAchieved: boolean;
+  isEliteAchieved: boolean;
+  isCrownAchieved: boolean;
+}
+
+export async function getOnChainUserRankMilestones(userAddress: string): Promise<UserRankMilestones> {
+  const fallback: UserRankMilestones = {
+    tierNumber: 0,
+    tierName: "NONE",
+    milestones: 0,
+    alphaThreshold: 42,
+    primeThreshold: 84,
+    eliteThreshold: 126,
+    crownThreshold: 168,
+    isAlphaAchieved: false,
+    isPrimeAchieved: false,
+    isEliteAchieved: false,
+    isCrownAchieved: false,
+  };
+  if (!userAddress) return fallback;
+
+  try {
+    const coder = new ethers.AbiCoder();
+    const userHex = toHexAddress(userAddress);
+    if (!userHex || userHex === "0x0000000000000000000000000000000000000000") return fallback;
+    const param = coder.encode(["address"], [userHex]).slice(2);
+
+    const [milestonesRaw, tierRaw] = await Promise.all([
+      queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "userMilestones(address)", param).catch(() => null),
+      queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "getUserTier(address)", param).catch(() => null),
+    ]);
+
+    const milestones = milestonesRaw ? Number(coder.decode(["uint256"], "0x" + milestonesRaw)[0]) : 0;
+    const tierNumber = tierRaw ? Number(coder.decode(["uint8"], "0x" + tierRaw)[0]) : 0;
+    const TIER_NAMES = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
+
+    return {
+      tierNumber,
+      tierName: TIER_NAMES[tierNumber] || "NONE",
+      milestones,
+      alphaThreshold: 42,
+      primeThreshold: 84,
+      eliteThreshold: 126,
+      crownThreshold: 168,
+      isAlphaAchieved: milestones >= 42 || tierNumber >= 1,
+      isPrimeAchieved: milestones >= 84 || tierNumber >= 2,
+      isEliteAchieved: milestones >= 126 || tierNumber >= 3,
+      isCrownAchieved: milestones >= 168 || tierNumber >= 4,
+    };
+  } catch (err) {
+    console.warn("[getOnChainUserRankMilestones] error:", err);
+    return fallback;
+  }
+}
+
 export async function getOnChainUserTransactions(userAddress: string) {
   const userHex = toHexAddress(userAddress).toLowerCase();
   const items: any[] = [];

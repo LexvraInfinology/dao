@@ -127,6 +127,7 @@ export interface MatrixDashboardOverview {
   isQualified?: boolean;
   activeDirectsCount?: number;
   sponsorAddress?: string | null;
+  rankMilestones?: any;
   activeSlotProgress: {
     slotNumber: number;
     filledNodes: number;

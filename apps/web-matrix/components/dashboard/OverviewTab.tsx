@@ -21,6 +21,8 @@ export function OverviewTab({
   onSwitchTab,
 }: OverviewTabProps) {
   const currentSlot = dashboard?.currentSlot ?? profile?.currentSlot ?? 1;
+  const activeBoardSlot = dashboard?.activeSlotProgress?.slotNumber ?? currentSlot;
+  const activeBoardSlotStr = activeBoardSlot.toString().padStart(2, "0");
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
   const isRegistered = Boolean(profile?.isRegistered);
   const highestUnlockedSlot = isRegistered
@@ -162,7 +164,7 @@ export function OverviewTab({
             </div>
           </div>
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
-            Slot #{currentSlotStr}
+            Slot #{activeBoardSlotStr}
           </div>
           <div className="text-[10.5px] text-[#8494a9] mt-1.5 truncate">
             {`${filledNodes} / 14 seats filled`}

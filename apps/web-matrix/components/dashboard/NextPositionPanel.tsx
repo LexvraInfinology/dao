@@ -144,7 +144,22 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #{currentCycle} Fulfilled (14/14)
             </span>
-          ) : (
+          ) : isSlotStandby ? (
+          <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white mb-3.5">
+            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span className="flex items-center gap-1.5 text-blue-900">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <span>Standby Mode (Tier Reserved)</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
+                Reserved Tier
+              </span>
+            </div>
+            <p className="text-[11.5px] font-semibold text-slate-700 leading-relaxed">
+              You own this slot tier! Placements will actively route and fill on this board as soon as your Slot #{activeSlotNumber - 1} board completes all 14 positions.
+            </p>
+          </div>
+        ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
               Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #{currentCycle} Active
             </span>

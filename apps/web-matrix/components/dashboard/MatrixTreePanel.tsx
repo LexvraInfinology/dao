@@ -610,6 +610,12 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         roleBadge = "bg-purple-100/90 text-purple-900 border-purple-300 font-black";
         statusDot = <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" />;
       }
+    } else if (isSlotStandby) {
+      styleClass =
+        "bg-slate-50/70 border-2 border-dashed border-blue-200 text-slate-400 opacity-80 hover:opacity-100 transition-all";
+      roleBadge = "bg-blue-50 text-blue-700 border-blue-200 font-semibold";
+      statusText = "Standby";
+      statusDot = <Lock className="w-2.5 h-2.5 text-blue-500" />;
     } else if (isNextUp) {
       styleClass =
         "bg-gradient-to-b from-blue-500/15 via-sky-50 to-white border-2 border-blue-500 ring-4 ring-blue-500/30 shadow-lg shadow-blue-500/20 text-slate-900 animate-pulse";
@@ -629,7 +635,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       statusText = "Open";
     }
 
-    let dynamicRole = cfg.role;
+    let dynamicRole = isSlotStandby ? "Standby" : cfg.role;
     if (cfg.type === "income") {
       if (filled) {
         dynamicRole = isOwnerQualified ? `+$30 YOU` : `Pool (${directsCount}/2)`;
@@ -920,6 +926,33 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
           >
             ← View Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}
+          </button>
+        </div>
+      )}
+
+      
+      {/* ───────────────── STANDBY RESERVED SLOT BANNER ───────────────── */}
+      {isSlotStandby && (
+        <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 via-sky-50 to-blue-50 border border-blue-200 text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-blue-950 block">
+                Slot #{String(selectedSlot).padStart(2, "0")} is in Standby Mode (Reserved Tier)
+              </span>
+              <span className="text-[11px] text-blue-700 font-medium">
+                You have unlocked this tier! Active placements will begin flowing into this board once Slot #{selectedSlot - 1} completes all 14/14 seats.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSelectSlot(selectedSlot - 1)}
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all"
+          >
+            ← View Slot #{String(selectedSlot - 1).padStart(2, "0")} Tree
           </button>
         </div>
       )}

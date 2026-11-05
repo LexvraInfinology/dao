@@ -12,6 +12,7 @@ import {
   getOnChainDirectMembers,
   getOnChainUserProfile,
   getOnChainQualification,
+  getOnChainUserRankMilestones,
 } from "../contracts";
 import { useUserStore } from "./useUserStore";
 
@@ -20,6 +21,7 @@ export interface MatrixState {
   selectedSlotNumber: number;
   selectedCycle: number | null;
   slotDetails: MatrixSlotDetails | null;
+  slotDetailsCache: Record<string, MatrixSlotDetails>;
   directMembers: Array<{
     address: string;
     userId: number;
@@ -61,6 +63,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
   selectedSlotNumber: 1,
   selectedCycle: null,
   slotDetails: null,
+  slotDetailsCache: {},
   directMembers: [],
   dashboard: null,
 
@@ -102,34 +105,47 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
   },
 
   selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
-    set({ selectedSlotNumber: slotNum, selectedCycle: cycle ?? null });
-    await get().fetchSlotDetails(slotNum, cycle, userAddress, true);
+    const targetCycle = cycle ?? 1;
+    const cacheKey = `${slotNum}_${targetCycle}`;
+    const cached = get().slotDetailsCache[cacheKey];
+
+    // If cached, immediately show cached board to prevent jitter / blank flashes
+    if (cached) {
+      set({
+        selectedSlotNumber: slotNum,
+        selectedCycle: targetCycle,
+        slotDetails: cached,
+      });
+    } else {
+      set({ selectedSlotNumber: slotNum, selectedCycle: targetCycle });
+    }
+
+    await get().fetchSlotDetails(slotNum, targetCycle, userAddress, true);
   },
 
   fetchSlotDetails: async (slotNum, cycle, userAddress, force = false) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) return;
     const targetSlot = slotNum ?? get().selectedSlotNumber ?? 1;
-    const { slotDetails, loadingDetails, selectedCycle } = get();
-    const targetCycle = cycle ?? selectedCycle ?? undefined;
+    const { slotDetails, loadingDetails, selectedCycle, slotDetailsCache } = get();
+    const targetCycle = cycle ?? selectedCycle ?? 1;
+    const cacheKey = `${targetSlot}_${targetCycle}`;
 
-    const isSlotSwitch = targetSlot !== slotDetails?.slotNumber;
+    const isSlotSwitch = targetSlot !== slotDetails?.slotNumber || targetCycle !== (slotDetails?.currentCycle ?? 1);
     const isInitialLoad = !slotDetails;
 
-    // Only bail out on ongoing fetch if we're not explicitly switching slots
-    if (loadingDetails && !isSlotSwitch) return;
-
-    if (
-      slotDetails &&
-      slotDetails.slotNumber === targetSlot &&
-      (targetCycle === undefined || slotDetails.currentCycle === targetCycle) &&
-      !force
-    ) {
+    // Fast cache display if available and not forcing refresh
+    if (!force && slotDetailsCache[cacheKey]) {
+      set({
+        slotDetails: slotDetailsCache[cacheKey],
+        selectedSlotNumber: targetSlot,
+        selectedCycle: targetCycle,
+        loadingDetails: false,
+      });
       return;
     }
 
-    // Only set loading indicator on initial load or explicit slot switch, never on background refresh
-    if (isInitialLoad || isSlotSwitch) {
+    if (isInitialLoad && !slotDetailsCache[cacheKey]) {
       set({ loadingDetails: true, error: null });
     }
 
@@ -137,12 +153,19 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       // 1. Prioritize live on-chain 14-node board data
       const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, targetCycle);
       if (onChainDetails) {
-        set({
-          slotDetails: onChainDetails,
-          selectedSlotNumber: targetSlot,
-          selectedCycle: onChainDetails.currentCycle,
-          loadingDetails: false,
-        });
+        const newCache = { ...get().slotDetailsCache, [cacheKey]: onChainDetails };
+        // Only update current slotDetails if the user is still on this slot and cycle
+        if (get().selectedSlotNumber === targetSlot && (get().selectedCycle ?? 1) === (onChainDetails.currentCycle ?? targetCycle)) {
+          set({
+            slotDetails: onChainDetails,
+            selectedSlotNumber: targetSlot,
+            selectedCycle: onChainDetails.currentCycle,
+            slotDetailsCache: newCache,
+            loadingDetails: false,
+          });
+        } else {
+          set({ slotDetailsCache: newCache });
+        }
         return;
       }
     } catch (err: any) {
@@ -151,12 +174,20 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
     try {
       const details = await matrixApi.getSlotDetails(addr, targetSlot, targetCycle);
-      set({
-        slotDetails: details,
-        selectedSlotNumber: targetSlot,
-        selectedCycle: targetCycle ?? null,
-        loadingDetails: false,
-      });
+      if (details) {
+        const newCache = { ...get().slotDetailsCache, [cacheKey]: details };
+        if (get().selectedSlotNumber === targetSlot) {
+          set({
+            slotDetails: details,
+            selectedSlotNumber: targetSlot,
+            selectedCycle: targetCycle ?? null,
+            slotDetailsCache: newCache,
+            loadingDetails: false,
+          });
+        } else {
+          set({ slotDetailsCache: newCache });
+        }
+      }
     } catch (err: any) {
       set({
         error: err?.message || `Failed to load details for slot ${targetSlot}`,
@@ -229,10 +260,11 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
     // 1. Prioritize live on-chain contract state
     try {
-      const [onChainDetails, onChainProf, onChainQual] = await Promise.all([
+      const [onChainDetails, onChainProf, onChainQual, onChainRank] = await Promise.all([
         getOnChainSlotDetails(addr, 1).catch(() => null),
         getOnChainUserProfile(addr).catch(() => null),
         getOnChainQualification(addr).catch(() => null),
+        getOnChainUserRankMilestones(addr).catch(() => null),
       ]);
 
       if (onChainDetails || onChainProf) {
@@ -259,6 +291,19 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           totalWithdrawnUsd: onChainProf?.withdrawnTotalUsd ?? 0,
           recyclesCount: onChainDetails?.recyclesCount ?? 0,
           trobPriceUsd: TROB_PRICE_USD,
+          rankMilestones: onChainRank || {
+            tierNumber: 0,
+            tierName: "NONE",
+            milestones: 0,
+            alphaThreshold: 42,
+            primeThreshold: 84,
+            eliteThreshold: 126,
+            crownThreshold: 168,
+            isAlphaAchieved: false,
+            isPrimeAchieved: false,
+            isEliteAchieved: false,
+            isCrownAchieved: false,
+          },
           activeSlotProgress: {
             slotNumber: 1,
             filledNodes: filledCount,

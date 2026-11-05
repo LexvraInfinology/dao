@@ -198,6 +198,11 @@ export function ProtocolPoolsPanel({
     return () => clearInterval(intv);
   }, []);
 
+  const isAlphaTarget = !isAlphaAchieved;
+  const isPrimeTarget = isAlphaAchieved && !isPrimeAchieved;
+  const isEliteTarget = isPrimeAchieved && !isEliteAchieved;
+  const isCrownTarget = isEliteAchieved && !isCrownAchieved;
+
   const rankCards = [
     {
       level: 3,
@@ -211,7 +216,7 @@ export function ProtocolPoolsPanel({
       glow: "hover:shadow-sky-500/30",
       requirement: `42 Team Placements (Level 3 Depth) • ${milestones}/42 Completed`,
       benefits: "10% Monthly Leadership Royalty on 11th + Instant Milestone Bounty",
-      status: isAlphaAchieved ? "ACHIEVED" : "IN PROGRESS",
+      status: isAlphaAchieved ? "ACHIEVED" : isAlphaTarget ? "IN PROGRESS" : "LOCKED",
     },
     {
       level: 6,
@@ -225,7 +230,7 @@ export function ProtocolPoolsPanel({
       glow: "hover:shadow-emerald-500/30",
       requirement: `84 Team Placements (Level 6 Depth) • ${milestones}/84 Completed`,
       benefits: "15% Monthly Regional Royalty on 11th + Instant Regional Bounty",
-      status: isPrimeAchieved ? "ACHIEVED" : "IN PROGRESS",
+      status: isPrimeAchieved ? "ACHIEVED" : isPrimeTarget ? "IN PROGRESS" : "LOCKED",
     },
     {
       level: 9,
@@ -239,7 +244,7 @@ export function ProtocolPoolsPanel({
       glow: "hover:shadow-amber-500/30",
       requirement: `126 Team Placements (Level 9 Depth) • ${milestones}/126 Completed`,
       benefits: "25% Monthly Executive Royalty on 11th + Instant Executive Bounty",
-      status: isEliteAchieved ? "ACHIEVED" : "IN PROGRESS",
+      status: isEliteAchieved ? "ACHIEVED" : isEliteTarget ? "IN PROGRESS" : "LOCKED",
     },
     {
       level: 12,
@@ -253,7 +258,7 @@ export function ProtocolPoolsPanel({
       glow: "hover:shadow-purple-500/30",
       requirement: `168 Team Placements (Level 12 Depth) • ${milestones}/168 Completed`,
       benefits: "50% Dominant Monthly Apex Royalty on 11th + Apex Milestone Bounty",
-      status: isCrownAchieved ? "ACHIEVED" : "IN PROGRESS",
+      status: isCrownAchieved ? "ACHIEVED" : isCrownTarget ? "IN PROGRESS" : "LOCKED",
     },
   ];
 
@@ -333,7 +338,7 @@ export function ProtocolPoolsPanel({
                   Your Claimable Pool Rewards
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] text-[9.5px] font-black uppercase">
-                  Tier: {claimableRewards?.currentTierName || "ALPHA"}
+                  Tier: {claimableRewards?.currentTierName || "NONE"}
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mt-0.5">
@@ -596,7 +601,9 @@ export function ProtocolPoolsPanel({
                       className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[9.5px] font-extrabold uppercase ${
                         isAchieved
                           ? "bg-[#e8fbf5] text-[#138261] border border-[#bbf7d0]"
-                          : "bg-[#f0f4f8] text-[#637890]"
+                          : card.status === "IN PROGRESS"
+                          ? "bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] animate-pulse"
+                          : "bg-[#f1f5f9] text-[#64748b] border border-slate-200"
                       }`}
                     >
                       {card.status}

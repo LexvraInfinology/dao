@@ -59,24 +59,28 @@ export function useMatrixUser() {
 
   const refreshAll = useCallback(
     async (force = false, followUp = false) => {
+      const curSlot = useMatrixStore.getState().selectedSlotNumber || 1;
+      const curCycle = useMatrixStore.getState().selectedCycle || 1;
       await Promise.all([
         fetchProfile(force),
         fetchDashboard(undefined, force),
         fetchSlots(undefined, force),
         fetchEarnings(undefined, force),
         fetchSettings(force),
-        fetchSlotDetails(undefined, undefined, undefined, force),
+        fetchSlotDetails(curSlot, curCycle, undefined, force),
         fetchDirectMembers(undefined, force),
       ]);
 
       if (followUp) {
         setTimeout(async () => {
+          const s = useMatrixStore.getState().selectedSlotNumber || 1;
+          const c = useMatrixStore.getState().selectedCycle || 1;
           await Promise.all([
             fetchProfile(true),
             fetchDashboard(undefined, true),
             fetchSlots(undefined, true),
             fetchEarnings(undefined, true),
-            fetchSlotDetails(undefined, undefined, undefined, true),
+            fetchSlotDetails(s, c, undefined, true),
             fetchDirectMembers(undefined, true),
           ]).catch(() => {});
         }, 3500);
@@ -102,12 +106,14 @@ export function useMatrixUser() {
 
     // 12-second live polling interval directly verifying against blockchain state smoothly
     const interval = setInterval(() => {
+      const s = useMatrixStore.getState().selectedSlotNumber || 1;
+      const c = useMatrixStore.getState().selectedCycle || 1;
       Promise.all([
         fetchProfile(true),
         fetchDashboard(undefined, true),
         fetchSlots(undefined, true),
         fetchEarnings(undefined, true),
-        fetchSlotDetails(undefined, undefined, undefined, true),
+        fetchSlotDetails(s, c, undefined, true),
       ]).catch((err) => {
         console.warn("[12s-ChainSync] Live blockchain polling notice:", err?.message);
       });

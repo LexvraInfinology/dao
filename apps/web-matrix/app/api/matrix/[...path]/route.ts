@@ -707,11 +707,21 @@ export async function GET(
       const cycleParam = req.nextUrl.searchParams.get("cycle");
       const targetCycle = cycleParam ? parseInt(cycleParam, 10) : null;
 
-      const [sd, nodesWithCodes, snapshotCount] = await Promise.all([
+      const [sd, nodesWithCodes, snapshotCount, userStats, slot12Data] = await Promise.all([
         getSlotDataV2(ethHex, slotNumber),
         getSlotNodesWithCodesOnChain(ethHex, slotNumber),
         getCycleSnapshotCount(ethHex, slotNumber),
+        getUserStats(ethHex),
+        getSlotDataV2(ethHex, 12).catch(() => null),
       ]);
+
+      const highestSlot = Math.max(userStats?.highestSlot || 0, 1);
+      // Global Cycle rule: Cycle 1 is Slot 1 to Slot 12.
+      // Cycle 2 only begins when Slot 12 has all 14 positions completed!
+      const isSlot12Completed = Boolean(
+        slot12Data && (slot12Data.filledNodes >= 14 || slot12Data.currentCycle > 1)
+      );
+      const globalCycle = isSlot12Completed ? Math.max(2, slot12Data?.currentCycle || 2) : 1;
 
       if (!sd) {
         const emptyNodes = await buildNodes([], [], [], [], [], slotCostUsd);
@@ -720,7 +730,8 @@ export async function GET(
           data: {
             slotNumber, cost: slotCostUsd,
             isUnlocked: false, isLive: false,
-            currentCycle: 0, selectedCycle: 1, totalCycles: 0, filledNodes: 0, snapshotCount: 0,
+            globalCycle,
+            currentCycle: globalCycle, selectedCycle: 1, totalCycles: globalCycle, filledNodes: 0, snapshotCount: 0,
             isViewingSnapshot: false,
             nodes: emptyNodes,
             totalEarned: 0, totalEarnedTrob: 0, totalEarnedUsd: 0,
@@ -731,11 +742,33 @@ export async function GET(
 
       let nodes: any[] = [];
       let isViewingSnapshot = false;
-      let selectedCycle = sd.currentCycle || 1;
+      let selectedCycle = globalCycle;
       let displayFilledCount = 0;
 
-      // Check if user is requesting a past completed cycle snapshot
-      if (targetCycle && targetCycle <= snapshotCount && targetCycle < (sd.currentCycle || 1)) {
+      // In Global Cycle 1:
+      // If past slot is completed (slotNumber < highestSlot or snapshotCount > 0):
+      // When targetCycle is not explicitly 2, load Cycle 1 completed snapshot (14/14 nodes)
+      const shouldLoadCycle1Snapshot =
+        globalCycle === 1 &&
+        snapshotCount > 0 &&
+        (targetCycle === 1 || targetCycle === null || slotNumber < highestSlot);
+
+      if (shouldLoadCycle1Snapshot) {
+        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, 0);
+        if (snapDetail) {
+          nodes = await buildNodes(
+            snapDetail.nodeAddresses,
+            snapDetail.nodeCodes,
+            snapDetail.nodeMemberIds,
+            snapDetail.payoutRecipients,
+            snapDetail.payoutTypes,
+            slotCostUsd
+          );
+          isViewingSnapshot = true;
+          selectedCycle = 1;
+          displayFilledCount = 14;
+        }
+      } else if (targetCycle && targetCycle <= snapshotCount && targetCycle < (sd.currentCycle || 1)) {
         const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle - 1);
         if (snapDetail) {
           nodes = await buildNodes(
@@ -763,6 +796,7 @@ export async function GET(
         );
         const activeFilledCount = nodes.filter((n) => n.filled).length;
         displayFilledCount = Math.max(sd.filledNodes || 0, activeFilledCount);
+        selectedCycle = globalCycle;
       }
 
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
@@ -772,11 +806,12 @@ export async function GET(
         data: {
           slotNumber,
           cost: slotCostUsd,
-          isUnlocked: sd.isUnlocked,
-          isLive: sd.isLive,
-          currentCycle: sd.currentCycle,
+          isUnlocked: Boolean(sd.isUnlocked || slotNumber <= highestSlot),
+          isLive: Boolean(sd.isLive || (slotNumber === highestSlot)),
+          globalCycle,
+          currentCycle: globalCycle,
           selectedCycle,
-          totalCycles: Math.max(sd.currentCycle || 1, snapshotCount),
+          totalCycles: globalCycle,
           snapshotCount,
           isViewingSnapshot,
           filledNodes: displayFilledCount,

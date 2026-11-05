@@ -633,10 +633,9 @@ export async function getOnChainSlotDetails(
     } catch {}
   }
 
-  const totalCycles = isUnlocked ? (Number(currentCycle) || 1) : 0;
   const liveFilledNodes = isUnlocked ? Number(filledNodes) : 0;
 
-  // Check how many completed cycle snapshots exist on-chain
+  // Check how many completed cycle snapshots exist on-chain for this slot
   let snapshotCount = 0;
   if (isUnlocked) {
     try {
@@ -651,16 +650,42 @@ export async function getOnChainSlotDetails(
     } catch {}
   }
 
-  // Determine which cycle to display (default to completed Cycle 1 if current cycle is 2 and has 0 nodes filled)
+  // Check if Slot 12 is completed on-chain to determine Global Cycle
+  let globalCycle = 1;
+  let isSlot12Completed = false;
+  if (userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const s12Param = coder.encode(["address", "uint256"], [userHex, 12]).slice(2);
+      const s12Raw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", s12Param);
+      if (s12Raw) {
+        const [, s12C, s12F] = coder.decode(["bool", "uint256", "uint256", "address[14]", "uint256"], "0x" + s12Raw);
+        if (Number(s12F) >= 14 || Number(s12C) > 1) {
+          isSlot12Completed = true;
+          globalCycle = Math.max(2, Number(s12C));
+        }
+      }
+    } catch {}
+  }
+
+  // Determine whether to display Cycle 1 completed snapshot (14/14 nodes)
+  // In Global Cycle 1, any completed slot (slotNumber < currentActiveSlot or snapshotCount > 0)
+  // displays its Cycle 1 snapshot (all 14 seats fulfilled)
+  const shouldLoadCycle1Snapshot =
+    isUnlocked &&
+    globalCycle === 1 &&
+    snapshotCount > 0 &&
+    (targetCycle === 1 || targetCycle === undefined || prevSlotCompleted || slotNumber === 1);
+
   const effectiveCycle = isUnlocked
-    ? (targetCycle ?? (liveFilledNodes === 0 && snapshotCount > 0 ? 1 : totalCycles))
+    ? (shouldLoadCycle1Snapshot ? 1 : (targetCycle ?? (globalCycle > 1 ? globalCycle : 1)))
     : 0;
-  const isViewingSnapshot = isUnlocked && effectiveCycle < totalCycles && snapshotCount >= effectiveCycle;
+  const isViewingSnapshot = isUnlocked && Boolean(shouldLoadCycle1Snapshot || (targetCycle && targetCycle <= snapshotCount && targetCycle < (Number(currentCycle) || 1)));
 
   let displayNodes = isUnlocked ? [...nodes] : Array(14).fill("0x0000000000000000000000000000000000000000");
   if (isUnlocked && isViewingSnapshot) {
     try {
-      const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, effectiveCycle - 1]).slice(2);
+      const snapIdx = Math.max(0, effectiveCycle - 1);
+      const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, snapIdx]).slice(2);
       const snapRaw = await queryTrobConstant(
         CONTRACT_ADDRESSES.matrix,
         "getCycleSnapshot(address,uint256,uint256)",
@@ -674,6 +699,8 @@ export async function getOnChainSlotDetails(
       console.warn("[OnChain] Cycle snapshot query notice:", err);
     }
   }
+
+  const totalCycles = globalCycle;
 
   // Check if slot is live and accepting placements on-chain
   let isLive = Boolean(isUnlocked);
@@ -840,13 +867,14 @@ export async function getOnChainSlotDetails(
     prevSlotCompleted: Boolean(prevSlotCompleted),
     isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
-    currentCycle: effectiveCycle,
-    totalCycles,
+    globalCycle,
+    currentCycle: globalCycle,
+    totalCycles: globalCycle,
     selectedCycle: effectiveCycle,
     snapshotCount,
     isViewingSnapshot: Boolean(isUnlocked && isViewingSnapshot),
-    recyclesCount: isUnlocked ? Math.max(0, totalCycles - 1) : 0,
-    filledNodes: isUnlocked ? Math.max(Number(liveFilledNodes) || 0, computedFilledCount) : 0,
+    recyclesCount: isUnlocked ? Math.max(0, globalCycle - 1) : 0,
+    filledNodes: isUnlocked ? (isViewingSnapshot ? 14 : Math.max(Number(liveFilledNodes) || 0, computedFilledCount)) : 0,
     upgradeReserve: 0,
     cycleEarnedUsd,
     totalEarned: totalEarnedUsd,
@@ -1234,10 +1262,12 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     upline2Address,
     directReferralsCount: isRegistered ? directReferralsCount : 0,
     activeDirectsCount: isRegistered ? activeDirectsCount : 0,
-    isQualified: isRegistered && isQualified,
+    // Cycle 2+ or Slot 2+ permanent qualification exemption
+    isQualified: isRegistered && (cleanHighestSlot > 1 || isQualified),
     teamCount: isRegistered ? directReferralsCount : 0,
     rankTier: isRegistered ? rankTier : 0,
     rankName: isRegistered ? rankNames[rankTier] : "NONE",
+    globalCycle: 1,
     currentSlot: cleanHighestSlot > 0 ? cleanHighestSlot : 1,
     highestUnlockedSlot: cleanHighestSlot,
     isSlot2Reserved: cleanHighestSlot >= 2,

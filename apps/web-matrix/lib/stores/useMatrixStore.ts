@@ -154,12 +154,10 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, targetCycle);
       if (onChainDetails) {
         const newCache = { ...get().slotDetailsCache, [cacheKey]: onChainDetails };
-        // Only update current slotDetails if the user is still on this slot and cycle
-        if (get().selectedSlotNumber === targetSlot && (get().selectedCycle ?? 1) === (onChainDetails.currentCycle ?? targetCycle)) {
+        // Only update current slotDetails if the user is still on this slot
+        if (get().selectedSlotNumber === targetSlot) {
           set({
             slotDetails: onChainDetails,
-            selectedSlotNumber: targetSlot,
-            selectedCycle: onChainDetails.currentCycle,
             slotDetailsCache: newCache,
             loadingDetails: false,
           });
@@ -179,8 +177,6 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
         if (get().selectedSlotNumber === targetSlot) {
           set({
             slotDetails: details,
-            selectedSlotNumber: targetSlot,
-            selectedCycle: targetCycle ?? null,
             slotDetailsCache: newCache,
             loadingDetails: false,
           });

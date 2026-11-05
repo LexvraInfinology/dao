@@ -242,8 +242,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           setLiveSlotData(details);
           useMatrixStore.setState({
             slotDetails: details,
-            selectedSlotNumber: selectedSlot,
-            selectedCycle: details.currentCycle,
           });
         }
       } catch (err) {
@@ -533,13 +531,15 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   // The 2 direct referral restriction strictly applies ONLY to initial onboarding on Slot 1 Cycle 1.
   // For all higher slots (Slot 2-12) or subsequent cycles (Cycle 2, 3...), operatives are permanently qualified!
-  const isInitialSlot1Cycle1 = selectedSlot === 1 && currentCycle <= 1;
+  const globalCycle = activeSlotDetails?.globalCycle ?? (data as any)?.globalCycle ?? 1;
+  // Strictly only new users at initial Slot 1 in Cycle 1 require 2 directs:
+  // In Cycle 2 or any slot > 1, operatives are 100% qualified from inception
+  const isInitialSlot1Cycle1 = selectedSlot === 1 && globalCycle <= 1 && effectiveHighestUnlocked <= 1;
   const isCycledOrHigherSlot = Boolean(
     selectedSlot > 1 ||
+    effectiveHighestUnlocked > 1 ||
+    globalCycle > 1 ||
     currentCycle > 1 ||
-    totalCycles > 1 ||
-    (data?.highestUnlockedSlot ?? 1) > 1 ||
-    (profile?.highestUnlockedSlot ?? 1) > 1 ||
     (data?.recyclesCount && data.recyclesCount > 0)
   );
 
@@ -805,38 +805,27 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
       </div>
 
-      {/* Informative Cycle Progress Banners */}
-      {isCurrentSlotUnlocked && totalCycles > 1 && selectedCycle === 2 && (
-        <div className="my-2.5 px-3 py-2 rounded-xl bg-blue-50/90 border border-blue-200 text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-            <span>
-              <strong>Cycle 1 Completed (14/14 Fulfilled & Paid Out)!</strong> Slot #{selectedSlot} has recycled into Cycle 2 and is open for new team placements.
-            </span>
+      {/* Completed Past Slot Board Notice */}
+      {isCurrentSlotUnlocked && selectedSlot < effectiveHighestUnlocked && (
+        <div className="my-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/40 to-blue-50 border border-emerald-200 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+            <div>
+              <span className="text-xs font-bold text-emerald-950 block">
+                🏆 Completed Slot #{String(selectedSlot).padStart(2, "0")} Board (14/14 Fulfilled & Settled)
+              </span>
+              <span className="text-[11px] text-emerald-800 font-medium">
+                All 14 placements in this tier are verified on-chain. Active team growth is running in Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}.
+              </span>
+            </div>
           </div>
           <button
             type="button"
-            onClick={() => handleCycleChange(1)}
-            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
+            onClick={() => handleSelectSlot(effectiveHighestUnlocked)}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
           >
-            View Completed Cycle 1 Board
-          </button>
-        </div>
-      )}
-      {isCurrentSlotUnlocked && totalCycles > 1 && selectedCycle === 1 && (
-        <div className="my-2.5 px-3 py-2 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse shrink-0" />
-            <span>
-              <strong>🏆 Viewing Cycle 1 Snapshot:</strong> All 14 seats are 100% completed & on-chain payouts fulfilled.
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleCycleChange(2)}
-            className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer self-start sm:self-auto"
-          >
-            Switch to Active Cycle 2
+            <span>View Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")} Board</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

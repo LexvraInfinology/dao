@@ -40,7 +40,12 @@ export function OverviewTab({
     profile?.activeDirectsCount ?? 0,
     profile?.directReferralsCount ?? 0
   );
-  const isQualified = directsCount >= 2;
+  const isCycledOrHigherSlot = Boolean(
+    highestUnlockedSlot > 1 ||
+    (dashboard?.recyclesCount && dashboard.recyclesCount > 0) ||
+    (((dashboard?.activeSlotProgress as any)?.totalCycles || 0) > 1)
+  );
+  const isQualified = isCycledOrHigherSlot || directsCount >= 2;
 
   const filledNodes = dashboard?.activeSlotProgress?.filledNodes ?? 0;
   const currentRank = profile?.rankName || "NONE";

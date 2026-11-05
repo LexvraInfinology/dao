@@ -95,17 +95,18 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const isSlotLive = Boolean(isSlotUnlocked);
   const isSlotStandby = false;
 
+  const isPastSlotCompleted = isSlotUnlocked && activeSlotNumber < effectiveHighestUnlocked;
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
   const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
   const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
-  const isViewingSnapshot = Boolean(isSlotUnlocked && details?.isViewingSnapshot);
-  const filledNodes = isSlotUnlocked ? (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? (isViewingSnapshot ? 14 : 0))) : 0;
-  const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14);
+  const isViewingSnapshot = Boolean(isSlotUnlocked && (details?.isViewingSnapshot || isPastSlotCompleted));
+  const filledNodes = isSlotUnlocked ? (isPastSlotCompleted ? 14 : (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? 0))) : 0;
+  const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14 || isPastSlotCompleted);
   const remainingNodes = isSlotUnlocked ? Math.max(14 - filledNodes, 0) : 14;
   const percentFilled = !isSlotUnlocked ? 0 : isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
 
   const firstOpenIdx = nodesList.length > 0 ? nodesList.findIndex((n: any) => !n?.filled) : -1;
-  const nextUpcomingSeat = !isSlotUnlocked ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : filledNodes + 1);
+  const nextUpcomingSeat = !isSlotUnlocked || isPastSlotCompleted ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : filledNodes + 1);
   const nextSeatMeta = nextUpcomingSeat ? SEAT_METAS[nextUpcomingSeat] : null;
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
@@ -273,54 +274,42 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         {!isSlotUnlocked ? (
           <button
             type="button"
-            onClick={() => selectSlot(effectiveHighestUnlocked, undefined, address || undefined)}
+            onClick={() => selectSlot(effectiveHighestUnlocked, 1, address || undefined)}
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
             <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>
           </button>
         ) : (
           <>
-            {isViewingSnapshot && totalCycles > currentCycle ? (
+            {isPastSlotCompleted && (
               <button
                 type="button"
-                onClick={() => selectSlot(activeSlotNumber, totalCycles, address || undefined)}
+                onClick={() => selectSlot(effectiveHighestUnlocked, 1, address || undefined)}
                 className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
               >
-                <span>Switch to Active Cycle {totalCycles} Board</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : !isViewingSnapshot && snapshotCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
-                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
-              >
-                <span>← View Cycle 1 Completed Board (14/14 🏆)</span>
-              </button>
-            ) : null}
-
-            {activeSlotNumber < 12 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(activeSlotNumber + 1, 1, address || undefined)}
-                className={`w-full py-2 px-3 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 ${
-                  isViewingSnapshot
-                    ? "bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border border-slate-200"
-                    : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-                }`}
-              >
-                <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} Board in Tree</span>
+                <span>View Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")} Board in Tree</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
 
-            {activeSlotNumber > 1 && (
+            {!isPastSlotCompleted && activeSlotNumber > 1 && (
               <button
                 type="button"
                 onClick={() => selectSlot(activeSlotNumber - 1, 1, address || undefined)}
-                className="w-full py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
               >
-                <span>← View Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Board</span>
+                <span>← View Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Completed Board (14/14 🏆)</span>
+              </button>
+            )}
+
+            {!isPastSlotCompleted && activeSlotNumber < 12 && (
+              <button
+                type="button"
+                onClick={() => selectSlot(activeSlotNumber + 1, 1, address || undefined)}
+                className="w-full py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+              >
+                <span>View Slot #{String(activeSlotNumber + 1).padStart(2, "0")} Board in Tree</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </>

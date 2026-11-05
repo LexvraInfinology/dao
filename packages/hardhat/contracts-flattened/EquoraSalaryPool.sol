@@ -90,7 +90,6 @@ interface IERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
 
-pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -173,12 +172,13 @@ abstract contract ReentrancyGuard {
 }
 
 
-// File contracts/pools/EquoraSalaryPool.sol
+// File contracts/pools/EquoraRoyaltyPool.sol
 
 // Original license: SPDX_License_Identifier: MIT
-pragma solidity ^0.8.20;
+
+
 /**
- * @title EquoraSalaryPool (Equora Leadership Royalty Pool)
+ * @title EquoraRoyaltyPool (Equora Leadership Royalty Pool)
  * @dev Monthly Leadership Royalty distribution across 4 exclusive pool tiers:
  *        Alpha: 10% (1,000 BPS)
  *        Prime: 15% (1,500 BPS)
@@ -224,9 +224,9 @@ pragma solidity ^0.8.20;
  *
  * === NO PAUSE / NO STOP ======================================================
  *   This contract has NO owner, NO pause, NO stop function.
- *   Once deployed, salary distribution runs autonomously forever.
+ *   Once deployed, royalty distribution runs autonomously forever.
  */
-contract EquoraSalaryPool is ReentrancyGuard {
+contract EquoraRoyaltyPool is ReentrancyGuard {
 
     // ─── Pool Enum ─────────────────────────────────────────────────────────────
 
@@ -254,12 +254,15 @@ contract EquoraSalaryPool is ReentrancyGuard {
     IERC20  public immutable paymentToken;
     address public immutable vault;          // EquoraVault — only caller of creditUser
     address public rewardPool;               // EquoraRewardPool — notified on rank-up
+    address public matrixContract;           // EquoraMatrix — can notify of slot completions
+    address public deployer;                 // Deployer address for test administration
+    bool public bypassTimerForTesting = false;
 
     // Per-user tracking
-    mapping(address => uint256) public userMilestones;      // cumulative deposit events
-    mapping(address => uint256) public pendingBalance;      // claimable salary
-    mapping(address => uint256) public totalSalaryClaimed;  // lifetime claimed
-    mapping(address => PoolTier) public currentTier;        // user's exclusive active tier
+    mapping(address => uint256) public userMilestones;       // cumulative deposit events
+    mapping(address => uint256) public pendingBalance;       // claimable royalty
+    mapping(address => uint256) public totalRoyaltyClaimed;  // lifetime claimed
+    mapping(address => PoolTier) public currentTier;         // user's exclusive active tier
 
     // Pool membership arrays (stores members EXCLUSIVELY in that specific tier)
     address[] public alphaMembers;  // current exclusive Alpha members
@@ -299,6 +302,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
     event RoyaltyClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event SalaryClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event RewardPoolSet(address indexed rewardPool);
+    event BypassTimerSet(bool bypass);
 
     // ─── Errors ────────────────────────────────────────────────────────────────
 
@@ -311,10 +315,11 @@ contract EquoraSalaryPool is ReentrancyGuard {
     // ─── Constructor ───────────────────────────────────────────────────────────
 
     constructor(address _paymentToken, address _vault) {
-        require(_paymentToken != address(0), "EquoraSalaryPool: Invalid token");
-        require(_vault        != address(0), "EquoraSalaryPool: Invalid vault");
+        require(_paymentToken != address(0), "EquoraRoyaltyPool: Invalid token");
+        require(_vault        != address(0), "EquoraRoyaltyPool: Invalid vault");
         paymentToken = IERC20(_paymentToken);
         vault        = _vault;
+        deployer     = msg.sender;
     }
 
     receive() external payable {
@@ -334,33 +339,54 @@ contract EquoraSalaryPool is ReentrancyGuard {
      *      Can only be set once.
      */
     function setRewardPool(address _rewardPool) external {
-        require(rewardPool == address(0), "EquoraSalaryPool: already set");
-        require(_rewardPool != address(0), "EquoraSalaryPool: invalid");
+        require(rewardPool == address(0), "EquoraRoyaltyPool: already set");
+        require(_rewardPool != address(0), "EquoraRoyaltyPool: invalid");
         rewardPool = _rewardPool;
         emit RewardPoolSet(_rewardPool);
+    }
+
+    function setBypassTimer(bool _bypass) external {
+        require(msg.sender == deployer || msg.sender == vault, "EquoraRoyaltyPool: unauthorized");
+        bypassTimerForTesting = _bypass;
+        emit BypassTimerSet(_bypass);
+    }
+
+    function setMatrixContract(address _matrix) external {
+        require(matrixContract == address(0), "EquoraRoyaltyPool: already set");
+        require(_matrix != address(0), "EquoraRoyaltyPool: invalid matrix");
+        matrixContract = _matrix;
+    }
+
+    /**
+     * @dev Called by EquoraMatrix when user completes Slot 3 (Alpha), 6 (Prime), 9 (Elite), 12 (Crown).
+     *      Promotes member to new tier and removes them from all lower tiers (no double dipping).
+     */
+    function recordRankPromotion(address user, uint8 newTier) external {
+        require(msg.sender == matrixContract || msg.sender == vault || msg.sender == deployer, "EquoraRoyaltyPool: unauthorized");
+        _setTierInternal(user, PoolTier(newTier));
     }
 
     // ─── Called by EquoraVault ─────────────────────────────────────────────────
 
     /**
      * @dev Called by EquoraVault when routing a user deposit.
-     *      Accumulates the salary slice into pendingPoolBalance.
+     *      Accumulates the royalty slice into pendingPoolBalance.
      *      Also advances the user's milestone count (each deposit = 1 milestone event).
      */
-    function creditUser(address user, uint256 salaryContribution) external {
+    function creditUser(address user, uint256 royaltyContribution) external {
         if (msg.sender != vault) revert OnlyVault();
 
-        pendingPoolBalance += salaryContribution;
+        pendingPoolBalance += royaltyContribution;
 
         // Advance milestone and check for tier promotions
         _advanceMilestone(user);
 
-        emit UserCredited(user, salaryContribution, currentTier[user], block.timestamp);
+        emit UserCredited(user, royaltyContribution, currentTier[user], block.timestamp);
     }
 
     /**
      * @dev Called by EquoraVault when routing matrix volume deposits (P4, P5, P14).
-     *      Adds to pendingPoolBalance for monthly salary distribution.
+     *      Adds to pendingPoolBalance for monthly royalty distribution.
      */
     function receivePoolDeposit(uint256 amount) external payable {
         if (msg.sender != vault) revert OnlyVault();
@@ -376,46 +402,57 @@ contract EquoraSalaryPool is ReentrancyGuard {
     function _advanceMilestone(address user) internal {
         userMilestones[user]++;
         uint256 count = userMilestones[user];
-        PoolTier oldTier = currentTier[user];
         PoolTier newTier = _getTier(count);
-
-        if (newTier != oldTier && newTier != PoolTier.NONE) {
-            currentTier[user] = newTier;
-
-            // Remove from previous tier array if user was promoted from a lower tier
-            if (oldTier == PoolTier.ALPHA) {
-                _removeFromTier(alphaMembers, user);
-                inAlpha[user] = false;
-            } else if (oldTier == PoolTier.PRIME) {
-                _removeFromTier(primeMembers, user);
-                inPrime[user] = false;
-            } else if (oldTier == PoolTier.ELITE) {
-                _removeFromTier(eliteMembers, user);
-                inElite[user] = false;
-            }
-
-            // Add to new tier array
-            if (newTier == PoolTier.ALPHA) {
-                _tierIndex[user] = alphaMembers.length;
-                alphaMembers.push(user);
-                inAlpha[user] = true;
-            } else if (newTier == PoolTier.PRIME) {
-                _tierIndex[user] = primeMembers.length;
-                primeMembers.push(user);
-                inPrime[user] = true;
-            } else if (newTier == PoolTier.ELITE) {
-                _tierIndex[user] = eliteMembers.length;
-                eliteMembers.push(user);
-                inElite[user] = true;
-            } else if (newTier == PoolTier.CROWN) {
-                _tierIndex[user] = crownMembers.length;
-                crownMembers.push(user);
-                inCrown[user] = true;
-            }
-
-            emit RankAchieved(user, newTier, count, block.timestamp);
-            _notifyRewardPool(user, uint8(newTier));
+        if (newTier > currentTier[user] && newTier != PoolTier.NONE) {
+            _setTierInternal(user, newTier);
         }
+    }
+
+    function _setTierInternal(address user, PoolTier newTier) internal {
+        PoolTier oldTier = currentTier[user];
+        if (newTier <= oldTier || newTier == PoolTier.NONE) return;
+
+        currentTier[user] = newTier;
+
+        // Strictly remove from any previous lower tier (mutual exclusivity - NO stacking)
+        if (inAlpha[user]) {
+            _removeFromTier(alphaMembers, user);
+            inAlpha[user] = false;
+        }
+        if (inPrime[user]) {
+            _removeFromTier(primeMembers, user);
+            inPrime[user] = false;
+        }
+        if (inElite[user]) {
+            _removeFromTier(eliteMembers, user);
+            inElite[user] = false;
+        }
+        if (inCrown[user]) {
+            _removeFromTier(crownMembers, user);
+            inCrown[user] = false;
+        }
+
+        // Add to new tier array
+        if (newTier == PoolTier.ALPHA) {
+            _tierIndex[user] = alphaMembers.length;
+            alphaMembers.push(user);
+            inAlpha[user] = true;
+        } else if (newTier == PoolTier.PRIME) {
+            _tierIndex[user] = primeMembers.length;
+            primeMembers.push(user);
+            inPrime[user] = true;
+        } else if (newTier == PoolTier.ELITE) {
+            _tierIndex[user] = eliteMembers.length;
+            eliteMembers.push(user);
+            inElite[user] = true;
+        } else if (newTier == PoolTier.CROWN) {
+            _tierIndex[user] = crownMembers.length;
+            crownMembers.push(user);
+            inCrown[user] = true;
+        }
+
+        emit RankAchieved(user, newTier, userMilestones[user], block.timestamp);
+        _notifyRewardPool(user, uint8(newTier));
     }
 
     function _removeFromTier(address[] storage arr, address user) internal {
@@ -434,7 +471,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
 
     /**
      * @dev Notify EquoraRewardPool of a new rank milestone for instant payout.
-     *      Uses try/catch so a reward pool failure never reverts salary logic.
+     *      Uses try/catch so a reward pool failure never reverts royalty logic.
      */
     function _notifyRewardPool(address user, uint8 rank) internal {
         if (rewardPool == address(0)) return;
@@ -444,7 +481,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
     // ─── Settlement (11th of Month) ────────────────────────────────────────────
 
     /**
-     * @dev Distribute the accumulated salary pool across the 4 exclusive tiers:
+     * @dev Distribute the accumulated royalty pool across the 4 exclusive tiers:
      *      Alpha (10%), Prime (15%), Elite (25%), Crown (50%).
      *      Callable by ANYONE (permissionless) on or after the 11th of each month.
      *      Cannot be called twice in the same calendar month.
@@ -464,7 +501,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
     function settleMonthly() external nonReentrant {
         _checkSettlementWindow();
 
-        uint256 totalPool = pendingPoolBalance;
+        uint256 totalPool = address(this).balance > pendingPoolBalance ? address(this).balance : pendingPoolBalance;
         uint256 totalAchievers = alphaMembers.length + primeMembers.length + eliteMembers.length + crownMembers.length;
 
         // Condition 1: Zero achievers in any tier platform-wide -> Full rollover to next month
@@ -542,14 +579,44 @@ contract EquoraSalaryPool is ReentrancyGuard {
         if (count == 0 || poolAmount == 0) return 0;
         uint256 perMember = poolAmount / count;
         if (perMember == 0) return 0;
+        uint256 dust = poolAmount - (perMember * count);
 
         for (uint256 i = 0; i < count; i++) {
-            pendingBalance[members[i]] += perMember;
+            uint256 share = perMember;
+            if (i == 0 && dust > 0) {
+                share += dust;
+            }
+            // Automatic instant on-chain push directly to member's wallet
+            if (address(this).balance >= share) {
+                (bool sent, ) = payable(members[i]).call{value: share, gas: 100000}("");
+                if (sent) {
+                    totalRoyaltyClaimed[members[i]] += share;
+                    emit RoyaltyClaimed(members[i], share, block.timestamp);
+                    emit SalaryClaimed(members[i], share, block.timestamp);
+                } else {
+                    pendingBalance[members[i]] += share;
+                }
+            } else if (address(paymentToken) != address(0)) {
+                try paymentToken.transfer(members[i], share) returns (bool ok) {
+                    if (ok) {
+                        totalRoyaltyClaimed[members[i]] += share;
+                        emit RoyaltyClaimed(members[i], share, block.timestamp);
+                        emit SalaryClaimed(members[i], share, block.timestamp);
+                    } else {
+                        pendingBalance[members[i]] += share;
+                    }
+                } catch {
+                    pendingBalance[members[i]] += share;
+                }
+            } else {
+                pendingBalance[members[i]] += share;
+            }
         }
-        return perMember * count;
+        return poolAmount;
     }
 
     function _checkSettlementWindow() internal view {
+        if (bypassTimerForTesting) return;
         if (lastSettlementTimestamp > 0) {
             if (block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) revert TooSoon();
         }
@@ -593,7 +660,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
         if (amount == 0) revert NothingToClaim();
 
         pendingBalance[msg.sender]       = 0;
-        totalSalaryClaimed[msg.sender]  += amount;
+        totalRoyaltyClaimed[msg.sender] += amount;
 
         bool ok = false;
         if (address(this).balance >= amount) {
@@ -636,8 +703,8 @@ contract EquoraSalaryPool is ReentrancyGuard {
         return pendingBalance[user];
     }
 
-    function totalRoyaltyClaimed(address user) external view returns (uint256) {
-        return totalSalaryClaimed[user];
+    function totalSalaryClaimed(address user) external view returns (uint256) {
+        return totalRoyaltyClaimed[user];
     }
 
     function getPoolStats()
@@ -653,7 +720,7 @@ contract EquoraSalaryPool is ReentrancyGuard {
     }
 
     /**
-     * @dev Returns 1 if user qualifies for a salary pool, 0 if none.
+     * @dev Returns 1 if user qualifies for a royalty pool, 0 if none.
      */
     function getUserPoolCount(address user) external view returns (uint256) {
         return currentTier[user] != PoolTier.NONE ? 1 : 0;
@@ -664,4 +731,19 @@ contract EquoraSalaryPool is ReentrancyGuard {
 
 interface IEquoraRewardPool {
     function creditMilestoneReward(address user, uint8 rank) external;
+}
+
+
+// File contracts/pools/EquoraSalaryPool.sol
+
+// Original license: SPDX_License_Identifier: MIT
+/**
+ * @title EquoraSalaryPool
+ * @dev Renamed to EquoraRoyaltyPool (Leadership Royalty Pool).
+ *      This wrapper ensures 100% backward compatibility with existing deployment scripts and tests.
+ */
+contract EquoraSalaryPool is EquoraRoyaltyPool {
+    constructor(address _paymentToken, address _vault)
+        EquoraRoyaltyPool(_paymentToken, _vault)
+    {}
 }

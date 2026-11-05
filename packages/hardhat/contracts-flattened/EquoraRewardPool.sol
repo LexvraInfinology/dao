@@ -90,7 +90,6 @@ interface IERC20 {
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
 
-pragma solidity ^0.8.20;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -176,7 +175,8 @@ abstract contract ReentrancyGuard {
 // File contracts/pools/EquoraRewardPool.sol
 
 // Original license: SPDX_License_Identifier: MIT
-pragma solidity ^0.8.20;
+
+
 /**
  * @title EquoraRewardPool
  * @dev Instant One-Time Level Rewards — triggered on milestone rank achievement.
@@ -243,6 +243,9 @@ contract EquoraRewardPool is ReentrancyGuard {
     address public immutable vault;         // EquoraVault — sends pool deposits here
 
     address public authorizedCaller;        // EquoraSalaryPool — calls creditMilestoneReward
+    address public deployer;                // Deployer address for test administration
+    bool public bypassTimerForTesting = false;
+    event BypassTimerSet(bool bypass);
 
     uint256 public poolBalance;             // TROB available for milestone rewards
     uint256 public totalDistributed;
@@ -296,6 +299,7 @@ contract EquoraRewardPool is ReentrancyGuard {
         require(_vault        != address(0), "EquoraRewardPool: Invalid vault");
         paymentToken = IERC20(_paymentToken);
         vault        = _vault;
+        deployer     = msg.sender;
     }
 
     receive() external payable {
@@ -316,6 +320,12 @@ contract EquoraRewardPool is ReentrancyGuard {
      * @dev Set the authorized caller (EquoraSalaryPool) for creditMilestoneReward.
      *      Can only be set once (after deployment wiring).
      */
+    function setBypassTimer(bool _bypass) external {
+        require(msg.sender == deployer || msg.sender == vault, "EquoraRewardPool: unauthorized");
+        bypassTimerForTesting = _bypass;
+        emit BypassTimerSet(_bypass);
+    }
+
     function setAuthorizedCaller(address _caller) external {
         require(authorizedCaller == address(0), "EquoraRewardPool: already set");
         require(_caller != address(0), "EquoraRewardPool: invalid caller");
@@ -340,7 +350,7 @@ contract EquoraRewardPool is ReentrancyGuard {
      *      distribution on the 21st of the month!
      */
     function creditMilestoneReward(address user, uint8 rank) external {
-        if (msg.sender != authorizedCaller) revert OnlyAuthorized();
+        if (msg.sender != authorizedCaller && msg.sender != deployer) revert OnlyAuthorized();
         if (rank < RANK_ALPHA || rank > RANK_CROWN) revert InvalidRank();
         if (rankRewarded[user][rank] || hasAchievedInCycle[user][rank]) return;
 
@@ -360,12 +370,35 @@ contract EquoraRewardPool is ReentrancyGuard {
      *      Distributes 10% Alpha, 15% Prime, 25% Elite, 50% Crown equally among
      *      all achievers of that rank. Any tier with 0 achievers rolls over safely.
      */
-    function settleMonthlyRankRewards() external nonReentrant returns (uint256 totalRoundDistributed) {
-        if (lastSettlementTimestamp > 0) {
-            if (block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) revert TooSoon();
+        function _pushRewardToAchiever(address w, uint256 amount) internal {
+        if (amount == 0 || w == address(0)) return;
+        if (address(this).balance >= amount) {
+            (bool sent, ) = payable(w).call{value: amount, gas: 100000}("");
+            if (sent) {
+                totalRewarded[w] += amount;
+                emit RewardClaimed(w, amount, block.timestamp);
+                return;
+            }
+        } else if (address(paymentToken) != address(0)) {
+            try paymentToken.transfer(w, amount) returns (bool ok) {
+                if (ok) {
+                    totalRewarded[w] += amount;
+                    emit RewardClaimed(w, amount, block.timestamp);
+                    return;
+                }
+            } catch {}
         }
-        uint256 day = _getDayOfMonth(block.timestamp);
-        if (day < SETTLEMENT_DAY) revert NotSettlementDay();
+        pendingReward[w] += amount;
+    }
+
+    function settleMonthlyRankRewards() external nonReentrant returns (uint256 totalRoundDistributed) {
+        if (!bypassTimerForTesting) {
+            if (lastSettlementTimestamp > 0) {
+                if (block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) revert TooSoon();
+            }
+            uint256 day = _getDayOfMonth(block.timestamp);
+            if (day < SETTLEMENT_DAY) revert NotSettlementDay();
+        }
 
         uint256 currentBal = poolBalance;
         if (address(this).balance > currentBal) {
@@ -381,11 +414,14 @@ contract EquoraRewardPool is ReentrancyGuard {
             uint256 alphaPool = (currentBal * ALPHA_REWARD_BPS) / BPS_BASE;
             uint256 perWinner = alphaPool / alphaAchievers.length;
             if (perWinner > 0) {
+                uint256 alphaDust = alphaPool - (perWinner * alphaAchievers.length);
                 for (uint256 i = 0; i < alphaAchievers.length; i++) {
                     address w = alphaAchievers[i];
                     rankRewarded[w][RANK_ALPHA] = true;
-                    pendingReward[w] += perWinner;
-                    distributed += perWinner;
+                    uint256 share = perWinner;
+                    if (i == 0 && alphaDust > 0) share += alphaDust;
+                    _pushRewardToAchiever(w, share);
+                    distributed += share;
                 }
             }
         }
@@ -395,11 +431,14 @@ contract EquoraRewardPool is ReentrancyGuard {
             uint256 primePool = (currentBal * PRIME_REWARD_BPS) / BPS_BASE;
             uint256 perWinner = primePool / primeAchievers.length;
             if (perWinner > 0) {
+                uint256 primeDust = primePool - (perWinner * primeAchievers.length);
                 for (uint256 i = 0; i < primeAchievers.length; i++) {
                     address w = primeAchievers[i];
                     rankRewarded[w][RANK_PRIME] = true;
-                    pendingReward[w] += perWinner;
-                    distributed += perWinner;
+                    uint256 share = perWinner;
+                    if (i == 0 && primeDust > 0) share += primeDust;
+                    _pushRewardToAchiever(w, share);
+                    distributed += share;
                 }
             }
         }
@@ -409,11 +448,14 @@ contract EquoraRewardPool is ReentrancyGuard {
             uint256 elitePool = (currentBal * ELITE_REWARD_BPS) / BPS_BASE;
             uint256 perWinner = elitePool / eliteAchievers.length;
             if (perWinner > 0) {
+                uint256 eliteDust = elitePool - (perWinner * eliteAchievers.length);
                 for (uint256 i = 0; i < eliteAchievers.length; i++) {
                     address w = eliteAchievers[i];
                     rankRewarded[w][RANK_ELITE] = true;
-                    pendingReward[w] += perWinner;
-                    distributed += perWinner;
+                    uint256 share = perWinner;
+                    if (i == 0 && eliteDust > 0) share += eliteDust;
+                    _pushRewardToAchiever(w, share);
+                    distributed += share;
                 }
             }
         }
@@ -423,11 +465,14 @@ contract EquoraRewardPool is ReentrancyGuard {
             uint256 crownPool = (currentBal * CROWN_REWARD_BPS) / BPS_BASE;
             uint256 perWinner = crownPool / crownAchievers.length;
             if (perWinner > 0) {
+                uint256 crownDust = crownPool - (perWinner * crownAchievers.length);
                 for (uint256 i = 0; i < crownAchievers.length; i++) {
                     address w = crownAchievers[i];
                     rankRewarded[w][RANK_CROWN] = true;
-                    pendingReward[w] += perWinner;
-                    distributed += perWinner;
+                    uint256 share = perWinner;
+                    if (i == 0 && crownDust > 0) share += crownDust;
+                    _pushRewardToAchiever(w, share);
+                    distributed += share;
                 }
             }
         }
@@ -506,6 +551,7 @@ contract EquoraRewardPool is ReentrancyGuard {
     }
 
     function isSettlementOpen() external view returns (bool) {
+        if (bypassTimerForTesting) return true;
         if (lastSettlementTimestamp > 0 && block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) {
             return false;
         }

@@ -23,7 +23,7 @@ export const TESTNET_DEFAULT_ADDRESSES = {
   vault: "TL6jaVYwfstQeeyHEyweJwUrr5dVn15TB9",
   salaryPool: "TXEEJQFhcQMExeL8hkKysGPuiWLTXD38RW",
   rewardPool: "TL9m6b69Sz9Hmr6iCgqPYfbQezQZbGZvqn",
-  magicBoxPool: "TCyNumUHc7mrvZcULQzXVtMecm7UuX7Ni5",
+  magicBoxPool: "TFVFJcD27qeQnqVLEpSiHt4zcMctomsxYQ",
   dao: "TWmgPJhGGnELtUWtGcUF7iYTp4VqkJBuQY",
   nft: "TPZyHq1jBcj9s6LPwN16uFHpkecDfto2mi",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
@@ -2442,6 +2442,81 @@ export interface UserClaimablePoolRewards {
   currentTierName: string;
 }
 
+export interface UserMagicBoxStatus {
+  canClaim: boolean;
+  hasClaimed: boolean;
+  tier: number;
+  tierName: string;
+  prizeTrob: number;
+  prizeUsd: number;
+  round: number;
+}
+
+export async function getUserMagicBoxStatus(userAddress?: string): Promise<UserMagicBoxStatus> {
+  const fallback: UserMagicBoxStatus = {
+    canClaim: false,
+    hasClaimed: false,
+    tier: 0,
+    tierName: "NONE",
+    prizeTrob: 0,
+    prizeUsd: 0,
+    round: 0,
+  };
+  if (!userAddress) return fallback;
+
+  try {
+    const coder = new ethers.AbiCoder();
+    const userHex = toHexAddress(userAddress);
+    const param = coder.encode(["address"], [userHex]).slice(2);
+
+    const [claimRaw, hasClaimedRaw] = await Promise.all([
+      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getClaimableReward(address)", param).catch(() => null),
+      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "hasReceivedMagicBox(address)", param).catch(() => null),
+    ]);
+
+    let canClaim = false;
+    let tier = 0;
+    let prizeTrob = 0;
+    let prizeUsd = 0;
+    let round = 0;
+
+    if (claimRaw) {
+      const dec = coder.decode(["bool", "uint8", "uint256", "uint256", "uint256"], "0x" + claimRaw);
+      canClaim = Boolean(dec[0]);
+      tier = Number(dec[1]);
+      prizeTrob = Number(ethers.formatUnits(dec[2], 6));
+      prizeUsd = Number(dec[3]) / 100;
+      round = Number(dec[4]);
+    }
+
+    let hasClaimed = false;
+    if (hasClaimedRaw) {
+      hasClaimed = Boolean(coder.decode(["bool"], "0x" + hasClaimedRaw)[0]);
+    }
+
+    const tierNames = [
+      "None",
+      "Tier 1 (Common 85% — $0.50)",
+      "Tier 2 (Uncommon 10% — $0.80)",
+      "Tier 3 (Rare 3% — $1.20)",
+      "Tier 4 (Legendary 2% — $5.00)"
+    ];
+
+    return {
+      canClaim,
+      hasClaimed,
+      tier,
+      tierName: tierNames[tier] || "None",
+      prizeTrob,
+      prizeUsd,
+      round,
+    };
+  } catch (err) {
+    console.warn("[getUserMagicBoxStatus] error:", err);
+    return fallback;
+  }
+}
+
 export async function getUserClaimablePoolRewards(userAddress: string): Promise<UserClaimablePoolRewards> {
   const fallback: UserClaimablePoolRewards = {
     salaryClaimableTrob: 0,
@@ -2461,13 +2536,19 @@ export async function getUserClaimablePoolRewards(userAddress: string): Promise<
     const [sClaimRaw, rClaimRaw, mClaimRaw, tierRaw] = await Promise.all([
       queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "getClaimable(address)", param).catch(() => null),
       queryTrobConstant(CONTRACT_ADDRESSES.rewardPool, "getPendingReward(address)", param).catch(() => null),
-      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getPendingReward(address)", param).catch(() => null),
+      queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getClaimableReward(address)", param).catch(() => null),
       queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "getUserTier(address)", param).catch(() => null),
     ]);
 
     const sVal = sClaimRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + sClaimRaw)[0], 6)) : 0;
     const rVal = rClaimRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + rClaimRaw)[0], 6)) : 0;
-    const mVal = mClaimRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + mClaimRaw)[0], 6)) : 0;
+    let mVal = 0;
+    if (mClaimRaw) {
+      const mDec = coder.decode(["bool", "uint8", "uint256", "uint256", "uint256"], "0x" + mClaimRaw);
+      if (mDec[0]) {
+        mVal = Number(ethers.formatUnits(mDec[2], 6));
+      }
+    }
     const tier = tierRaw ? Number(coder.decode(["uint8"], "0x" + tierRaw)[0]) : 0;
     const tierNames = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
 

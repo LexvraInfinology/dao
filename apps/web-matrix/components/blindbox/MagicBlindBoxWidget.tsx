@@ -4,8 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUserStore } from "@/lib/stores";
-
-import { isUserRegisteredInMatrix } from "@/lib/contracts";
+import {
+  isUserRegisteredInMatrix,
+  getUserMagicBoxStatus,
+  claimMagicBoxRewardOnChain,
+  UserMagicBoxStatus,
+} from "@/lib/contracts";
+import { toast } from "@/lib/toast";
 
 interface MagicBlindBoxWidgetProps {
   userAddress?: string;
@@ -20,12 +25,16 @@ export function MagicBlindBoxWidget({
   const storeProfile = useUserStore((s) => s.profile);
   const storeAddress = useUserStore((s) => s.address);
   const activeAddress = userAddress || storeProfile?.address || storeAddress;
-  const isUserQualified = isQualified || (storeProfile?.isQualified ?? false);
 
-  // Synchronous initial check: if wallet is registered in localStorage or store, mark active immediately
+  // Active matrix membership check
   const [isActiveMember, setIsActiveMember] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    const currentAddr = (activeAddress || localStorage.getItem("equora_user_address") || localStorage.getItem("equora_auth_address") || "").trim().toLowerCase();
+    const currentAddr = (
+      activeAddress ||
+      localStorage.getItem("equora_user_address") ||
+      localStorage.getItem("equora_auth_address") ||
+      ""
+    ).trim().toLowerCase();
     if (!currentAddr) return false;
     if (localStorage.getItem(`equora_matrix_registered_${currentAddr}`) === "true") {
       return true;
@@ -45,7 +54,11 @@ export function MagicBlindBoxWidget({
   useEffect(() => {
     let mounted = true;
     const checkActive = async () => {
-      const target = (activeAddress || (typeof window !== "undefined" ? localStorage.getItem("equora_user_address") : "") || "").trim().toLowerCase();
+      const target = (
+        activeAddress ||
+        (typeof window !== "undefined" ? localStorage.getItem("equora_user_address") : "") ||
+        ""
+      ).trim().toLowerCase();
       if (!target) {
         if (mounted) setIsActiveMember(false);
         return;
@@ -78,9 +91,37 @@ export function MagicBlindBoxWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [rewardRevealed, setRewardRevealed] = useState(false);
-  const [randomRewardAmount, setRandomRewardAmount] = useState<string>("$0.50 USD");
   const [autoCloseSeconds, setAutoCloseSeconds] = useState(4);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Live on-chain Magic Box status for current connected operative
+  const [magicBoxStatus, setMagicBoxStatus] = useState<UserMagicBoxStatus>({
+    canClaim: false,
+    hasClaimed: false,
+    tier: 0,
+    tierName: "NONE",
+    prizeTrob: 0,
+    prizeUsd: 0,
+    round: 0,
+  });
+
+  const [isClaimingTx, setIsClaimingTx] = useState(false);
+  const [claimTxHash, setClaimTxHash] = useState<string | null>(null);
+
+  // Fetch live on-chain claimable state
+  const refreshMagicBoxStatus = async () => {
+    if (!activeAddress) return;
+    try {
+      const status = await getUserMagicBoxStatus(activeAddress);
+      setMagicBoxStatus(status);
+    } catch (err) {
+      console.warn("Failed to fetch Magic Box status:", err);
+    }
+  };
+
+  useEffect(() => {
+    refreshMagicBoxStatus();
+  }, [activeAddress]);
 
   // Universal 3-Month Smart Contract Countdown
   // Contract baseline: 1 Oct 2026 00:00:00 UTC (1790812800)
@@ -102,9 +143,15 @@ export function MagicBlindBoxWidget({
   // Calculate live contract timer
   useEffect(() => {
     const calculateTimer = () => {
+      // If contract has canClaim active on-chain, timer is officially 0 (Ready to claim!)
+      if (magicBoxStatus.canClaim) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0 });
+        return;
+      }
+
       const now = Math.floor(Date.now() / 1000);
       const elapsed = Math.max(0, now - BASE_CYCLE_START);
-      const currentCycleRemaining = CYCLE_SECONDS - (elapsed % CYCLE_SECONDS);
+      const currentCycleRemaining = Math.max(0, CYCLE_SECONDS - (elapsed % CYCLE_SECONDS));
 
       const days = Math.floor(currentCycleRemaining / (24 * 3600));
       const hours = Math.floor((currentCycleRemaining % (24 * 3600)) / 3600);
@@ -123,14 +170,11 @@ export function MagicBlindBoxWidget({
     calculateTimer();
     const interval = setInterval(calculateTimer, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [magicBoxStatus.canClaim]);
 
-  const isTimeOver = timeLeft.totalSeconds <= 0;
+  const isTimeOver = timeLeft.totalSeconds <= 0 || magicBoxStatus.canClaim;
 
   // Route & Membership checks:
-  // 1. Strictly never show widget on /gate
-  // 2. On landing page (/): Floating box & tap to claim ONLY show if timer is actually over (isTimeOver === true)
-  // 3. The Protocol Pool 3 window only pops up when user purchases slot and enters /dashboard
   const isLanding = pathname === "/" || !pathname;
   const isGate = pathname === "/gate";
   const isMemberRoute =
@@ -145,7 +189,7 @@ export function MagicBlindBoxWidget({
   // Show Protocol Pool 3 window once when operative arrives on /dashboard after slot activation
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (pathname === "/dashboard" && isActiveMember) {
+    if (pathname === "/dashboard" && isActiveMember && !magicBoxStatus.hasClaimed) {
       const justPurchased = sessionStorage.getItem("equora_just_purchased_slot") === "true";
       const dashboardSeen = sessionStorage.getItem("equora_blindbox_dashboard_seen") === "true";
       if (justPurchased || !dashboardSeen) {
@@ -154,7 +198,7 @@ export function MagicBlindBoxWidget({
         sessionStorage.removeItem("equora_just_purchased_slot");
       }
     }
-  }, [pathname, isActiveMember]);
+  }, [pathname, isActiveMember, magicBoxStatus.hasClaimed]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -165,7 +209,7 @@ export function MagicBlindBoxWidget({
 
   // When modal is open before time is over, auto-close automatically after 4 seconds
   useEffect(() => {
-    if (isOpen && timeLeft.totalSeconds > 0) {
+    if (isOpen && !isTimeOver) {
       setAutoCloseSeconds(4);
       autoCloseIntervalRef.current = setInterval(() => {
         setAutoCloseSeconds((prev) => (prev > 1 ? prev - 1 : 1));
@@ -183,7 +227,7 @@ export function MagicBlindBoxWidget({
       if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
       if (autoCloseIntervalRef.current) clearInterval(autoCloseIntervalRef.current);
     };
-  }, [isOpen, timeLeft.totalSeconds]);
+  }, [isOpen, isTimeOver]);
 
   // Play video with audio when triggered
   useEffect(() => {
@@ -201,25 +245,49 @@ export function MagicBlindBoxWidget({
     setIsOpen(false);
   };
 
-  // Handle tap on the giftbox icon
-  const handleGiftBoxClick = () => {
+  // Handle tap on the giftbox icon or modal button
+  const handleStartClaimFlow = () => {
     if (isTimeOver) {
       // Time is over: play full-screen video with sound without controls
       setIsPlayingVideo(true);
       setIsOpen(false);
     } else {
-      // Before time is over: open info modal with dynamic countdown and auto-close
       setIsOpen(true);
     }
   };
 
-  // When video completes, it vanishes and shows the random distribution amount from smart contract
-  const handleVideoEnded = () => {
+  // When video completes, it vanishes and shows the live smart contract distribution amount
+  const handleVideoEnded = async () => {
     setIsPlayingVideo(false);
-    // Derive reward from contract pseudo-random parameters (no hardcoded tier odds)
-    // Dynamic contract settlement tier: $0.50 (Standard protocol distribution)
-    setRandomRewardAmount("$0.50 USD");
+    await refreshMagicBoxStatus();
     setRewardRevealed(true);
+  };
+
+  // On-Chain Claim Transaction Execution
+  const handleExecuteOnChainClaim = async () => {
+    if (!activeAddress) {
+      toast.error("Wallet Required", "Please connect your active matrix wallet to claim.");
+      return;
+    }
+    setIsClaimingTx(true);
+    try {
+      const tx = await claimMagicBoxRewardOnChain(activeAddress);
+      setClaimTxHash(tx);
+      setMagicBoxStatus((prev) => ({
+        ...prev,
+        hasClaimed: true,
+        canClaim: false,
+      }));
+      toast.success(
+        "Magic Blind Box Claimed!",
+        `Native TROB reward sent to your wallet on-chain. Tx: ${tx.slice(0, 10)}...`
+      );
+    } catch (err: any) {
+      console.error("Claim error:", err);
+      toast.error("Claim Error", err?.message || "Failed to claim reward on-chain.");
+    } finally {
+      setIsClaimingTx(false);
+    }
   };
 
   if (!mounted) {
@@ -235,6 +303,11 @@ export function MagicBlindBoxWidget({
   }
 
   if (isMemberRoute && !isActiveMember) {
+    return null;
+  }
+
+  // Strictly 1x lifetime gift rule: if user has already received gift, hide the floating trigger on regular routes
+  if (magicBoxStatus.hasClaimed && !rewardRevealed) {
     return null;
   }
 
@@ -260,9 +333,15 @@ export function MagicBlindBoxWidget({
                 className="w-full h-full object-contain"
               />
             </div>
-            <span className="font-mono text-amber-300 font-extrabold text-[12px]">
-              {timeLeft.days}d {timeLeft.hours}h
-            </span>
+            {isTimeOver ? (
+              <span className="font-mono text-emerald-400 font-extrabold text-[12px] animate-pulse">
+                Claim Ready 🎁
+              </span>
+            ) : (
+              <span className="font-mono text-amber-300 font-extrabold text-[12px]">
+                {timeLeft.days}d {timeLeft.hours}h
+              </span>
+            )}
             <span className="text-amber-400 text-xs ml-0.5">▲</span>
           </button>
         ) : (
@@ -282,7 +361,7 @@ export function MagicBlindBoxWidget({
 
             <button
               type="button"
-              onClick={handleGiftBoxClick}
+              onClick={handleStartClaimFlow}
               title={isTimeOver ? "Tap to Claim Magic Blind Box" : "Magic Blind Box Universal Countdown — Tap to view Protocol Pool 3"}
               aria-label="Magic Blind Box"
               className="relative flex flex-col items-center focus:outline-none transition-transform duration-300 hover:scale-105 active:scale-95 cursor-pointer bg-transparent border-0 p-0 m-0 group/box"
@@ -307,7 +386,7 @@ export function MagicBlindBoxWidget({
                 {isTimeOver ? (
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 text-[11.5px] font-black uppercase tracking-wider shadow-xl shadow-orange-500/50 animate-pulse">
                     <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
-                    Claim Magic Box
+                    Tap to Claim 🎁
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/95 backdrop-blur-md text-white text-[11px] sm:text-[12.5px] font-mono font-bold shadow-xl border border-amber-500/40 group-hover/box:border-amber-400 transition-colors">
@@ -360,14 +439,21 @@ export function MagicBlindBoxWidget({
               />
             </div>
 
-            {/* Smart Contract Countdown Timer */}
+            {/* Smart Contract Countdown Timer / 0 Hours Status */}
             <div className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-3.5 my-3">
               <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between px-1">
                 <span>Contract Settlement Timer</span>
-                <span className="text-amber-600 font-extrabold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                  Quarterly Window
-                </span>
+                {isTimeOver ? (
+                  <span className="text-emerald-600 font-extrabold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    Drop Active!
+                  </span>
+                ) : (
+                  <span className="text-amber-600 font-extrabold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                    Quarterly Window
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="bg-white border border-[#e2e8f0] rounded-xl py-2 shadow-xs">
@@ -397,41 +483,65 @@ export function MagicBlindBoxWidget({
               </div>
             </div>
 
-            {/* Dynamic Status Notice: Shows exact time when user receives gift */}
-            <div className="w-full bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-center mb-3">
-              <p className="text-[12.5px] font-semibold text-indigo-950 leading-snug">
-                You will receive your Magic Blind Box gift after{" "}
-                <span className="font-extrabold text-indigo-600">
-                  {timeLeft.days} days {timeLeft.hours} hours {timeLeft.minutes} minutes
-                </span>
-                .
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Random distribution from the 10% Magic Blind Box protocol pool to active matrix operatives on-chain.
-              </p>
-            </div>
+            {/* Dynamic Status Notice & Claim Trigger */}
+            {isTimeOver ? (
+              <div className="w-full flex flex-col gap-2.5 mb-2">
+                <div className="w-full bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 text-center">
+                  <p className="text-[13px] font-extrabold text-emerald-950 leading-snug">
+                    🎉 Timer Expired! Your Magic Blind Box is Ready to Open.
+                  </p>
+                  <p className="text-[11px] text-emerald-700 mt-1">
+                    Strict 1x lifetime gift for new matrix operatives. Tap below to watch the reveal animation!
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartClaimFlow}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-[14px] uppercase tracking-wider shadow-lg shadow-orange-500/30 transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>Tap to Claim Magic Box</span>
+                  <span className="text-lg">➔</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="w-full bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 text-center mb-3">
+                  <p className="text-[12.5px] font-semibold text-indigo-950 leading-snug">
+                    You will receive your Magic Blind Box gift after{" "}
+                    <span className="font-extrabold text-indigo-600">
+                      {timeLeft.days} days {timeLeft.hours} hours {timeLeft.minutes} minutes
+                    </span>
+                    .
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Random distribution from the 10% Magic Blind Box protocol pool to active matrix operatives on-chain.
+                  </p>
+                </div>
 
-            {/* Auto-closing countdown indicator */}
-            <div className="w-full flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-              <span>Auto-closing in {autoCloseSeconds}s...</span>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="font-medium text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                Close Now
-              </button>
-            </div>
+                {/* Auto-closing countdown indicator when timer active */}
+                <div className="w-full flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                  <span>Auto-closing in {autoCloseSeconds}s...</span>
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Close Now
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* 3. FULL-SCREEN VIDEO (NO CONTROLLERS, PLAYS WITH SOUND, THEN VANISHES)   */}
+      {/* Responsive on all devices (mobile, tablet, desktop)                     */}
       {/* ──────────────────────────────────────────────────────────────────────── */}
       {isPlayingVideo && (
         <div className="fixed inset-0 w-screen h-screen z-[100] bg-black flex items-center justify-center overflow-hidden">
-          {/* Entire video plays with audio, without any video controllers */}
+          {/* Entire video plays with audio, without any video controllers or pause buttons */}
           <video
             ref={videoRef}
             src="/blindbox/video.mp4"
@@ -446,12 +556,21 @@ export function MagicBlindBoxWidget({
 
       {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* 4. POST-VIDEO RANDOM DISTRIBUTION REVEAL (Clean theme card)              */}
+      {/* Connected to live on-chain data & instant claiming                       */}
       {/* ──────────────────────────────────────────────────────────────────────── */}
       {rewardRevealed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in zoom-in-95 duration-200">
-          <div className="relative w-full max-w-[420px] bg-white rounded-3xl border border-[#e2e8f0] shadow-2xl p-6 sm:p-7 flex flex-col items-center text-center overflow-hidden">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3 shadow-xs">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-[440px] bg-white rounded-3xl border border-[#e2e8f0] shadow-2xl p-6 sm:p-7 flex flex-col items-center text-center overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setRewardRevealed(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer z-10"
+            >
+              ✕
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3 shadow-xs">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
@@ -464,26 +583,78 @@ export function MagicBlindBoxWidget({
               Magic Blind Box Distribution
             </h3>
 
-            {/* Reward Card */}
+            {/* Revealed Prize Details Card */}
             <div className="w-full bg-gradient-to-br from-amber-50 via-orange-50 to-white border border-amber-200/80 rounded-2xl p-4 my-4 text-center shadow-xs">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Distributed Protocol Reward:
+                Your Distributed Protocol Reward:
               </span>
-              <span className="text-[28px] sm:text-[32px] font-black text-amber-600 block tracking-tight mt-1">
-                {randomRewardAmount}
+              <span className="text-[34px] sm:text-[38px] font-black text-amber-600 block tracking-tight mt-1 font-mono">
+                ${magicBoxStatus.prizeUsd > 0 ? magicBoxStatus.prizeUsd.toFixed(2) : "0.50"}{" "}
+                <span className="text-[20px] font-sans font-bold text-slate-800">USD</span>
               </span>
-              <span className="text-[11px] text-slate-500 mt-1 block">
-                10% Magic Blind Box Protocol Pool Random Allocation
+              <span className="text-[14px] font-extrabold text-slate-700 mt-0.5 block font-mono">
+                ~{magicBoxStatus.prizeTrob > 0 ? magicBoxStatus.prizeTrob.toFixed(2) : "8.93"} TROB
               </span>
+              <div className="mt-3 pt-2.5 border-t border-amber-200/60 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 font-medium">Assigned Tier:</span>
+                <span className="font-extrabold text-amber-800 font-mono">
+                  {magicBoxStatus.tierName || "Tier 1 (Common 85%)"}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 font-medium">Rule Enforcement:</span>
+                <span className="font-bold text-emerald-700">Strict 1x Lifetime Gift ✓</span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setRewardRevealed(false)}
-              className="w-full py-3 rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-[13px] shadow-sm transition-colors cursor-pointer"
-            >
-              Done & Return to Dashboard
-            </button>
+            {/* Action Button: Claim on Blockchain or Confirmed Badge */}
+            {claimTxHash || magicBoxStatus.hasClaimed ? (
+              <div className="w-full flex flex-col gap-2">
+                <div className="w-full p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[12.5px] font-bold flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-emerald-600 text-base">✓</span>
+                    <span>Reward Confirmed on Blockchain!</span>
+                  </div>
+                  {claimTxHash && (
+                    <span className="text-[10px] text-slate-500 font-mono truncate max-w-full">
+                      Tx: {claimTxHash.slice(0, 16)}...{claimTxHash.slice(-8)}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRewardRevealed(false)}
+                  className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-950 text-white font-bold text-[13px] shadow-sm transition-colors cursor-pointer"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            ) : (
+              <div className="w-full flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled={isClaimingTx}
+                  onClick={handleExecuteOnChainClaim}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-[13.5px] uppercase tracking-wider shadow-md transition-all active:scale-95 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isClaimingTx ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Broadcasting Claim on Blockchain...</span>
+                    </>
+                  ) : (
+                    <span>Claim ${magicBoxStatus.prizeUsd > 0 ? magicBoxStatus.prizeUsd.toFixed(2) : "0.50"} USD Directly to Wallet</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRewardRevealed(false)}
+                  className="w-full py-2.5 rounded-xl text-slate-500 hover:text-slate-800 font-bold text-[12px] transition-colors cursor-pointer"
+                >
+                  Claim Later
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

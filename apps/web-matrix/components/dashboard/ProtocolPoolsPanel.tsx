@@ -661,8 +661,8 @@ export function ProtocolPoolsPanel({
         isOpen={showBlindBoxModal}
         onClose={() => setShowBlindBoxModal(false)}
         userAddress={userAddress || ""}
-        claimableAmountTrob={claimableRewards?.magicBoxClaimableTrob || 88.25}
-        claimableAmountUsd={(claimableRewards?.magicBoxClaimableTrob || 88.25) * 0.056}
+        claimableAmountTrob={claimableRewards?.magicBoxClaimableTrob || 8.93}
+        claimableAmountUsd={(claimableRewards?.magicBoxClaimableTrob || 8.93) * 0.056}
         onRewardClaimed={refreshClaimable}
       />
 

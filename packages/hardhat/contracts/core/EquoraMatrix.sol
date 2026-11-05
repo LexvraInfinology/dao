@@ -1342,6 +1342,13 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
      */
     function isMatrixQualified(address user) public view returns (bool) {
         if (user == _getRootMatrixOwner()) return true;
+        // Cycle 2+ or Slot 2+ permanent qualification:
+        // The 2 direct referral requirement strictly applies only to initial Slot 1 Cycle 1 onboarding.
+        // Cycled operatives and operatives with higher slots unlocked are permanently qualified.
+        if (userSlots[user][1].currentCycle > 1 || cycleSnapshots[user][1].length > 0) return true;
+        for (uint256 s = 2; s <= 12; s++) {
+            if (userSlots[user][s].isUnlocked) return true;
+        }
         return getActiveDirectReferralsCount(user) >= 2;
     }
 
@@ -1380,6 +1387,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     function isMatrixTreeStarted(address user, uint256 slot) public view returns (bool) {
         if (!userSlots[user][slot].isUnlocked) return false;
         if (slot > 1 && !userSlots[user][slot].isLive) return false;
+        // Higher slots and all Cycle 2+ boards start immediately upon unlock without waiting for directs
+        if (slot > 1 || userSlots[user][1].currentCycle > 1 || cycleSnapshots[user][1].length > 0) return true;
         return isMatrixQualified(user);
     }
 

@@ -45,6 +45,13 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     setMounted(true);
+    const handleSwitchTab = (e: any) => {
+      if (e.detail && ["overview", "matrix", "pools"].includes(e.detail)) {
+        setActiveTab(e.detail);
+      }
+    };
+    window.addEventListener("equora_switch_tab", handleSwitchTab);
+    return () => window.removeEventListener("equora_switch_tab", handleSwitchTab);
   }, []);
 
   const { address, changeAddress, disconnect, dashboard, profile, refreshAll, loading } = useMatrixUser();
@@ -55,7 +62,14 @@ export default function DashboardPage() {
     dashboard?.activeDirectsCount ?? 0,
     directMembers?.length ?? 0
   );
-  const isQualified = activeDirectsCount >= 2;
+  // Cycle 2+ or Slot 2+ permanent qualification exemption:
+  // The 2 direct referral restriction strictly applies only to initial Slot 1 Cycle 1 onboarding.
+  const isCycledOrHigherSlot = Boolean(
+    (dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 1) > 1 ||
+    (dashboard?.recyclesCount && dashboard.recyclesCount > 0) ||
+    (((dashboard?.activeSlotProgress as any)?.totalCycles || 0) > 1)
+  );
+  const isQualified = isCycledOrHigherSlot || activeDirectsCount >= 2;
 
   if (!mounted || (loading && !dashboard)) {
     return (
@@ -298,7 +312,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
-          <HeaderSearchBar className="hidden lg:flex items-center flex-1 max-w-[240px] xl:max-w-[360px]" />
+          <HeaderSearchBar className="flex items-center flex-1 max-w-[240px] xl:max-w-[420px]" />
 
           {/* Right Header Section */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">

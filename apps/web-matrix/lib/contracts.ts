@@ -17,7 +17,7 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TNVT6eeHFgdeQKXMYq9D2sFMeDHN3sjbkp",
+  matrix: "TLpALqXZmg6ZKmfhkZgDvGcRNKnaQtDaCM",
   token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
   registry: "TZDGqBb9GmF6SPDfUigXbFeYBTLcqD5oML",
   vault: "TXr6CbCQBKFqF33P9o95SwwnV8zQa8nG2V",
@@ -881,8 +881,22 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
       }
     } catch {}
 
-    // Strict qualification requirement: Must have at least 2 active direct referrals
-    const isQualified = activeDirectsCount >= 2;
+    // Query on-chain smart contract isMatrixQualified (includes Genesis Root, Cycle 2+ and Slot 2+ permanent qualification)
+    let isQualified = false;
+    try {
+      const qualRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.matrix,
+        "isMatrixQualified(address)",
+        param
+      );
+      if (qualRaw) {
+        isQualified = Boolean(coder.decode(["bool"], "0x" + qualRaw)[0]);
+      }
+    } catch {}
+
+    if (!isQualified && activeDirectsCount >= 2) {
+      isQualified = true;
+    }
 
     return { isQualified, activeDirectsCount };
   } catch (err) {

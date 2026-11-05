@@ -34,8 +34,8 @@
       "txHash": "0xb218b6db55a1190ede56695f3e836217940bc037fab899c77b2bd3b5a55e635f"
     },
     "EquoraMatrix": {
-      "addressHex": "418959c15db0460c2d9c1e343ed04ef2f2bf4e74a2",
-      "addressBase58": "TNVT6eeHFgdeQKXMYq9D2sFMeDHN3sjbkp"
+      "addressHex": "4176f36b9c20bfab2359022fa83bd4eabd6f56b03e",
+      "addressBase58": "TLpALqXZmg6ZKmfhkZgDvGcRNKnaQtDaCM"
     },
     "EquoraDAOv2": {
       "name": "EquoraDAOv3",
@@ -74,5 +74,5 @@
       "txHash": "0x55c3fd5807356b573750944e915dff4afa623f1a1dc57de521170595ab687c78"
     }
   },
-  "updatedAt": "2026-11-05T07:36:06.718Z"
+  "updatedAt": "2026-11-05T08:05:35.725Z"
 }

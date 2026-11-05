@@ -179,3 +179,4 @@ export function RankAchievedModal({ isOpen, onClose, rank, milestones }: RankAch
     </div>
   );
 }
+

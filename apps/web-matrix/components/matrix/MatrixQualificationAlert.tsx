@@ -19,7 +19,7 @@ export function MatrixQualificationAlert({
   const count = Math.max(0, activeDirectsCount);
   const needed = Math.max(0, 2 - count);
   // STRICT RULE: User is ONLY qualified if active directs count >= 2
-  const strictlyQualified = count >= 2;
+  const strictlyQualified = Boolean(isQualified || count >= 2);
   const progressPercent = strictlyQualified ? 100 : Math.min(100, Math.round((count / 2) * 100));
 
   const handleCopy = () => {

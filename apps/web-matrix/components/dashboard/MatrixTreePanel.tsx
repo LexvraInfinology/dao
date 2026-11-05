@@ -531,7 +531,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     data?.activeDirectsCount ?? 0
   );
 
-  const isOwnerQualified = directsCount >= 2;
+  // The 2 direct referral restriction strictly applies ONLY to initial onboarding on Slot 1 Cycle 1.
+  // For all higher slots (Slot 2-12) or subsequent cycles (Cycle 2, 3...), operatives are permanently qualified!
+  const isInitialSlot1Cycle1 = selectedSlot === 1 && currentCycle <= 1;
+  const isCycledOrHigherSlot = Boolean(
+    selectedSlot > 1 ||
+    currentCycle > 1 ||
+    totalCycles > 1 ||
+    (data?.highestUnlockedSlot ?? 1) > 1 ||
+    (profile?.highestUnlockedSlot ?? 1) > 1 ||
+    (data?.recyclesCount && data.recyclesCount > 0)
+  );
+
+  const isOwnerQualified = isCycledOrHigherSlot || !isInitialSlot1Cycle1 || directsCount >= 2;
 
   const firstOpenPosIndex = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.findIndex((n: any) => !n?.filled) : -1;
   const nextUpcomingPos = isCurrentSlotUnlocked && !isSlotStandby

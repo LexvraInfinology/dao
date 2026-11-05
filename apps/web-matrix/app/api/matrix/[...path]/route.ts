@@ -209,6 +209,12 @@ async function getActiveDirects(userEthHex: string): Promise<number> {
 // Read isMatrixQualified(address) → bool
 // ─────────────────────────────────────────────────────────────────────────────
 async function isQualified(userEthHex: string): Promise<boolean> {
+  try {
+    const chunks = await callContract(MATRIX_HEX, "isMatrixQualified(address)", encodeAddress(userEthHex));
+    if (chunks && chunks[0]) {
+      return decodeBool(chunks[0]);
+    }
+  } catch {}
   const directs = await getActiveDirects(userEthHex);
   return directs >= 2;
 }

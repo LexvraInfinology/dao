@@ -55,7 +55,7 @@ const TESTNET_DEFAULT_CONTRACTS = {
   nft:      "TYD9wK9ApVu1Bne5EKDS3HTkVEPLssrJMa",
   vesting:  "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
   dao:      "TWgcp9aBD5GBnCaCQnPaEzuAogBRBF2PBY",
-  matrix:   "TNVT6eeHFgdeQKXMYq9D2sFMeDHN3sjbkp",
+  matrix:   "TLpALqXZmg6ZKmfhkZgDvGcRNKnaQtDaCM",
   vault:    "TXr6CbCQBKFqF33P9o95SwwnV8zQa8nG2V",
   salary:   "TDjun5J74ybWbpsQfUSXuzdZGoGsZGsKbY",
   reward:   "TKhg942FnQ99crWupUwZPp7SoquLhFH83j",

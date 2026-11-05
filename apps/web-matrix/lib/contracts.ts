@@ -23,7 +23,7 @@ export const TESTNET_DEFAULT_ADDRESSES = {
   vault: "TL6jaVYwfstQeeyHEyweJwUrr5dVn15TB9",
   salaryPool: "TXEEJQFhcQMExeL8hkKysGPuiWLTXD38RW",
   rewardPool: "TL9m6b69Sz9Hmr6iCgqPYfbQezQZbGZvqn",
-  magicBoxPool: "TWT4V3tCaAvQwU5nnw6E8B87S1myyXVApE",
+  magicBoxPool: "TD6p1DL543xVRTDEbGqnjf9iSySAtMUecP",
   dao: "TWmgPJhGGnELtUWtGcUF7iYTp4VqkJBuQY",
   nft: "TPZyHq1jBcj9s6LPwN16uFHpkecDfto2mi",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",

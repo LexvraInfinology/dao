@@ -54,6 +54,17 @@ contract EquoraMagicBox is ReentrancyGuard {
 
     // ─── Data Structures ───────────────────────────────────────────────────────
 
+    struct TierConfig {
+        uint256 t1Count;
+        uint256 t2Count;
+        uint256 t3Count;
+        uint256 t4Count;
+        uint256 t1Trob;
+        uint256 t2Trob;
+        uint256 t3Trob;
+        uint256 t4Trob;
+    }
+
     struct QuarterDraw {
         uint256 round;
         bytes32 seed;
@@ -307,6 +318,40 @@ contract EquoraMagicBox is ReentrancyGuard {
         _executeQuarterlyAutoPush(bytes32(seed));
     }
 
+    function _computeTierConfig(uint256 total) internal view returns (TierConfig memory tc) {
+        tc.t4Count = (total * TIER4_USER_BPS + BPS_BASE / 2) / BPS_BASE;
+        tc.t3Count = (total * TIER3_USER_BPS + BPS_BASE / 2) / BPS_BASE;
+        tc.t2Count = (total * TIER2_USER_BPS + BPS_BASE / 2) / BPS_BASE;
+
+        if (total >= 4) {
+            if (tc.t4Count == 0) tc.t4Count = 1;
+            if (tc.t3Count == 0) tc.t3Count = 1;
+            if (tc.t2Count == 0) tc.t2Count = 1;
+        } else {
+            tc.t4Count = 0;
+            tc.t3Count = 0;
+            tc.t2Count = 0;
+        }
+
+        tc.t1Count = total - (tc.t4Count + tc.t3Count + tc.t2Count);
+
+        tc.t1Trob = (TIER1_USD_CENTS * trobPerUsd) / 100;
+        tc.t2Trob = (TIER2_USD_CENTS * trobPerUsd) / 100;
+        tc.t3Trob = (TIER3_USD_CENTS * trobPerUsd) / 100;
+        tc.t4Trob = (TIER4_USD_CENTS * trobPerUsd) / 100;
+
+        uint256 totalRequired = (tc.t1Trob * tc.t1Count) + (tc.t2Trob * tc.t2Count) +
+                                (tc.t3Trob * tc.t3Count) + (tc.t4Trob * tc.t4Count);
+
+        if (totalRequired > poolBalance && totalRequired > 0) {
+            uint256 scale = (poolBalance * 1e18) / totalRequired;
+            tc.t1Trob = (tc.t1Trob * scale) / 1e18;
+            tc.t2Trob = (tc.t2Trob * scale) / 1e18;
+            tc.t3Trob = (tc.t3Trob * scale) / 1e18;
+            tc.t4Trob = (tc.t4Trob * scale) / 1e18;
+        }
+    }
+
     /**
      * @dev Core Automatic Push Engine:
      *      1. Computes zero-lost-users tier breakdown (85% / 10% / 3% / 2%).
@@ -329,77 +374,53 @@ contract EquoraMagicBox is ReentrancyGuard {
             return;
         }
 
-        // Zero-Lost-Users Rounding Formula:
-        // Half-up rounding on smaller tiers + Tier 1 takes exact remainder
-        uint256 t4Count = (total * TIER4_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-        uint256 t3Count = (total * TIER3_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-        uint256 t2Count = (total * TIER2_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-
-        if (total >= 4) {
-            if (t4Count == 0) t4Count = 1;
-            if (t3Count == 0) t3Count = 1;
-            if (t2Count == 0) t2Count = 1;
-        } else {
-            t4Count = 0;
-            t3Count = 0;
-            t2Count = 0;
-        }
-
-        uint256 t1Count = total - (t4Count + t3Count + t2Count);
-
-        // Convert USD cent prizes to TROB (6 decimals)
-        uint256 t1Trob = (TIER1_USD_CENTS * trobPerUsd) / 100;
-        uint256 t2Trob = (TIER2_USD_CENTS * trobPerUsd) / 100;
-        uint256 t3Trob = (TIER3_USD_CENTS * trobPerUsd) / 100;
-        uint256 t4Trob = (TIER4_USD_CENTS * trobPerUsd) / 100;
-
-        // Total TROB required
-        uint256 totalRequired = (t1Trob * t1Count) + (t2Trob * t2Count) +
-                                (t3Trob * t3Count) + (t4Trob * t4Count);
-
-        // Scale down proportionally if pool balance is below theoretical requirement
-        if (totalRequired > poolBalance && totalRequired > 0) {
-            uint256 scale = (poolBalance * 1e18) / totalRequired;
-            t1Trob = (t1Trob * scale) / 1e18;
-            t2Trob = (t2Trob * scale) / 1e18;
-            t3Trob = (t3Trob * scale) / 1e18;
-            t4Trob = (t4Trob * scale) / 1e18;
-        }
+        TierConfig memory tc = _computeTierConfig(total);
 
         bytes32 entropySeed = keccak256(abi.encodePacked(
             seedInput, block.timestamp, block.prevrandao, block.number,
             total, q
         ));
 
+        // Create an in-memory Fisher-Yates shuffled permutation to guarantee exact tier quotas:
+        // rank 0 .. t4Count-1                         -> Tier 4 (2%  = $5.00)
+        // rank t4Count .. t4Count+t3Count-1           -> Tier 3 (3%  = $1.20)
+        // rank t4Count+t3Count .. +t2Count-1          -> Tier 2 (10% = $0.80)
+        // all remaining ranks                         -> Tier 1 (85% = $0.50)
+        uint256[] memory shuffled = new uint256[](total);
+        for (uint256 i = 0; i < total; i++) {
+            shuffled[i] = i;
+        }
+        for (uint256 i = 0; i < total; i++) {
+            uint256 j = i + (uint256(keccak256(abi.encodePacked(entropySeed, i, "SHUFFLE"))) % (total - i));
+            uint256 temp = shuffled[i];
+            shuffled[i] = shuffled[j];
+            shuffled[j] = temp;
+        }
+
         // AUTOMATIC ON-CHAIN DIRECT PUSH TRANSFER LOOP
         uint256 totalPaid = 0;
         uint256 successfulRecipients = 0;
 
-        for (uint256 i = 0; i < total; i++) {
-            address recipient = _quarterUsers[q][i];
+        for (uint256 rank = 0; rank < total; rank++) {
+            address recipient = _quarterUsers[q][shuffled[rank]];
             if (recipient == address(0) || hasReceivedMagicBox[recipient]) continue;
 
-            uint256 roll = uint256(keccak256(abi.encodePacked(entropySeed, recipient, i))) % BPS_BASE;
-            uint8 tier;
-            uint256 prizeTrob;
-            uint256 prizeUsd;
+            uint8 tier = 1;
+            uint256 prizeTrob = tc.t1Trob;
+            uint256 prizeUsd = TIER1_USD_CENTS;
 
-            if (roll < TIER4_USER_BPS) {
+            if (rank < tc.t4Count) {
                 tier = 4;
-                prizeTrob = t4Trob;
+                prizeTrob = tc.t4Trob;
                 prizeUsd = TIER4_USD_CENTS;
-            } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS) {
+            } else if (rank < tc.t4Count + tc.t3Count) {
                 tier = 3;
-                prizeTrob = t3Trob;
+                prizeTrob = tc.t3Trob;
                 prizeUsd = TIER3_USD_CENTS;
-            } else if (roll < TIER4_USER_BPS + TIER3_USER_BPS + TIER2_USER_BPS) {
+            } else if (rank < tc.t4Count + tc.t3Count + tc.t2Count) {
                 tier = 2;
-                prizeTrob = t2Trob;
+                prizeTrob = tc.t2Trob;
                 prizeUsd = TIER2_USD_CENTS;
-            } else {
-                tier = 1;
-                prizeTrob = t1Trob;
-                prizeUsd = TIER1_USD_CENTS;
             }
 
             // Permanently mark user received (1x lifetime gift)
@@ -445,14 +466,14 @@ contract EquoraMagicBox is ReentrancyGuard {
             startTime: quarterStartTime,
             endTime: block.timestamp,
             totalUsers: total,
-            t1Count: t1Count,
-            t2Count: t2Count,
-            t3Count: t3Count,
-            t4Count: t4Count,
-            t1Trob: t1Trob,
-            t2Trob: t2Trob,
-            t3Trob: t3Trob,
-            t4Trob: t4Trob,
+            t1Count: tc.t1Count,
+            t2Count: tc.t2Count,
+            t3Count: tc.t3Count,
+            t4Count: tc.t4Count,
+            t1Trob: tc.t1Trob,
+            t2Trob: tc.t2Trob,
+            t3Trob: tc.t3Trob,
+            t4Trob: tc.t4Trob,
             totalPaidTrob: totalPaid,
             timestamp: block.timestamp
         });
@@ -461,10 +482,10 @@ contract EquoraMagicBox is ReentrancyGuard {
             q,
             entropySeed,
             total,
-            t1Count,
-            t2Count,
-            t3Count,
-            t4Count,
+            tc.t1Count,
+            tc.t2Count,
+            tc.t3Count,
+            tc.t4Count,
             block.timestamp
         );
 

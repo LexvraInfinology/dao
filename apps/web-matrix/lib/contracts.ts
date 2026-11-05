@@ -17,31 +17,31 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: "TSVnyi3gM6QQrH4is8nNFJjJyQbjSrUohK",
-  token: "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
-  registry: "TVV5TzCddJ2EwvpGUEnJzyvYe4QUkDq2m2",
-  vault: "TL6jaVYwfstQeeyHEyweJwUrr5dVn15TB9",
-  salaryPool: "TXEEJQFhcQMExeL8hkKysGPuiWLTXD38RW",
-  rewardPool: "TL9m6b69Sz9Hmr6iCgqPYfbQezQZbGZvqn",
-  magicBoxPool: "TD6p1DL543xVRTDEbGqnjf9iSySAtMUecP",
-  dao: "TWmgPJhGGnELtUWtGcUF7iYTp4VqkJBuQY",
-  nft: "TPZyHq1jBcj9s6LPwN16uFHpkecDfto2mi",
-  legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
-  legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
+  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || "",
+  token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "",
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "",
+  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || "",
+  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || "",
+  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || "",
+  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || "",
+  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || "",
+  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || "",
+  legacyDaoV1: process.env.NEXT_PUBLIC_LEGACY_V1_DAO_ADDRESS || "",
+  legacyDaoV2: process.env.NEXT_PUBLIC_LEGACY_V2_DAO_ADDRESS || "",
 };
 
 export const MAINNET_DEFAULT_ADDRESSES = {
-  matrix: "TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz",
-  token: "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-  registry: "TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN",
-  vault: "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
-  salaryPool: "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
-  rewardPool: "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
-  magicBoxPool: "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
-  dao: "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
-  nft: "TYhsf65YRD64Dz5b8CpRsjGzb22ZYtacZj",
-  legacyDaoV1: "TAuwP4TDvmGp6FT5wqcSz2VMZVbuusneto",
-  legacyDaoV2: "TP7e2uoSrazAewXUgYnE6EmrtHhhSHWxPT",
+  matrix: "TEMkDDSRHjXHDZ8Hk4Rj7VvH4bMd2ttUGw",
+  token: "TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8",
+  registry: "THPNUxBhgG5ZsT3XfMU8LKTNq1rWzahLxT",
+  vault: "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9",
+  salaryPool: "TAiDq3DQ4H5LNKFt57akWXY7HRyT52VsBy",
+  rewardPool: "TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v",
+  magicBoxPool: "TDuKBBieferWEHwSESRA1YKiKhJovidYsw",
+  dao: "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf",
+  nft: "TGToBrxcw8PJw2uPvdwCvTHneECnFtzUYi",
+  legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
+  legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
 };
 
 const DEFAULT_ADDRESSES = IS_MAINNET ? MAINNET_DEFAULT_ADDRESSES : TESTNET_DEFAULT_ADDRESSES;
@@ -449,7 +449,8 @@ export async function getOnChainTotalMembers(): Promise<number> {
   return 0;
 }
 export function getSlotCost(slotNumber: number): number {
-  return 30;
+  if (!slotNumber || slotNumber <= 1) return 30;
+  return 30 * Math.pow(2, Math.min(11, slotNumber - 1));
 }
 
 /**
@@ -511,9 +512,9 @@ export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<num
     } catch {}
   }
 
-  if (onChainSun > 0) return onChainSun;
   if (liveSun > 0) return liveSun;
-  return 882_508_678; // Dynamic market rate based on live TROB API
+  if (onChainSun > 0) return onChainSun;
+  return 937_558_597; // Dynamic market rate based on live TROB API
 }
 
 // Fast cache for direct referrals
@@ -1120,8 +1121,12 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   if (sponsorRaw) {
     const sp = coder.decode(["address"], "0x" + sponsorRaw)[0];
     if (sp && sp !== "0x0000000000000000000000000000000000000000") {
-      // If the registry returns legacy root 0x7124b32b, dynamically redirect to the Protocol Vault from .env.local
-      if (sp.toLowerCase() === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902") {
+      // If the registry returns root account, dynamically redirect to the Protocol Vault from .env.local
+      const genesisRootHex = (
+        process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX ||
+        (process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS ? toHexAddress(process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS) : "")
+      ).toLowerCase();
+      if (genesisRootHex && sp.toLowerCase() === genesisRootHex) {
         sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
       } else {
         sponsorAddress = sp.toLowerCase();
@@ -2112,7 +2117,7 @@ export async function joinSlotOnChain(
     contractAddress: CONTRACT_ADDRESSES.matrix,
     functionSelector: "joinSlot(uint256,address)",
     parameterHex,
-    feeLimitSun: 100_000_000,
+    feeLimitSun: 300_000_000,
     callValueSun: callValueSun || 0,
     userAddress,
     evmArgs: [slotNumber, sponsorHex],
@@ -2374,7 +2379,12 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
   let magicBoxUsers = 0;
   if (mStatsRaw) {
     try {
-      const mDec = coder.decode(["uint256", "uint256", "uint256", "uint256", "uint256"], "0x" + mStatsRaw);
+      let mDec: any;
+      try {
+        mDec = coder.decode(["uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256"], "0x" + mStatsRaw);
+      } catch {
+        mDec = coder.decode(["uint256", "uint256", "uint256", "uint256", "uint256"], "0x" + mStatsRaw);
+      }
       magicBoxBalance = Number(ethers.formatUnits(mDec[0], 6));
       magicBoxTotalDist = Number(ethers.formatUnits(mDec[1], 6));
       magicBoxRounds = Number(mDec[2]);
@@ -2646,8 +2656,9 @@ export async function getOnChainUserRankMilestones(userAddress: string): Promise
       queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "getUserTier(address)", param).catch(() => null),
     ]);
 
-    const milestones = milestonesRaw ? Number(coder.decode(["uint256"], "0x" + milestonesRaw)[0]) : 0;
+    const rawMilestones = milestonesRaw ? Number(coder.decode(["uint256"], "0x" + milestonesRaw)[0]) : 0;
     const tierNumber = tierRaw ? Number(coder.decode(["uint8"], "0x" + tierRaw)[0]) : 0;
+    const milestones = Math.max(rawMilestones, tierNumber * 42);
     const TIER_NAMES = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
 
     return {
@@ -2687,11 +2698,10 @@ export async function getOnChainUserTransactions(userAddress: string) {
   }
 
   try {
+    // 1. Matrix Slot 1 Details & Direct Commissions
     const slotDetails = await getOnChainSlotDetails(userHex, 1).catch(() => null);
 
     if (slotDetails && slotDetails.isUnlocked) {
-      // Direct Owner Payout positions in 14-node binary matrix:
-      // Positions 3, 6, 8, 9, 11, 12 pay strictly +$30.00 USD directly to matrix owner
       const payingPositions = [3, 6, 8, 9, 11, 12];
       for (const pos of payingPositions) {
         const node = slotDetails.nodes?.[pos - 1];
@@ -2717,7 +2727,6 @@ export async function getOnChainUserTransactions(userAddress: string) {
         }
       }
 
-      // Slot 1 Outflow: Joined Slot 1 for $30.00
       totalOutflow += 30.0;
       items.push({
         id: `tx-slot-1-${userHex.slice(2, 8)}`,
@@ -2737,7 +2746,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
       });
     }
 
-    // Check if Slot 2 is unlocked and live
+    // 2. Matrix Slot 2 Details & Unlocks
     const slot2Details = await getOnChainSlotDetails(userHex, 2).catch(() => null);
     if (slot2Details && slot2Details.isUnlocked && slot2Details.isLive) {
       totalOutflow += 60.0;
@@ -2758,6 +2767,142 @@ export async function getOnChainUserTransactions(userAddress: string) {
         timestamp: new Date().toISOString(),
       });
     }
+
+    // 3. Royalty Pool Rewards (Leadership Royalty 40%)
+    try {
+      const coder = new ethers.AbiCoder();
+      const param = coder.encode(["address"], [userHex]).slice(2);
+      const [claimedRaw, pendingRaw] = await Promise.all([
+        queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "totalRoyaltyClaimed(address)", param).catch(() => null),
+        queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "pendingBalance(address)", param).catch(() => null),
+      ]);
+      const claimedTrob = claimedRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + claimedRaw)[0], 6)) : 0;
+      const pendingTrob = pendingRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + pendingRaw)[0], 6)) : 0;
+
+      if (claimedTrob > 0) {
+        const usdVal = Number((claimedTrob * 0.056).toFixed(2));
+        totalInflow += usdVal;
+        items.push({
+          id: `tx-royalty-claimed-${userHex.slice(2, 8)}`,
+          type: "ROYALTY_DIVIDEND",
+          slotNumber: null,
+          cycle: 1,
+          position: null,
+          amount: usdVal,
+          amountUsd: usdVal,
+          trobAmount: claimedTrob,
+          token: "TROB",
+          fromAddress: CONTRACT_ADDRESSES.salaryPool,
+          toAddress: "You",
+          txHash: null,
+          status: "COMPLETED",
+          description: `Leadership Royalty Monthly Dividend (+ $${usdVal.toFixed(2)} USD)`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      if (pendingTrob > 0) {
+        const usdVal = Number((pendingTrob * 0.056).toFixed(2));
+        items.push({
+          id: `tx-royalty-pending-${userHex.slice(2, 8)}`,
+          type: "ROYALTY_DIVIDEND",
+          slotNumber: null,
+          cycle: 1,
+          position: null,
+          amount: usdVal,
+          amountUsd: usdVal,
+          trobAmount: pendingTrob,
+          token: "TROB",
+          fromAddress: CONTRACT_ADDRESSES.salaryPool,
+          toAddress: "You",
+          txHash: null,
+          status: "PENDING",
+          description: `Leadership Royalty Dividend Accrued (+ $${usdVal.toFixed(2)} USD)`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch {}
+
+    // 4. Reward Pool Rewards (Rank Milestones 15%)
+    try {
+      const coder = new ethers.AbiCoder();
+      const param = coder.encode(["address"], [userHex]).slice(2);
+      const [rewardedRaw, pendingRewardRaw] = await Promise.all([
+        queryTrobConstant(CONTRACT_ADDRESSES.rewardPool, "totalRewarded(address)", param).catch(() => null),
+        queryTrobConstant(CONTRACT_ADDRESSES.rewardPool, "pendingReward(address)", param).catch(() => null),
+      ]);
+      const rewardedTrob = rewardedRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + rewardedRaw)[0], 6)) : 0;
+      const pendingRewardTrob = pendingRewardRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + pendingRewardRaw)[0], 6)) : 0;
+
+      if (rewardedTrob > 0) {
+        const usdVal = Number((rewardedTrob * 0.056).toFixed(2));
+        totalInflow += usdVal;
+        items.push({
+          id: `tx-milestone-claimed-${userHex.slice(2, 8)}`,
+          type: "RANK_MILESTONE",
+          slotNumber: null,
+          cycle: 1,
+          position: null,
+          amount: usdVal,
+          amountUsd: usdVal,
+          trobAmount: rewardedTrob,
+          token: "TROB",
+          fromAddress: CONTRACT_ADDRESSES.rewardPool,
+          toAddress: "You",
+          txHash: null,
+          status: "COMPLETED",
+          description: `Apex Rank Milestone Bounty (+ $${usdVal.toFixed(2)} USD)`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      if (pendingRewardTrob > 0) {
+        const usdVal = Number((pendingRewardTrob * 0.056).toFixed(2));
+        items.push({
+          id: `tx-milestone-pending-${userHex.slice(2, 8)}`,
+          type: "RANK_MILESTONE",
+          slotNumber: null,
+          cycle: 1,
+          position: null,
+          amount: usdVal,
+          amountUsd: usdVal,
+          trobAmount: pendingRewardTrob,
+          token: "TROB",
+          fromAddress: CONTRACT_ADDRESSES.rewardPool,
+          toAddress: "You",
+          txHash: null,
+          status: "PENDING",
+          description: `Apex Rank Milestone Bounty Claimable (+ $${usdVal.toFixed(2)} USD)`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch {}
+
+    // 5. Magic Blind Box Gifts (10%)
+    try {
+      const magicStatus = await getUserMagicBoxStatus(userAddress).catch(() => null);
+      if (magicStatus && (magicStatus.hasReceived || magicStatus.canClaim) && magicStatus.prizeTrob > 0) {
+        const prizeUsd = magicStatus.prizeUsd > 0 ? magicStatus.prizeUsd : Number((magicStatus.prizeTrob * 0.056).toFixed(2));
+        if (magicStatus.hasReceived) {
+          totalInflow += prizeUsd;
+        }
+        items.push({
+          id: `tx-magicbox-${userHex.slice(2, 8)}-q${magicStatus.round || 1}`,
+          type: "MAGIC_BOX_GIFT",
+          slotNumber: null,
+          cycle: magicStatus.round || 1,
+          position: null,
+          amount: prizeUsd,
+          amountUsd: prizeUsd,
+          trobAmount: magicStatus.prizeTrob,
+          token: "TROB",
+          fromAddress: CONTRACT_ADDRESSES.magicBoxPool,
+          toAddress: "You",
+          txHash: null,
+          status: magicStatus.hasReceived ? "COMPLETED" : "PENDING",
+          description: `Magic Blind Box ${magicStatus.tierName || "Quarterly"} Payout (+ $${prizeUsd.toFixed(2)} USD)`,
+          timestamp: magicStatus.receivedTimestamp ? new Date(magicStatus.receivedTimestamp * 1000).toISOString() : new Date().toISOString(),
+        });
+      }
+    } catch {}
   } catch (err) {
     console.warn("[OnChainTransactions] Error building on-chain txs:", err);
   }
@@ -2771,7 +2916,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
     stats: {
       totalInflow,
       totalOutflow,
-      pendingCount: 0,
+      pendingCount: items.filter(i => i.status === "PENDING").length,
       netProfit: totalInflow - totalOutflow,
     },
   };

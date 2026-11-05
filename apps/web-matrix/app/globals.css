@@ -235,3 +235,30 @@ input[type="reset"] {
   }
 }
 
+
+/* ═══════════ MATRIX TREE NODE STAGGERED REVEAL ANIMATION ═══════════ */
+@keyframes tree-node-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  60% {
+    opacity: 0.95;
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tree-node {
+  animation: tree-node-reveal 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tree-node {
+    animation: none !important;
+  }
+}

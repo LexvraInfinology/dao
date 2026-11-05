@@ -53,10 +53,19 @@ export async function GET() {
           const totalDistributedBTT = parseFloat(formatUnits(decoded.totalDistributedAmount, 6));
           const remainingPositions = Math.max(0, 100 - memberCount);
           const nextAvailableSeat = memberCount < 100 ? memberCount + 1 : 100;
+          let livePrice = 0.031998;
+          try {
+            const pRes = await fetch('https://backend.trobchain.com/v1/market/price', { cache: 'no-store' });
+            if (pRes.ok) {
+              const pj = await pRes.json();
+              const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
+              if (p > 0) livePrice = p;
+            }
+          } catch {}
           const entryFeeUsd = 300;
           const earningsCapUsd = 1500;
-          const entryFeeBtt = 8076.24;
-          const earningsCapBtt = 26785.71;
+          const entryFeeBtt = Math.round((entryFeeUsd / livePrice) * 100) / 100;
+          const earningsCapBtt = Math.round((earningsCapUsd / livePrice) * 100) / 100;
 
           const payload = {
             memberCount,
@@ -101,8 +110,8 @@ export async function GET() {
               distributedTrob: totalDistributedBTT,
             },
             isClosed: memberCount >= 100,
-            bttPriceUsd: 0.056,
-            trobPriceUsd: 0.056,
+            bttPriceUsd: livePrice,
+            trobPriceUsd: livePrice,
             priceSource: 'trobchain-testnet',
             priceUpdatedAt: new Date().toISOString(),
             dividendYieldApy: '0%',
@@ -127,12 +136,21 @@ export async function GET() {
   syncOnChainMembersState().catch(() => {});
   getOnChainDaoTransactions().catch(() => {});
 
-  const trobPriceUsd = 0.056;
+  let livePrice = 0.031998;
+  try {
+    const pRes = await fetch('https://backend.trobchain.com/v1/market/price', { cache: 'no-store' });
+    if (pRes.ok) {
+      const pj = await pRes.json();
+      const p = Number(pj?.data?.priceUsd ?? pj?.priceUsd);
+      if (p > 0) livePrice = p;
+    }
+  } catch {}
+  const trobPriceUsd = livePrice;
   const bttPriceUsd = trobPriceUsd;
   const entryFeeUsd = 300;
   const earningsCapUsd = 1500;
-  const entryFeeBtt = 5357.14; // Smart contract fixed entry fee
-  const earningsCapBtt = 26785.71; // Smart contract fixed 5X cap
+  const entryFeeBtt = Math.round((entryFeeUsd / livePrice) * 100) / 100;
+  const earningsCapBtt = Math.round((earningsCapUsd / livePrice) * 100) / 100;
 
   let memberCount = 87;
   let nextAvailableSeat = 79;

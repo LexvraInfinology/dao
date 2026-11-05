@@ -18,8 +18,8 @@ export const V1_DAO_BASE58 = process.env.NEXT_PUBLIC_LEGACY_V1_DAO_ADDRESS || 'T
 export const V2_DAO_HEX = process.env.NEXT_PUBLIC_LEGACY_V2_DAO_HEX || '41687a15cb759d8ab57a2e3a2c141b728ef9d5cb74';
 export const V2_DAO_BASE58 = process.env.NEXT_PUBLIC_LEGACY_V2_DAO_ADDRESS || 'TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy';
 
-export const V3_DAO_HEX = process.env.NEXT_PUBLIC_DAO_HEX || '41d2b5680da9913bdc7ebe8a00ed419ecb60b669c5';
-export const V3_DAO_BASE58 = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW';
+export const V3_DAO_HEX = process.env.NEXT_PUBLIC_DAO_HEX || '417816ae352da7d1a806eea8446aebbe551420429b';
+export const V3_DAO_BASE58 = process.env.NEXT_PUBLIC_DAO_ADDRESS || 'TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf';
 
 export interface MergedOnChainDaoStats {
   v1CollectedTrob: number;

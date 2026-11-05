@@ -43,9 +43,7 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
         const cleaned = data.filter((e) => {
           const a = (e.address || '').toLowerCase();
           return (
-            a !== '0x7124b32b48786a13177f3bdc9620e7a48eb9c902' &&
-            a !== 'tlhtkgsbruwfyv8mo6b4z3rrj1k1wlwzwa' &&
-            a !== '0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee'
+            (!process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX || a !== process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX.toLowerCase()) && (!process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS || a !== process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS.toLowerCase())
           );
         });
         set({ entries: cleaned, loading: false });

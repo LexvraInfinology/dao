@@ -7,6 +7,7 @@ import { useUserStore } from "@/lib/stores";
 import {
   isUserRegisteredInMatrix,
   getUserMagicBoxStatus,
+  getOnChainProtocolPoolsStats,
   claimMagicBoxRewardOnChain,
   UserMagicBoxStatus,
 } from "@/lib/contracts";
@@ -92,7 +93,12 @@ export function MagicBlindBoxWidget({
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [rewardRevealed, setRewardRevealed] = useState(false);
   const [autoCloseSeconds, setAutoCloseSeconds] = useState(4);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const isDashboard = pathname === "/dashboard";
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => pathname !== "/dashboard");
+
+  useEffect(() => {
+    setIsMinimized(pathname !== "/dashboard");
+  }, [pathname]);
 
   // Live on-chain Magic Box status for current connected operative
   const [magicBoxStatus, setMagicBoxStatus] = useState<UserMagicBoxStatus>({
@@ -123,12 +129,20 @@ export function MagicBlindBoxWidget({
 
   // Fetch live on-chain claimable state
   const refreshMagicBoxStatus = async () => {
-    if (!activeAddress) return;
     try {
-      const status = await getUserMagicBoxStatus(activeAddress);
-      setMagicBoxStatus(status);
-      if (typeof window !== "undefined") {
-        setHasSeenReward(localStorage.getItem(`equora_blindbox_opened_${activeAddress.toLowerCase()}`) === "true");
+      if (activeAddress) {
+        const status = await getUserMagicBoxStatus(activeAddress);
+        setMagicBoxStatus(status);
+        if (typeof window !== "undefined") {
+          setHasSeenReward(localStorage.getItem(`equora_blindbox_opened_${activeAddress.toLowerCase()}`) === "true");
+        }
+      }
+      const stats = await getOnChainProtocolPoolsStats().catch(() => null);
+      if (stats?.magicBoxPool?.timeUntilNextDrawSeconds) {
+        setMagicBoxStatus((prev) => ({
+          ...prev,
+          timeRemainingSeconds: stats.magicBoxPool.timeUntilNextDrawSeconds,
+        }));
       }
     } catch (err) {
       console.warn("Failed to fetch Magic Box status:", err);
@@ -161,7 +175,7 @@ export function MagicBlindBoxWidget({
 
       const totalSec = magicBoxStatus.timeRemainingSeconds > 0
         ? magicBoxStatus.timeRemainingSeconds
-        : 85 * 24 * 3600;
+        : 0;
 
       const days = Math.floor(totalSec / (24 * 3600));
       const hours = Math.floor((totalSec % (24 * 3600)) / 3600);
@@ -196,7 +210,8 @@ export function MagicBlindBoxWidget({
     return () => clearInterval(interval);
   }, [magicBoxStatus.hasReceived, magicBoxStatus.canClaim, magicBoxStatus.timeRemainingSeconds]);
 
-  const isTimeOver = timeLeft.totalSeconds <= 0 || magicBoxStatus.hasReceived || magicBoxStatus.canClaim;
+  const isLoaded = magicBoxStatus.timeRemainingSeconds > 0 || magicBoxStatus.hasReceived || magicBoxStatus.canClaim;
+  const isTimeOver = (isLoaded && timeLeft.totalSeconds <= 0) || magicBoxStatus.hasReceived || magicBoxStatus.canClaim;
 
   // Route & Membership checks:
   const isLanding = pathname === "/" || !pathname;
@@ -295,6 +310,11 @@ export function MagicBlindBoxWidget({
     return null;
   }
 
+  // Hide floating widget entirely on /transactions so it never obscures the transaction ledger
+  if (pathname === "/transactions") {
+    return null;
+  }
+
   if (isLanding && !isTimeOver) {
     return null;
   }
@@ -336,7 +356,7 @@ export function MagicBlindBoxWidget({
               </span>
             ) : (
               <span className="font-mono text-amber-300 font-extrabold text-[12px]">
-                {timeLeft.days}d {timeLeft.hours}h
+                {isLoaded ? `${timeLeft.days}d ${timeLeft.hours}h` : "--d --h"}
               </span>
             )}
             <span className="text-amber-400 text-xs ml-0.5">▲</span>
@@ -389,7 +409,7 @@ export function MagicBlindBoxWidget({
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950/95 backdrop-blur-md text-white text-[11px] sm:text-[12.5px] font-mono font-bold shadow-xl border border-amber-500/40 group-hover/box:border-amber-400 transition-colors">
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
                     <span className="text-amber-300 font-extrabold tracking-tight">
-                      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+                      {isLoaded ? `${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m` : "--d --h --m"}
                     </span>
                   </span>
                 )}

@@ -10,11 +10,9 @@ const FULLNODE_URL =
   process.env.NEXT_PUBLIC_RPC_URL ||
   "https://fullnode-one-testnet.trobchain.com";
 
-const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "41b54ada8dec142e077f90824fcf700a92456b4087"; // TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H
-
-const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "41d61094078cf1f538328f97dc62286b6346228458"; // TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i
-
-const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "41e931f71a740ab185e23b03f02c3b9c2f42bb42d7"; // TDjun5J74ybWbpsQfUSXuzdZGoGsZGsKbY
+const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "";
+const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "";
+const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Address helpers

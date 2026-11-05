@@ -3,74 +3,75 @@
   "deployer": "TYCqPBV2CyndtBK3TFeHyv5MMDYaYgoEBr",
   "deployerHex": "41f3e68b5fb76382683baf1e8512c4c0ab39490717",
   "rpcUrl": "https://fullnode-one-testnet.trobchain.com",
-  "deployedAt": "2026-11-01T12:41:27.063Z",
+  "deployedAt": "2026-11-05T18:56:39.899Z",
   "contracts": {
     "EquoraToken": {
       "name": "EquoraToken",
-      "addressBase58": "TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx",
-      "addressHex": "418065e61914497415e464cbc7b67eadb10d13f569",
-      "evmAddress": "0x8065e61914497415e464cbc7b67eadb10d13f569",
-      "txID": "2d5cacb877dc99c22ebcecc80a205badde5cae31f09f0880306fe4fa945596b7"
+      "addressBase58": "TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8",
+      "addressHex": "41a667025dfad5636f4c92c26c60131ea052a34ede",
+      "evmAddress": "0xa667025dfad5636f4c92c26c60131ea052a34ede"
     },
     "EquoraRegistry": {
       "name": "EquoraRegistry",
-      "addressBase58": "TDeTkVTHDv8i9aHi1eZBMUPSvuReypxAw1",
-      "addressHex": "412854e95c847472bb7130baf5f3d9363dcee5fe18",
-      "evmAddress": "0x2854e95c847472bb7130baf5f3d9363dcee5fe18",
-      "txID": "1519de0c99cd476855cee3222075645191adc830524892e568f0b611dad4351f"
+      "addressBase58": "TMyB1Gqpcm4aukmgPUZKcqGRQ2jgvpTeQV",
+      "addressHex": "41839fd7cdbce15d6fabdb8cbbc1bb7cd6dd28cbd4",
+      "evmAddress": "0x839fd7cdbce15d6fabdb8cbbc1bb7cd6dd28cbd4",
+      "txHash": "0x9ae51fa5b1d06722a90524b2748c5b417b3a64953853e7d77a3faf8cf69eb0fd"
     },
     "EquoraNFT": {
       "name": "EquoraNFT",
-      "addressBase58": "TYKwGFyJLnRt9QSh2RuvM2FzeeyxLNz42J",
-      "addressHex": "41f53e5d75a6d93e2a0c441c562dbf3332c41bfc0c",
-      "evmAddress": "0xf53e5d75a6d93e2a0c441c562dbf3332c41bfc0c",
-      "txID": "0c1d58bc0fcdc7ba37c30dc992c5488965da30a0f119a0c8c7a8298efc3f5fe3"
+      "addressBase58": "TX3ATu9ZZegyEQ89f6hoNLXBJ3Rg4JbdJt",
+      "addressHex": "41e71a2ff554a7873db470ea3148a5e0e4801d3bf4",
+      "evmAddress": "0xe71a2ff554a7873db470ea3148a5e0e4801d3bf4",
+      "txHash": "0x9ecdd2cd1f1c8de77f3ab86f12187404c61111aa736d9bb751b287d40e226643"
     },
     "EquoraVault": {
       "name": "EquoraVault",
-      "addressBase58": "TXn5f6qg8egX1fww3aUAfrpoM3K91Lpq3Q",
-      "addressHex": "41ef380fa5abfba8a057e1df49c0f6b3d6b24280ee",
-      "evmAddress": "0xef380fa5abfba8a057e1df49c0f6b3d6b24280ee",
-      "txID": "f3cba5e98728d40a32036de7f267ac352523e487d91b6e8ca416c6cc7a95baf1"
+      "addressBase58": "TX4Uc9VJvRJp17krXXth76CUovr1tsaCUR",
+      "addressHex": "41e759bf65531a160ec7a7e645e5cd35c5c852133f",
+      "evmAddress": "0xe759bf65531a160ec7a7e645e5cd35c5c852133f",
+      "txHash": "0xef4e380b51e37665763670f20cdca06c840491ef3cd88eb2265d6ec4e15a5e74"
     },
     "EquoraDAOv3": {
       "name": "EquoraDAOv3",
-      "addressBase58": "TVBLDggu9VULMQnxucjftLgg6QfAKN5rUW",
-      "addressHex": "41d2b5680da9913bdc7ebe8a00ed419ecb60b669c5",
-      "evmAddress": "0xd2b5680da9913bdc7ebe8a00ed419ecb60b669c5",
-      "txID": "d6f9893737ce6f000dab1b39b9ea01c55dd9012fa4da0c826728ab36c1694044"
+      "addressBase58": "TQNFweKh5g7PMwU9cpwmnKqBLYpxR3a8cL",
+      "addressHex": "419dedc8814249620ab37d733234e2dd2bf89584f0",
+      "evmAddress": "0x9dedc8814249620ab37d733234e2dd2bf89584f0",
+      "txHash": "0x707635c56f089b39d836fed1730a0002df079e6f9fe04707298350032824c9ed"
     },
     "EquoraRoyaltyPool": {
-      "name": "EquoraRoyaltyPool",
-      "addressBase58": "TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM",
-      "addressHex": "41a3e4cdf6a90b3b3a57ce716c1882bd20eb1aa830",
-      "evmAddress": "0xa3e4cdf6a90b3b3a57ce716c1882bd20eb1aa830",
-      "txID": "9ee2c1c71f750a64455ccdb7380b75b6ff5c5eb5b5e7d0ab57c1e1f2e9bd9429"
+      "name": "EquoraSalaryPool",
+      "addressBase58": "TV7ajE2sihxmbeDsREfudsXmw9ZkAkWwTS",
+      "addressHex": "41d1ffdab8a0cc5cd4a10521e95667e688bc6216e7",
+      "evmAddress": "0xd1ffdab8a0cc5cd4a10521e95667e688bc6216e7",
+      "txHash": "0x6a17486f8477b83dfbecea5433f686b8d67a87e81d7b7b9b4999d3dd0b1b0c4f"
     },
     "EquoraRewardPool": {
       "name": "EquoraRewardPool",
-      "addressBase58": "TMAiUnfvgchovZ4ffq7BuEPidCd1SxVJBf",
-      "addressHex": "417ad690f733b9f8a83aba72b4fd4b86ce0c4ba76c",
-      "evmAddress": "0x7ad690f733b9f8a83aba72b4fd4b86ce0c4ba76c",
-      "txID": "d70bee0fcabdc4d80658d217ec6fb84d45fca603de1407b4c70c80ad5bf86c7c"
+      "addressBase58": "TAe62TsxcmsMYSuNdfyJrTXdC8EAaF97ZC",
+      "addressHex": "41075a6640f781f71be99f7270be80633d5a67b88e",
+      "evmAddress": "0x075a6640f781f71be99f7270be80633d5a67b88e",
+      "txHash": "0x90f409dcc54d47e0613b00ddd0d39f90cde769b3a7502ca839a76b59308306de"
     },
     "EquoraMagicBox": {
       "name": "EquoraMagicBox",
-      "addressBase58": "TAoMXsB2Em1iK9tSqwGaPDL3A7hLHrR8Ue",
-      "addressHex": "41091b166dd91ead929d45f0125942382cc59bb250",
-      "evmAddress": "0x091b166dd91ead929d45f0125942382cc59bb250",
-      "txID": "d3a0c7d977723e5e4e806538cc1365736694bf0029c16c2b50a6c906f4805acf"
+      "addressBase58": "TCpK46hiS8v7FP71eCNjBkspMTsfi1P3H7",
+      "addressHex": "411f39af9d8af0f287a87d614f551f067247b2c923",
+      "evmAddress": "0x1f39af9d8af0f287a87d614f551f067247b2c923",
+      "txHash": "0x567fa4977f75c3f3b086df09b95c6947f352e781d4259a120ddf095a8978ad12"
     },
     "EquoraMatrix": {
       "name": "EquoraMatrix",
-      "addressBase58": "TNU8aUC8H8osyfhr2TnNzNNEMZPtGV4D8o",
-      "addressHex": "418919e11e219e81d9f510947f9d4f9e9ac04f4cc6",
-      "evmAddress": "0x8919e11e219e81d9f510947f9d4f9e9ac04f4cc6",
-      "txID": "6bcd6bcbdd5bea9d99d9d731a273cd41aca497cf1977682de58e3edcc6c69809"
+      "addressBase58": "TAnnQYWmCBE6nQG8J6w2T8uQHrk3hVgzir",
+      "addressHex": "4108ff6f6ad68a1557520afafeb12160d1a3104c8e",
+      "evmAddress": "0x08ff6f6ad68a1557520afafeb12160d1a3104c8e",
+      "txHash": "0xfb6ea3e163f093e414a3499565892a32027150e3400d5516f525852e91ba1ae0"
     }
   },
   "genesis": {
-    "rootBase58": "TLHTKgsBRUWfYV8Mo6b4Z3RrJ1k1WLwZWa",
-    "node1Base58": "THiH4WkoXmVKHoRiWBrp2HaoVUAbj4bpwp"
+    "rootBase58": "",
+    "rootHex": "",
+    "rootEvm": "",
+    "note": "Pristine: 0 members. 1st organic entrant manually activates Slot 1 to become Genesis Root."
   }
 }

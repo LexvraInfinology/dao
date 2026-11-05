@@ -328,7 +328,8 @@ contract EquoraVault is ReentrancyGuard {
         if (amount == 0 || pool == address(0)) return;
         bool ok = false;
         if (address(this).balance >= amount) {
-            (bool sent, ) = payable(pool).call{value: amount, gas: 2500000}("");
+            // No restrictive gas stipend: let TVM allocate all available gas.
+            (bool sent, ) = payable(pool).call{value: amount}("");
             ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {

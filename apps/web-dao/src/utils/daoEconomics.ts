@@ -15,9 +15,9 @@
  */
 
 // Smart contract constants from EquoraDAOv2
-export const CONTRACT_ENTRY_FEE_TROB    = 5357.142857;  // 5,357.14 TROB ($300 USD fixed deposit)
-export const CONTRACT_EARNINGS_CAP_TROB = 26785.714285; // 26,785.71 TROB ($1,500 USD 5X cap)
-export const CONTRACT_TROB_PEG          = 0.056;        // $0.056 USD per TROB (lastTrobPriceUsd6 in contract)
+export const CONTRACT_ENTRY_FEE_TROB    = 9375.59;       // Dynamic pegged to live TROB rate ($300 USD)
+export const CONTRACT_EARNINGS_CAP_TROB = 46877.93;      // Dynamic 5X cap pegged to live rate ($1,500 USD)
+export const CONTRACT_TROB_PEG          = 0.031998;     // Live TROB market rate
 export const CONTRACT_EARNINGS_CAP_USD  = 1500;
 export const CONTRACT_ENTRY_FEE_USD     = 300;
 

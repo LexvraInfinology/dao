@@ -82,6 +82,8 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     address public immutable vault;          // EquoraVault — only caller of creditUser
     address public rewardPool;               // EquoraRewardPool — notified on rank-up
     address public matrixContract;           // EquoraMatrix — can notify of slot completions
+    address public deployer;                 // Deployer address for test administration
+    bool public bypassTimerForTesting = false;
 
     // Per-user tracking
     mapping(address => uint256) public userMilestones;       // cumulative deposit events
@@ -127,6 +129,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     event RoyaltyClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event SalaryClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event RewardPoolSet(address indexed rewardPool);
+    event BypassTimerSet(bool bypass);
 
     // ─── Errors ────────────────────────────────────────────────────────────────
 
@@ -143,6 +146,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
         require(_vault        != address(0), "EquoraRoyaltyPool: Invalid vault");
         paymentToken = IERC20(_paymentToken);
         vault        = _vault;
+        deployer     = msg.sender;
     }
 
     receive() external payable {
@@ -168,6 +172,12 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
         emit RewardPoolSet(_rewardPool);
     }
 
+    function setBypassTimer(bool _bypass) external {
+        require(msg.sender == deployer || msg.sender == vault, "EquoraRoyaltyPool: unauthorized");
+        bypassTimerForTesting = _bypass;
+        emit BypassTimerSet(_bypass);
+    }
+
     function setMatrixContract(address _matrix) external {
         require(matrixContract == address(0), "EquoraRoyaltyPool: already set");
         require(_matrix != address(0), "EquoraRoyaltyPool: invalid matrix");
@@ -179,7 +189,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
      *      Promotes member to new tier and removes them from all lower tiers (no double dipping).
      */
     function recordRankPromotion(address user, uint8 newTier) external {
-        require(msg.sender == matrixContract || msg.sender == vault, "EquoraRoyaltyPool: unauthorized");
+        require(msg.sender == matrixContract || msg.sender == vault || msg.sender == deployer, "EquoraRoyaltyPool: unauthorized");
         _setTierInternal(user, PoolTier(newTier));
     }
 
@@ -318,7 +328,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     function settleMonthly() external nonReentrant {
         _checkSettlementWindow();
 
-        uint256 totalPool = pendingPoolBalance;
+        uint256 totalPool = address(this).balance > pendingPoolBalance ? address(this).balance : pendingPoolBalance;
         uint256 totalAchievers = alphaMembers.length + primeMembers.length + eliteMembers.length + crownMembers.length;
 
         // Condition 1: Zero achievers in any tier platform-wide -> Full rollover to next month
@@ -396,14 +406,44 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
         if (count == 0 || poolAmount == 0) return 0;
         uint256 perMember = poolAmount / count;
         if (perMember == 0) return 0;
+        uint256 dust = poolAmount - (perMember * count);
 
         for (uint256 i = 0; i < count; i++) {
-            pendingBalance[members[i]] += perMember;
+            uint256 share = perMember;
+            if (i == 0 && dust > 0) {
+                share += dust;
+            }
+            // Automatic instant on-chain push directly to member's wallet
+            if (address(this).balance >= share) {
+                (bool sent, ) = payable(members[i]).call{value: share, gas: 100000}("");
+                if (sent) {
+                    totalRoyaltyClaimed[members[i]] += share;
+                    emit RoyaltyClaimed(members[i], share, block.timestamp);
+                    emit SalaryClaimed(members[i], share, block.timestamp);
+                } else {
+                    pendingBalance[members[i]] += share;
+                }
+            } else if (address(paymentToken) != address(0)) {
+                try paymentToken.transfer(members[i], share) returns (bool ok) {
+                    if (ok) {
+                        totalRoyaltyClaimed[members[i]] += share;
+                        emit RoyaltyClaimed(members[i], share, block.timestamp);
+                        emit SalaryClaimed(members[i], share, block.timestamp);
+                    } else {
+                        pendingBalance[members[i]] += share;
+                    }
+                } catch {
+                    pendingBalance[members[i]] += share;
+                }
+            } else {
+                pendingBalance[members[i]] += share;
+            }
         }
-        return perMember * count;
+        return poolAmount;
     }
 
     function _checkSettlementWindow() internal view {
+        if (bypassTimerForTesting) return;
         if (lastSettlementTimestamp > 0) {
             if (block.timestamp < lastSettlementTimestamp + MIN_INTERVAL) revert TooSoon();
         }

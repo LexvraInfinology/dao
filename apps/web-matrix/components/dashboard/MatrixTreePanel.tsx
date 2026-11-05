@@ -667,7 +667,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           }
           setSelectedNodeModal(cfg);
         }}
-        className={`${widthClass} rounded-2xl py-2 px-1 flex flex-col items-center justify-between transition-all hover:scale-105 active:scale-95 cursor-pointer ${styleClass}`}
+        className={`animate-tree-node ${widthClass} rounded-2xl py-2 px-1 flex flex-col items-center justify-between transition-all hover:scale-105 active:scale-95 cursor-pointer ${styleClass}`}
+        style={{ animationDelay: `${pos * 40}ms` }}
         title={
           !isCurrentSlotUnlocked
             ? `Position #${pos} is Locked (Slot #${selectedSlot} unlocks via Slot #${selectedSlot - 1} auto-reserve)`
@@ -1007,7 +1008,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <div className="py-2 sm:py-4 w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent pb-3">
             <div className="w-[640px] mx-auto shrink-0 flex flex-col items-center">
               {/* Root Node: YOU */}
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white font-black flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 text-xs sm:text-sm">
+              <div className="animate-tree-node w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white font-black flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 text-xs sm:text-sm">
                 <span>YOU</span>
                 <span className="text-[9px] font-bold opacity-90 text-blue-100">Root Node</span>
               </div>

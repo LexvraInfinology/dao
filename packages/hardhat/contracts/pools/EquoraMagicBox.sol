@@ -48,7 +48,7 @@ contract EquoraMagicBox is ReentrancyGuard {
     uint256 public constant TIER4_USD_CENTS = 500;  // $5.00
 
     // Timing constants
-    uint256 public constant MIN_INTERVAL    = 85 days;   // ~3 months minimum between draws
+    uint256 public constant MIN_INTERVAL    = 90 days;   // Full 3 months quarterly duration (90 days)
     uint256 public constant SETTLEMENT_DAY  = 11;
     uint256 public constant SECONDS_PER_DAY = 86400;
 
@@ -177,6 +177,7 @@ contract EquoraMagicBox is ReentrancyGuard {
     event MatrixContractSet(address indexed matrix);
     event RegistryContractSet(address indexed registry);
     event BypassTimerSet(bool bypass);
+    event QuarterStartTimeSet(uint256 startTime);
 
     // ─── Errors ────────────────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ contract EquoraMagicBox is ReentrancyGuard {
         paymentToken = IERC20(_paymentToken);
         vault        = _vault;
         deployer     = msg.sender;
-        quarterStartTime = block.timestamp;
+        quarterStartTime = 1790812800; // Oct 1, 2026 00:00:00 UTC (Current Q4 Quarter Baseline)
     }
 
     receive() external payable {
@@ -230,6 +231,13 @@ contract EquoraMagicBox is ReentrancyGuard {
         if (msg.sender != deployer && msg.sender != vault) revert Unauthorized();
         bypassTimerForTesting = _bypass;
         emit BypassTimerSet(_bypass);
+    }
+
+    function setQuarterStartTime(uint256 _startTime) external {
+        if (msg.sender != deployer && msg.sender != vault) revert Unauthorized();
+        require(_startTime > 0, "Invalid timestamp");
+        quarterStartTime = _startTime;
+        emit QuarterStartTimeSet(_startTime);
     }
 
     function updateTrobPrice(uint256 _trobPerUsd) external {
@@ -318,12 +326,11 @@ contract EquoraMagicBox is ReentrancyGuard {
         _executeQuarterlyAutoPush(bytes32(seed));
     }
 
-    function _computeTierConfig(uint256 total) internal view returns (TierConfig memory tc) {
-        tc.t4Count = (total * TIER4_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-        tc.t3Count = (total * TIER3_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-        tc.t2Count = (total * TIER2_USER_BPS + BPS_BASE / 2) / BPS_BASE;
-
+    function _computeTierConfig(uint256 total, uint256 balanceToDistribute) internal pure returns (TierConfig memory tc) {
         if (total >= 4) {
+            tc.t4Count = (total * TIER4_USER_BPS + BPS_BASE / 2) / BPS_BASE;
+            tc.t3Count = (total * TIER3_USER_BPS + BPS_BASE / 2) / BPS_BASE;
+            tc.t2Count = (total * TIER2_USER_BPS + BPS_BASE / 2) / BPS_BASE;
             if (tc.t4Count == 0) tc.t4Count = 1;
             if (tc.t3Count == 0) tc.t3Count = 1;
             if (tc.t2Count == 0) tc.t2Count = 1;
@@ -335,29 +342,36 @@ contract EquoraMagicBox is ReentrancyGuard {
 
         tc.t1Count = total - (tc.t4Count + tc.t3Count + tc.t2Count);
 
-        tc.t1Trob = (TIER1_USD_CENTS * trobPerUsd) / 100;
-        tc.t2Trob = (TIER2_USD_CENTS * trobPerUsd) / 100;
-        tc.t3Trob = (TIER3_USD_CENTS * trobPerUsd) / 100;
-        tc.t4Trob = (TIER4_USD_CENTS * trobPerUsd) / 100;
-
-        uint256 totalRequired = (tc.t1Trob * tc.t1Count) + (tc.t2Trob * tc.t2Count) +
-                                (tc.t3Trob * tc.t3Count) + (tc.t4Trob * tc.t4Count);
-
-        if (totalRequired > poolBalance && totalRequired > 0) {
-            uint256 scale = (poolBalance * 1e18) / totalRequired;
-            tc.t1Trob = (tc.t1Trob * scale) / 1e18;
-            tc.t2Trob = (tc.t2Trob * scale) / 1e18;
-            tc.t3Trob = (tc.t3Trob * scale) / 1e18;
-            tc.t4Trob = (tc.t4Trob * scale) / 1e18;
+        if (total < 4) {
+            tc.t1Trob = balanceToDistribute / total;
+            tc.t2Trob = 0;
+            tc.t3Trob = 0;
+            tc.t4Trob = 0;
+            return tc;
         }
+
+        // Relative Tier Weights:
+        // Tier 1: 50  ($0.50 relative weight)
+        // Tier 2: 80  ($0.80 relative weight)
+        // Tier 3: 120 ($1.20 relative weight)
+        // Tier 4: 500 ($5.00 relative weight)
+        uint256 totalWeight = (tc.t1Count * TIER1_USD_CENTS) +
+                              (tc.t2Count * TIER2_USD_CENTS) +
+                              (tc.t3Count * TIER3_USD_CENTS) +
+                              (tc.t4Count * TIER4_USD_CENTS);
+
+        tc.t1Trob = (balanceToDistribute * TIER1_USD_CENTS) / totalWeight;
+        tc.t2Trob = (balanceToDistribute * TIER2_USD_CENTS) / totalWeight;
+        tc.t3Trob = (balanceToDistribute * TIER3_USD_CENTS) / totalWeight;
+        tc.t4Trob = (balanceToDistribute * TIER4_USD_CENTS) / totalWeight;
     }
 
     /**
      * @dev Core Automatic Push Engine:
-     *      1. Computes zero-lost-users tier breakdown (85% / 10% / 3% / 2%).
-     *      2. Evaluates each cohort user's deterministic prize.
-     *      3. DIRECTLY TRANSFERS native TROB into each user's wallet on-chain.
-     *      4. Marks hasReceivedMagicBox[user] = true (strictly 1x lifetime).
+     *      1. Empties and distributes 100% OF THE ENTIRE ACCUMULATED POOL BALANCE.
+     *      2. Zero leftover balance: entire balanceToDistribute is sent on-chain.
+     *      3. Proportions respect the 4 tiers: 85% ($0.50), 10% ($0.80), 3% ($1.20), 2% ($5.00).
+     *      4. Directly transfers native TROB to all cohort wallets on-chain.
      *      5. Advances currentQuarter++ and restarts the 3-month timer for new users!
      */
     function _executeQuarterlyAutoPush(bytes32 seedInput) internal {
@@ -374,7 +388,24 @@ contract EquoraMagicBox is ReentrancyGuard {
             return;
         }
 
-        TierConfig memory tc = _computeTierConfig(total);
+        uint256 balanceToDistribute = address(this).balance;
+        if (balanceToDistribute == 0) {
+            lastDistributionTimestamp = block.timestamp;
+            distributionCount++;
+            currentQuarter++;
+            quarterStartTime = block.timestamp;
+            emit QuarterSettledAndAdvanced(q, currentQuarter, total, 0, block.timestamp);
+            return;
+        }
+
+        TierConfig memory tc = _computeTierConfig(total, balanceToDistribute);
+
+        // Division dust remainder added to rank 0 to guarantee exactly 0 balance remains
+        uint256 baseAllocated = (tc.t1Count * tc.t1Trob) +
+                                (tc.t2Count * tc.t2Trob) +
+                                (tc.t3Count * tc.t3Trob) +
+                                (tc.t4Count * tc.t4Trob);
+        uint256 dustRemainder = balanceToDistribute > baseAllocated ? balanceToDistribute - baseAllocated : 0;
 
         bytes32 entropySeed = keccak256(abi.encodePacked(
             seedInput, block.timestamp, block.prevrandao, block.number,
@@ -382,10 +413,10 @@ contract EquoraMagicBox is ReentrancyGuard {
         ));
 
         // Create an in-memory Fisher-Yates shuffled permutation to guarantee exact tier quotas:
-        // rank 0 .. t4Count-1                         -> Tier 4 (2%  = $5.00)
-        // rank t4Count .. t4Count+t3Count-1           -> Tier 3 (3%  = $1.20)
-        // rank t4Count+t3Count .. +t2Count-1          -> Tier 2 (10% = $0.80)
-        // all remaining ranks                         -> Tier 1 (85% = $0.50)
+        // rank 0 .. t4Count-1                         -> Tier 4 (2%  = $5.00 weight)
+        // rank t4Count .. t4Count+t3Count-1           -> Tier 3 (3%  = $1.20 weight)
+        // rank t4Count+t3Count .. +t2Count-1          -> Tier 2 (10% = $0.80 weight)
+        // all remaining ranks                         -> Tier 1 (85% = $0.50 weight)
         uint256[] memory shuffled = new uint256[](total);
         for (uint256 i = 0; i < total; i++) {
             shuffled[i] = i;
@@ -407,21 +438,24 @@ contract EquoraMagicBox is ReentrancyGuard {
 
             uint8 tier = 1;
             uint256 prizeTrob = tc.t1Trob;
-            uint256 prizeUsd = TIER1_USD_CENTS;
 
             if (rank < tc.t4Count) {
                 tier = 4;
                 prizeTrob = tc.t4Trob;
-                prizeUsd = TIER4_USD_CENTS;
             } else if (rank < tc.t4Count + tc.t3Count) {
                 tier = 3;
                 prizeTrob = tc.t3Trob;
-                prizeUsd = TIER3_USD_CENTS;
             } else if (rank < tc.t4Count + tc.t3Count + tc.t2Count) {
                 tier = 2;
                 prizeTrob = tc.t2Trob;
-                prizeUsd = TIER2_USD_CENTS;
             }
+
+            // Distribute fractional division dust to rank 0 to leave exact 0 balance in contract
+            if (rank == 0 && dustRemainder > 0) {
+                prizeTrob += dustRemainder;
+            }
+
+            uint256 prizeUsd = (prizeTrob * 100) / trobPerUsd;
 
             // Permanently mark user received (1x lifetime gift)
             hasReceivedMagicBox[recipient] = true;
@@ -450,14 +484,10 @@ contract EquoraMagicBox is ReentrancyGuard {
             }
         }
 
-        // Update contract accounting
+        // Update contract accounting — entire poolBalance is distributed (0 left)
         totalDistributed += totalPaid;
         totalRecipientsCount += successfulRecipients;
-        if (poolBalance >= totalPaid) {
-            poolBalance -= totalPaid;
-        } else {
-            poolBalance = 0;
-        }
+        poolBalance = 0;
 
         // Record draw history
         draws[q] = QuarterDraw({
@@ -626,7 +656,7 @@ contract EquoraMagicBox is ReentrancyGuard {
         uint256 lastDist
     ) {
         return (
-            poolBalance,
+            address(this).balance,
             totalDistributed,
             distributionCount,
             totalRecipientsCount,

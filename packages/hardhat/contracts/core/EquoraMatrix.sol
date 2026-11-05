@@ -84,8 +84,8 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     uint256 public constant MAX_UPLINE_DEPTH     = 12;
     uint256 public constant MAX_CASCADE_DEPTH    = 12;
 
-    uint256 public trobPriceUsd6                 = 56_000;       // Benchmark $0.056 USD (6 decimals, matches EquoraDAOv2)
-    uint256 public baseSlotCost                  = 535_714_285;  // 535.714285 TROB in SUN ($30 USD at $0.056)
+    uint256 public trobPriceUsd6                 = 31_998;       // Live market rate ~$0.031998 USD (dynamic, 6 decimals)
+    uint256 public baseSlotCost                  = 937_558_597;  // 937.558597 TROB in SUN ($30 USD at $0.031998)
     uint256 public lastPriceUpdateTimestamp;
     address public priceOracle;
 
@@ -1168,12 +1168,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
 
         bool ok = false;
         if (address(this).balance >= amount) {
-            try IEquoraVault(vaultContract).routePoolDeposit{value: amount, gas: 3000000}(amount) {
-                ok = true;
-            } catch {
-                (bool sent, ) = payable(vaultContract).call{value: amount, gas: 3000000}("");
-                ok = sent;
-            }
+            // No restrictive gas stipend: let TVM allocate all available gas for pool sub-calls.
+            (bool sent, ) = payable(vaultContract).call{value: amount}("");
+            ok = sent;
         }
         if (!ok && address(paymentToken) != address(0)) {
             try paymentToken.transfer(vaultContract, amount) returns (bool res) {

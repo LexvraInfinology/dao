@@ -1,9 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
+import { MatrixTransaction } from "@/lib/api";
+import { useFinanceStore, useUserStore } from "@/lib/stores";
+import { formatAddress, formatDateSafe } from "@/lib/format";
+import { EXPLORER_URL } from "@/lib/contracts";
 
-export type TxType = "Receive" | "Send" | "Matrix Cycle" | "Partner Reward";
-export type FilterTab = "All Transactions" | "Received" | "Sent" | "Rewards" | "Matrix" | "Partner" | "System";
+export type TxType =
+  | "Receive"
+  | "Send"
+  | "Matrix Cycle"
+  | "Partner Reward"
+  | "Leadership Royalty"
+  | "Milestone Bounty"
+  | "Blind Box Gift"
+  | "Matrix Slot";
+
+export type FilterTab = "All Transactions" | "Received" | "Sent" | "Rewards" | "Gift Box" | "Matrix" | "Partner" | "System";
 
 export interface Transaction {
   id: number;
@@ -19,11 +32,58 @@ export interface Transaction {
   txHash: string;
 }
 
-
-
 const TypeIcon = ({ type, sm = false }: { type: TxType; sm?: boolean }) => {
   const sz = sm ? 12 : 14;
   const cls = sm ? "w-7 h-7" : "w-8 h-8";
+
+  if (type === "Leadership Royalty") {
+    return (
+      <div className={`${cls} rounded-full bg-[#fef3c7] flex items-center justify-center flex-shrink-0`}>
+        <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (type === "Milestone Bounty") {
+    return (
+      <div className={`${cls} rounded-full bg-[#ecfdf5] flex items-center justify-center flex-shrink-0`}>
+        <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="7" />
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (type === "Blind Box Gift") {
+    return (
+      <div className={`${cls} rounded-full bg-[#f3e8ff] flex items-center justify-center flex-shrink-0`}>
+        <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 12 20 22 4 22 4 12" />
+          <rect x="2" y="7" width="20" height="5" />
+          <line x1="12" y1="22" x2="12" y2="7" />
+          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (type === "Matrix Slot") {
+    return (
+      <div className={`${cls} rounded-full bg-[#e0e7ff] flex items-center justify-center flex-shrink-0`}>
+        <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg>
+      </div>
+    );
+  }
+
   if (type === "Receive")
     return (
       <div className={`${cls} rounded-full bg-[#ecfdf5] flex items-center justify-center flex-shrink-0`}>
@@ -32,6 +92,7 @@ const TypeIcon = ({ type, sm = false }: { type: TxType; sm?: boolean }) => {
         </svg>
       </div>
     );
+
   if (type === "Send")
     return (
       <div className={`${cls} rounded-full bg-[#fff1f2] flex items-center justify-center flex-shrink-0`}>
@@ -40,6 +101,7 @@ const TypeIcon = ({ type, sm = false }: { type: TxType; sm?: boolean }) => {
         </svg>
       </div>
     );
+
   if (type === "Matrix Cycle")
     return (
       <div className={`${cls} rounded-full bg-[#f5f3ff] flex items-center justify-center flex-shrink-0`}>
@@ -50,6 +112,7 @@ const TypeIcon = ({ type, sm = false }: { type: TxType; sm?: boolean }) => {
         </svg>
       </div>
     );
+
   return (
     <div className={`${cls} rounded-full bg-[#eff6ff] flex items-center justify-center flex-shrink-0`}>
       <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
@@ -76,10 +139,6 @@ const ExternalIcon = () => (
   </svg>
 );
 
-import { MatrixTransaction } from "@/lib/api";
-import { useFinanceStore } from "@/lib/stores";
-import { formatAddress, formatDateSafe } from "@/lib/format";
-
 export interface TransactionsTableProps {
   copy: (t: string) => void;
   items?: MatrixTransaction[];
@@ -87,12 +146,13 @@ export interface TransactionsTableProps {
 
 export function TransactionsTable({ copy, items: propItems }: TransactionsTableProps) {
   const storeItems = useFinanceStore((s) => s.transactions);
+  const userAddress = useUserStore((s) => s.address);
   const items = propItems !== undefined ? propItems : storeItems;
   const [activeTab, setActiveTab] = useState<FilterTab>("All Transactions");
   const [selectedType, setSelectedType] = useState<string>("All Types");
   const [selectedStatus, setSelectedStatus] = useState<string>("All Status");
 
-  const ALL_TABS: FilterTab[] = ["All Transactions", "Received", "Sent", "Rewards", "Matrix", "Partner", "System"];
+  const ALL_TABS: FilterTab[] = ["All Transactions", "Received", "Sent", "Rewards", "Gift Box", "Matrix", "Partner", "System"];
 
   const activeTransactions: (Transaction & { rawTxHash?: string | null })[] =
     items && items.length > 0
@@ -103,6 +163,14 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
               ? "Matrix Cycle"
               : t.type === "COMMISSION_EARNED"
               ? "Partner Reward"
+              : t.type === "ROYALTY_DIVIDEND"
+              ? "Leadership Royalty"
+              : t.type === "RANK_MILESTONE"
+              ? "Milestone Bounty"
+              : t.type === "MAGIC_BOX_GIFT"
+              ? "Blind Box Gift"
+              : t.type === "SLOT_PURCHASE"
+              ? "Matrix Slot"
               : isSend
               ? "Send"
               : "Receive";
@@ -143,163 +211,201 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
       : [];
 
   const filtered = activeTransactions.filter((tx) => {
-    if (activeTab === "Received" && tx.type !== "Receive") return false;
-    if (activeTab === "Sent" && tx.type !== "Send") return false;
-    if (activeTab === "Rewards" && tx.type !== "Partner Reward") return false;
-    if (activeTab === "Matrix" && tx.type !== "Matrix Cycle") return false;
+    if (activeTab === "Received" && tx.amount <= 0) return false;
+    if (activeTab === "Sent" && tx.amount >= 0) return false;
+    if (
+      activeTab === "Rewards" &&
+      tx.type !== "Leadership Royalty" &&
+      tx.type !== "Milestone Bounty" &&
+      tx.type !== "Partner Reward"
+    ) return false;
+    if (activeTab === "Gift Box" && tx.type !== "Blind Box Gift") return false;
+    if (activeTab === "Matrix" && tx.type !== "Matrix Cycle" && tx.type !== "Matrix Slot") return false;
     if (activeTab === "Partner" && tx.type !== "Partner Reward") return false;
-    if (activeTab === "System" && tx.type !== "Matrix Cycle") return false;
+    if (
+      activeTab === "System" &&
+      tx.type !== "Matrix Slot" &&
+      tx.type !== "Blind Box Gift" &&
+      tx.type !== "Leadership Royalty" &&
+      tx.type !== "Milestone Bounty"
+    ) return false;
 
     if (selectedType !== "All Types" && tx.type !== selectedType) return false;
     if (selectedStatus !== "All Status" && tx.status !== selectedStatus) return false;
     return true;
   });
 
+  const openExplorer = (rawHash?: string | null) => {
+    if (rawHash && rawHash !== "—") {
+      window.open(`${EXPLORER_URL}/blockchain/transaction/${rawHash}`, "_blank");
+    } else if (userAddress) {
+      window.open(`${EXPLORER_URL}/blockchain/account/${userAddress}`, "_blank");
+    }
+  };
+
   return (
-          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs overflow-hidden">
-
-            {/* Unified tab bar */}
-            <div className="flex items-center justify-between px-3 sm:px-5 pt-3 sm:pt-4 pb-0 border-b border-[#f1f5f9] min-w-0 overflow-x-auto no-scrollbar gap-2">
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                {ALL_TABS.map((tab) => (
-                  <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-                    className={`px-3 sm:px-4 py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-semibold whitespace-nowrap transition-all cursor-pointer border-b-2 -mb-px ${activeTab === tab ? "border-[#2563eb] text-[#2563eb] bg-[#eff6ff] rounded-t-lg" : "border-transparent text-[#64748b] hover:text-[#0f172a]"}`}>
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div className="hidden sm:flex items-center gap-2 pb-1 flex-shrink-0">
-                <div className="relative">
-                  <select
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-medium text-[#334155] hover:bg-[#f1f5f9] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
-                  >
-                    <option value="All Types">All Types</option>
-                    <option value="Receive">Receive</option>
-                    <option value="Send">Send</option>
-                    <option value="Partner Reward">Partner Reward</option>
-                    <option value="Matrix Cycle">Matrix Cycle</option>
-                  </select>
-                </div>
-                <div className="relative">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-medium text-[#334155] hover:bg-[#f1f5f9] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
-                  >
-                    <option value="All Status">All Status</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Table (visible on tablet md 768px and up) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-[13px] min-w-[760px]">
-                <thead>
-                  <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase w-10">#</th>
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TYPE</th>
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">FROM</th>
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TO</th>
-                    <th className="py-3 px-4 text-right text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">AMOUNT</th>
-                    <th className="py-3 px-4 text-center text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">STATUS</th>
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">DATE &amp; TIME</th>
-                    <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TX HASH</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f1f5f9]">
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-[#94a3b8] text-[13px]">
-                        No transactions recorded yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-[#f8fafc]/80 transition-colors cursor-pointer">
-                        <td className="py-3.5 px-4 text-[#94a3b8] font-medium">{tx.id}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <TypeIcon type={tx.type} />
-                            <span className="font-semibold text-[#0f172a]">{tx.type}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4"><span className="font-mono text-[12px] text-[#64748b]">{tx.from}</span></td>
-                        <td className="py-3.5 px-4">
-                          <span className={tx.to === "You" ? "font-semibold text-[#0f172a]" : "font-mono text-[12px] text-[#64748b]"}>{tx.to}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>{tx.amountDisplay}</div>
-                          <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD {tx.trobSubtitle && <span className="text-[9.5px] text-slate-400 font-normal">({tx.trobSubtitle})</span>}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-semibold bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0]">{tx.status}</span>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="text-[12.5px] text-[#0f172a] font-medium">{tx.date}</div>
-                          <div className="text-[11.5px] text-[#94a3b8]">{tx.time}</div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[12px] text-[#64748b]">{tx.txHash}</span>
-                            <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
-                            <button type="button" className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><ExternalIcon /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile transaction cards (< md 768px) */}
-            <div className="md:hidden divide-y divide-[#f1f5f9]">
-              {filtered.length === 0 ? (
-                <div className="py-10 text-center text-[#94a3b8] text-[13px]">
-                  No transactions recorded yet.
-                </div>
-              ) : (
-                filtered.map((tx) => (
-                  <div key={tx.id} className="px-3 py-3.5">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-start gap-2.5">
-                        <TypeIcon type={tx.type} sm={true} />
-                        <div>
-                          <div className="font-extrabold text-[13px] text-[#0f172a] leading-tight">{tx.type}</div>
-                          <div className="text-[10.5px] text-[#94a3b8] mt-0.5">{tx.date} {tx.time}</div>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>
-                          {tx.amountDisplay} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
-                        </div>
-                        <div className="text-[10px] font-semibold text-[#16a34a] mt-0.5">{tx.status}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-1.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-mono text-[10.5px] text-[#64748b] truncate">{tx.from}</span>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                          <path d="M5 12h14M12 5l7 7-7 7" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span className={tx.to === "You" ? "text-[10.5px] font-bold text-[#2563eb] truncate" : "font-mono text-[10.5px] text-[#64748b] truncate"}>{tx.to}</span>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="font-mono text-[10px] text-[#94a3b8]">{tx.txHash}</span>
-                        <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
-                        <button type="button" className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"><ExternalIcon /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
+    <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs overflow-hidden">
+      {/* Unified tab bar */}
+      <div className="flex items-center justify-between px-3 sm:px-5 pt-3 sm:pt-4 pb-0 border-b border-[#f1f5f9] min-w-0 overflow-x-auto no-scrollbar gap-2">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {ALL_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 text-[12px] sm:text-[13px] font-semibold whitespace-nowrap transition-all cursor-pointer border-b-2 -mb-px ${
+                activeTab === tab
+                  ? "border-[#2563eb] text-[#2563eb] bg-[#eff6ff] rounded-t-lg"
+                  : "border-transparent text-[#64748b] hover:text-[#0f172a]"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div className="hidden sm:flex items-center gap-2 pb-1 flex-shrink-0">
+          <div className="relative">
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-medium text-[#334155] hover:bg-[#f1f5f9] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
+            >
+              <option value="All Types">All Types</option>
+              <option value="Partner Reward">Partner Reward</option>
+              <option value="Leadership Royalty">Leadership Royalty</option>
+              <option value="Milestone Bounty">Milestone Bounty</option>
+              <option value="Blind Box Gift">Blind Box Gift</option>
+              <option value="Matrix Slot">Matrix Slot</option>
+              <option value="Matrix Cycle">Matrix Cycle</option>
+              <option value="Receive">Receive</option>
+              <option value="Send">Send</option>
+            </select>
           </div>
+          <div className="relative">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] text-[12px] font-medium text-[#334155] hover:bg-[#f1f5f9] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
+            >
+              <option value="All Status">All Status</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Table (visible on tablet md 768px and up) */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-[13px] min-w-[760px]">
+          <thead>
+            <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase w-10">#</th>
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TYPE</th>
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">FROM</th>
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TO</th>
+              <th className="py-3 px-4 text-right text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">AMOUNT</th>
+              <th className="py-3 px-4 text-center text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">STATUS</th>
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">DATE &amp; TIME</th>
+              <th className="py-3 px-4 text-left text-[11px] font-bold text-[#94a3b8] tracking-wider uppercase">TX HASH</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#f1f5f9]">
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-[#94a3b8] text-[13px]">
+                  No transactions recorded yet in this category.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((tx) => (
+                <tr key={tx.id} className="hover:bg-[#f8fafc]/80 transition-colors cursor-pointer">
+                  <td className="py-3.5 px-4 text-[#94a3b8] font-medium">{tx.id}</td>
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-2.5">
+                      <TypeIcon type={tx.type} />
+                      <span className="font-semibold text-[#0f172a]">{tx.type}</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-4"><span className="font-mono text-[12px] text-[#64748b]">{tx.from}</span></td>
+                  <td className="py-3.5 px-4">
+                    <span className={tx.to === "You" ? "font-semibold text-[#0f172a]" : "font-mono text-[12px] text-[#64748b]"}>{tx.to}</span>
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>{tx.amountDisplay}</div>
+                    <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD {tx.trobSubtitle && <span className="text-[9.5px] text-slate-400 font-normal">({tx.trobSubtitle})</span>}</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${
+                      tx.status === "Confirmed"
+                        ? "bg-[#ecfdf5] text-[#16a34a] border border-[#bbf7d0]"
+                        : tx.status === "Pending"
+                        ? "bg-[#fffbeb] text-[#b45309] border border-[#fde68a]"
+                        : "bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca]"
+                    }`}>
+                      {tx.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <div className="text-[12.5px] text-[#0f172a] font-medium">{tx.date}</div>
+                    <div className="text-[11.5px] text-[#94a3b8]">{tx.time}</div>
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[12px] text-[#64748b]">{tx.txHash}</span>
+                      <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
+                      <button type="button" onClick={() => openExplorer(tx.rawTxHash)} className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="View on TrobScan Explorer"><ExternalIcon /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile transaction cards (< md 768px) */}
+      <div className="md:hidden divide-y divide-[#f1f5f9]">
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-[#94a3b8] text-[13px]">
+            No transactions recorded yet in this category.
+          </div>
+        ) : (
+          filtered.map((tx) => (
+            <div key={tx.id} className="px-3 py-3.5">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-start gap-2.5">
+                  <TypeIcon type={tx.type} sm={true} />
+                  <div>
+                    <div className="font-extrabold text-[13px] text-[#0f172a] leading-tight">{tx.type}</div>
+                    <div className="text-[10.5px] text-[#94a3b8] mt-0.5">{tx.date} {tx.time}</div>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>
+                    {tx.amountDisplay} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
+                  </div>
+                  <div className={`text-[10px] font-semibold mt-0.5 ${tx.status === "Confirmed" ? "text-[#16a34a]" : "text-[#b45309]"}`}>{tx.status}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-mono text-[10.5px] text-[#64748b] truncate">{tx.from}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className={tx.to === "You" ? "text-[10.5px] font-bold text-[#2563eb] truncate" : "font-mono text-[10.5px] text-[#64748b] truncate"}>{tx.to}</span>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="font-mono text-[10px] text-[#94a3b8]">{tx.txHash}</span>
+                  <button type="button" onClick={() => copy(tx.rawTxHash || tx.txHash)} className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="Copy Transaction Hash"><CopyIcon /></button>
+                  <button type="button" onClick={() => openExplorer(tx.rawTxHash)} className="p-0.5 text-[#94a3b8] hover:text-[#2563eb] cursor-pointer" title="View on TrobScan Explorer"><ExternalIcon /></button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

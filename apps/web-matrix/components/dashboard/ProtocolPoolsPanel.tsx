@@ -170,9 +170,7 @@ export function ProtocolPoolsPanel({
     return () => clearInterval(interval);
   }, []);
 
-  // 3-Month Universal Milestone Countdown (90-day lockup)
-  const CYCLE_SECONDS = 90 * 24 * 60 * 60;
-  const BASE_CYCLE_START = 1790812800; // Oct 1, 2026
+  // Synchronized On-Chain Magic Box Countdown (Direct from smart contract)
   const [milestoneCountdown, setMilestoneCountdown] = useState<{
     days: number;
     hours: number;
@@ -183,10 +181,10 @@ export function ProtocolPoolsPanel({
   const [showBlindBoxModal, setShowBlindBoxModal] = useState<boolean>(false);
 
   useEffect(() => {
+    const contractSec = poolStats?.magicBoxPool?.timeUntilNextDrawSeconds;
+    let remaining = (contractSec !== undefined && contractSec > 0) ? contractSec : 0;
+
     const calcMilestone = () => {
-      const now = Math.floor(Date.now() / 1000);
-      const elapsed = Math.max(0, now - BASE_CYCLE_START);
-      const remaining = CYCLE_SECONDS - (elapsed % CYCLE_SECONDS);
       const days = Math.floor(remaining / (24 * 3600));
       const hours = Math.floor((remaining % (24 * 3600)) / 3600);
       const minutes = Math.floor((remaining % 3600) / 60);
@@ -194,9 +192,12 @@ export function ProtocolPoolsPanel({
       setMilestoneCountdown({ days, hours, minutes, seconds, totalSeconds: remaining });
     };
     calcMilestone();
-    const intv = setInterval(calcMilestone, 1000);
+    const intv = setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      calcMilestone();
+    }, 1000);
     return () => clearInterval(intv);
-  }, []);
+  }, [poolStats?.magicBoxPool?.timeUntilNextDrawSeconds]);
 
   const isAlphaTarget = !isAlphaAchieved;
   const isPrimeTarget = isAlphaAchieved && !isPrimeAchieved;
@@ -323,7 +324,8 @@ export function ProtocolPoolsPanel({
           </div>
         </div>
 
-        {/* User On-Chain Claimable Yield & Status Strip */}
+        {/* User On-Chain Claimable Yield & Status Strip (Only rendered when claimable rewards exist) */}
+        {claimableRewards && claimableRewards.totalClaimableTrob > 0 && (
         <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#f0f7ff] via-[#f8fbff] to-[#edf9f5] border border-[#d6e7fa] flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white border border-[#cbe1fb] flex items-center justify-center text-[#2563eb] shadow-2xs shrink-0">
@@ -381,6 +383,7 @@ export function ProtocolPoolsPanel({
             )}
           </div>
         </div>
+        )}
 
         {/* 4 Pools Grid - Compact, Light-Themed, Sky Blue Accents */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-5 relative z-10">
@@ -492,7 +495,7 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#7256d8]">
-                  ${((poolStats ? (poolStats.magicBoxPool.balanceTrob || (poolStats.vault.totalRoutedFromMatrix * 0.1)) : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${((poolStats ? (poolStats.magicBoxPool.balanceTrob ?? 0) : 0) * 0.056).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10.5px] text-[#657895] font-bold">USD Pooled</span>
               </div>
@@ -502,7 +505,7 @@ export function ProtocolPoolsPanel({
               <div className="mt-2.5 bg-[#f8faff] rounded-lg p-1.5 border border-[#e0eaf7] flex items-center justify-between text-[10.5px]">
                 <span className="text-[#657895]">3-Mo Drop In:</span>
                 <span className="font-mono font-bold text-[#b97a17]">
-                  {milestoneCountdown.days}d {milestoneCountdown.hours}h {milestoneCountdown.minutes}m
+                  {milestoneCountdown.totalSeconds > 0 ? `${milestoneCountdown.days}d ${milestoneCountdown.hours}h ${milestoneCountdown.minutes}m` : "--d --h --m"}
                 </span>
               </div>
             </div>

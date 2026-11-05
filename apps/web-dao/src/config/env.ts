@@ -37,7 +37,7 @@ export const FULLNODE_RPC_URL =
 export const TROB_PRICE_API_URL =
   process.env.NEXT_PUBLIC_TROB_PRICE_API_URL ||
   process.env.TROB_PRICE_API_URL ||
-  (IS_MAINNET ? 'https://backend.trobchain.com/v1/market/price' : 'https://testnet-backend.trobchain.com/v1/market/price');
+  'https://backend.trobchain.com/v1/market/price';
 
 // Official Super Representative (SR) Addresses for Governance Staking & Voting
 export const OFFICIAL_SR_MAINNET =
@@ -51,31 +51,31 @@ export const OFFICIAL_SR = IS_MAINNET ? OFFICIAL_SR_MAINNET : OFFICIAL_SR_TESTNE
 // DAO Contract Address & Hex (TrobChain Testnet by default)
 export const ACTIVE_DAO_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
-  (IS_MAINNET ? 'TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2' : 'TEh2X5NgisqALBEcjTxDrwDE97njFvMHf3');
+  (IS_MAINNET ? 'TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf' : 'TP8PVXguepBjLwvuS6TmCC1nuXbjM6UEau');
 
 export const ACTIVE_DAO_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_DAO_HEX ||
-  (IS_MAINNET ? '419031dbc5faddd365a9b3d40ddc0c550ca0f369e4' : '4133c939246c012f3e1f1c0829f2d7db92a2e2550b');
+  (IS_MAINNET ? '417816ae352da7d1a806eea8446aebbe551420429b' : '41905622dd4a442843a9ff8238c9c7a8cb5d61a1f1');
 
 // Matrix Contract Address (TrobChain Testnet by default)
 export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
-  (IS_MAINNET ? 'TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV' : 'TX8ak7RrAW7yKGvvG12ioZkvFaU5f5bG6H');
+  (IS_MAINNET ? 'TEMkDDSRHjXHDZ8Hk4Rj7VvH4bMd2ttUGw' : 'TXiYqDTWp3m7EFtAA7f5CBUaPEZNdU36GJ');
 
 // Vault Contract Address (TrobChain Testnet by default)
 export const ACTIVE_VAULT_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-  (IS_MAINNET ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TBq3nvGgycW13zyr9KAazizPfFVgVd1n63');
+  (IS_MAINNET ? 'TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9' : 'TESBwN1LgNQobMML7PkQhYS6P9M5UV5qvs');
 
 // Registry Contract Address (TrobChain Testnet by default)
 export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
-  (IS_MAINNET ? 'TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj' : 'TKVGNsrsNhof6zGvRFo29D1z85Z1cJZ47i');
+  (IS_MAINNET ? 'THPNUxBhgG5ZsT3XfMU8LKTNq1rWzahLxT' : 'TGqsxzj8QCLT5SMHy48kGvjSDVo58Dahmq');
 
 // Token Contract Address (TrobChain Testnet by default)
 export const ACTIVE_TOKEN_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_TOKEN_ADDRESS ||
-  (IS_MAINNET ? 'TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn' : 'TMg7ZffXNkopbA5KWsq8vUFW5oL5ZqKPbx');
+  (IS_MAINNET ? 'TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8' : 'TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8');
 
 // Chain ID (1001 for Testnet, 1000 for Mainnet)
 export const CHAIN_ID = parseInt(

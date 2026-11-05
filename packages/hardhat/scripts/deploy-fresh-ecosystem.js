@@ -487,25 +487,10 @@ async function main() {
     "EquoraDAOv2.setTrobPrice(31740 -> $0.03174 USD)"
   );
 
-  // K. Register 2 DAO IDs on EquoraDAOv2 (Seat 1 Founder + Seat 2 Member)
+  // K. Pristine DAO starts with 0 members (No past IDs merged)
   console.log("\n======================================================");
-  console.log("🏛️ REGISTERING 2 DAO MEMBERS ON-CHAIN");
+  console.log("🏛️ PRISTINE DAO: 0 INITIAL MEMBERS (NO PAST IDs)");
   console.log("======================================================");
-  const dao1Evm = seat1.evmAddress;
-  const dao2Hex = base58ToHex("THB9S4bRBzR6Zwt4fz3hAfi3TC3AC6pLhx");
-  const dao2Evm = "0x" + dao2Hex.slice(2);
-
-  const migrateParams = coder.encode(
-    ["address[]", "uint256[]", "uint256[]"],
-    [[dao1Evm, dao2Evm], [1, 2], [0, 0]]
-  );
-  await triggerContractMethod(
-    deployer,
-    dao.addressHex,
-    "migrateGenuineMembers(address[],uint256[],uint256[])",
-    migrateParams,
-    "EquoraDAOv2.migrateGenuineMembers(Seat 1 & Seat 2)"
-  );
 
   // ══════════════════════════════════════════════════════════════════
   // ON-CHAIN VERIFICATION

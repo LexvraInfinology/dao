@@ -155,6 +155,9 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     // Genesis Apex Root wallet address
     address public genesisRoot;
 
+    // Leadership Royalty Pool contract — notified of Slot 3, 6, 9, 12 rank milestones
+    address public royaltyPoolContract;
+
     // -------------------------------------------------------------------------
     // Matrix State
     // -------------------------------------------------------------------------
@@ -263,6 +266,7 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     event VaultContractSet(address indexed vault);
     event DaoContractSet(address indexed dao);
     event GenesisRootSet(address indexed root);
+    event RoyaltyPoolContractSet(address indexed royaltyPool);
     event SlotReserved(
         address indexed user,
         uint8   indexed fromSlot,
@@ -422,6 +426,12 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
         require(_root != address(0), "EquoraMatrix: invalid root");
         genesisRoot = _root;
         emit GenesisRootSet(_root);
+    }
+
+    function setRoyaltyPoolContract(address _royaltyPool) external onlyOwner {
+        require(_royaltyPool != address(0), "EquoraMatrix: invalid royalty pool");
+        royaltyPoolContract = _royaltyPool;
+        emit RoyaltyPoolContractSet(_royaltyPool);
     }
 
     function importUserSlotData(
@@ -1270,6 +1280,11 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
             try nftContract.mintRankBadge(user, rank) {} catch {}
         }
 
+        // Notify RoyaltyPool of rank promotion (advances tier, removes lower tier payouts, notifies RewardPool)
+        if (royaltyPoolContract != address(0)) {
+            try IEquoraRoyaltyPool(royaltyPoolContract).recordRankPromotion(user, uint8(rank)) {} catch {}
+        }
+
         emit MilestoneReached(user, uint8(slot), uint8(rank), block.timestamp);
     }
 
@@ -1520,4 +1535,8 @@ interface IEquoraVault {
     /// @dev Called by EquoraMatrix to route P4/P5/P14 funds into the 4 protocol pools.
     ///      Vault splits: 35% Ecosystem & DAO Pool | 40% Royalty Pool | 15% Level Rewards | 10% Magic Blind Box.
     function routePoolDeposit(uint256 amount) external payable;
+}
+
+interface IEquoraRoyaltyPool {
+    function recordRankPromotion(address user, uint8 newTier) external;
 }

@@ -316,15 +316,15 @@ async function main() {
     deployer
   );
 
-  // 7. Deploy Fresh EquoraDAOv2
-  const daoV2Params = coder.encode(
+  // 7. Deploy Fresh EquoraDAOv3
+  const daoV3Params = coder.encode(
     ["address", "address"],
     [zeroAddress, "0x" + registry.addressHex.slice(2)]
   );
   const dao = await deployContractToTrob(
-    "EquoraDAOv2",
-    "artifacts/contracts/core/EquoraDAOv2.sol/EquoraDAOv2.json",
-    daoV2Params,
+    "EquoraDAOv3",
+    "artifacts/contracts/core/EquoraDAOv3.sol/EquoraDAOv3.json",
+    daoV3Params,
     deployer
   );
 
@@ -448,6 +448,26 @@ async function main() {
     "EquoraNFT.setMinter(EquoraMatrix, true)"
   );
 
+  // I2. salaryPool.setMatrixContract(matrix)
+  const setMatrixOnSalaryParam = coder.encode(["address"], ["0x" + matrix.addressHex.slice(2)]);
+  await triggerContractMethod(
+    deployer,
+    salaryPool.addressHex,
+    "setMatrixContract(address)",
+    setMatrixOnSalaryParam,
+    "EquoraSalaryPool.setMatrixContract(EquoraMatrix)"
+  );
+
+  // I3. matrix.setRoyaltyPoolContract(salaryPool)
+  const setRoyaltyOnMatrixParam = coder.encode(["address"], ["0x" + salaryPool.addressHex.slice(2)]);
+  await triggerContractMethod(
+    deployer,
+    matrix.addressHex,
+    "setRoyaltyPoolContract(address)",
+    setRoyaltyOnMatrixParam,
+    "EquoraMatrix.setRoyaltyPoolContract(EquoraSalaryPool)"
+  );
+
   // J1. Set Dynamic Trob Price on Matrix: $0.03174/TROB (31740)
   const setTrobPriceParam = coder.encode(["uint256"], [31740]);
   await triggerContractMethod(
@@ -552,13 +572,35 @@ async function main() {
   const matrixEnvPath = path.resolve(__dirname, "../../../apps/web-matrix/.env.local");
   if (fs.existsSync(matrixEnvPath)) {
     let c = fs.readFileSync(matrixEnvPath, "utf8");
-    c = c.replace(/NEXT_PUBLIC_MATRIX_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_MATRIX_ADDRESS=${matrix.addressBase58}`);
-    c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_DAO_ADDRESS=${dao.addressBase58}`);
-    c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_VAULT_ADDRESS=${vault.addressBase58}`);
-    c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_REGISTRY_ADDRESS=${registry.addressBase58}`);
-    c = c.replace(/NEXT_PUBLIC_NFT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_NFT_ADDRESS=${nft.addressBase58}`);
+    c = c.replace(/NEXT_PUBLIC_MATRIX_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_MATRIX_ADDRESS="${matrix.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_MATRIX_HEX=[^\r\n]*/, `NEXT_PUBLIC_MATRIX_HEX="${matrix.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_DAO_ADDRESS="${dao.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_DAO_HEX=[^\r\n]*/, `NEXT_PUBLIC_DAO_HEX="${dao.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_VAULT_ADDRESS="${vault.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_VAULT_HEX=[^\r\n]*/, `NEXT_PUBLIC_VAULT_HEX="${vault.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_REGISTRY_ADDRESS="${registry.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_REGISTRY_HEX=[^\r\n]*/, `NEXT_PUBLIC_REGISTRY_HEX="${registry.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_NFT_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_NFT_ADDRESS="${nft.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_NFT_HEX=[^\r\n]*/, `NEXT_PUBLIC_NFT_HEX="${nft.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_SALARY_POOL_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_SALARY_POOL_ADDRESS="${salaryPool.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_SALARY_POOL_HEX=[^\r\n]*/, `NEXT_PUBLIC_SALARY_POOL_HEX="${salaryPool.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_REWARD_POOL_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_REWARD_POOL_ADDRESS="${rewardPool.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_REWARD_POOL_HEX=[^\r\n]*/, `NEXT_PUBLIC_REWARD_POOL_HEX="${rewardPool.addressHex}"`);
+    c = c.replace(/NEXT_PUBLIC_MAGIC_BOX_ADDRESS=[^\r\n]*/, `NEXT_PUBLIC_MAGIC_BOX_ADDRESS="${magicBox.addressBase58}"`);
+    c = c.replace(/NEXT_PUBLIC_MAGIC_BOX_HEX=[^\r\n]*/, `NEXT_PUBLIC_MAGIC_BOX_HEX="${magicBox.addressHex}"`);
     fs.writeFileSync(matrixEnvPath, c, "utf8");
     console.log(`💾 Updated web-matrix/.env.local`);
+  }
+
+  // 2b. Update apps/web-matrix/app/api/matrix/[...path]/route.ts
+  const apiRoutePath = path.resolve(__dirname, "../../../apps/web-matrix/app/api/matrix/[...path]/route.ts");
+  if (fs.existsSync(apiRoutePath)) {
+    let rc = fs.readFileSync(apiRoutePath, "utf8");
+    rc = rc.replace(/const MATRIX_HEX =\s*process\.env\.NEXT_PUBLIC_MATRIX_HEX \|\|\s*"[^"]*";/, `const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "${matrix.addressHex}";`);
+    rc = rc.replace(/const REGISTRY_HEX =\s*process\.env\.NEXT_PUBLIC_REGISTRY_HEX \|\|\s*"[^"]*";/, `const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "${registry.addressHex}";`);
+    rc = rc.replace(/const SALARY_POOL_HEX =\s*process\.env\.NEXT_PUBLIC_SALARY_POOL_HEX \|\|\s*"[^"]*";/, `const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "${salaryPool.addressHex}";`);
+    fs.writeFileSync(apiRoutePath, rc, "utf8");
+    console.log(`💾 Updated web-matrix/app/api/matrix/[...path]/route.ts`);
   }
 
   // 3. Update apps/web-dao/.env.local

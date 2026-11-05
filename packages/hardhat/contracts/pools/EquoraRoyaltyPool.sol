@@ -81,6 +81,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     IERC20  public immutable paymentToken;
     address public immutable vault;          // EquoraVault — only caller of creditUser
     address public rewardPool;               // EquoraRewardPool — notified on rank-up
+    address public matrixContract;           // EquoraMatrix — can notify of slot completions
 
     // Per-user tracking
     mapping(address => uint256) public userMilestones;       // cumulative deposit events
@@ -167,6 +168,21 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
         emit RewardPoolSet(_rewardPool);
     }
 
+    function setMatrixContract(address _matrix) external {
+        require(matrixContract == address(0), "EquoraRoyaltyPool: already set");
+        require(_matrix != address(0), "EquoraRoyaltyPool: invalid matrix");
+        matrixContract = _matrix;
+    }
+
+    /**
+     * @dev Called by EquoraMatrix when user completes Slot 3 (Alpha), 6 (Prime), 9 (Elite), 12 (Crown).
+     *      Promotes member to new tier and removes them from all lower tiers (no double dipping).
+     */
+    function recordRankPromotion(address user, uint8 newTier) external {
+        require(msg.sender == matrixContract || msg.sender == vault, "EquoraRoyaltyPool: unauthorized");
+        _setTierInternal(user, PoolTier(newTier));
+    }
+
     // ─── Called by EquoraVault ─────────────────────────────────────────────────
 
     /**
@@ -203,46 +219,57 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     function _advanceMilestone(address user) internal {
         userMilestones[user]++;
         uint256 count = userMilestones[user];
-        PoolTier oldTier = currentTier[user];
         PoolTier newTier = _getTier(count);
-
-        if (newTier != oldTier && newTier != PoolTier.NONE) {
-            currentTier[user] = newTier;
-
-            // Remove from previous tier array if user was promoted from a lower tier
-            if (oldTier == PoolTier.ALPHA) {
-                _removeFromTier(alphaMembers, user);
-                inAlpha[user] = false;
-            } else if (oldTier == PoolTier.PRIME) {
-                _removeFromTier(primeMembers, user);
-                inPrime[user] = false;
-            } else if (oldTier == PoolTier.ELITE) {
-                _removeFromTier(eliteMembers, user);
-                inElite[user] = false;
-            }
-
-            // Add to new tier array
-            if (newTier == PoolTier.ALPHA) {
-                _tierIndex[user] = alphaMembers.length;
-                alphaMembers.push(user);
-                inAlpha[user] = true;
-            } else if (newTier == PoolTier.PRIME) {
-                _tierIndex[user] = primeMembers.length;
-                primeMembers.push(user);
-                inPrime[user] = true;
-            } else if (newTier == PoolTier.ELITE) {
-                _tierIndex[user] = eliteMembers.length;
-                eliteMembers.push(user);
-                inElite[user] = true;
-            } else if (newTier == PoolTier.CROWN) {
-                _tierIndex[user] = crownMembers.length;
-                crownMembers.push(user);
-                inCrown[user] = true;
-            }
-
-            emit RankAchieved(user, newTier, count, block.timestamp);
-            _notifyRewardPool(user, uint8(newTier));
+        if (newTier > currentTier[user] && newTier != PoolTier.NONE) {
+            _setTierInternal(user, newTier);
         }
+    }
+
+    function _setTierInternal(address user, PoolTier newTier) internal {
+        PoolTier oldTier = currentTier[user];
+        if (newTier <= oldTier || newTier == PoolTier.NONE) return;
+
+        currentTier[user] = newTier;
+
+        // Strictly remove from any previous lower tier (mutual exclusivity - NO stacking)
+        if (inAlpha[user]) {
+            _removeFromTier(alphaMembers, user);
+            inAlpha[user] = false;
+        }
+        if (inPrime[user]) {
+            _removeFromTier(primeMembers, user);
+            inPrime[user] = false;
+        }
+        if (inElite[user]) {
+            _removeFromTier(eliteMembers, user);
+            inElite[user] = false;
+        }
+        if (inCrown[user]) {
+            _removeFromTier(crownMembers, user);
+            inCrown[user] = false;
+        }
+
+        // Add to new tier array
+        if (newTier == PoolTier.ALPHA) {
+            _tierIndex[user] = alphaMembers.length;
+            alphaMembers.push(user);
+            inAlpha[user] = true;
+        } else if (newTier == PoolTier.PRIME) {
+            _tierIndex[user] = primeMembers.length;
+            primeMembers.push(user);
+            inPrime[user] = true;
+        } else if (newTier == PoolTier.ELITE) {
+            _tierIndex[user] = eliteMembers.length;
+            eliteMembers.push(user);
+            inElite[user] = true;
+        } else if (newTier == PoolTier.CROWN) {
+            _tierIndex[user] = crownMembers.length;
+            crownMembers.push(user);
+            inCrown[user] = true;
+        }
+
+        emit RankAchieved(user, newTier, userMilestones[user], block.timestamp);
+        _notifyRewardPool(user, uint8(newTier));
     }
 
     function _removeFromTier(address[] storage arr, address user) internal {

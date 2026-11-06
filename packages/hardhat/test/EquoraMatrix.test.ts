@@ -90,7 +90,8 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     matrix = await MatrixFactory.deploy(
       await token.getAddress(),
       await registry.getAddress(),
-      await nft.getAddress()
+      await nft.getAddress(),
+      await vault.getAddress()
     );
 
     // 7. Wire authorizations
@@ -770,3 +771,4 @@ describe("EquoraMatrix — Equora.Fi V3 14-Position Single-Leg Matrix Engine", f
     });
   });
 });
+

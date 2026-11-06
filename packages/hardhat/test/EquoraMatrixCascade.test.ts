@@ -97,7 +97,8 @@ describe("EquoraMatrix — Multi-Generational Recursive Downline Cascade & Anti-
     matrix = await MatrixFactory.deploy(
       ethers.ZeroAddress,
       await registry.getAddress(),
-      await nft.getAddress()
+      await nft.getAddress(),
+      await vault.getAddress()
     );
     await matrix.waitForDeployment();
 
@@ -223,3 +224,4 @@ describe("EquoraMatrix — Multi-Generational Recursive Downline Cascade & Anti-
     expect(u1SlotData.filledNodes).to.be.gte(2n);
   });
 });
+

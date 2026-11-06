@@ -41,6 +41,7 @@ export const MAINNET_DEFAULT_ADDRESSES = {
   magicBoxPool: "TDuKBBieferWEHwSESRA1YKiKhJovidYsw",
   dao: "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf",
   nft: "TH9wqQqL6vW3Lcp6PKq7pnJz6r8ByXTiCD",
+  royaltyPool: "TPH8E3PYKreaB5CjCPXTrEnEu1bhVCvHkZ",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
   legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
 };
@@ -57,6 +58,7 @@ export const CONTRACT_ADDRESSES = {
   magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || DEFAULT_ADDRESSES.magicBoxPool,
   dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || DEFAULT_ADDRESSES.dao,
   nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || DEFAULT_ADDRESSES.nft,
+  royaltyPool: process.env.NEXT_PUBLIC_ROYALTY_POOL_ADDRESS || (MAINNET_DEFAULT_ADDRESSES as any).royaltyPool,
 };
 
 // ── Domain & Routing Configuration ──────────────────────────────────────────

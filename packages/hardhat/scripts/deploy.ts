@@ -124,7 +124,7 @@ async function main() {
 
   console.log("\n🔢  Deploying EquoraMatrix...");
   const EquoraMatrix = await ethers.getContractFactory("EquoraMatrix");
-  const matrix = await EquoraMatrix.deploy(tokenAddress, registryAddress, nftAddress);
+  const matrix = await EquoraMatrix.deploy(tokenAddress, registryAddress, nftAddress, vaultAddress);
   await matrix.waitForDeployment();
   const matrixAddress = await matrix.getAddress();
   console.log(`   ✅ EquoraMatrix:      ${matrixAddress}`);
@@ -332,3 +332,4 @@ main()
     console.error(error);
     process.exit(1);
   });
+

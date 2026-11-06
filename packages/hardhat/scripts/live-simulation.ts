@@ -89,7 +89,7 @@ async function main() {
     dao = await DAO.deploy(await token.getAddress(), await registry.getAddress());
 
     const Matrix = await ethers.getContractFactory("EquoraMatrix");
-    matrix = await Matrix.deploy(await token.getAddress(), await registry.getAddress(), await nft.getAddress());
+    matrix = await Matrix.deploy(await token.getAddress(), await registry.getAddress(), await nft.getAddress(), await vault.getAddress());
 
     // Wire up authorizations
     await vault.initialize(
@@ -204,3 +204,4 @@ main().catch((err) => {
   console.error("Simulation error:", err);
   process.exit(1);
 });
+

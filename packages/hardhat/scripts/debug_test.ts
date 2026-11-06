@@ -11,7 +11,7 @@ async function main() {
   const EquoraVault = await ethers.getContractFactory("EquoraVault");
   const vault = await EquoraVault.deploy(await token.getAddress(), await registry.getAddress());
   const EquoraMatrix = await ethers.getContractFactory("EquoraMatrix");
-  const matrix = await EquoraMatrix.deploy(await token.getAddress(), await registry.getAddress(), await nft.getAddress());
+  const matrix = await EquoraMatrix.deploy(await token.getAddress(), await registry.getAddress(), await nft.getAddress(), await vault.getAddress());
   await matrix.setVaultContract(await vault.getAddress());
   await registry.setAuthorizedContracts(await vault.getAddress(), owner.address, await matrix.getAddress());
 
@@ -68,7 +68,7 @@ async function main() {
   const dl2BalBefore = await token.balanceOf(downline2.address);
   const tx = await matrix.connect(p7).joinSlot(1, matrixOwner.address);
   const rc = await tx.wait();
-  for (const log of rc.logs) {
+  if (rc) for (const log of rc.logs) {
     try {
       const parsed = matrix.interface.parseLog(log);
       console.log("Matrix Event:", parsed?.name, parsed?.args);
@@ -84,3 +84,4 @@ async function main() {
 }
 
 main().catch(console.error);
+

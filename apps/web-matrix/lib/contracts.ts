@@ -17,15 +17,15 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || "",
+  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || "TW7gQvguNsj8xDJk5nxHxkrsTEsQp9UVoQ",
   token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "",
-  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "",
-  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || "",
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "TWpt8BemzELhWwpEzD6FjKRipKUAzk8bNg",
+  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || "TV5NJC5WkiuftgtujspWhdF52585Zk6ZsP",
   salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || "",
   rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || "",
   magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || "",
-  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || "",
-  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || "",
+  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || "TPEZ2NWj5UhNJoowvAE1W7LnXLdCc2efdQ",
+  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || "TXywSvZsvEpBQeAYqzexVJhQxte8XbvVTK",
   legacyDaoV1: process.env.NEXT_PUBLIC_LEGACY_V1_DAO_ADDRESS || "",
   legacyDaoV2: process.env.NEXT_PUBLIC_LEGACY_V2_DAO_ADDRESS || "",
 };

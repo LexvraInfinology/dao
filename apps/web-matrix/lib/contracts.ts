@@ -10,7 +10,7 @@ import { getApiBaseUrl, type MatrixSlotDetails, type MatrixSlotSummary, type Mat
 export const IS_MAINNET =
   process.env.NEXT_PUBLIC_IS_MAINNET !== undefined
     ? (process.env.NEXT_PUBLIC_IS_MAINNET === "true" || process.env.NEXT_PUBLIC_IS_MAINNET === "1")
-    : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "").toLowerCase() === "mainnet";
+    : (process.env.NEXT_PUBLIC_TARGET_NETWORK || process.env.TARGET_NETWORK || "trobchain-mainnet").toLowerCase().includes("mainnet");
 
 export const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
 export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testnet";

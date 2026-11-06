@@ -668,15 +668,19 @@ contract EquoraMatrix is Ownable, ReentrancyGuard {
     constructor(
         address _paymentToken,
         address _registry,
-        address _nftContract
+        address _nftContract,
+        address _vaultContract
     ) Ownable(msg.sender) {
         require(_registry != address(0), "EquoraMatrix: invalid registry");
 
         if (_paymentToken != address(0)) {
             paymentToken = IERC20(_paymentToken);
         }
-        registry     = IEquoraRegistry(_registry);
-        nftContract  = IEquoraNFT(_nftContract);
+        registry      = IEquoraRegistry(_registry);
+        nftContract   = IEquoraNFT(_nftContract);
+        if (_vaultContract != address(0)) {
+            vaultContract = _vaultContract;
+        }
 
         // Precompute slot costs pegged to $30 USD (default: 30 * 1e6 SUN at $1.00 USD)
         baseSlotCost = (ENTRY_FEE_USD * 1e6) / trobPriceUsd6;

@@ -179,7 +179,7 @@ contract EquoraRoyaltyPool is ReentrancyGuard {
     }
 
     function setMatrixContract(address _matrix) external {
-        require(matrixContract == address(0), "EquoraRoyaltyPool: already set");
+        require(msg.sender == deployer || matrixContract == address(0), "EquoraRoyaltyPool: unauthorized");
         require(_matrix != address(0), "EquoraRoyaltyPool: invalid matrix");
         matrixContract = _matrix;
     }

@@ -31,15 +31,15 @@ export const TESTNET_DEFAULT_ADDRESSES = {
 };
 
 export const MAINNET_DEFAULT_ADDRESSES = {
-  matrix: "TEMkDDSRHjXHDZ8Hk4Rj7VvH4bMd2ttUGw",
+  matrix: "TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx",
   token: "TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8",
-  registry: "THPNUxBhgG5ZsT3XfMU8LKTNq1rWzahLxT",
+  registry: "TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T",
   vault: "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9",
   salaryPool: "TAiDq3DQ4H5LNKFt57akWXY7HRyT52VsBy",
   rewardPool: "TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v",
   magicBoxPool: "TDuKBBieferWEHwSESRA1YKiKhJovidYsw",
   dao: "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf",
-  nft: "TGToBrxcw8PJw2uPvdwCvTHneECnFtzUYi",
+  nft: "TH9wqQqL6vW3Lcp6PKq7pnJz6r8ByXTiCD",
   legacyDaoV1: "TRoF5D41yYtbjRdxatK38GDjxb2sGnkNFd",
   legacyDaoV2: "TKVdXdghjfPh8jH6Ek6UmWcnaafVkYcyfy",
 };

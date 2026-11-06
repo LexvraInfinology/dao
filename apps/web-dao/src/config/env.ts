@@ -60,7 +60,7 @@ export const ACTIVE_DAO_CONTRACT_HEX =
 // Matrix Contract Address (TrobChain Testnet by default)
 export const ACTIVE_MATRIX_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
-  (IS_MAINNET ? 'TEMkDDSRHjXHDZ8Hk4Rj7VvH4bMd2ttUGw' : 'TXiYqDTWp3m7EFtAA7f5CBUaPEZNdU36GJ');
+  (IS_MAINNET ? 'TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx' : 'TXiYqDTWp3m7EFtAA7f5CBUaPEZNdU36GJ');
 
 // Vault Contract Address (TrobChain Testnet by default)
 export const ACTIVE_VAULT_CONTRACT_ADDRESS =
@@ -70,7 +70,7 @@ export const ACTIVE_VAULT_CONTRACT_ADDRESS =
 // Registry Contract Address (TrobChain Testnet by default)
 export const ACTIVE_REGISTRY_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
-  (IS_MAINNET ? 'THPNUxBhgG5ZsT3XfMU8LKTNq1rWzahLxT' : 'TGqsxzj8QCLT5SMHy48kGvjSDVo58Dahmq');
+  (IS_MAINNET ? 'TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T' : 'TGqsxzj8QCLT5SMHy48kGvjSDVo58Dahmq');
 
 // Token Contract Address (TrobChain Testnet by default)
 export const ACTIVE_TOKEN_CONTRACT_ADDRESS =

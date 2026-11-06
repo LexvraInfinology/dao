@@ -81,7 +81,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? (isUserRegistered ? 1 : 0));
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
   const isSlotUnlocked = activeSlotNumber === 1
-    ? (isUserRegistered || Boolean(details?.isUnlocked))
+    ? true
     : (details ? Boolean(details.isUnlocked) : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked));
 
   const isSlot1Complete = Boolean(
@@ -108,7 +108,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const percentFilled = !isSlotUnlocked ? 0 : isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
 
   const firstOpenIdx = nodesList.length > 0 ? nodesList.findIndex((n: any) => !n?.filled) : -1;
-  const nextUpcomingSeat = !isSlotUnlocked || isPastSlotCompleted ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : filledNodes + 1);
+  const nextUpcomingSeat = !isSlotUnlocked || isPastSlotCompleted ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledNodes < 14 ? filledNodes + 1 : 1));
   const nextSeatMeta = nextUpcomingSeat ? SEAT_METAS[nextUpcomingSeat] : null;
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
@@ -274,10 +274,10 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         )}
 
         {/* Navigation & Action Buttons */}
-        {!isSlotUnlocked ? (
+        {!isSlotUnlocked && activeSlotNumber > 1 ? (
           <button
             type="button"
-            onClick={() => selectSlot(effectiveHighestUnlocked, 1, address || undefined)}
+            onClick={() => selectSlot(effectiveHighestUnlocked || 1, 1, address || undefined)}
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
             <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>

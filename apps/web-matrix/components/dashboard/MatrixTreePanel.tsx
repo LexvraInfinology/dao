@@ -293,7 +293,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const isSlot1Escalated = highestUnlockedSlot >= 2;
 
   const isCurrentSlotUnlocked = selectedSlot === 1
-    ? (isUserRegistered || Boolean(activeSlotDetails?.isUnlocked))
+    ? true
     : (activeSlotDetails ? Boolean(activeSlotDetails.isUnlocked) : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked));
 
   // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
@@ -547,9 +547,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const firstOpenPosIndex = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.findIndex((n: any) => !n?.filled) : -1;
   const nextUpcomingPos = isCurrentSlotUnlocked && !isSlotStandby
-    ? (!isOwnerQualified
-        ? (directsCount === 0 ? 1 : 2)
-        : (firstOpenPosIndex >= 0 ? firstOpenPosIndex + 1 : (filledCount < 14 ? filledCount + 1 : null)))
+    ? (firstOpenPosIndex >= 0 ? firstOpenPosIndex + 1 : (filledCount < 14 ? filledCount + 1 : (filledCount === 14 ? null : 1)))
     : null;
 
   // Node Component Render: Vibrant Blue & Green Active/Filled and Large Responsive Cards
@@ -622,12 +620,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       roleBadge = "bg-blue-600 text-white font-black border-blue-600 shadow-xs";
       statusText = "Next Up";
       statusDot = <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />;
-    } else if (isLockedUnqualified) {
-      styleClass =
-        "bg-slate-50/60 border-2 border-dashed border-amber-200/80 hover:border-amber-400 hover:bg-amber-50/30 text-slate-400 opacity-80 transition-all";
-      roleBadge = "bg-amber-50 text-amber-800 border-amber-200 font-bold";
-      statusText = "Locked";
-      statusDot = <Lock className="w-2.5 h-2.5 text-amber-600" />;
     } else {
       styleClass =
         "bg-white border-2 border-dashed border-slate-200 hover:border-blue-300 hover:bg-slate-50/70 text-slate-500";
@@ -642,8 +634,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       } else {
         dynamicRole = isOwnerQualified ? `+$30 YOU` : `+$30 (Req 2 Dir)`;
       }
-    } else if (isLockedUnqualified) {
-      dynamicRole = "2 Directs Req.";
     }
 
     return (

@@ -80,7 +80,9 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const isUserRegistered = Boolean(profile?.isRegistered);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? (isUserRegistered ? 1 : 0));
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
-  const isSlotUnlocked = details ? Boolean(details.isUnlocked) : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked);
+  const isSlotUnlocked = activeSlotNumber === 1
+    ? (isUserRegistered || Boolean(details?.isUnlocked))
+    : (details ? Boolean(details.isUnlocked) : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked));
 
   const isSlot1Complete = Boolean(
     (details as any)?.prevSlotCompleted ||
@@ -111,11 +113,12 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
 
-  const totalEarnedUsd =
+  const totalEarnedUsd = Math.round(
     details?.totalEarnedUsd ||
     data?.totalEarnedUsd ||
     profile?.totalEarningsUsd ||
-    (profile?.totalEarnings ?? 0);
+    (profile?.totalEarnings ?? 0)
+  );
   const totalEarnedTrob =
     details?.totalEarnedTrob ||
     data?.totalEarnedTrob ||
@@ -208,7 +211,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         </div>
 
         {/* Next Open Position Spotlight */}
-        {!isSlotUnlocked ? (
+        {!isSlotUnlocked && activeSlotNumber > 1 ? (
           <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/80 mb-3.5">
             <div className="flex items-center justify-between text-[11px] font-bold mb-1">
               <span className="flex items-center gap-1.5 text-slate-700">

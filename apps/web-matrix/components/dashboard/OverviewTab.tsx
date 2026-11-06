@@ -29,10 +29,8 @@ export function OverviewTab({
     ? Math.max(profile?.highestUnlockedSlot ?? 1, dashboard?.highestUnlockedSlot ?? 1)
     : 0;
 
-  const totalEarnedUsd =
-    dashboard?.totalEarnedUsd ??
-    (profile?.totalEarningsUsd ??
-      (profile?.totalEarnings ?? 0));
+  const rawEarnedUsd = dashboard?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0));
+  const totalEarnedUsd = Math.round(rawEarnedUsd);
   const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (totalEarnedUsd / 0.056));
 
   const directsCount = Math.max(
@@ -444,3 +442,4 @@ export function OverviewTab({
     </div>
   );
 }
+

@@ -1241,9 +1241,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     }
   } catch {}
 
-  const availableBalanceUsd = availableBalance * livePrice;
-  const withdrawnTotalUsd = withdrawnTotal * livePrice;
-  const effectiveEarnedUsd = effectiveEarnedTrob * livePrice;
+  const availableBalanceUsd = Math.round(availableBalance * livePrice);
+  const withdrawnTotalUsd = Math.round(withdrawnTotal * livePrice);
+  const effectiveEarnedUsd = Math.round(effectiveEarnedTrob * livePrice);
   const cleanHighestSlot = isRegistered ? Math.max(highestUnlockedSlot, 1) : 0;
 
   return {

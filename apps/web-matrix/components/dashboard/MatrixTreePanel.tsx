@@ -292,9 +292,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
   const isSlot1Escalated = highestUnlockedSlot >= 2;
 
-  const isCurrentSlotUnlocked = activeSlotDetails
-    ? Boolean(activeSlotDetails.isUnlocked)
-    : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked);
+  const isCurrentSlotUnlocked = selectedSlot === 1
+    ? (isUserRegistered || Boolean(activeSlotDetails?.isUnlocked))
+    : (activeSlotDetails ? Boolean(activeSlotDetails.isUnlocked) : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked));
 
   // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
   const isSlot1Complete = Boolean(
@@ -756,7 +756,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             {!isCurrentSlotUnlocked ? (
               <span className="font-semibold text-slate-500">
-                Slot #{String(selectedSlot).padStart(2, "0")} • Locked Tier • Automatically unlocks at $0 out-of-pocket cost via Slot #{Math.max(1, selectedSlot - 1)} (P4 &amp; P5)
+                {selectedSlot === 1
+                  ? "Slot #01 • Entry Tier ($30 USD) • Join Matrix to Activate"
+                  : `Slot #${String(selectedSlot).padStart(2, "0")} • Locked Tier • Automatically unlocks at $0 out-of-pocket cost via Slot #${Math.max(1, selectedSlot - 1)} (P4 & P5)`}
               </span>
             ) : (
               <>
@@ -895,7 +897,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       )}
 
       {/* ───────────────── LOCKED SLOT NOTIFICATION BANNER ───────────────── */}
-      {!isCurrentSlotUnlocked && (
+      {!isCurrentSlotUnlocked && selectedSlot > 1 && (
         <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-slate-100 via-amber-50/40 to-slate-100 border border-slate-200 text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">

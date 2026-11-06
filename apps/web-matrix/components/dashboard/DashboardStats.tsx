@@ -31,7 +31,8 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
       .catch(() => {});
   }, []);
 
-  const totalEarnedUsd = data?.totalEarnedUsd ?? profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0);
+  const rawEarnedUsd = data?.totalEarnedUsd ?? profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0);
+  const totalEarnedUsd = Math.round(rawEarnedUsd);
   const totalEarnedTrob = data?.totalEarnedTrob ?? profile?.totalEarningsTrob ?? (totalEarnedUsd > 0 && trobPrice > 0 ? totalEarnedUsd / trobPrice : 0);
 
   const availableWithdrawUsd = data?.availableWithdrawUsd ?? profile?.availableBalanceUsd ?? (profile?.availableBalance ?? 0);

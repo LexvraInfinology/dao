@@ -66,16 +66,16 @@ export const DEPLOYED_CONTRACTS = {
     hex: process.env.NEXT_PUBLIC_TOKEN_HEX || (isMainnetMode ? '4190b18ab71b5b2b8df3a10c8e52fbdd3ea8f126b9' : '418065e61914497415e464cbc7b67eadb10d13f569'),
   },
   EquoraRegistry: {
-    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || (isMainnetMode ? 'TCPJuV7134EpeaBrqkUAWa2uiMa38EJTpN' : 'TG1Jm7BC37CiUm9WKGSM7r57k3BVo5Z5ND'),
-    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || (isMainnetMode ? '411a7f29b91424fd6715c5048b458dcf7beeeaeebc' : '41423664f5cfd3c235777f182b9c88f87d2f32c6bb'),
+    base58: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || (isMainnetMode ? 'TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T' : 'TG1Jm7BC37CiUm9WKGSM7r57k3BVo5Z5ND'),
+    hex: process.env.NEXT_PUBLIC_REGISTRY_HEX || (isMainnetMode ? '41d9b1ebced59d4899d306640718862e207dbfbb2a' : '41423664f5cfd3c235777f182b9c88f87d2f32c6bb'),
   },
   EquoraVault: {
-    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || (isMainnetMode ? 'TUZjyaLc1TghdoccJWTKhoBcEU12AG327J' : 'TTbKnsxHwGiG9u5cvq5TKZMd56TqEtpLCJ'),
-    hex: process.env.NEXT_PUBLIC_VAULT_HEX || (isMainnetMode ? '4155f1f42bc35374f5eefda01a4cfa083c21f34f12' : '41c14ec7ecfbe1c04de27ab0f42874c833cad0b066'),
+    base58: process.env.NEXT_PUBLIC_VAULT_ADDRESS || (isMainnetMode ? 'TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9' : 'TTbKnsxHwGiG9u5cvq5TKZMd56TqEtpLCJ'),
+    hex: process.env.NEXT_PUBLIC_VAULT_HEX || (isMainnetMode ? '416612ba87acbdcd645f039b80f3101935bc4ad9d8' : '41c14ec7ecfbe1c04de27ab0f42874c833cad0b066'),
   },
   EquoraMatrix: {
-    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || (isMainnetMode ? 'TCNeVcVAA3H22QxxRsmG2NsXCsk1q3JpFz' : 'TB4V7VuvkB3mavbLBkEXPmm9pooX5eKJfA'),
-    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || (isMainnetMode ? '411a5f193d5b9654282fed67931d9123c00da9c879' : '410bf7a78782c7e99e6737b833f834ff0762ab2896'),
+    base58: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || (isMainnetMode ? 'TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx' : 'TB4V7VuvkB3mavbLBkEXPmm9pooX5eKJfA'),
+    hex: process.env.NEXT_PUBLIC_MATRIX_HEX || (isMainnetMode ? '41b48f1e72c64b776ce5864df74926b3b935fef308' : '410bf7a78782c7e99e6737b833f834ff0762ab2896'),
   },
   EquoraNFT: {
     base58: process.env.NEXT_PUBLIC_NFT_ADDRESS || (isMainnetMode ? 'TSANycxN3mgwxAXLNj7XdhvMvWaXT3WxL9' : 'TRmtmYSpWbgdrHG3n8AufTXnPWvgCwZHGK'),

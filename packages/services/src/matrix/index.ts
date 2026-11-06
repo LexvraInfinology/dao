@@ -267,17 +267,17 @@ export function toCanonicalAddress(input?: string | null): string {
   return str.toLowerCase();
 }
 
-const IS_MAINNET_SVC = process.env.IS_MAINNET === "true" || process.env.NEXT_PUBLIC_IS_MAINNET === "true";
+const IS_MAINNET_SVC = process.env.IS_MAINNET !== "false" && process.env.NEXT_PUBLIC_IS_MAINNET !== "false";
 const MATRIX_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   process.env.MATRIX_HEX ||
-  (IS_MAINNET_SVC ? "411a5f193d5b9654282fed67931d9123c00da9c879" : "41e82088dfa79e87b02b88ccdf055c11234b081ec2");
+  (IS_MAINNET_SVC ? "41b48f1e72c64b776ce5864df74926b3b935fef308" : "41e82088dfa79e87b02b88ccdf055c11234b081ec2");
 const REGISTRY_CONTRACT_HEX =
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   process.env.REGISTRY_HEX ||
-  (IS_MAINNET_SVC ? "411a7f29b91424fd6715c5048b458dcf7beeeaeebc" : "4168686de05c0776cf5ffae505743d4b980c23baa3");
+  (IS_MAINNET_SVC ? "41d9b1ebced59d4899d306640718862e207dbfbb2a" : "4168686de05c0776cf5ffae505743d4b980c23baa3");
 const VAULT_CONTRACT_CANONICAL =
-  toCanonicalAddress(process.env.NEXT_PUBLIC_VAULT_ADDRESS || process.env.VAULT_ADDRESS || "0x14653c8041eb6010c4161e6afdb6596d50679548");
+  toCanonicalAddress(process.env.NEXT_PUBLIC_VAULT_ADDRESS || process.env.VAULT_ADDRESS || "0x6612ba87acbdcd645f039b80f3101935bc4ad9d8");
 const TROB_RPC_ENDPOINT =
   process.env.RPC_URL ||
   process.env.FULLNODE_URL ||
@@ -492,6 +492,7 @@ export async function fetchOnChainSlotDetailsLive(
         filled: isFilled,
         placedUser: isFilled ? addr : null,
         userId: userId,
+        code: userId,
         payoutType: PAYOUT_TYPES[i] || "DIRECT",
         recipientAddress: isFilled ? addr : null,
         wasFallback: false,
@@ -973,6 +974,7 @@ export class MatrixService {
             filled: true,
             placedUser: placement.placedUserAddress,
             userId: placement.placedUser?.userId ?? null,
+            code: placement.placedUser?.userId ?? null,
             payoutType: placement.payoutType,
             recipientAddress: placement.recipientAddress,
             wasFallback: placement.wasFallback,

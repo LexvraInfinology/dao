@@ -97,18 +97,22 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const isSlotLive = Boolean(isSlotUnlocked);
   const isSlotStandby = false;
 
-  const isPastSlotCompleted = isSlotUnlocked && activeSlotNumber < effectiveHighestUnlocked;
+  const isPastSlotCompleted = Boolean(
+    isSlotUnlocked &&
+    activeSlotNumber < effectiveHighestUnlocked &&
+    ((details?.snapshotCount && details.snapshotCount > 0) || (details?.currentCycle && details.currentCycle > 1) || realFilledNodes >= 14 || (details?.filledNodes && details.filledNodes >= 14))
+  );
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
   const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
   const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
-  const isViewingSnapshot = Boolean(isSlotUnlocked && (details?.isViewingSnapshot || isPastSlotCompleted));
-  const filledNodes = isSlotUnlocked ? (isPastSlotCompleted ? 14 : (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? 0))) : 0;
-  const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14 || isPastSlotCompleted);
+  const isViewingSnapshot = Boolean(isSlotUnlocked && (details?.isViewingSnapshot || (storeSelectedCycle && storeSelectedCycle < totalCycles) || isPastSlotCompleted));
+  const filledNodes = isSlotUnlocked ? (isPastSlotCompleted && realFilledNodes === 0 ? 14 : (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? 0))) : 0;
+  const isCycleComplete = isSlotUnlocked && (isViewingSnapshot || filledNodes >= 14);
   const remainingNodes = isSlotUnlocked ? Math.max(14 - filledNodes, 0) : 14;
   const percentFilled = !isSlotUnlocked ? 0 : isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
 
   const firstOpenIdx = nodesList.length > 0 ? nodesList.findIndex((n: any) => !n?.filled) : -1;
-  const nextUpcomingSeat = !isSlotUnlocked || isPastSlotCompleted ? null : isCycleComplete ? 1 : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledNodes < 14 ? filledNodes + 1 : 1));
+  const nextUpcomingSeat = !isSlotUnlocked ? null : isCycleComplete ? null : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledNodes < 14 ? filledNodes + 1 : 1));
   const nextSeatMeta = nextUpcomingSeat ? SEAT_METAS[nextUpcomingSeat] : null;
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);

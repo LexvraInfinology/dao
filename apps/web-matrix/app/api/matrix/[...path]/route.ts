@@ -51,13 +51,41 @@ function toEthHex(address: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 const FULLNODE_URL =
   process.env.NEXT_PUBLIC_RPC_URL ||
+  process.env.RPC_URL ||
+  process.env.FULLNODE_URL ||
   (process.env.IS_MAINNET === "false"
     ? "https://fullnode-one-testnet.trobchain.com"
     : "https://fullnode-one.trobchain.com");
 
-const MATRIX_HEX = toTronHex(process.env.NEXT_PUBLIC_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_HEX || "");
-const REGISTRY_HEX = toTronHex(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_HEX || "");
-const SALARY_POOL_HEX = toTronHex(process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "");
+const DEFAULT_MATRIX_HEX = "41b48f1e72c64b776ce5864df74926b3b935fef308";
+const DEFAULT_REGISTRY_HEX = "41d9b1ebced59d4899d306640718862e207dbfbb2a";
+const DEFAULT_VAULT_HEX = "416612ba87acbdcd645f039b80f3101935bc4ad9d8";
+const DEFAULT_SALARY_POOL_HEX = "41054df6beae1ebfa5676ee5fe7f6204c8f0fc441c";
+
+const MATRIX_HEX = toTronHex(
+  process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
+  process.env.NEXT_PUBLIC_MATRIX_HEX ||
+  process.env.MATRIX_HEX ||
+  DEFAULT_MATRIX_HEX
+);
+const REGISTRY_HEX = toTronHex(
+  process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
+  process.env.NEXT_PUBLIC_REGISTRY_HEX ||
+  process.env.REGISTRY_HEX ||
+  DEFAULT_REGISTRY_HEX
+);
+const VAULT_HEX = toTronHex(
+  process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+  process.env.NEXT_PUBLIC_VAULT_HEX ||
+  process.env.VAULT_HEX ||
+  DEFAULT_VAULT_HEX
+);
+const SALARY_POOL_HEX = toTronHex(
+  process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS ||
+  process.env.NEXT_PUBLIC_SALARY_POOL_HEX ||
+  process.env.SALARY_POOL_HEX ||
+  DEFAULT_SALARY_POOL_HEX
+);
 
 function encodeBase58(buffer: Uint8Array): string {
   const digits = [0];
@@ -755,13 +783,14 @@ export async function GET(
       // In Global Cycle 1:
       // If past slot is completed (slotNumber < highestSlot or snapshotCount > 0):
       // When targetCycle is not explicitly 2, load Cycle 1 completed snapshot (14/14 nodes)
-      const shouldLoadCycle1Snapshot =
-        globalCycle === 1 &&
-        snapshotCount > 0 &&
-        (targetCycle === 1 || targetCycle === null || slotNumber < highestSlot);
+      const shouldLoadTargetSnapshot = Boolean(
+        targetCycle &&
+        targetCycle <= snapshotCount &&
+        targetCycle < (sd.currentCycle || 1)
+      );
 
-      if (shouldLoadCycle1Snapshot) {
-        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, 0);
+      if (shouldLoadTargetSnapshot) {
+        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle! - 1);
         if (snapDetail) {
           nodes = await buildNodes(
             snapDetail.nodeAddresses,
@@ -772,7 +801,7 @@ export async function GET(
             slotCostUsd
           );
           isViewingSnapshot = true;
-          selectedCycle = 1;
+          selectedCycle = snapDetail.cycleNumber;
           displayFilledCount = 14;
         }
       } else if (targetCycle && targetCycle <= snapshotCount && targetCycle < (sd.currentCycle || 1)) {

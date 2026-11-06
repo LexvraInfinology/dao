@@ -799,7 +799,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       </div>
 
       {/* Completed Past Slot Board Notice */}
-      {isCurrentSlotUnlocked && selectedSlot < effectiveHighestUnlocked && (
+      {isCurrentSlotUnlocked && selectedSlot < effectiveHighestUnlocked && (filledCount >= 14 || isViewingSnapshot) && (
         <div className="my-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/40 to-blue-50 border border-emerald-200 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />

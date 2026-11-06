@@ -4,17 +4,6 @@ import crypto from "crypto";
 export const dynamic = "force-dynamic";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Config — always read from process.env so Vercel/Render env vars take priority
-// ─────────────────────────────────────────────────────────────────────────────
-const FULLNODE_URL =
-  process.env.NEXT_PUBLIC_RPC_URL ||
-  "https://fullnode-one-testnet.trobchain.com";
-
-const MATRIX_HEX = process.env.NEXT_PUBLIC_MATRIX_HEX || "";
-const REGISTRY_HEX = process.env.NEXT_PUBLIC_REGISTRY_HEX || "";
-const SALARY_POOL_HEX = process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "";
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Address helpers
 // ─────────────────────────────────────────────────────────────────────────────
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -39,6 +28,7 @@ function base58ToHex(b58: string): string {
 
 /** Convert any address format → 41-prefixed tron hex */
 function toTronHex(address: string): string {
+  if (!address) return "";
   const c = address.trim();
   if (c.startsWith("T") && c.length === 34) return base58ToHex(c).toLowerCase();
   if (c.startsWith("0x") || c.startsWith("0X")) return ("41" + c.slice(2)).toLowerCase();
@@ -48,12 +38,24 @@ function toTronHex(address: string): string {
 
 /** Convert any address format → 0x-prefixed eth hex */
 function toEthHex(address: string): string {
+  if (!address) return "";
   const c = address.trim();
   if (c.startsWith("0x") || c.startsWith("0X")) return c.toLowerCase();
   if (c.startsWith("T") && c.length === 34) return ("0x" + base58ToHex(c).slice(2)).toLowerCase();
   if (c.startsWith("41") && c.length === 42) return ("0x" + c.slice(2)).toLowerCase();
   return c.toLowerCase();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config — always read from process.env so Vercel/Render env vars take priority
+// ─────────────────────────────────────────────────────────────────────────────
+const FULLNODE_URL =
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  "https://fullnode-one-testnet.trobchain.com";
+
+const MATRIX_HEX = toTronHex(process.env.NEXT_PUBLIC_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_HEX || "TN7imfXjjMTbTfdAnFKF6KBkNxRyrK51Cp");
+const REGISTRY_HEX = toTronHex(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_HEX || "TRCmQoG75RwAYJZkz3Nc86PGQNhVByj9R3");
+const SALARY_POOL_HEX = toTronHex(process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "TXhXHf8cLfjxta5S4ScfeQtZdYdXxQ771r");
 
 function encodeBase58(buffer: Uint8Array): string {
   const digits = [0];
@@ -832,6 +834,65 @@ export async function GET(
       return NextResponse.json({
         success: true,
         data: { address: ethHex, activeDirects: directs, isQualified: qualified, required: 2 },
+      });
+    }
+
+    // ── /api/matrix/directs/:address ─────────────────────────────────────────
+    if (path[0] === "directs" && path[1]) {
+      const ethHex = toEthHex(path[1]);
+      const param = encodeAddress(ethHex);
+      
+      let directs: string[] = [];
+      const regChunks = await callContract(REGISTRY_HEX, "getDirectReferrals(address)", param);
+      if (regChunks && regChunks.length >= 2) {
+        const count = Number(decodeUint256(regChunks[1]));
+        for (let i = 0; i < count; i++) {
+          const directRaw = regChunks[2 + i];
+          if (directRaw) directs.push(decodeAddress(directRaw));
+        }
+      }
+
+      if (directs.length === 0) {
+        const matrixChunks = await callContract(MATRIX_HEX, "getActiveDirectReferrals(address)", param);
+        if (matrixChunks && matrixChunks.length >= 2) {
+          const count = Number(decodeUint256(matrixChunks[1]));
+          for (let i = 0; i < count; i++) {
+            const directRaw = matrixChunks[2 + i];
+            if (directRaw) directs.push(decodeAddress(directRaw));
+          }
+        }
+      }
+
+      const list = await Promise.all(
+        directs.map(async (dAddr) => {
+          const dParam = encodeAddress(dAddr);
+          const [idChunk, codeChunk, slotChunk] = await Promise.all([
+            callContract(REGISTRY_HEX, "getUserId(address)", dParam),
+            callContract(REGISTRY_HEX, "getCodeByUser(address)", dParam),
+            callContract(MATRIX_HEX, "userSlots(address,uint256)", dParam + encodeUint256(1)),
+          ]);
+          const userId = idChunk[0] ? Number(decodeUint256(idChunk[0])) : 0;
+          const code = codeChunk[0] ? Number(decodeUint256(codeChunk[0])) : 0;
+          const isSlot1Unlocked = slotChunk[0] ? decodeBool(slotChunk[0]) : true;
+
+          return {
+            address: dAddr,
+            base58: hexToTronBase58(dAddr),
+            userId,
+            code,
+            username: code ? `Member #${code}` : `Operative #${userId || "1"}`,
+            joinedAt: new Date().toISOString(),
+            activeSlots: isSlot1Unlocked ? 1 : 0,
+            totalContributed: isSlot1Unlocked ? 30 : 0,
+            isSlot1Unlocked,
+          };
+        })
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: list,
+        _source: "onchain",
       });
     }
 

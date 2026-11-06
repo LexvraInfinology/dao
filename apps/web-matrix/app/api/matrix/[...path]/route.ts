@@ -51,7 +51,9 @@ function toEthHex(address: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 const FULLNODE_URL =
   process.env.NEXT_PUBLIC_RPC_URL ||
-  "https://fullnode-one-testnet.trobchain.com";
+  (process.env.IS_MAINNET === "false"
+    ? "https://fullnode-one-testnet.trobchain.com"
+    : "https://fullnode-one.trobchain.com");
 
 const MATRIX_HEX = toTronHex(process.env.NEXT_PUBLIC_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_HEX || "");
 const REGISTRY_HEX = toTronHex(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_HEX || "");

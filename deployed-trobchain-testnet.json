@@ -2,52 +2,52 @@
   "network": "trobchain-testnet",
   "chainId": 1001,
   "deployer": "TKRWSwmKSpLB85V26MPEWbwCWqXR9aPzNf",
-  "deployedAt": "2026-11-06T00:23:56.540Z",
+  "deployedAt": "2026-11-06T01:01:18.878Z",
   "contracts": {
     "EquoraRegistry": {
-      "addressBase58": "TWpt8BemzELhWwpEzD6FjKRipKUAzk8bNg",
-      "addressHex": "41e4c78e5083e532ee341d8b25668da397e7efe7e2",
-      "evmAddress": "0xe4c78e5083e532ee341d8b25668da397e7efe7e2"
+      "addressBase58": "TRCmQoG75RwAYJZkz3Nc86PGQNhVByj9R3",
+      "addressHex": "41a71a592268ca01c09efb485f13aa5c0739df8d4d",
+      "evmAddress": "0xa71a592268ca01c09efb485f13aa5c0739df8d4d"
     },
     "EquoraNFT": {
-      "addressBase58": "TXywSvZsvEpBQeAYqzexVJhQxte8XbvVTK",
-      "addressHex": "41f1763308123139ac2cd09fe7ef90a7f8e0e2001a",
-      "evmAddress": "0xf1763308123139ac2cd09fe7ef90a7f8e0e2001a"
+      "addressBase58": "TBZkgbt7zD6D2cFHQGdhDSnsBeY59KtKJt",
+      "addressHex": "411180b710f3fda5127bc126e7c33779d574236088",
+      "evmAddress": "0x1180b710f3fda5127bc126e7c33779d574236088"
     },
     "EquoraVault": {
-      "addressBase58": "TV5NJC5WkiuftgtujspWhdF52585Zk6ZsP",
-      "addressHex": "41d194a5230d8605a7d0648dd3445ecd700d9c60e7",
-      "evmAddress": "0xd194a5230d8605a7d0648dd3445ecd700d9c60e7"
+      "addressBase58": "TX4kxnj5UjG8gkZz338YEjKpVoRtebHNVo",
+      "addressHex": "41e767669e6fd5768a036fd346f9d17bd1b9ce8ac5",
+      "evmAddress": "0xe767669e6fd5768a036fd346f9d17bd1b9ce8ac5"
     },
     "EquoraSalaryPool": {
-      "addressBase58": "TYXYPG4iWejvW3LmZtp1hXARYfhvVEP6jC",
-      "addressHex": "41f770420950d22fb7e8da6f1255295861a0336d01",
-      "evmAddress": "0xf770420950d22fb7e8da6f1255295861a0336d01"
+      "addressBase58": "TXhXHf8cLfjxta5S4ScfeQtZdYdXxQ771r",
+      "addressHex": "41ee5b605bc8a1ae6da235a923a256ec2a279b3b79",
+      "evmAddress": "0xee5b605bc8a1ae6da235a923a256ec2a279b3b79"
     },
     "EquoraRewardPool": {
-      "addressBase58": "TGwmcsUm4fwyNehYRMuzoCEdYmiErRBHSY",
-      "addressHex": "414c8346b7a1bd066d13a468227cd3ffd9a71b08f9",
-      "evmAddress": "0x4c8346b7a1bd066d13a468227cd3ffd9a71b08f9"
+      "addressBase58": "TNYrShBADdhEtWd9XEboVWMrPsdLs4mWLn",
+      "addressHex": "4189fe7dbab6e99f04c3848d6e60f70f811ed84b3f",
+      "evmAddress": "0x89fe7dbab6e99f04c3848d6e60f70f811ed84b3f"
     },
     "EquoraMagicBox": {
-      "addressBase58": "TFxccBhS56yrGu87Y6BpBVf6jq9tE9WfPs",
-      "addressHex": "4141b40b3183e7152e06a14c05921280a8b164d06a",
-      "evmAddress": "0x41b40b3183e7152e06a14c05921280a8b164d06a"
+      "addressBase58": "TD8BJm3b9rDziQbpPSNGMotFG8QZtJsutb",
+      "addressHex": "41229ab4cd0fce0310ad316a065fffaf5164ac4756",
+      "evmAddress": "0x229ab4cd0fce0310ad316a065fffaf5164ac4756"
     },
     "EquoraDAOv3": {
-      "addressBase58": "TPEZ2NWj5UhNJoowvAE1W7LnXLdCc2efdQ",
-      "addressHex": "41918096b2f8aa85de55dbd3f9e7566b7503925272",
-      "evmAddress": "0x918096b2f8aa85de55dbd3f9e7566b7503925272"
+      "addressBase58": "TVaSFbWXJfGegnwCS8tKxQoqX6a57Gfvtq",
+      "addressHex": "41d7140276eadd184637a42d4f080ae44db90ecfef",
+      "evmAddress": "0xd7140276eadd184637a42d4f080ae44db90ecfef"
     },
     "EquoraRoyaltyPool": {
-      "addressBase58": "TLViAEA24G1jp11gxh9muoe5qhFRyqJ3hf",
-      "addressHex": "417376139e13fc046c85070e2bee17875e3c46fbac",
-      "evmAddress": "0x7376139e13fc046c85070e2bee17875e3c46fbac"
+      "addressBase58": "TVav7i1kPYU46jnSJCRgswZCBRjSYuyGJZ",
+      "addressHex": "41d72b44f27913d9ff5ecb008ea43bbcfe9c684c1c",
+      "evmAddress": "0xd72b44f27913d9ff5ecb008ea43bbcfe9c684c1c"
     },
     "EquoraMatrix": {
-      "addressBase58": "TW7gQvguNsj8xDJk5nxHxkrsTEsQp9UVoQ",
-      "addressHex": "41dcfcb9b02dec5eeedb7189684ca56ec2d7d92485",
-      "evmAddress": "0xdcfcb9b02dec5eeedb7189684ca56ec2d7d92485"
+      "addressBase58": "TN7imfXjjMTbTfdAnFKF6KBkNxRyrK51Cp",
+      "addressHex": "41853dafe3bdbf7e7f8bd665b19c3d65149b5add4b",
+      "evmAddress": "0x853dafe3bdbf7e7f8bd665b19c3d65149b5add4b"
     }
   }
 }

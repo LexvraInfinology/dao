@@ -346,7 +346,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Total Earned</span>
             <div className="flex items-baseline gap-2 mt-1 flex-wrap">
               <span className="text-[28px] sm:text-[32px] font-extrabold text-[#0f172a] leading-none">
-                ${totalEarnedUsd.toFixed(2)}
+                ${totalEarnedUsd % 1 === 0 ? totalEarnedUsd.toLocaleString() : totalEarnedUsd.toFixed(2)}
               </span>
               <span className="text-[11.5px] font-mono font-bold text-slate-500">
                 ({totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)
@@ -354,7 +354,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             </div>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <span className="text-[11.5px] font-bold text-[#2563eb]">
-                {totalEarnedUsd > 0 ? `$${totalEarnedUsd.toFixed(2)} USD` : "Live P2P Yield"}
+                {totalEarnedUsd > 0 ? `$${totalEarnedUsd % 1 === 0 ? totalEarnedUsd.toLocaleString() : totalEarnedUsd.toFixed(2)} USD` : "Live P2P Yield"}
               </span>
               <span className="text-[#cbd5e1]">•</span>
               <span className="text-[11px] font-semibold text-[#0e9f79]">Verified On-Chain</span>

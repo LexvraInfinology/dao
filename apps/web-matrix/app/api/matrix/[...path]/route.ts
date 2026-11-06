@@ -53,9 +53,9 @@ const FULLNODE_URL =
   process.env.NEXT_PUBLIC_RPC_URL ||
   "https://fullnode-one-testnet.trobchain.com";
 
-const MATRIX_HEX = toTronHex(process.env.NEXT_PUBLIC_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_HEX || "TN7imfXjjMTbTfdAnFKF6KBkNxRyrK51Cp");
-const REGISTRY_HEX = toTronHex(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_HEX || "TRCmQoG75RwAYJZkz3Nc86PGQNhVByj9R3");
-const SALARY_POOL_HEX = toTronHex(process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "TXhXHf8cLfjxta5S4ScfeQtZdYdXxQ771r");
+const MATRIX_HEX = toTronHex(process.env.NEXT_PUBLIC_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_HEX || "");
+const REGISTRY_HEX = toTronHex(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_HEX || "");
+const SALARY_POOL_HEX = toTronHex(process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_HEX || "");
 
 function encodeBase58(buffer: Uint8Array): string {
   const digits = [0];
@@ -527,7 +527,7 @@ export async function GET(
       const trobPriceUsd = trobPriceUsd6 / 1_000_000;
       const highestUnlocked = Math.max(stats.highestSlot, slot1?.isUnlocked ? 1 : 0);
       const totalEarnedTrob = Number(stats.totalEarned) / 1_000_000;
-      const totalEarnedUsd  = totalEarnedTrob * trobPriceUsd;
+      const totalEarnedUsd  = Math.round(totalEarnedTrob * trobPriceUsd);
       const balanceTrob     = Number(await getUserBalance(ethHex)) / 1_000_000;
 
       return NextResponse.json({
@@ -559,7 +559,7 @@ export async function GET(
           poolEarnings: 0,
           availableBalance: Number(await getUserBalance(ethHex)),
           availableBalanceTrob: balanceTrob,
-          availableBalanceUsd: balanceTrob * trobPriceUsd,
+          availableBalanceUsd: Math.round(balanceTrob * trobPriceUsd),
           withdrawnTotal: Number(stats.totalWithdrawn),
           recyclesCount: 0,
           highestUnlockedSlot: highestUnlocked || 1,
@@ -587,7 +587,7 @@ export async function GET(
       const trobPriceUsd = trobPriceUsd6 / 1_000_000;
       const highestUnlocked = Math.max(stats.highestSlot, slot1?.isUnlocked ? 1 : 0);
       const totalEarnedTrob = Number(stats.totalEarned) / 1_000_000;
-      const totalEarnedUsd  = totalEarnedTrob * trobPriceUsd;
+      const totalEarnedUsd  = Math.round(totalEarnedTrob * trobPriceUsd);
       const balanceTrob     = Number(await getUserBalance(ethHex)) / 1_000_000;
       const sponsor         = await getSponsor(ethHex).catch(() => null);
       let upline1Directs = 0;
@@ -614,7 +614,7 @@ export async function GET(
           totalEarnedTrob,
           totalEarnedUsd,
           availableWithdrawTrob: balanceTrob,
-          availableWithdrawUsd: balanceTrob * trobPriceUsd,
+          availableWithdrawUsd: Math.round(balanceTrob * trobPriceUsd),
           recyclesCount: 0,
           trobPriceUsd,
           isQualified: qualified,
@@ -677,21 +677,26 @@ export async function GET(
         Array.from({ length: 12 }, (_, i) => getUserSlot(ethHex, i + 1))
       );
 
-      const slots = slotData.map((sd, i) => ({
-        slotNumber: i + 1,
-        cost: slotCostUsd,
-        isUnlocked: sd?.isUnlocked || i === 0 ? (sd?.isUnlocked ?? false) : false,
-        isLive: sd?.isLive || i === 0 ? (sd?.isLive ?? false) : false,
-        currentCycle: sd?.currentCycle || 1,
-        recyclesCount: 0,
-        filledNodes: sd?.filledNodes || 0,
-        upgradeReserve: 0,
-        totalEarned: Number(sd?.totalEarned || 0n),
-        totalEarnedUsd: (Number(sd?.totalEarned || 0n) / 1_000_000) * trobPriceUsd,
-        totalEarnedTrob: Number(sd?.totalEarned || 0n) / 1_000_000,
-        unlockedAt: sd?.isUnlocked ? new Date().toISOString() : null,
-        _source: "onchain",
-      }));
+      const slots = slotData.map((sd, i) => {
+        const costUsd = 30 * Math.pow(2, i);
+        const earnedTrob = Number(sd?.totalEarned || 0n) / 1_000_000;
+        const earnedUsd = Math.round(earnedTrob * trobPriceUsd);
+        return {
+          slotNumber: i + 1,
+          cost: costUsd,
+          isUnlocked: sd?.isUnlocked || i === 0 ? (sd?.isUnlocked ?? false) : false,
+          isLive: sd?.isLive || i === 0 ? (sd?.isLive ?? false) : false,
+          currentCycle: sd?.currentCycle || 1,
+          recyclesCount: 0,
+          filledNodes: sd?.filledNodes || 0,
+          upgradeReserve: 0,
+          totalEarned: Number(sd?.totalEarned || 0n),
+          totalEarnedUsd: earnedUsd,
+          totalEarnedTrob: earnedTrob,
+          unlockedAt: sd?.isUnlocked ? new Date().toISOString() : null,
+          _source: "onchain",
+        };
+      });
 
       return NextResponse.json({ success: true, data: slots });
     }
@@ -702,7 +707,7 @@ export async function GET(
       const slotNumber = Math.min(Math.max(parseInt(path[2], 10) || 1, 1), 12);
       const trobPriceUsd6 = await getTrobPrice();
       const trobPriceUsd = trobPriceUsd6 / 1_000_000;
-      const slotCostUsd = 30;
+      const slotCostUsd = 30 * Math.pow(2, Math.min(11, slotNumber - 1));
 
       const cycleParam = req.nextUrl.searchParams.get("cycle");
       const targetCycle = cycleParam ? parseInt(cycleParam, 10) : null;
@@ -818,7 +823,7 @@ export async function GET(
           nodes,
           totalEarned: Number(sd.slotEarned),
           totalEarnedTrob,
-          totalEarnedUsd: totalEarnedTrob * trobPriceUsd,
+          totalEarnedUsd: Math.round(totalEarnedTrob * trobPriceUsd),
           _source: isViewingSnapshot ? "onchain_snapshot" : "onchain",
         },
       });

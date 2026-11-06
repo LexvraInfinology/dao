@@ -143,7 +143,7 @@ export function OverviewTab({
             </div>
           </div>
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
-            ${totalEarnedUsd.toFixed(2)}
+            ${totalEarnedUsd % 1 === 0 ? totalEarnedUsd.toLocaleString() : totalEarnedUsd.toFixed(2)}
           </div>
           <div className="text-[10.5px] text-[#0e9f79] font-bold mt-1.5 truncate">
             All slots combined • P2P Settled on Blockchain

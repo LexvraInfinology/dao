@@ -99,7 +99,7 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
           </span>
           <div className="flex items-baseline gap-1 mt-1 sm:mt-1.5 min-w-0">
             <span className="text-[20px] sm:text-[24px] xl:text-[30px] font-extrabold text-[#0f172a] leading-none tracking-tight truncate">
-              ${totalEarnedUsd.toFixed(2)}
+              ${totalEarnedUsd % 1 === 0 ? totalEarnedUsd.toLocaleString() : totalEarnedUsd.toFixed(2)}
             </span>
             <span className="text-[10px] sm:text-[11px] font-semibold text-[#94a3b8]">USD</span>
           </div>
@@ -126,7 +126,7 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
           </span>
           <div className="flex items-baseline gap-1 mt-1 sm:mt-1.5 min-w-0">
             <span className="text-[20px] sm:text-[24px] xl:text-[30px] font-extrabold text-[#16a34a] leading-none tracking-tight truncate">
-              ${(totalEarnedUsd > 0 ? totalEarnedUsd : availableWithdrawUsd).toFixed(2)}
+              ${(totalEarnedUsd > 0 ? totalEarnedUsd : availableWithdrawUsd) % 1 === 0 ? (totalEarnedUsd > 0 ? totalEarnedUsd : availableWithdrawUsd).toLocaleString() : (totalEarnedUsd > 0 ? totalEarnedUsd : availableWithdrawUsd).toFixed(2)}
             </span>
             <span className="text-[10px] sm:text-[11px] font-semibold text-[#16a34a]">USD</span>
           </div>

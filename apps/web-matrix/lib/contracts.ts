@@ -17,16 +17,16 @@ export const NETWORK_NAME = IS_MAINNET ? "TrobChain Mainnet" : "TrobChain Testne
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || (IS_MAINNET ? 1000 : 1001));
 
 export const TESTNET_DEFAULT_ADDRESSES = {
-  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || "TN7imfXjjMTbTfdAnFKF6KBkNxRyrK51Cp",
+  matrix: process.env.NEXT_PUBLIC_MATRIX_ADDRESS || "",
   token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "",
-  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "TRCmQoG75RwAYJZkz3Nc86PGQNhVByj9R3",
-  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || "TX4kxnj5UjG8gkZz338YEjKpVoRtebHNVo",
-  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || "TXhXHf8cLfjxta5S4ScfeQtZdYdXxQ771r",
-  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || "TNYrShBADdhEtWd9XEboVWMrPsdLs4mWLn",
-  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || "TD8BJm3b9rDziQbpPSNGMotFG8QZtJsutb",
-  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || "TVaSFbWXJfGegnwCS8tKxQoqX6a57Gfvtq",
-  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || "TBZkgbt7zD6D2cFHQGdhDSnsBeY59KtKJt",
-  royaltyPool: process.env.NEXT_PUBLIC_ROYALTY_POOL_ADDRESS || "TVav7i1kPYU46jnSJCRgswZCBRjSYuyGJZ",
+  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || "",
+  vault: process.env.NEXT_PUBLIC_VAULT_ADDRESS || "",
+  salaryPool: process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || "",
+  rewardPool: process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || "",
+  magicBoxPool: process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || "",
+  dao: process.env.NEXT_PUBLIC_DAO_ADDRESS || "",
+  nft: process.env.NEXT_PUBLIC_NFT_ADDRESS || "",
+  royaltyPool: process.env.NEXT_PUBLIC_ROYALTY_POOL_ADDRESS || "",
   legacyDaoV1: process.env.NEXT_PUBLIC_LEGACY_V1_DAO_ADDRESS || "",
   legacyDaoV2: process.env.NEXT_PUBLIC_LEGACY_V2_DAO_ADDRESS || "",
 };

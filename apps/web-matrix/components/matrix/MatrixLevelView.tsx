@@ -30,6 +30,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
       num: String(lvl).padStart(2, "0"),
       status: isUnlocked ? "Active" : "Locked",
       statusType: isUnlocked ? "active" : "locked",
+      isCompleted: false,
       nodesFilled: 0,
       totalNodes: 14,
       progress: 0,
@@ -44,27 +45,28 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
       ? slots.map((s) => {
           const isStandby = false;
           const cost = s.cost || (30 * Math.pow(2, s.slotNumber - 1));
+          const isSlot1Fulfilled = s.slotNumber === 1 && (s.recyclesCount > 0 || s.filledNodes >= 14);
           const earned = (s.totalEarnedUsd !== undefined && s.totalEarnedUsd > 0)
             ? s.totalEarnedUsd
             : (s.totalEarned > 0 ? s.totalEarned : (s.recyclesCount ? s.recyclesCount * 6 * cost : 0));
-          const filled = s.filledNodes > 0
-            ? s.filledNodes
-            : (s.recyclesCount > 0 ? 14 : 0);
+          const filled = isSlot1Fulfilled ? 14 : (s.filledNodes || 0);
+          const isCompleted = isSlot1Fulfilled || s.filledNodes >= 14;
           return {
             level: s.slotNumber,
             num: String(s.slotNumber).padStart(2, "0"),
-            status: s.isUnlocked ? (isStandby ? "Standby" : "Active") : "Locked",
-            statusType: s.isUnlocked ? (isStandby ? "standby" : "active") : "locked",
+            status: isCompleted ? "Completed" : (s.isUnlocked ? (isStandby ? "Standby" : "Active") : "Locked"),
+            statusType: isCompleted ? "completed" : (s.isUnlocked ? (isStandby ? "standby" : "active") : "locked"),
+            isCompleted,
             nodesFilled: filled,
             totalNodes: 14,
             progress: Math.min(100, Math.round((filled / 14) * 100)),
-            earned: `$${Number(earned).toFixed(2)}`,
+            earned: `${Number(earned).toFixed(2)}`,
             isActive: s.isUnlocked,
             isStandby,
             cost,
           };
         })
-      : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false }));
+      : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false, isCompleted: false }));
 
   const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 1;
 
@@ -124,25 +126,30 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                   <h3 className="font-extrabold text-[15px] sm:text-[16px] text-[#0f172a]">
                                     Level {lvl.level}
                                   </h3>
-                                  {lvl.isStandby ? (
+                                  {lvl.isCompleted ? (
+                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                                      Completed 🏆
+                                    </span>
+                                  ) : lvl.isStandby ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-amber-600 ml-1">
                                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                       Standby Reserved
                                     </span>
                                   ) : (
-                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                                      Active
+                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#2563eb] ml-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
+                                      Active Tier ⚡
                                     </span>
                                   )}
                                 </div>
 
                                 <div className="text-[11.5px] font-medium text-[#475569] mt-1">
-                                  {lvl.isStandby
+                                  {lvl.isCompleted
+                                    ? "14 / 14 Nodes Completed • Cycle #01 Settled 🏆"
+                                    : lvl.isStandby
                                     ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Board Complete"
-                                    : lvl.nodesFilled === 14
-                                    ? "14 / 14 Nodes Filled • Cycle Fulfilled 🏆"
-                                    : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes`}
+                                    : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes • Next: Seat #${Math.min(14, lvl.nodesFilled + 1)}`}
                                 </div>
 
                                 {/* Progress bar */}

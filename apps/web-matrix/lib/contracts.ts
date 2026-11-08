@@ -2803,9 +2803,28 @@ export async function getOnChainUserTransactions(userAddress: string) {
     };
   }
 
+  // Fast internal API check in browser runtime
+  if (typeof window !== "undefined" && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const res = await fetch(`/api/matrix/transactions/${userHex}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data && Array.isArray(json.data.items) && json.data.items.length > 0) {
+          return json.data;
+        }
+      }
+    } catch {}
+  }
+
   try {
     // 1. Matrix Slot 1 Details & Direct Commissions
-    const slotDetails = await getOnChainSlotDetails(userHex, 1).catch(() => null);
+    let slotDetails = await getOnChainSlotDetails(userHex, 1).catch(() => null);
+    if (slotDetails && slotDetails.snapshotCount > 0 && (!slotDetails.nodes || slotDetails.nodes.filter((n: any) => n && n.filled).length < 6)) {
+      const snapDetails = await getOnChainSlotDetails(userHex, 1, 1).catch(() => null);
+      if (snapDetails && snapDetails.nodes && snapDetails.nodes.some((n: any) => n && n.filled)) {
+        slotDetails = snapDetails;
+      }
+    }
 
     if (slotDetails && slotDetails.isUnlocked) {
       const payingPositions = [3, 6, 8, 9, 11, 12];

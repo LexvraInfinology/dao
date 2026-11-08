@@ -237,9 +237,12 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
 
   const openExplorer = (rawHash?: string | null) => {
     if (rawHash && rawHash !== "—") {
-      window.open(`${EXPLORER_URL}/blockchain/transaction/${rawHash}`, "_blank");
+      const url = rawHash.startsWith("T")
+        ? `https://trobscan.com/address/${rawHash}`
+        : `https://trobscan.com/transaction/${rawHash}`;
+      window.open(url, "_blank");
     } else if (userAddress) {
-      window.open(`${EXPLORER_URL}/blockchain/account/${userAddress}`, "_blank");
+      window.open(`https://trobscan.com/address/${userAddress}`, "_blank");
     }
   };
 

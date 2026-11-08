@@ -351,34 +351,34 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <Lock className="w-3 h-3 text-slate-500" />
                 LOCKED TIER
               </span>
-            ) : totalCycles > 1 ? (
+            ) : (selectedSlotNumber === 1 && ((slotDetails as any)?.snapshotCount > 0 || (slotDetails as any)?.isViewingSnapshot || isSlot1Complete)) ? (
               <div className="flex items-center gap-1 p-0.5 bg-[#eff6ff] rounded-lg border border-[#bfdbfe]">
                 <button
                   type="button"
-                  onClick={() => selectSlotStore(selectedSlotNumber, 1, address || undefined)}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
-                    currentCycle === 1
-                      ? "bg-[#2563eb] text-white shadow-xs"
+                  onClick={() => selectSlotStore(1, 1, address || undefined)}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
+                    (slotDetails as any)?.isViewingSnapshot || (slotDetails?.currentCycle === 1 && (slotDetails?.filledNodes ?? 0) >= 14)
+                      ? "bg-emerald-600 text-white shadow-xs"
                       : "text-[#2563eb] hover:bg-blue-100/60"
                   }`}
                 >
-                  🏆 Cycle 1 (14/14 Fulfilled)
+                  🏆 Board #1 History (14/14 Settled)
                 </button>
                 <button
                   type="button"
-                  onClick={() => selectSlotStore(selectedSlotNumber, 2, address || undefined)}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
-                    currentCycle >= 2
+                  onClick={() => selectSlotStore(1, undefined, address || undefined)}
+                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
+                    !(slotDetails as any)?.isViewingSnapshot
                       ? "bg-[#2563eb] text-white shadow-xs"
                       : "text-[#2563eb] hover:bg-blue-100/60"
                   }`}
                 >
-                  ⚡ Cycle 2 (Active Board)
+                  ⚡ Active Board ({(slotDetails?.nodes ?? []).filter((n: any) => n?.filled).length}/14)
                 </button>
               </div>
             ) : (
               <span className="px-2 py-0.5 rounded-md bg-[#dbeafe] text-[#1d4ed8] text-[10.5px] font-bold">
-                CYCLE #{String(currentCycle).padStart(2, "0")}
+                CYCLE #{String(currentCycle || 1).padStart(2, "0")} (ACTIVE)
               </span>
             )}
           </div>

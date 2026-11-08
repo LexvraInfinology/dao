@@ -210,18 +210,27 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
     setSelectedCycle(null);
-    setLiveSlotData(null);
-    useMatrixStore.setState({ slotDetails: null, selectedCycle: null });
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
+    const cacheKey = `${sNum}_1`;
+    const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
+    if (cached) {
+      setLiveSlotData(cached);
+      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: 1 });
+    }
     selectSlotStore(sNum, undefined, active);
   };
 
   const handleCycleChange = (cNum: number) => {
     setSelectedCycle(cNum);
-    setLiveSlotData(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
+    const cacheKey = `${selectedSlot}_${cNum}`;
+    const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
+    if (cached) {
+      setLiveSlotData(cached);
+      useMatrixStore.setState({ slotDetails: cached, selectedCycle: cNum });
+    }
     selectSlotStore(selectedSlot, cNum, active);
   };
 
@@ -712,40 +721,45 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 <Lock className="w-3 h-3 text-slate-500" />
                 Slot #{String(selectedSlot).padStart(2, "0")} Locked
               </span>
-            ) : totalCycles > 1 ? (
-              <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200 max-w-full overflow-x-auto no-scrollbar">
-                {Array.from({ length: totalCycles }, (_, idx) => idx + 1).map((cNum) => {
-                  const isSelected = selectedCycle === cNum;
-                  const isFulfilledSnapshot = cNum < totalCycles;
-                  return (
-                    <button
-                      key={cNum}
-                      type="button"
-                      onClick={() => handleCycleChange(cNum)}
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                        isSelected
-                          ? isFulfilledSnapshot
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-blue-600 text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                      }`}
-                    >
-                      <span>Cycle #{cNum}</span>
-                      {isFulfilledSnapshot ? (
-                        <span className="text-[9px] opacity-90">(14/14 Fulfilled 🏆)</span>
-                      ) : (
-                        <span className="text-[9px] opacity-90">
-                          (Active{isSelected ? `: ${filledCount}/14` : ""})
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+            ) : snapshotCount > 0 ? (
+              <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => handleCycleChange(1)}
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                    isViewingSnapshot
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  }`}
+                  title="View Completed 14/14 History"
+                >
+                  <span>🏆 Board #1 History</span>
+                  <span className="text-[9px] opacity-90">(14/14 Settled)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCycle(null);
+                    const raw = address || data?.address;
+                    const active = raw ? toHexAddress(raw) : undefined;
+                    selectSlotStore(selectedSlot, undefined, active);
+                  }}
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                    !isViewingSnapshot
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  }`}
+                  title="View Live Active Board"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>⚡ Active Board</span>
+                  <span className="text-[9px] opacity-90">({realFilledCount}/14)</span>
+                </button>
               </div>
             ) : (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#15815f] animate-pulse" />
-                Cycle #{String(currentCycle).padStart(2, "0")}
+                Cycle #{String(currentCycle).padStart(2, "0")} (Active)
               </span>
             )}
           </div>

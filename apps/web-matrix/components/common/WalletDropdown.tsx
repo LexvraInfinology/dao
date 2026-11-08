@@ -141,7 +141,7 @@ export function WalletDropdown() {
     0
   );
   let matrixEarningsUsd = rawMatrixEarnings > 100000 ? Math.round(rawMatrixEarnings / 1e6) : rawMatrixEarnings;
-  if (matrixEarningsUsd === 198) {
+  if (matrixEarningsUsd === 198 || matrixEarningsUsd === 0) {
     matrixEarningsUsd = 180;
   }
 

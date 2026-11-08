@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   TransactionsHeader,
   TransactionsStats,
+  SlotEarningsBreakdown,
   TransactionsTable,
   TimeframeTab,
 } from "@/components/transactions";
@@ -261,6 +262,9 @@ export default function TransactionsPage() {
 
           {/* STAT CARDS */}
           <TransactionsStats stats={txStats} />
+
+          {/* SLOT & CYCLE EARNINGS BREAKDOWN */}
+          <SlotEarningsBreakdown />
 
           {/* TRANSACTION TABLE / LIST */}
           <TransactionsTable copy={copy} items={txItems} />

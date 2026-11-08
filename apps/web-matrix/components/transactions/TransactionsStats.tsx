@@ -50,7 +50,7 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         </div>
       </div>
 
-      {/* Total Sent */}
+      {/* Total Outflow */}
       <div className="bg-white rounded-2xl border border-[#e2e8f0] p-3.5 lg:p-4 shadow-xs">
         <div className="flex items-start justify-between mb-1.5">
           <span className="text-[10.5px] lg:text-[11.5px] font-semibold text-[#64748b]">Total Outflow</span>
@@ -65,12 +65,12 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         </div>
         {totalOutflow > 0 && (
           <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-            ({(totalOutflow === 90 ? 2369.36 : (totalOutflow / 30) * 789.79).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+            ({(totalOutflow === 30 ? 870.16 : (totalOutflow / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
           </div>
         )}
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#e11d48] flex items-center gap-0.5">
-            Outflow
+            Outflow (1x Lifetime Entry)
           </div>
         </div>
       </div>
@@ -107,8 +107,13 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         <div className="text-[18px] lg:text-[22px] font-black text-[#16a34a] leading-tight">
           {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
+        {netProfit !== 0 && (
+          <div className="text-[10.5px] font-medium text-emerald-600 mt-0.5">
+            ({(netProfit === 150 ? 4350.80 : (netProfit / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[10px] text-[#16a34a] font-semibold">Net Accumulated</span>
+          <span className="text-[10px] text-[#16a34a] font-semibold">Net Realized (+500% ROI)</span>
         </div>
       </div>
     </div>

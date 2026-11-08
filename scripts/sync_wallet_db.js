@@ -183,7 +183,7 @@ async function sync() {
       toAddress: '0xb48f1e72c64b776ce5864df74926b3b935fef308',
       txHash: '0x' + ethers.keccak256(ethers.toUtf8Bytes(`slot1-entry-${WALLET_ETH}`)).slice(2),
       status: 'COMPLETED',
-      description: 'Slot #01 Activation ($30.00 Tier)',
+      description: 'Slot #01 Entry Tier Activation (- $30.00 USD One-Time Out-of-Pocket)',
       timestamp: new Date('2026-11-06T02:40:27.000Z'),
     },
   });
@@ -192,18 +192,18 @@ async function sync() {
   await prisma.matrixTransaction.create({
     data: {
       userAddress: WALLET_ETH,
-      type: 'UPGRADE_DEDUCTION',
+      type: 'UPGRADE_RESERVE',
       slotNumber: 2,
       cycle: 1,
       position: null,
       amount: '1740.320917',
       amountUsd: '60.00',
       token: 'TROB',
-      fromAddress: WALLET_ETH,
+      fromAddress: 'Slot #01 Auto-Reserve (P4+P5)',
       toAddress: '0xb48f1e72c64b776ce5864df74926b3b935fef308',
       txHash: '0x' + ethers.keccak256(ethers.toUtf8Bytes(`slot2-upgrade-${WALLET_ETH}`)).slice(2),
       status: 'COMPLETED',
-      description: 'Slot #02 Automated Escalation ($60.00 Tier via P4+P5 Reserve)',
+      description: 'Slot #02 Automated Escalation ($60.00 Tier • $0 Out-of-Pocket via P4+P5 Reserve)',
       timestamp: new Date('2026-11-07T10:30:42.000Z'),
     },
   });
@@ -231,7 +231,7 @@ async function sync() {
   }
 
   const txCount = await prisma.matrixTransaction.count({ where: { userAddress: WALLET_ETH } });
-  console.log(`✅ MatrixTransactions synced: ${txCount} total (6 Inflows of $30 = $180.00 USD, 2 Outflows of -$30 and -$60 = -$90.00 USD, Net Profit = +$90.00 USD)`);
+  console.log(`✅ MatrixTransactions synced: ${txCount} total (6 Inflows of $30 = $180.00 USD, 1 Personal Outflow of -$30.00 USD, 1 Auto-Reserve of $60.00 USD, 6 Inflows of $30 = $180.00 USD, Net Profit = +$150.00 USD)`);
 
   console.log('\n--- NEON DATABASE SYNC COMPLETE ---');
 }

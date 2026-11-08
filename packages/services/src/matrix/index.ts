@@ -1859,8 +1859,10 @@ export class MatrixService {
           ? Number(t.amountUsd)
           : (rawAmt > 100 ? slotVal : (rawAmt > 0 ? rawAmt : slotVal));
 
-        if (t.type === "WITHDRAWAL" || t.type === "SLOT_PURCHASE") {
+        if (t.type === "WITHDRAWAL" || (t.type === "SLOT_PURCHASE" && (t.slotNumber === 1 || !t.slotNumber))) {
           totalOutflow += usd;
+        } else if (t.type === "UPGRADE_RESERVE" || t.type === "UPGRADE_DEDUCTION") {
+          // Internal protocol auto-reserve escalation ($0 user out-of-pocket); does not impact cash flow
         } else {
           totalInflow += usd;
         }

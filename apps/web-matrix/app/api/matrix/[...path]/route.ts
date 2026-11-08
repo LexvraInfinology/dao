@@ -1383,37 +1383,37 @@ export async function GET(
         position: null,
         amount: -30.0,
         amountUsd: -30.0,
-        trobAmount: 789.79,
-        trobSubtitle: "789.79 TROB",
+        trobAmount: 870.16,
+        trobSubtitle: "870.16 TROB",
         token: "USD",
         fromAddress: "You",
-        toAddress: "System",
+        toAddress: "EquoraMatrix Protocol",
         txHash: s1OutflowHash,
         status: "COMPLETED",
-        description: "Unlocked Matrix Slot #01 for $30.00 USD",
+        description: "Slot #01 Entry Tier Activation (- $30.00 USD One-Time Out-of-Pocket)",
         timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
       });
 
       // Outflow 2: Slot #02 Auto-Progression ($60.00 USD)
       if (slot2Data?.isUnlocked || userStats.highestSlot >= 2) {
-        totalOutflow += 60.0;
+        // Slot 2 was funded via P4+P5 reserve ($0 out-of-pocket); do NOT add to totalOutflow
         const s2OutflowHash = "0x" + crypto.createHash("sha256").update(`equora:unlock:slot2:${ethHex}`).digest("hex");
         items.push({
           id: `tx-outflow-s2`,
-          type: "SLOT_PURCHASE",
+          type: "UPGRADE_RESERVE",
           slotNumber: 2,
           cycle: 1,
           position: null,
-          amount: -60.0,
-          amountUsd: -60.0,
-          trobAmount: 1579.57,
-          trobSubtitle: "1,579.57 TROB",
+          amount: 60.0,
+          amountUsd: 60.0,
+          trobAmount: 1740.32,
+          trobSubtitle: "1,740.32 TROB (Auto-Reserve Funded)",
           token: "USD",
-          fromAddress: "You",
-          toAddress: "System",
+          fromAddress: "Slot #01 Auto-Reserve (P4+P5)",
+          toAddress: "Slot #02 Contract",
           txHash: s2OutflowHash,
           status: "COMPLETED",
-          description: "Unlocked Matrix Slot #02 for $60.00 USD",
+          description: "Slot #02 Automated Escalation ($60.00 Tier • $0 Out-of-Pocket via P4+P5)",
           timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
         });
       }

@@ -746,14 +746,19 @@ export async function GET(
       const slots = slotData.map((sd, i) => {
         const costUsd = 30 * Math.pow(2, i);
         const earnedTrob = Number(sd?.totalEarned || 0n) / 1_000_000;
-        const earnedUsd = Math.round(earnedTrob * trobPriceUsd);
+        const sCycles = Math.max(0, (sd?.currentCycle || 1) - 1);
+        // Fixed USD increments (e.g. 6 direct payouts of $30 = $180 per completed cycle)
+        let earnedUsd = sCycles * 6 * costUsd;
+        if (earnedUsd === 0 && earnedTrob > 0) {
+          earnedUsd = Math.round(earnedTrob * trobPriceUsd);
+        }
         return {
           slotNumber: i + 1,
           cost: costUsd,
           isUnlocked: sd?.isUnlocked || i === 0 ? (sd?.isUnlocked ?? false) : false,
           isLive: sd?.isLive || i === 0 ? (sd?.isLive ?? false) : false,
           currentCycle: sd?.currentCycle || 1,
-          recyclesCount: 0,
+          recyclesCount: sCycles,
           filledNodes: sd?.filledNodes || 0,
           upgradeReserve: 0,
           totalEarned: Number(sd?.totalEarned || 0n),
@@ -811,18 +816,19 @@ export async function GET(
         });
       }
 
+      const slotOnChainCycle = sd.currentCycle || 1;
+      const totalSlotCycles = Math.max(slotOnChainCycle, snapshotCount + 1);
+
       let nodes: any[] = [];
       let isViewingSnapshot = false;
-      let selectedCycle = globalCycle;
+      let selectedCycle = slotOnChainCycle;
       let displayFilledCount = 0;
 
-      // In Global Cycle 1:
-      // If past slot is completed (slotNumber < highestSlot or snapshotCount > 0):
-      // When targetCycle is not explicitly 2, load Cycle 1 completed snapshot (14/14 nodes)
+      // Snapshot is ONLY loaded if targetCycle is explicitly provided for an archived past cycle
       const shouldLoadTargetSnapshot = Boolean(
         targetCycle &&
         targetCycle <= snapshotCount &&
-        targetCycle < (sd.currentCycle || 1)
+        targetCycle < slotOnChainCycle
       );
 
       if (shouldLoadTargetSnapshot) {
@@ -837,22 +843,7 @@ export async function GET(
             slotCostUsd
           );
           isViewingSnapshot = true;
-          selectedCycle = snapDetail.cycleNumber;
-          displayFilledCount = 14;
-        }
-      } else if (targetCycle && targetCycle <= snapshotCount && targetCycle < (sd.currentCycle || 1)) {
-        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle - 1);
-        if (snapDetail) {
-          nodes = await buildNodes(
-            snapDetail.nodeAddresses,
-            snapDetail.nodeCodes,
-            snapDetail.nodeMemberIds,
-            snapDetail.payoutRecipients,
-            snapDetail.payoutTypes,
-            slotCostUsd
-          );
-          isViewingSnapshot = true;
-          selectedCycle = snapDetail.cycleNumber;
+          selectedCycle = snapDetail.cycleNumber || targetCycle!;
           displayFilledCount = 14;
         }
       }
@@ -868,14 +859,18 @@ export async function GET(
         );
         const activeFilledCount = nodes.filter((n) => n.filled).length;
         displayFilledCount = Math.max(sd.filledNodes || 0, activeFilledCount);
-        selectedCycle = globalCycle;
+        selectedCycle = slotOnChainCycle;
       }
 
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
       const payingPositions = [3, 6, 8, 9, 11, 12];
-      const sPaidCount = nodes.filter(n => payingPositions.includes(n.position) && n.filled).length;
+      const activePaidCount = isViewingSnapshot
+        ? 0
+        : nodes.filter(n => payingPositions.includes(n.position) && n.filled).length;
       const sCycles = Math.max(0, (sd.currentCycle || 1) - 1);
-      const calculatedSlotUsd = (sCycles * 6 * slotCostUsd) + (sPaidCount * slotCostUsd);
+      const calculatedSlotUsd = isViewingSnapshot
+        ? (6 * slotCostUsd)
+        : (sCycles * 6 * slotCostUsd) + (activePaidCount * slotCostUsd);
       const slotUsdEarned = calculatedSlotUsd > 0 ? calculatedSlotUsd : (totalEarnedTrob > 0 ? Math.round(totalEarnedTrob * trobPriceUsd) : 0);
 
       return NextResponse.json({
@@ -886,9 +881,9 @@ export async function GET(
           isUnlocked: Boolean(sd.isUnlocked || slotNumber <= highestSlot),
           isLive: Boolean(sd.isLive || (slotNumber === highestSlot)),
           globalCycle,
-          currentCycle: globalCycle,
+          currentCycle: slotOnChainCycle,
           selectedCycle,
-          totalCycles: globalCycle,
+          totalCycles: totalSlotCycles,
           snapshotCount,
           isViewingSnapshot,
           filledNodes: displayFilledCount,

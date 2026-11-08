@@ -671,24 +671,30 @@ export async function getOnChainSlotDetails(
     } catch {}
   }
 
-  // Determine whether to display Cycle 1 completed snapshot (14/14 nodes)
-  // In Global Cycle 1, any completed slot (slotNumber < currentActiveSlot or snapshotCount > 0)
-  // displays its Cycle 1 snapshot (all 14 seats fulfilled)
-  const shouldLoadCycle1Snapshot =
+  const slotOnChainCycle = isUnlocked ? (Number(currentCycle) || 1) : 0;
+  const slotTotalCycles = Math.max(slotOnChainCycle, snapshotCount + 1);
+
+  // Snapshot is ONLY loaded if targetCycle is explicitly requested for an archived cycle
+  // (targetCycle <= snapshotCount and targetCycle < slotOnChainCycle).
+  // By default (targetCycle undefined or latest cycle), the LIVE ACTIVE BOARD is shown.
+  const isTargetingArchivedCycle = Boolean(
     isUnlocked &&
-    globalCycle === 1 &&
-    snapshotCount > 0 &&
-    (targetCycle === 1 || targetCycle === undefined || prevSlotCompleted || slotNumber === 1);
+    targetCycle !== undefined &&
+    targetCycle !== null &&
+    targetCycle > 0 &&
+    targetCycle <= snapshotCount &&
+    targetCycle < slotOnChainCycle
+  );
 
   const effectiveCycle = isUnlocked
-    ? (shouldLoadCycle1Snapshot ? 1 : (targetCycle ?? (globalCycle > 1 ? globalCycle : 1)))
+    ? (isTargetingArchivedCycle ? targetCycle : slotOnChainCycle)
     : 0;
-  const isViewingSnapshot = isUnlocked && Boolean(shouldLoadCycle1Snapshot || (targetCycle && targetCycle <= snapshotCount && targetCycle < (Number(currentCycle) || 1)));
+  const isViewingSnapshot = isTargetingArchivedCycle;
 
   let displayNodes = isUnlocked ? [...nodes] : Array(14).fill("0x0000000000000000000000000000000000000000");
   if (isUnlocked && isViewingSnapshot) {
     try {
-      const snapIdx = Math.max(0, effectiveCycle - 1);
+      const snapIdx = Math.max(0, (effectiveCycle || 1) - 1);
       const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, snapIdx]).slice(2);
       const snapRaw = await queryTrobConstant(
         CONTRACT_ADDRESSES.matrix,
@@ -704,7 +710,7 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  const totalCycles = globalCycle;
+  const totalCycles = slotTotalCycles;
 
   // Check if slot is live and accepting placements on-chain
   let isLive = Boolean(isUnlocked);
@@ -872,12 +878,12 @@ export async function getOnChainSlotDetails(
     isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
     globalCycle,
-    currentCycle: globalCycle,
-    totalCycles: globalCycle,
+    currentCycle: slotOnChainCycle,
+    totalCycles: slotTotalCycles,
     selectedCycle: effectiveCycle,
     snapshotCount,
     isViewingSnapshot: Boolean(isUnlocked && isViewingSnapshot),
-    recyclesCount: isUnlocked ? Math.max(0, globalCycle - 1) : 0,
+    recyclesCount: isUnlocked ? Math.max(0, slotOnChainCycle - 1) : 0,
     filledNodes: isUnlocked ? (isViewingSnapshot ? 14 : Math.max(Number(liveFilledNodes) || 0, computedFilledCount)) : 0,
     upgradeReserve: 0,
     cycleEarnedUsd,

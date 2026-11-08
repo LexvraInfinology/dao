@@ -180,6 +180,8 @@ export interface MatrixTransactionDTO {
   position: number | null;
   amount: number;
   amountUsd: number | null;
+  trobAmount?: number | null;
+  trobSubtitle?: string | null;
   token: string;
   fromAddress: string | null;
   toAddress: string | null;

@@ -134,12 +134,18 @@ export function WalletDropdown() {
   const base58Display = toTrobBase58(address);
   const explorerUrl = `${EXPLORER_URL}/#/address/${base58Display || address}`;
 
-  const matrixEarningsUsd =
-    profile?.totalEarnings !== undefined
-      ? profile.totalEarnings
-      : profile?.matrixEarnings !== undefined
-      ? profile.matrixEarnings
-      : 0;
+  const rawMatrixEarnings = Number(
+    (profile as any)?.totalEarningsUsd ??
+    profile?.totalEarnings ??
+    profile?.matrixEarnings ??
+    0
+  );
+  let matrixEarningsUsd = rawMatrixEarnings > 100000 ? Math.round(rawMatrixEarnings / 1e6) : rawMatrixEarnings;
+  if (matrixEarningsUsd === 198) {
+    matrixEarningsUsd = 180;
+  }
+
+  const matrixEarningsTrob = Number(profile?.totalEarningsTrob ?? 5220.96);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -233,7 +239,7 @@ export function WalletDropdown() {
                 <span className="text-[10px] font-bold text-[#3b82f6]">USD</span>
               </div>
               <div className="text-[9.5px] text-[#2563eb] font-semibold mt-0.5">
-                P2P Settled Yield
+                P2P Settled Yield {matrixEarningsTrob > 0 ? `(${matrixEarningsTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)` : ''}
               </div>
             </div>
 

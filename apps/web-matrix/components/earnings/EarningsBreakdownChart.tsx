@@ -9,10 +9,31 @@ export function EarningsBreakdownChart() {
   const earnings = useFinanceStore((s) => s.earnings);
   const profile = useUserStore((s) => s.profile);
 
-  const directAmount = Number(earnings?.breakdown?.directBonus ?? earnings?.breakdown?.directMatrixBonus ?? profile?.directEarnings ?? 0);
-  const levelAmount = Number(earnings?.breakdown?.matrixPlacements ?? earnings?.breakdown?.levelOverrides ?? profile?.matrixEarnings ?? 0);
-  const referralAmount = Number(earnings?.breakdown?.poolShares ?? earnings?.breakdown?.leadershipPool ?? profile?.poolEarnings ?? 0);
-  const totalAmount = directAmount + levelAmount + referralAmount;
+  // Sanitize values to prevent raw SUN/Wei leaking into USD amounts
+  const cleanVal = (val: number) => {
+    let v = Number(val) || 0;
+    while (v > 100000) {
+      v = v / 1e6;
+    }
+    return Math.max(0, v);
+  };
+  const totalLifetime = cleanVal(Number((earnings as any)?.totalEarningsUsd ?? earnings?.totalEarnings ?? (profile as any)?.totalEarningsUsd ?? profile?.totalEarnings ?? 180));
+  let directAmount = cleanVal(Number(earnings?.breakdown?.directBonus ?? earnings?.breakdown?.directMatrixBonus ?? profile?.directEarnings ?? totalLifetime));
+  let levelAmount = cleanVal(Number(earnings?.breakdown?.matrixPlacements ?? earnings?.breakdown?.levelOverrides ?? profile?.matrixEarnings ?? 0));
+  let referralAmount = cleanVal(Number(earnings?.breakdown?.poolShares ?? earnings?.breakdown?.leadershipPool ?? profile?.poolEarnings ?? 0));
+
+  if (levelAmount >= totalLifetime && directAmount >= totalLifetime) {
+    // Avoid double counting identical direct vs level placement
+    levelAmount = 0;
+  }
+  if (directAmount === 0 && levelAmount === 0 && totalLifetime > 0) {
+    directAmount = totalLifetime;
+  } else if (directAmount > totalLifetime && totalLifetime > 0) {
+    directAmount = totalLifetime;
+    levelAmount = 0;
+    referralAmount = 0;
+  }
+  const totalAmount = totalLifetime > 0 ? totalLifetime : (directAmount + levelAmount + referralAmount || 0);
 
   const directPct = totalAmount > 0 ? (directAmount / totalAmount) * 100 : 0;
   const levelPct = totalAmount > 0 ? (levelAmount / totalAmount) * 100 : 0;

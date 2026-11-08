@@ -332,8 +332,14 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                     <span className={tx.to === "You" ? "font-semibold text-[#0f172a]" : "font-mono text-[12px] text-[#64748b]"}>{tx.to}</span>
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>{tx.amountDisplay}</div>
-                    <div className="text-[10.5px] font-semibold text-[#94a3b8]">USD {tx.trobSubtitle && <span className="text-[9.5px] text-slate-400 font-normal">({tx.trobSubtitle})</span>}</div>
+                    <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>
+                      {tx.amountDisplay} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
+                    </div>
+                    {tx.trobSubtitle && (
+                      <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
+                        ({tx.trobSubtitle})
+                      </div>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${
@@ -385,6 +391,11 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                   <div className={`font-black text-[13.5px] leading-tight ${tx.amount > 0 ? "text-[#16a34a]" : "text-[#ef4444]"}`}>
                     {tx.amountDisplay} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
                   </div>
+                  {tx.trobSubtitle && (
+                    <div className="text-[10px] font-medium text-slate-400 mt-0.5">
+                      ({tx.trobSubtitle})
+                    </div>
+                  )}
                   <div className={`text-[10px] font-semibold mt-0.5 ${tx.status === "Confirmed" ? "text-[#16a34a]" : "text-[#b45309]"}`}>{tx.status}</div>
                 </div>
               </div>

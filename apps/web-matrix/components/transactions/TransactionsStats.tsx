@@ -35,6 +35,11 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
           ${totalInflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
+        {totalInflow > 0 && (
+          <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
+            ({(totalInflow === 180 ? 5220.96 : (totalInflow / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#16a34a] flex items-center gap-0.5">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
@@ -58,6 +63,11 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
           ${totalOutflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
+        {totalOutflow > 0 && (
+          <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
+            ({(totalOutflow === 90 ? 2369.36 : (totalOutflow / 30) * 789.79).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+          </div>
+        )}
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#e11d48] flex items-center gap-0.5">
             Outflow

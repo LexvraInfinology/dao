@@ -117,17 +117,19 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
 
-  const totalEarnedUsd = Math.round(
+  const rawEarnedUsd = Number(
     details?.totalEarnedUsd ||
     data?.totalEarnedUsd ||
     profile?.totalEarningsUsd ||
     (profile?.totalEarnings ?? 0)
   );
-  const totalEarnedTrob =
+  const totalEarnedUsd = rawEarnedUsd > 100000 ? Math.round(rawEarnedUsd / 1e6) : Math.round(rawEarnedUsd);
+  const totalEarnedTrob = Number(
     details?.totalEarnedTrob ||
     data?.totalEarnedTrob ||
     profile?.totalEarningsTrob ||
-    (totalEarnedUsd / 0.056);
+    (totalEarnedUsd > 0 ? totalEarnedUsd / 0.056 : 0)
+  );
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">

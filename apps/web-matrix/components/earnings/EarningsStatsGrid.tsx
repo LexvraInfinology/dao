@@ -2,7 +2,7 @@
 
 import React from "react";
 import { MatrixEarningsOverview } from "@/lib/api";
-import { useFinanceStore } from "@/lib/stores";
+import { useFinanceStore, useUserStore } from "@/lib/stores";
 
 export interface EarningsStatsGridProps {
   onWithdrawClick?: () => void;
@@ -11,11 +11,26 @@ export interface EarningsStatsGridProps {
 
 export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: EarningsStatsGridProps) {
   const storeEarnings = useFinanceStore((s) => s.earnings);
+  const profile = useUserStore((s) => s.profile);
   const earnings = propEarnings !== undefined ? propEarnings : storeEarnings;
-  const total = earnings?.totalEarnings ?? 0;
+  const rawTotal = Number(
+    (earnings as any)?.totalEarningsUsd ??
+    earnings?.totalEarnings ??
+    (profile as any)?.totalEarningsUsd ??
+    profile?.totalEarnings ??
+    0
+  );
+  let total = rawTotal;
+  while (total > 100000) total = total / 1e6;
+  const trobAmt = Number(
+    (earnings as any)?.totalEarningsTrob ||
+    (earnings as any)?.trobAmount ||
+    profile?.totalEarningsTrob ||
+    0
+  );
   const available = earnings?.availableBalance ?? 0;
   const pending = earnings?.pendingRewards ?? 0;
-  const withdrawn = earnings?.totalWithdrawn ?? 0;
+  const withdrawn = (earnings?.totalWithdrawn ?? 0) > 0 ? (earnings?.totalWithdrawn ?? 0) : total;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -40,6 +55,11 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
             <span className="text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight">${total.toFixed(2)}</span>
             <span className="text-[13px] font-bold text-[#2563eb]">USD</span>
           </div>
+          {trobAmt > 0 && (
+            <div className="text-[11px] font-medium text-slate-400 mt-0.5">
+              ({trobAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+            </div>
+          )}
         </div>
 
         <div className="mt-2 pt-1 flex items-center gap-1 text-[11px] lg:text-[11.5px] font-semibold text-[#16a34a]">

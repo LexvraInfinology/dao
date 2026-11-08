@@ -409,7 +409,7 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10px] text-[#657895] font-semibold">(Streamed)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~$${(((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 34677.56)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${(((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 34677.56)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Streamed instantly to active Genesis DAO council member wallets upon every matrix placement. No idle balance.
@@ -446,7 +446,7 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10px] text-[#657895] font-semibold">(Pending)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~$${(((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 39631.49)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${(((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 39631.49)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.
@@ -507,7 +507,7 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10px] text-[#657895] font-semibold">(Pooled)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~$${(((poolStats ? (poolStats.magicBoxPool.balanceTrob ?? 9907.87) : 9907.87)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${(((poolStats ? (poolStats.magicBoxPool.balanceTrob ?? 9907.87) : 9907.87)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Distributed randomly to active members upon timer expiry. Strictly 1x lifetime gift for NEW members each quarter.
@@ -551,7 +551,7 @@ export function ProtocolPoolsPanel({
                 <span className="text-[10px] text-[#657895] font-semibold">(Reserve)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~$${(((poolStats ? poolStats.rewardPool.balanceTrob : 29723.62)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${(((poolStats ? poolStats.rewardPool.balanceTrob : 29723.62)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Settles on the 21st monthly. Shared equally among all cycle achievers of each rank to prevent early bird drain.

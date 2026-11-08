@@ -375,8 +375,8 @@ export function HeaderSearchBar({ className = "" }: HeaderSearchBarProps) {
             (dm.username || "").toLowerCase(),
           ],
           action: () => {
-            changeAddress(dm.address);
-            toast.success("Operative Synchronized", `Inspecting member #${dm.userId} (${formatAddress(toTrobBase58(dm.address))})`);
+            window.open(`https://trobscan.com/address/${toTrobBase58(dm.address)}`, "_blank", "noopener,noreferrer");
+            toast.info("Member Ledger Verified", `Viewing on-chain ledger for Operative #${dm.userId} (${formatAddress(toTrobBase58(dm.address))})`);
             setIsOpen(false);
             setMobileModalOpen(false);
           },
@@ -497,8 +497,8 @@ export function HeaderSearchBar({ className = "" }: HeaderSearchBarProps) {
               badge: res.referralCode ? `#${res.referralCode}` : "On-Chain",
               icon: <User className="w-4 h-4 text-emerald-600" />,
               action: () => {
-                changeAddress(res.address!);
-                toast.success("Operative Synchronized", `Inspecting on-chain member ${formatAddress(toTrobBase58(res.address!))}`);
+                window.open(`https://trobscan.com/address/${toTrobBase58(res.address!)}`, "_blank", "noopener,noreferrer");
+                toast.info("Member Ledger Verified", `Viewing public on-chain ledger for ${formatAddress(toTrobBase58(res.address!))}`);
                 setIsOpen(false);
                 setMobileModalOpen(false);
               },

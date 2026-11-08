@@ -171,7 +171,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           </div>
         ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #01 Active
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • {activeSlotNumber === 1 && currentCycle > 1 ? `Board #${String(currentCycle).padStart(2, "0")} Active` : "Cycle #01 Active"}
             </span>
           )}
         </div>
@@ -187,7 +187,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               {!isSlotUnlocked
                 ? `Slot #${String(activeSlotNumber).padStart(2, "0")} • Awaiting Auto-Unlock ($0 Out-of-Pocket)`
                 : isViewingSnapshot
-                ? `$${cost.toFixed(2)} Tier • Cycle #${currentCycle} All Settled 🏆`
+                ? `$${cost.toFixed(2)} Tier • Board #1 All Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
             </span>
           </div>
@@ -197,7 +197,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               {!isSlotUnlocked ? "0 / 14 Nodes" : isViewingSnapshot ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
             </span>
             <div className="text-[10px] font-bold text-slate-400">
-              {!isSlotUnlocked ? "Tier Locked" : isViewingSnapshot ? "Cycle Completed" : `${remainingNodes} Remaining`}
+              {!isSlotUnlocked ? "Tier Locked" : isViewingSnapshot ? "Board Settled 🏆" : `${remainingNodes} Remaining`}
             </div>
           </div>
         </div>

@@ -759,7 +759,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             ) : (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#15815f] animate-pulse" />
-                Cycle #{String(currentCycle).padStart(2, "0")} (Active)
+                {currentCycle > 1 ? `Board #${String(currentCycle).padStart(2, "0")}` : `Cycle #${String(currentCycle).padStart(2, "0")}`} (Active)
               </span>
             )}
           </div>
@@ -1069,10 +1069,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div className="px-2 sm:px-4">
               <div className="text-lg sm:text-xl font-black text-[#0b132b] tracking-tight">
-                {!isCurrentSlotUnlocked ? "Locked" : `Cycle #${currentCycle}`}
+                {!isCurrentSlotUnlocked ? "Locked" : `Board #${isViewingSnapshot ? 1 : currentCycle}`}
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
-                {!isCurrentSlotUnlocked ? "Auto-Reserve Tier" : "Board Cycle"}
+                {!isCurrentSlotUnlocked ? "Auto-Reserve Tier" : "Board History"}
               </div>
             </div>
             <div className="px-2 sm:px-4">

@@ -742,6 +742,8 @@ export async function GET(
       const slotData = await Promise.all(
         Array.from({ length: 12 }, (_, i) => getUserSlot(ethHex, i + 1))
       );
+      const slot12Data = slotData[11];
+      const globalCycle = slot12Data && (slot12Data.filledNodes >= 14 || slot12Data.currentCycle > 1) ? Math.max(2, slot12Data.currentCycle || 2) : 1;
 
       const slots = slotData.map((sd, i) => {
         const costUsd = 30 * Math.pow(2, i);
@@ -757,7 +759,7 @@ export async function GET(
           cost: costUsd,
           isUnlocked: sd?.isUnlocked || i === 0 ? (sd?.isUnlocked ?? false) : false,
           isLive: sd?.isLive || i === 0 ? (sd?.isLive ?? false) : false,
-          currentCycle: sd?.currentCycle || 1,
+          currentCycle: globalCycle,
           recyclesCount: sCycles,
           filledNodes: sd?.filledNodes || 0,
           upgradeReserve: 0,
@@ -817,14 +819,18 @@ export async function GET(
       }
 
       const slotOnChainCycle = sd.currentCycle || 1;
-      const totalSlotCycles = Math.max(slotOnChainCycle, snapshotCount + 1);
+      const recyclesCount = Math.max(0, slotOnChainCycle - 1);
+      // Rule: Cycle 1 is active for the whole project (Slots 1–12, 168 positions total).
+      // Cycle 2 only opens when Slot 12 completes all 14 positions (168 positions total)!
+      const effectiveCurrentCycle = globalCycle;
+      const totalSlotCycles = globalCycle;
 
       let nodes: any[] = [];
       let isViewingSnapshot = false;
-      let selectedCycle = slotOnChainCycle;
+      let selectedCycle = effectiveCurrentCycle;
       let displayFilledCount = 0;
 
-      // Snapshot is ONLY loaded if targetCycle is explicitly provided for an archived past cycle
+      // Snapshot is ONLY loaded if targetCycle is explicitly provided for an archived past board
       const shouldLoadTargetSnapshot = Boolean(
         targetCycle &&
         targetCycle <= snapshotCount &&
@@ -843,7 +849,7 @@ export async function GET(
             slotCostUsd
           );
           isViewingSnapshot = true;
-          selectedCycle = snapDetail.cycleNumber || targetCycle!;
+          selectedCycle = targetCycle!;
           displayFilledCount = 14;
         }
       }
@@ -859,7 +865,7 @@ export async function GET(
         );
         const activeFilledCount = nodes.filter((n) => n.filled).length;
         displayFilledCount = Math.max(sd.filledNodes || 0, activeFilledCount);
-        selectedCycle = slotOnChainCycle;
+        selectedCycle = effectiveCurrentCycle;
       }
 
       const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
@@ -881,7 +887,7 @@ export async function GET(
           isUnlocked: Boolean(sd.isUnlocked || slotNumber <= highestSlot),
           isLive: Boolean(sd.isLive || (slotNumber === highestSlot)),
           globalCycle,
-          currentCycle: slotOnChainCycle,
+          currentCycle: effectiveCurrentCycle,
           selectedCycle,
           totalCycles: totalSlotCycles,
           snapshotCount,

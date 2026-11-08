@@ -672,11 +672,12 @@ export async function getOnChainSlotDetails(
   }
 
   const slotOnChainCycle = isUnlocked ? (Number(currentCycle) || 1) : 0;
-  const slotTotalCycles = Math.max(slotOnChainCycle, snapshotCount + 1);
+  // Rule: Cycle 1 is active for the whole project (Slots 1–12, 168 positions total).
+  // Cycle 2 only opens when Slot 12 completes all 14 positions (168 positions total)!
+  const totalCycles = globalCycle;
+  const effectiveCurrentCycle = globalCycle;
 
-  // Snapshot is ONLY loaded if targetCycle is explicitly requested for an archived cycle
-  // (targetCycle <= snapshotCount and targetCycle < slotOnChainCycle).
-  // By default (targetCycle undefined or latest cycle), the LIVE ACTIVE BOARD is shown.
+  // Snapshot is ONLY loaded if targetCycle is explicitly requested for an archived board history
   const isTargetingArchivedCycle = Boolean(
     isUnlocked &&
     targetCycle !== undefined &&
@@ -687,7 +688,7 @@ export async function getOnChainSlotDetails(
   );
 
   const effectiveCycle = isUnlocked
-    ? (isTargetingArchivedCycle ? targetCycle : slotOnChainCycle)
+    ? (isTargetingArchivedCycle ? targetCycle : effectiveCurrentCycle)
     : 0;
   const isViewingSnapshot = isTargetingArchivedCycle;
 
@@ -709,8 +710,6 @@ export async function getOnChainSlotDetails(
       console.warn("[OnChain] Cycle snapshot query notice:", err);
     }
   }
-
-  const totalCycles = slotTotalCycles;
 
   // Check if slot is live and accepting placements on-chain
   let isLive = Boolean(isUnlocked);
@@ -878,8 +877,8 @@ export async function getOnChainSlotDetails(
     isSlot1Completed: slotNumber === 2 ? Boolean(prevSlotCompleted) : false,
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
     globalCycle,
-    currentCycle: slotOnChainCycle,
-    totalCycles: slotTotalCycles,
+    currentCycle: effectiveCurrentCycle,
+    totalCycles: globalCycle,
     selectedCycle: effectiveCycle,
     snapshotCount,
     isViewingSnapshot: Boolean(isUnlocked && isViewingSnapshot),

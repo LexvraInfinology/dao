@@ -152,7 +152,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #{effectiveSelectedCycle} Fulfilled (14/14)
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Board #1 Fulfilled (14/14)
             </span>
           ) : isSlotStandby ? (
           <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white mb-3.5">
@@ -171,7 +171,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           </div>
         ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #{currentCycle} Active
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #01 Active
             </span>
           )}
         </div>
@@ -245,7 +245,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
                 <>
                   <span className="flex items-center gap-1.5 text-emerald-900">
                     <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>Cycle #{effectiveSelectedCycle} Fulfilled:</span>
+                    <span>Board #1 Fulfilled:</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
                     14/14 Settled
@@ -299,7 +299,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
                 }}
                 className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
               >
-                <span>📜 View Completed Cycle #1 History (14/14 🏆)</span>
+                <span>📜 View Completed Board #1 History (14/14 🏆)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}

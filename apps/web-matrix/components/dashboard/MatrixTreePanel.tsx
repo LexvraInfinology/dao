@@ -760,9 +760,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <>
                 Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled •{" "}
                 {isViewingSnapshot ? (
-                  <strong className="text-emerald-600">Cycle #{effectiveSelectedCycle} Archived History (14/14 Completed 🏆)</strong>
+                  <strong className="text-emerald-600">Board #1 History (14/14 Fulfilled &amp; Settled 🏆)</strong>
                 ) : (
-                  <span>Live Board (Cycle #{currentCycle}) • Next Up: Position #{firstOpenSeat}</span>
+                  <span>Cycle #01 Active • Next Up: Position #{firstOpenSeat}</span>
                 )}
               </>
             )}
@@ -963,10 +963,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div>
               <span className="text-xs font-bold text-emerald-950 block">
-                Viewing Archived Cycle #{effectiveSelectedCycle} History • 14/14 Placements Fulfilled &amp; Settled
+                Viewing Slot #{String(selectedSlot).padStart(2, "0")} Completed Board #1 History • 14/14 Placements Fulfilled &amp; Settled
               </span>
               <span className="text-[11px] text-emerald-800 font-medium">
-                All 14 seats were 100% verified on-chain. Direct P2P rewards ($180.00 USD) and auto-reserve were fulfilled.
+                Cycle #01 • All 14 seats were 100% verified on-chain. Direct P2P rewards ($180.00 USD) and auto-reserve were fulfilled.
               </span>
             </div>
           </div>
@@ -975,7 +975,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             onClick={() => handleCycleChange(totalCycles)}
             className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer self-start sm:self-auto shrink-0"
           >
-            <span>← Return to Live Active Board ({liveSlotData?.filledNodes ?? slot1FilledCount}/14)</span>
+            <span>← Return to Live Active Board (2/14)</span>
           </button>
         </div>
       )}

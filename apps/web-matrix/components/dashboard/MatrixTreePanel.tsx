@@ -212,11 +212,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     setSelectedCycle(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    const cacheKey = `${sNum}_1`;
+    const cacheKey = `${sNum}_live`;
     const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
     if (cached) {
       setLiveSlotData(cached);
-      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: 1 });
+      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: null });
     }
     selectSlotStore(sNum, undefined, active);
   };
@@ -321,6 +321,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const isSlotStandby = false;
 
 
+  const currentSlotCost = 30 * Math.pow(2, Math.max(0, selectedSlot - 1));
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
   const snapshotCount = isCurrentSlotUnlocked ? (activeSlotDetails?.snapshotCount ?? 0) : 0;
@@ -856,33 +857,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         })}
       </div>
 
-      {/* ───────────────── AUTO-ESCALATION NOTIFICATION (Slot 2 Unlocked from P4+P5) ───────────────── */}
-      {selectedSlot === 1 && isSlot1Escalated && (
-        <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-blue-50 border border-emerald-200 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-emerald-950 block">
-                🎉 Next Slot #02 Activated!
-              </span>
-              <span className="text-[11px] text-emerald-800 font-medium">
-                Your Slot #02 is active on-chain ($60.00 Tier) for follow-me upgrades and team placements.
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleSelectSlot(2)}
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
-          >
-            <span>View Slot #02 Board</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* ───────────────── LOCKED SLOT NOTIFICATION BANNER ───────────────── */}
       {!isCurrentSlotUnlocked && selectedSlot > 1 && (
         <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-slate-100 via-amber-50/40 to-slate-100 border border-slate-200 text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
@@ -941,7 +915,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-            <span className="font-semibold text-slate-700">+$30 Direct Income</span>
+            <span className="font-semibold text-slate-700">+${currentSlotCost.toFixed(0)} Direct Income</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] shadow-[0_0_8px_#2563eb]" />

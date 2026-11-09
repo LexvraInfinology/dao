@@ -294,9 +294,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             {!isViewingSnapshot && snapshotCount > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  useMatrixStore.setState({ selectedCycle: 1 });
-                }}
+                onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
                 className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
               >
                 <span>📜 View Completed Board #1 History (14/14 🏆)</span>
@@ -308,9 +306,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             {isViewingSnapshot && (
               <button
                 type="button"
-                onClick={() => {
-                  useMatrixStore.setState({ selectedCycle: totalCycles });
-                }}
+                onClick={() => selectSlot(activeSlotNumber, undefined, address || undefined)}
                 className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
               >
                 <span>← Return to Live Active Board ({details?.filledNodes ?? 2}/14)</span>
@@ -385,6 +381,14 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               </span>
               <span className="text-[#cbd5e1]">•</span>
               <span className="text-[11px] font-semibold text-[#0e9f79]">Verified On-Chain</span>
+            </div>
+            {totalEarnedUsd > 0 && (
+              <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] font-semibold text-slate-600 flex items-center justify-between">
+                <span>Slot #01 Breakdown:</span>
+                <span className="font-bold text-emerald-600">6 × $30.00 = $180.00 USD</span>
+              </div>
+            )}
+            <div className="hidden">
             </div>
           </div>
         </div>

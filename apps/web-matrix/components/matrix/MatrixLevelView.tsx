@@ -161,7 +161,16 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                 </div>
 
                                 <div className="font-black text-[14px] sm:text-[15px] text-[#0f172a] mt-2">
-                                  {lvl.earned}
+                                  <span>${Number(lvl.earned).toFixed(2)} USD</span>
+                                  {Number(lvl.earned) > 0 ? (
+                                    <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
+                                      ({Math.round(Number(lvl.earned) / lvl.cost)} × ${lvl.cost} Direct Yield)
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] font-medium text-slate-400 ml-1.5">
+                                      (0 / 6 Yields)
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>

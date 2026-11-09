@@ -104,23 +104,23 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     }
   },
 
-  selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
-    const targetCycle = cycle ?? 1;
-    const cacheKey = `${slotNum}_${targetCycle}`;
+    selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
+    const isLive = cycle === undefined;
+    const cacheKey = isLive ? `${slotNum}_live` : `${slotNum}_cycle_${cycle}`;
     const cached = get().slotDetailsCache[cacheKey];
 
     // If cached, immediately show cached board to prevent jitter / blank flashes
     if (cached) {
       set({
         selectedSlotNumber: slotNum,
-        selectedCycle: targetCycle,
+        selectedCycle: cycle ?? null,
         slotDetails: cached,
       });
     } else {
-      set({ selectedSlotNumber: slotNum, selectedCycle: targetCycle });
+      set({ selectedSlotNumber: slotNum, selectedCycle: cycle ?? null });
     }
 
-    await get().fetchSlotDetails(slotNum, targetCycle, userAddress, true);
+    await get().fetchSlotDetails(slotNum, cycle, userAddress, true);
   },
 
   fetchSlotDetails: async (slotNum, cycle, userAddress, force = false) => {
@@ -128,10 +128,10 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     if (!addr) return;
     const targetSlot = slotNum ?? get().selectedSlotNumber ?? 1;
     const { slotDetails, loadingDetails, selectedCycle, slotDetailsCache } = get();
-    const targetCycle = cycle ?? selectedCycle ?? 1;
-    const cacheKey = `${targetSlot}_${targetCycle}`;
+    const isLive = cycle === undefined;
+    const cacheKey = isLive ? `${targetSlot}_live` : `${targetSlot}_cycle_${cycle}`;
 
-    const isSlotSwitch = targetSlot !== slotDetails?.slotNumber || targetCycle !== (slotDetails?.currentCycle ?? 1);
+    const isSlotSwitch = targetSlot !== slotDetails?.slotNumber;
     const isInitialLoad = !slotDetails;
 
     // Fast cache display if available and not forcing refresh
@@ -139,7 +139,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       set({
         slotDetails: slotDetailsCache[cacheKey],
         selectedSlotNumber: targetSlot,
-        selectedCycle: targetCycle,
+        selectedCycle: cycle ?? null,
         loadingDetails: false,
       });
       return;
@@ -151,7 +151,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
     try {
       // 1. Prioritize live on-chain 14-node board data
-      const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, targetCycle);
+      const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, cycle);
       if (onChainDetails) {
         const newCache = { ...get().slotDetailsCache, [cacheKey]: onChainDetails };
         // Only update current slotDetails if the user is still on this slot
@@ -171,7 +171,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     }
 
     try {
-      const details = await matrixApi.getSlotDetails(addr, targetSlot, targetCycle);
+      const details = await matrixApi.getSlotDetails(addr, targetSlot, cycle);
       if (details) {
         const newCache = { ...get().slotDetailsCache, [cacheKey]: details };
         if (get().selectedSlotNumber === targetSlot) {

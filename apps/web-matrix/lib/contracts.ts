@@ -1033,7 +1033,8 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
           );
           const onChainSlotEarnedTrob = Number(ethers.formatUnits(slotEarnedVal, 6));
           const sCost = getSlotCost(s);
-          const slotPayoutCount = onChainSlotEarnedTrob > 0 ? Math.max(1, Math.round(onChainSlotEarnedTrob / 1076)) : 0;
+          const perNodeTrob = sCost * 29.0053486;
+          const slotPayoutCount = onChainSlotEarnedTrob > 0 ? Math.max(1, Math.round(onChainSlotEarnedTrob / perNodeTrob)) : 0;
           const slotEarnedUsd = onChainSlotEarnedTrob > 0 ? slotPayoutCount * sCost : 0;
           result[s - 1].totalEarned = slotEarnedUsd;
           result[s - 1].totalEarnedUsd = slotEarnedUsd;

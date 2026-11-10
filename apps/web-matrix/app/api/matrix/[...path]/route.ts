@@ -830,11 +830,10 @@ export async function GET(
       let selectedCycle = effectiveCurrentCycle;
       let displayFilledCount = 0;
 
-      // Snapshot is ONLY loaded if targetCycle is explicitly provided for an archived past board
+      // Snapshot is loaded if targetCycle is explicitly provided for an archived past board
       const shouldLoadTargetSnapshot = Boolean(
         targetCycle &&
-        targetCycle <= snapshotCount &&
-        targetCycle < slotOnChainCycle
+        (targetCycle <= snapshotCount || targetCycle < slotOnChainCycle || (slotNumber === 1 && targetCycle === 1))
       );
 
       if (shouldLoadTargetSnapshot) {

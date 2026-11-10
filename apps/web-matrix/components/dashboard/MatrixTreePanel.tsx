@@ -182,8 +182,12 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const profile = useUserStore((s) => s.profile);
   const address = useUserStore((s) => s.address);
 
+  const data = propData !== undefined ? propData : storeDashboard;
+  const currentActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? 1;
+
   const [selectedSlot, setSelectedSlot] = useState<number>(storeSelectedSlot || 1);
   const [selectedCycle, setSelectedCycle] = useState<number | null>(storeSelectedCycle ?? null);
+  const [selectedGlobalCycle, setSelectedGlobalCycle] = useState<number>(1);
   const [liveSlotData, setLiveSlotData] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"tree" | "table" | "directs">("tree");
   const [directMembersList, setDirectMembersList] = useState<any[]>([]);
@@ -191,6 +195,35 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [celebrationModalOpen, setCelebrationModalOpen] = useState(false);
   const [celebrationUnlockedSlot, setCelebrationUnlockedSlot] = useState<number>(2);
+
+  const activeSlotDetails =
+    (liveSlotData && liveSlotData.slotNumber === selectedSlot ? liveSlotData : null) ||
+    (storeSlotDetails && storeSlotDetails.slotNumber === selectedSlot ? storeSlotDetails : null);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
+
+  const slot1FilledCount =
+    (activeSlotDetails?.slotNumber === 1 ? (activeSlotDetails?.filledNodes ?? (activeSlotDetails?.nodes ? activeSlotDetails.nodes.filter((n: any) => n?.filled).length : 0)) : 0) ||
+    (data?.activeSlotProgress?.filledNodes ?? 0);
+  const isUserRegistered = Boolean(profile?.isRegistered);
+  const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
+  const isSlot1Escalated = highestUnlockedSlot >= 2;
+
+  const isCurrentSlotUnlocked = selectedSlot === 1
+    ? true
+    : (activeSlotDetails ? Boolean(activeSlotDetails.isUnlocked) : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked));
+
+  // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
+  const isSlot1Complete = Boolean(
+    activeSlotDetails?.prevSlotCompleted ||
+    (activeSlotDetails as any)?.isSlot1Completed ||
+    (activeSlotDetails as any)?.slot1FilledNodes >= 14 ||
+    slot1FilledCount >= 14 ||
+    (data?.recyclesCount && data.recyclesCount > 0) ||
+    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
+    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
+    (profile as any)?.isSlot1Complete ||
+    effectiveHighestUnlocked >= 2
+  );
 
 
   // Sync when store slot changes externally
@@ -209,21 +242,23 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
-    setSelectedCycle(null);
+    const queryCycle = (selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete) ? 1 : undefined;
+    setSelectedCycle(queryCycle ?? null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    const cacheKey = `${sNum}_live`;
+    const cacheKey = queryCycle ? `${sNum}_cycle_${queryCycle}` : `${sNum}_live`;
     const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
     if (cached && cached.slotNumber === sNum) {
       setLiveSlotData(cached);
-      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: null });
+      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: queryCycle ?? null });
     } else {
-      // Clean default state for newly selected slot to prevent stale Slot 1 bleed & flickering
+      // Clean default state for newly selected slot representing the active cycle
       const slotCost = 30 * Math.pow(2, Math.max(0, sNum - 1));
+      const isSlotCompleted = Boolean(selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete);
       const defaultNodes = Array.from({ length: 14 }, (_, i) => ({
         position: i + 1,
         level: i < 2 ? 1 : i < 6 ? 2 : 3,
-        filled: false,
+        filled: isSlotCompleted,
         placedUser: null,
         base58: null,
         code: null,
@@ -236,37 +271,30 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         cost: slotCost,
         isUnlocked: sNum <= effectiveHighestUnlocked,
         isLive: true,
-        currentCycle: 1,
+        currentCycle: selectedGlobalCycle,
         totalCycles: 1,
-        filledNodes: 0,
-        snapshotCount: 0,
-        isViewingSnapshot: false,
-        recyclesCount: 0,
+        filledNodes: isSlotCompleted ? 14 : 0,
+        snapshotCount: isSlotCompleted ? 1 : 0,
+        isViewingSnapshot: isSlotCompleted,
+        recyclesCount: isSlotCompleted ? 1 : 0,
         upgradeReserve: 0,
-        totalEarned: 0,
+        totalEarned: isSlotCompleted ? 180 : 0,
         nodes: defaultNodes,
       } as any;
       setLiveSlotData(initialSlotData);
-      useMatrixStore.setState({ slotDetails: initialSlotData, selectedSlotNumber: sNum, selectedCycle: null });
+      useMatrixStore.setState({ slotDetails: initialSlotData, selectedSlotNumber: sNum, selectedCycle: queryCycle ?? null });
     }
-    selectSlotStore(sNum, undefined, active);
+    selectSlotStore(sNum, queryCycle, active);
   };
 
-  const handleCycleChange = (cNum: number) => {
-    setSelectedCycle(cNum);
+  const handleCycleSelect = (cNum: number) => {
+    setSelectedGlobalCycle(cNum);
+    const queryCycle = (cNum === 1 && selectedSlot === 1 && isSlot1Complete) ? 1 : undefined;
+    setSelectedCycle(queryCycle ?? null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    const cacheKey = `${selectedSlot}_${cNum}`;
-    const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
-    if (cached) {
-      setLiveSlotData(cached);
-      useMatrixStore.setState({ slotDetails: cached, selectedCycle: cNum });
-    }
-    selectSlotStore(selectedSlot, cNum, active);
+    selectSlotStore(selectedSlot, queryCycle, active);
   };
-
-  const data = propData !== undefined ? propData : storeDashboard;
-  const currentActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? 1;
 
   // Poll live on-chain 14-node board data with cycle snapshot support
   useEffect(() => {
@@ -277,11 +305,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       const active = toHexAddress(raw);
       if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
       try {
-        const details = await getOnChainSlotDetails(active, selectedSlot, selectedCycle ?? undefined);
+        const queryCycle = (selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete)
+          ? 1
+          : (selectedCycle ?? undefined);
+        const details = await getOnChainSlotDetails(active, selectedSlot, queryCycle);
         if (isMounted && details) {
           setLiveSlotData(details);
+          const cacheKey = queryCycle ? `${selectedSlot}_cycle_${queryCycle}` : `${selectedSlot}_live`;
           useMatrixStore.setState({
             slotDetails: details,
+            slotDetailsCache: {
+              ...useMatrixStore.getState().slotDetailsCache,
+              [cacheKey]: details,
+            },
           });
         }
       } catch (err) {
@@ -307,48 +343,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [address, data?.address, selectedSlot, selectedCycle]);
-
-  const activeSlotDetails =
-    (liveSlotData && liveSlotData.slotNumber === selectedSlot ? liveSlotData : null) ||
-    (storeSlotDetails && storeSlotDetails.slotNumber === selectedSlot ? storeSlotDetails : null);
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
-
-  // Dynamic Auto-Escalation:
-  // When Node 4 (index 3) and Node 5 (index 4) of Slot 1 are filled,
-  // Slot 2 unlocks automatically in Standby Mode at $0 out-of-pocket!
-  const slot1Nodes =
-    (activeSlotDetails?.slotNumber === 1 ? activeSlotDetails?.nodes : null) ||
-    data?.activeSlotProgress?.nodes ||
-    [];
-  const isNodeOccupied = (n: any) =>
-    Boolean(
-      n?.filled ||
-      (n?.placedUser && n.placedUser !== "0x0000000000000000000000000000000000000000" && n.placedUser !== "0x0") ||
-      (n?.base58 && n.base58 !== "-" && n.base58.length > 5)
-    );
-  const slot1FilledCount =
-    (activeSlotDetails?.slotNumber === 1 ? (activeSlotDetails?.filledNodes ?? (activeSlotDetails?.nodes ? activeSlotDetails.nodes.filter((n: any) => n?.filled).length : 0)) : 0) ||
-    (data?.activeSlotProgress?.filledNodes ?? 0);
-  const isUserRegistered = Boolean(profile?.isRegistered);
-  const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
-  const isSlot1Escalated = highestUnlockedSlot >= 2;
-
-  const isCurrentSlotUnlocked = selectedSlot === 1
-    ? true
-    : (activeSlotDetails ? Boolean(activeSlotDetails.isUnlocked) : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked));
-
-  // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
-  const isSlot1Complete = Boolean(
-    activeSlotDetails?.prevSlotCompleted ||
-    (activeSlotDetails as any)?.isSlot1Completed ||
-    (activeSlotDetails as any)?.slot1FilledNodes >= 14 ||
-    slot1FilledCount >= 14 ||
-    (data?.recyclesCount && data.recyclesCount > 0) ||
-    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
-    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
-    (profile as any)?.isSlot1Complete
-  );
+  }, [address, data?.address, selectedSlot, selectedCycle, selectedGlobalCycle, isSlot1Complete]);
 
   const isCurrentSlotLive = Boolean(isCurrentSlotUnlocked);
   const isSlotStandby = false;
@@ -780,54 +775,45 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               14 Seats / Slot
             </span>
 
-            {/* INTERACTIVE INFINITE CYCLE TOGGLE PILLS */}
-            {!isCurrentSlotUnlocked ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
-                <Lock className="w-3 h-3 text-slate-500" />
-                Slot #{String(selectedSlot).padStart(2, "0")} Locked
-              </span>
-            ) : snapshotCount > 0 ? (
-              <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCycle(null);
-                    const raw = address || data?.address;
-                    const active = raw ? toHexAddress(raw) : undefined;
-                    selectSlotStore(selectedSlot, undefined, active);
-                  }}
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                    !isViewingSnapshot
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                  }`}
-                  title="View Live Active Board"
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${!isViewingSnapshot ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`} />
-                  <span>⚡ Active Board</span>
-                  <span className="text-[9px] opacity-90">({liveFilledCount}/14)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCycleChange(1)}
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                    isViewingSnapshot
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                  }`}
-                  title="View Completed 14/14 History"
-                >
-                  <span>🏆 Board #1 History</span>
-                  <span className="text-[9px] opacity-90">(14/14 Settled)</span>
-                </button>
-              </div>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#15815f] animate-pulse" />
-                <span>⚡ Active Board</span>
-                <span className="text-[9px] opacity-90">({liveFilledCount}/14)</span>
-              </span>
-            )}
+            {/* TOP-LEVEL GLOBAL CYCLE SELECTOR (Cycle 1 Active, Cycle 2 Locked until Slot 12 completes) */}
+            <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleCycleSelect(1)}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  selectedGlobalCycle === 1
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                }`}
+                title="Cycle #01 (Active)"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedGlobalCycle === 1 ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`} />
+                <span>Cycle #01 (Active)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (totalCycles >= 2) {
+                    handleCycleSelect(2);
+                  } else {
+                    toast.info(
+                      "Cycle #02 Locked",
+                      "Cycle #02 unlocks automatically when all 12 slots in Cycle #01 (168 positions total) are completed on-chain."
+                    );
+                  }
+                }}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                  selectedGlobalCycle === 2
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/40"
+                }`}
+                title="Cycle #02 unlocks after Slot 12 completes all 14 positions (168 positions total)"
+              >
+                <Lock className="w-2.5 h-2.5 text-slate-400" />
+                <span>Cycle #02</span>
+                <span className="text-[9px] opacity-75">(Locked)</span>
+              </button>
+            </div>
           </div>
           <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             {!isCurrentSlotUnlocked ? (
@@ -836,17 +822,17 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   ? "Slot #01 • Entry Tier ($30 USD) • Join Matrix to Activate"
                   : `Slot #${String(selectedSlot).padStart(2, "0")} • Locked Tier • Automatically unlocks at $0 out-of-pocket cost via Slot #${Math.max(1, selectedSlot - 1)} (P4 & P5)`}
               </span>
-            ) : isViewingSnapshot ? (
+            ) : selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete ? (
               <span className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-emerald-700">
-                  Slot #{String(selectedSlot).padStart(2, "0")} • Completed Board #1 (14/14 Fulfilled &amp; Settled 🏆)
+                  Slot #01 • Cycle #01 Completed (14/14 Seats Settled 🏆)
                 </span>
                 <span className="text-slate-400">•</span>
-                <span className="text-slate-500">On-Chain Verified Archive</span>
+                <span className="text-slate-500">On-Chain Verified</span>
               </span>
             ) : (
               <span>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {liveFilledCount} / 14 Nodes Filled • Cycle #01 Active • Next Up: Position #{firstOpenSeat}
+                Slot #{String(selectedSlot).padStart(2, "0")} • {liveFilledCount} / 14 Nodes Filled • Cycle #0${selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
               </span>
             )}
           </p>
@@ -894,7 +880,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
           const isSlotUnlocked = sNum <= effectiveHighestUnlocked;
-          const isCompleted = isSlotUnlocked && ((activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14) || (activeSlotDetails?.totalCycles && activeSlotDetails.totalCycles > 1 && sNum < activeSlotDetails.slotNumber));
+          const isCompleted = isSlotUnlocked && ((selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete) || (activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14));
           return (
             <button
               key={sNum}
@@ -1086,17 +1072,15 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             <div className="px-2 sm:px-4">
               <div className="text-lg sm:text-xl font-black text-[#0b132b] tracking-tight">
                 {!isCurrentSlotUnlocked
-                  ? "Locked"
-                  : isViewingSnapshot
-                  ? "Board #1"
-                  : `Board #${currentCycle > 1 ? currentCycle : 2}`}
+                  ? "Locked Tier"
+                  : `Cycle #${String(selectedGlobalCycle).padStart(2, "0")}`}
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
                 {!isCurrentSlotUnlocked
-                  ? "Auto-Reserve Tier"
-                  : isViewingSnapshot
-                  ? "Completed History (14/14)"
-                  : "Live Active Board"}
+                  ? "Auto-Reserve Escalation"
+                  : isViewingSnapshot || (selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete)
+                  ? "14/14 Settled 🏆"
+                  : "Live Active Tier"}
               </div>
             </div>
             <div className="px-2 sm:px-4">

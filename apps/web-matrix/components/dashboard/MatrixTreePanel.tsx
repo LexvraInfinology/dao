@@ -1085,10 +1085,18 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             </div>
             <div className="px-2 sm:px-4">
               <div className="text-lg sm:text-xl font-black text-[#0b132b] tracking-tight">
-                {!isCurrentSlotUnlocked ? "Locked" : `Board #${isViewingSnapshot ? 1 : currentCycle}`}
+                {!isCurrentSlotUnlocked
+                  ? "Locked"
+                  : isViewingSnapshot
+                  ? "Board #1"
+                  : `Board #${currentCycle > 1 ? currentCycle : 2}`}
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
-                {!isCurrentSlotUnlocked ? "Auto-Reserve Tier" : "Board History"}
+                {!isCurrentSlotUnlocked
+                  ? "Auto-Reserve Tier"
+                  : isViewingSnapshot
+                  ? "Completed History (14/14)"
+                  : "Live Active Board"}
               </div>
             </div>
             <div className="px-2 sm:px-4">

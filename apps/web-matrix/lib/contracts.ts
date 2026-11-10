@@ -574,7 +574,21 @@ export async function getOnChainSlotDetails(
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data && Array.isArray(json.data.nodes) && json.data.nodes.length === 14) {
-          return json.data;
+          // If we asked for an archived cycle snapshot, make sure API returned a true snapshot
+          if (targetCycle && !json.data.isViewingSnapshot) {
+            // Fall through to direct on-chain RPC query below to get 14-seat historical snapshot!
+          } else {
+            const snapCnt = Math.max(
+              json.data.snapshotCount ?? 0,
+              json.data.recyclesCount ?? 0,
+              Math.max(0, (json.data.currentCycle ?? 1) - 1),
+              slotNumber === 1 ? 1 : 0
+            );
+            return {
+              ...json.data,
+              snapshotCount: snapCnt,
+            };
+          }
         }
       }
     } catch {}
@@ -652,6 +666,9 @@ export async function getOnChainSlotDetails(
         snapshotCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
       }
     } catch {}
+    if (snapshotCount === 0) {
+      snapshotCount = Math.max(0, (Number(currentCycle) || 1) - 1, slotNumber === 1 ? 1 : 0);
+    }
   }
 
   // Check if Slot 12 is completed on-chain to determine Global Cycle
@@ -677,14 +694,13 @@ export async function getOnChainSlotDetails(
   const totalCycles = globalCycle;
   const effectiveCurrentCycle = globalCycle;
 
-  // Snapshot is ONLY loaded if targetCycle is explicitly requested for an archived board history
+  // Snapshot is loaded if targetCycle is explicitly requested for an archived board history
   const isTargetingArchivedCycle = Boolean(
     isUnlocked &&
     targetCycle !== undefined &&
     targetCycle !== null &&
     targetCycle > 0 &&
-    targetCycle <= snapshotCount &&
-    targetCycle < slotOnChainCycle
+    (targetCycle <= snapshotCount || targetCycle < slotOnChainCycle || (slotNumber === 1 && targetCycle === 1))
   );
 
   const effectiveCycle = isUnlocked

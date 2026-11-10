@@ -467,7 +467,44 @@ export async function fetchOnChainSlotDetailsLive(
   const currentCycle = rootData?.currentCycle || (isUnlocked ? 1 : 0);
   const totalEarned = rootData?.slotEarned || 0;
 
-  const displayNodes = rootData?.nodes ? [...rootData.nodes] : Array(14).fill(ZERO);
+  let displayNodes = rootData?.nodes ? [...rootData.nodes] : Array(14).fill(ZERO);
+  let isViewingSnapshot = false;
+
+  // If targeting past completed cycle, query getCycleSnapshot on-chain directly
+  if (isUnlocked && targetCycle && (targetCycle < currentCycle || (slotNumber === 1 && targetCycle === 1 && currentCycle > 1))) {
+    try {
+      const snapIdx = Math.max(0, targetCycle - 1);
+      const cleanAddr = canonical.startsWith("0x") ? canonical.slice(2) : canonical;
+      const snapParam = cleanAddr.padStart(64, "0").toLowerCase() +
+        BigInt(slotNumber).toString(16).padStart(64, "0") +
+        BigInt(snapIdx).toString(16).padStart(64, "0");
+      const snapRes = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggerconstantcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: "410000000000000000000000000000000000000000",
+          contract_address: MATRIX_CONTRACT_HEX,
+          function_selector: "getCycleSnapshot(address,uint256,uint256)",
+          parameter: snapParam,
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+      });
+      const snapJson: any = await snapRes.json();
+      const snapRaw = snapJson.constant_result?.[0] || "";
+      if (snapRaw && snapRaw.length >= 960) {
+        const snapChunks: string[] = [];
+        for (let i = 0; i < snapRaw.length; i += 64) snapChunks.push(snapRaw.slice(i, i + 64));
+        const snapNodes: string[] = [];
+        for (let i = 0; i < 14; i++) {
+          snapNodes.push("0x" + snapChunks[1 + i].slice(24).toLowerCase());
+        }
+        displayNodes = snapNodes;
+        isViewingSnapshot = true;
+      }
+    } catch (snapErr) {
+      console.warn('[MatrixService] Snapshot query notice:', snapErr);
+    }
+  }
 
   const PAYOUT_TYPES = [
     "UPLINE_1", "UPLINE_2",
@@ -513,9 +550,11 @@ export async function fetchOnChainSlotDetailsLive(
     cost: SLOT_COSTS[slotNumber] || 30,
     isUnlocked,
     isLive,
-    currentCycle,
+    currentCycle: isViewingSnapshot ? targetCycle : currentCycle,
     recyclesCount: Math.max(0, currentCycle - 1),
-    filledNodes: Math.max(rootData?.filledNodes || 0, filledCount),
+    snapshotCount: Math.max(0, currentCycle - 1, slotNumber === 1 ? 1 : 0),
+    isViewingSnapshot,
+    filledNodes: isViewingSnapshot ? 14 : Math.max(rootData?.filledNodes || 0, filledCount),
     upgradeReserve: 0,
     totalEarned,
     nodes: nodesArray,

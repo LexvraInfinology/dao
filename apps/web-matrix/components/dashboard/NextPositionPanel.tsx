@@ -99,7 +99,20 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
 
   const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
-  const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
+  const snapshotCount = isSlotUnlocked
+    ? Math.max(
+        details?.snapshotCount ?? 0,
+        details?.recyclesCount ?? 0,
+        Math.max(0, (details?.currentCycle ?? 1) - 1),
+        activeSlotNumber === 1
+          ? Math.max(
+              data?.recyclesCount ?? 0,
+              Math.max(0, (data?.activeSlotProgress?.cycle ?? 1) - 1),
+              1
+            )
+          : 0
+      )
+    : 0;
   const isViewingSnapshot = Boolean(isSlotUnlocked && details?.isViewingSnapshot);
   const effectiveSelectedCycle = isViewingSnapshot
     ? (details?.selectedCycle || storeSelectedCycle || 1)

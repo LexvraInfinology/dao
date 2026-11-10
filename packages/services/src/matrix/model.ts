@@ -34,6 +34,8 @@ export interface MatrixSlotDetailsDTO {
   isLive?: boolean;
   currentCycle: number;
   recyclesCount: number;
+  snapshotCount?: number;
+  isViewingSnapshot?: boolean;
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;

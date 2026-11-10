@@ -111,6 +111,20 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const remainingNodes = isSlotUnlocked ? Math.max(14 - filledNodes, 0) : 14;
   const percentFilled = !isSlotUnlocked ? 0 : isCycleComplete ? 100 : Math.min(Math.round((filledNodes / 14) * 100), 100);
 
+  const liveFilledNodes = (() => {
+    if (!isSlotUnlocked) return 0;
+    if (!isViewingSnapshot) return filledNodes;
+    const cachedLive = useMatrixStore.getState().slotDetailsCache[`${activeSlotNumber}_live`];
+    if (cachedLive && cachedLive.slotNumber === activeSlotNumber) {
+      const c = cachedLive.nodes?.filter((n: any) => n?.filled).length;
+      return c ?? cachedLive.filledNodes ?? 0;
+    }
+    if (activeSlotNumber === 1) {
+      return data?.activeSlotProgress?.filledNodes ?? (data?.activeSlotProgress?.nodes ? data.activeSlotProgress.nodes.filter((n: any) => n?.filled).length : 0);
+    }
+    return 0;
+  })();
+
   const firstOpenIdx = nodesList.length > 0 ? nodesList.findIndex((n: any) => !n?.filled) : -1;
   const nextUpcomingSeat = !isSlotUnlocked ? null : isCycleComplete ? null : (firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledNodes < 14 ? filledNodes + 1 : 1));
   const nextSeatMeta = nextUpcomingSeat ? SEAT_METAS[nextUpcomingSeat] : null;
@@ -290,39 +304,41 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           </button>
         ) : (
           <>
-            {/* View Cycle 1 History toggle if past cycles exist and we are on live board */}
-            {!isViewingSnapshot && snapshotCount > 0 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
-                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
-              >
-                <span>📜 View Completed Board #1 History (14/14 🏆)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-
             {/* Return to Live Board if viewing snapshot */}
-            {isViewingSnapshot && (
+            {isViewingSnapshot ? (
               <button
                 type="button"
                 onClick={() => selectSlot(activeSlotNumber, undefined, address || undefined)}
                 className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
               >
-                <span>← Return to Live Active Board ({details?.filledNodes ?? 2}/14)</span>
+                <span>← Return to Live Active Board ({liveFilledNodes}/14)</span>
               </button>
-            )}
+            ) : (
+              <>
+                {/* View Cycle 1 History toggle if past cycles exist and we are on live board */}
+                {snapshotCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => selectSlot(activeSlotNumber, 1, address || undefined)}
+                    className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
+                  >
+                    <span>📜 View Completed Board #1 History (14/14 🏆)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
 
-            {/* View Slot 2 if on Slot 1 and Slot 2 is unlocked */}
-            {!isViewingSnapshot && activeSlotNumber === 1 && effectiveHighestUnlocked >= 2 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(2, undefined, address || undefined)}
-                className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
-              >
-                <span>View Active Slot #02 Board ($60 Tier)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+                {/* View Slot 2 if on Slot 1 and Slot 2 is unlocked */}
+                {activeSlotNumber === 1 && effectiveHighestUnlocked >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => selectSlot(2, undefined, address || undefined)}
+                    className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5"
+                  >
+                    <span>View Active Slot #02 Board ($60 Tier)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </>
             )}
 
             {/* View previous slot if activeSlotNumber > 1 */}

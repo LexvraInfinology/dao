@@ -312,7 +312,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
-          <HeaderSearchBar className="flex items-center flex-1 max-w-[240px] xl:max-w-[420px]" />
+          <HeaderSearchBar className="items-center flex-1 max-w-[240px] xl:max-w-[420px]" />
 
           {/* Right Header Section */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">

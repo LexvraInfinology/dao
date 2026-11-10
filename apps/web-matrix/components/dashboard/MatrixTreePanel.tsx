@@ -389,6 +389,24 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const firstOpenIdx = nodes.length > 0 ? nodes.findIndex((n: any) => !n?.filled) : -1;
   const firstOpenSeat = firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledCount < 14 ? filledCount + 1 : 1);
 
+  // Dedicated calculation of the LIVE active board count (unaffected by snapshot views)
+  const liveFilledCount = (() => {
+    if (!isCurrentSlotUnlocked) return 0;
+    if (activeSlotDetails && activeSlotDetails.slotNumber === selectedSlot && !isViewingSnapshot) {
+      return realFilledCount;
+    }
+    const cachedLive = useMatrixStore.getState().slotDetailsCache[`${selectedSlot}_live`];
+    if (cachedLive && cachedLive.slotNumber === selectedSlot) {
+      const c = cachedLive.nodes?.filter((n: any) => n?.filled).length;
+      return c ?? cachedLive.filledNodes ?? 0;
+    }
+    if (selectedSlot === 1) {
+      if (data?.activeSlotProgress?.filledNodes != null) return data.activeSlotProgress.filledNodes;
+      if (data?.activeSlotProgress?.nodes) return data.activeSlotProgress.nodes.filter((n: any) => n?.filled).length;
+    }
+    return 0;
+  })();
+
   const isNodeFilled = (pos: number) => {
     if (!isCurrentSlotUnlocked) return false;
     return Boolean(nodes[pos - 1]?.filled);
@@ -772,19 +790,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
                 <button
                   type="button"
-                  onClick={() => handleCycleChange(1)}
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                    isViewingSnapshot
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                  }`}
-                  title="View Completed 14/14 History"
-                >
-                  <span>🏆 Board #1 History</span>
-                  <span className="text-[9px] opacity-90">(14/14 Settled)</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     setSelectedCycle(null);
                     const raw = address || data?.address;
@@ -798,15 +803,29 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   }`}
                   title="View Live Active Board"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className={`w-1.5 h-1.5 rounded-full ${!isViewingSnapshot ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`} />
                   <span>⚡ Active Board</span>
-                  <span className="text-[9px] opacity-90">({realFilledCount}/14)</span>
+                  <span className="text-[9px] opacity-90">({liveFilledCount}/14)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCycleChange(1)}
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                    isViewingSnapshot
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  }`}
+                  title="View Completed 14/14 History"
+                >
+                  <span>🏆 Board #1 History</span>
+                  <span className="text-[9px] opacity-90">(14/14 Settled)</span>
                 </button>
               </div>
             ) : (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ecfbf5] text-[#15815f] border border-[#b4e9d6] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#15815f] animate-pulse" />
-                {currentCycle > 1 ? `Board #${String(currentCycle).padStart(2, "0")}` : `Cycle #${String(currentCycle).padStart(2, "0")}`} (Active)
+                <span>⚡ Active Board</span>
+                <span className="text-[9px] opacity-90">({liveFilledCount}/14)</span>
               </span>
             )}
           </div>
@@ -817,15 +836,18 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   ? "Slot #01 • Entry Tier ($30 USD) • Join Matrix to Activate"
                   : `Slot #${String(selectedSlot).padStart(2, "0")} • Locked Tier • Automatically unlocks at $0 out-of-pocket cost via Slot #${Math.max(1, selectedSlot - 1)} (P4 & P5)`}
               </span>
+            ) : isViewingSnapshot ? (
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-emerald-700">
+                  Slot #{String(selectedSlot).padStart(2, "0")} • Completed Board #1 (14/14 Fulfilled &amp; Settled 🏆)
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-500">On-Chain Verified Archive</span>
+              </span>
             ) : (
-              <>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled •{" "}
-                {isViewingSnapshot ? (
-                  <strong className="text-emerald-600">Board #1 History (14/14 Fulfilled &amp; Settled 🏆)</strong>
-                ) : (
-                  <span>Cycle #01 Active • Next Up: Position #{firstOpenSeat}</span>
-                )}
-              </>
+              <span>
+                Slot #{String(selectedSlot).padStart(2, "0")} • {liveFilledCount} / 14 Nodes Filled • Cycle #01 Active • Next Up: Position #{firstOpenSeat}
+              </span>
             )}
           </p>
         </div>
@@ -988,32 +1010,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       </div>
 
       {/* ───────────────── TREE VISUALIZER CONTAINER (Large & Bold Binary Tree Layout) ───────────────── */}
-      {/* Snapshot Viewing Indicator Banner */}
-      {isViewingSnapshot && (
-        <div className="my-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-blue-50 border border-emerald-200 text-emerald-950 text-xs font-bold animate-fade-in shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <CheckCircle2 className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-emerald-950 block">
-                Viewing Slot #{String(selectedSlot).padStart(2, "0")} Completed Board #1 History • 14/14 Placements Fulfilled &amp; Settled
-              </span>
-              <span className="text-[11px] text-emerald-800 font-medium">
-                Cycle #01 • All 14 seats were 100% verified on-chain. Direct P2P rewards ($180.00 USD) and auto-reserve were fulfilled.
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleCycleChange(totalCycles)}
-            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer self-start sm:self-auto shrink-0"
-          >
-            <span>← Return to Live Active Board (2/14)</span>
-          </button>
-        </div>
-      )}
-
       {viewMode === "tree" ? (
         <div className="mt-3 bg-gradient-to-b from-[#f8fbff] to-white border border-[#d8e6f8] rounded-2xl p-3 sm:p-5 w-full min-w-0">
           {/* Mobile Pan / Swipe Hint */}

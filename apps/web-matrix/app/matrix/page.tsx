@@ -277,7 +277,7 @@ export default function MatrixPage() {
         {/* ───────────────────────────────────────────────────────────── */}
         <header className="hidden lg:flex sticky top-0 z-30 bg-white border-b border-[#e8ecf1] px-8 h-[64px] items-center justify-between">
           {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
-          <HeaderSearchBar className="w-full max-w-[200px] xl:max-w-[360px]" />
+          <HeaderSearchBar className="items-center w-full max-w-[200px] xl:max-w-[360px]" />
 
           {/* Right Controls */}
           <div className="flex items-center gap-3">

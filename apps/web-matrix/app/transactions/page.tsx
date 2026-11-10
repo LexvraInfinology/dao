@@ -221,7 +221,7 @@ export default function TransactionsPage() {
             </Link>
           </div>
           {/* Robust On-Chain Search Bar (Wallet, Member ID, Tx Hash) */}
-          <HeaderSearchBar className="hidden lg:flex items-center flex-1 max-w-[200px] xl:max-w-[360px]" />
+          <HeaderSearchBar className="items-center flex-1 max-w-[200px] xl:max-w-[360px]" />
 
           <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
             <div

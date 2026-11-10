@@ -214,9 +214,40 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     const active = raw ? toHexAddress(raw) : undefined;
     const cacheKey = `${sNum}_live`;
     const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
-    if (cached) {
+    if (cached && cached.slotNumber === sNum) {
       setLiveSlotData(cached);
       useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: null });
+    } else {
+      // Clean default state for newly selected slot to prevent stale Slot 1 bleed & flickering
+      const slotCost = 30 * Math.pow(2, Math.max(0, sNum - 1));
+      const defaultNodes = Array.from({ length: 14 }, (_, i) => ({
+        position: i + 1,
+        level: i < 2 ? 1 : i < 6 ? 2 : 3,
+        filled: false,
+        placedUser: null,
+        base58: null,
+        code: null,
+        userId: null,
+        amount: slotCost,
+        label: `Seat #${i + 1}`,
+      }));
+      const initialSlotData = {
+        slotNumber: sNum,
+        cost: slotCost,
+        isUnlocked: sNum <= effectiveHighestUnlocked,
+        isLive: true,
+        currentCycle: 1,
+        totalCycles: 1,
+        filledNodes: 0,
+        snapshotCount: 0,
+        isViewingSnapshot: false,
+        recyclesCount: 0,
+        upgradeReserve: 0,
+        totalEarned: 0,
+        nodes: defaultNodes,
+      } as any;
+      setLiveSlotData(initialSlotData);
+      useMatrixStore.setState({ slotDetails: initialSlotData, selectedSlotNumber: sNum, selectedCycle: null });
     }
     selectSlotStore(sNum, undefined, active);
   };
@@ -278,7 +309,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     };
   }, [address, data?.address, selectedSlot, selectedCycle]);
 
-  const activeSlotDetails = liveSlotData || storeSlotDetails;
+  const activeSlotDetails =
+    (liveSlotData && liveSlotData.slotNumber === selectedSlot ? liveSlotData : null) ||
+    (storeSlotDetails && storeSlotDetails.slotNumber === selectedSlot ? storeSlotDetails : null);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
 
   // Dynamic Auto-Escalation:
@@ -330,9 +363,22 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     ? (activeSlotDetails?.selectedCycle || selectedCycle || 1)
     : (selectedCycle || currentCycle);
   const nodes = isCurrentSlotUnlocked
-    ? (activeSlotDetails && activeSlotDetails.slotNumber === selectedSlot && Array.isArray(activeSlotDetails.nodes) && activeSlotDetails.nodes.length > 0
+    ? (activeSlotDetails && Array.isArray(activeSlotDetails.nodes) && activeSlotDetails.nodes.length > 0
         ? activeSlotDetails.nodes
-        : (selectedSlot === 1 ? (data?.activeSlotProgress?.nodes || []) : []))
+        : (selectedSlot === 1 && data?.activeSlotProgress?.nodes && data.activeSlotProgress.nodes.length > 0
+            ? data.activeSlotProgress.nodes
+            : Array.from({ length: 14 }, (_, i) => ({
+                position: i + 1,
+                level: i < 2 ? 1 : i < 6 ? 2 : 3,
+                filled: false,
+                placedUser: null,
+                base58: null,
+                code: null,
+                userId: null,
+                amount: currentSlotCost,
+                label: `Seat #${i + 1}`,
+              }))
+          ))
     : [];
   const realFilledCount = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.filter((n: any) => n?.filled).length : 0;
   const filledCount = realFilledCount > 0
@@ -646,9 +692,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     let dynamicRole = isSlotStandby ? "Standby" : cfg.role;
     if (cfg.type === "income") {
       if (filled) {
-        dynamicRole = isOwnerQualified ? `+$30 YOU` : `Pool (${directsCount}/2)`;
+        dynamicRole = isOwnerQualified ? `+${currentSlotCost.toFixed(0)} YOU` : `Pool (${directsCount}/2)`;
       } else {
-        dynamicRole = isOwnerQualified ? `+$30 YOU` : `+$30 (Req 2 Dir)`;
+        dynamicRole = isOwnerQualified ? `+${currentSlotCost.toFixed(0)} YOU` : `+${currentSlotCost.toFixed(0)} (Req 2 Dir)`;
       }
     }
 

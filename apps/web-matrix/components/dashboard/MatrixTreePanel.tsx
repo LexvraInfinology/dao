@@ -785,11 +785,11 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
 
         {/* View Switcher (Tree vs Table vs Direct Partners) */}
-        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 flex-wrap">
+        <div className="flex items-center gap-1 w-full sm:w-auto bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setViewMode("tree")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               viewMode === "tree" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -799,7 +799,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <button
             type="button"
             onClick={() => setViewMode("table")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -809,7 +809,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <button
             type="button"
             onClick={() => setViewMode("directs")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               viewMode === "directs" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >

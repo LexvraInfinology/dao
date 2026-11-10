@@ -1171,16 +1171,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   if (sponsorRaw) {
     const sp = coder.decode(["address"], "0x" + sponsorRaw)[0];
     if (sp && sp !== "0x0000000000000000000000000000000000000000") {
-      // If the registry returns root account, dynamically redirect to the Protocol Vault from .env.local
-      const genesisRootHex = (
-        process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX ||
-        (process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS ? toHexAddress(process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS) : "")
-      ).toLowerCase();
-      if (genesisRootHex && sp.toLowerCase() === genesisRootHex) {
-        sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
-      } else {
-        sponsorAddress = sp.toLowerCase();
-      }
+      sponsorAddress = sp.toLowerCase();
     }
   }
     // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
@@ -2151,7 +2142,6 @@ export async function joinSlotOnChain(
   const isValidAddress = ethers.isAddress(hexCheck) && hexCheck !== "0x0000000000000000000000000000000000000000";
 
   if (
-    isFirstMember ||
     !targetSponsor ||
     !isValidAddress ||
     targetSponsor === "0x0000000000000000000000000000000000000000" ||

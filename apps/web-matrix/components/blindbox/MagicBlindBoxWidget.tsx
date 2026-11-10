@@ -94,10 +94,17 @@ export function MagicBlindBoxWidget({
   const [rewardRevealed, setRewardRevealed] = useState(false);
   const [autoCloseSeconds, setAutoCloseSeconds] = useState(4);
   const isDashboard = pathname === "/dashboard";
-  const [isMinimized, setIsMinimized] = useState<boolean>(() => pathname !== "/dashboard");
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) return true;
+    return pathname !== "/dashboard";
+  });
 
   useEffect(() => {
-    setIsMinimized(pathname !== "/dashboard");
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMinimized(true);
+    } else {
+      setIsMinimized(pathname !== "/dashboard");
+    }
   }, [pathname]);
 
   // Live on-chain Magic Box status for current connected operative

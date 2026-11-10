@@ -166,7 +166,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const [daoSeat, setDaoSeat] = useState<number | null>(null);
 
   const isRootWallet = false;
-  const isFirstMember = totalMembers === 0 || daoSeat === 1;
+  const isFirstMember = (totalMembers !== null && totalMembers === 0) || daoSeat === 1;
 
   // Dynamic $30.00 USD entry cost based on live TrobChain oracle
   const [slotCostSun, setSlotCostSun] = useState<number>(937558597);
@@ -488,16 +488,14 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         );
         const isFirstId = isCurrentRootWallet || membersCount === 0 || daoSeat === 1;
 
-        // Purge any deployer or invalid cached sponsor from localStorage
+        // Purge only deployer or zero-address cached sponsor from localStorage
         if (typeof window !== "undefined") {
           const stored = localStorage.getItem("equora_sponsor");
           if (
-            isFirstId ||
-            (stored && (
+            stored && (
               isDeployerAddress(stored) ||
-              toTrobBase58(stored) === GENESIS_ROOT_MEMBER_BASE58 ||
-              toHexAddress(stored).toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase()
-            ))
+              stored === "0x0000000000000000000000000000000000000000"
+            )
           ) {
             localStorage.removeItem("equora_sponsor");
           }
@@ -517,36 +515,46 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             }
           }
 
-          // Case A: 1st ID on Mainnet or Apex Founding Member (#0001) -> Routes directly to Protocol Pools
-          if (isFirstId || parsedSeat === 1) {
-            resolved = CONTRACT_ADDRESSES.vault;
-            isRootAllowed = true;
-          }
-          // Case B1: 5-digit referral code passed in URL (e.g. ?ref=54821)
-          else if (ref && /^\d{5}$/.test(ref)) {
+          // Case 1: Explicit referral code passed in URL (e.g. ?ref=54821)
+          if (ref && /^\d{5}$/.test(ref)) {
             const userFromCode = await getOnChainUserByCode(ref);
             if (userFromCode) {
               resolved = userFromCode;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", userFromCode);
-            } else if (isFirstId) {
-              resolved = CONTRACT_ADDRESSES.vault;
-              isRootAllowed = true;
             } else {
               resolved = "";
               localStorage.removeItem("equora_sponsor");
             }
           }
-          // Case B2: Explicit referral address passed in URL
+          // Case 2: Explicit referral wallet address passed in URL (e.g. ?ref=T... or ?ref=0x...)
           else if (ref && (ref.startsWith("0x") || ref.startsWith("T"))) {
             if (!isDeployerAddress(ref)) {
               resolved = ref;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", ref);
-            } else {
-              resolved = CONTRACT_ADDRESSES.vault;
-              isRootAllowed = true;
             }
+          }
+          // Case 3: Stored referral in localStorage from previous link
+          else if (typeof window !== "undefined" && localStorage.getItem("equora_sponsor")) {
+            const stored = localStorage.getItem("equora_sponsor")!;
+            if (stored && !isDeployerAddress(stored)) {
+              if (/^\d{5}$/.test(stored)) {
+                const userFromCode = await getOnChainUserByCode(stored);
+                if (userFromCode) {
+                  resolved = userFromCode;
+                  isCustomFound = true;
+                }
+              } else if (stored.startsWith("0x") || stored.startsWith("T")) {
+                resolved = stored;
+                isCustomFound = true;
+              }
+            }
+          }
+          // Case 4: 1st ID on Mainnet or Apex Founding Member (#0001) -> Routes directly to Protocol Pools
+          else if (isFirstId || parsedSeat === 1) {
+            resolved = CONTRACT_ADDRESSES.vault;
+            isRootAllowed = true;
           }
           // Case C: Genesis Council Members (Seats 2 to 100) 4-Quadrant Symmetrical Binary Tree
           // Quadrant q = floor((S-1)/25) + 1, k = ((S-1)%25) + 1
@@ -1083,8 +1091,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       return;
     }
 
-    // For the genesis/1st member, always route to Protocol Vault — bypass sponsor validation
-    const effectiveSponsor = isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress;
+    // Respect user-specified valid sponsor over root fallback
+    const effectiveSponsor = (sponsorStatus.isValid && sponsorAddress && !isDeployerAddress(sponsorAddress))
+      ? sponsorAddress
+      : (isFirstMember ? CONTRACT_ADDRESSES.vault : sponsorAddress);
 
     if (!isFirstMember && (!sponsorStatus.isValid || !effectiveSponsor || /^\d{5}$/.test(effectiveSponsor))) {
       toast.error(

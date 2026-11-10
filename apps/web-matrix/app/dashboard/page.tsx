@@ -410,15 +410,7 @@ export default function DashboardPage() {
           {/* TAB 2: MATRIX TREE */}
           {activeTab === "matrix" && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-[#e0eaf7] gap-2">
-                <div>
-                  <h2 className="text-[18px] sm:text-[20px] font-black text-[#102341]">Matrix Position &amp; Level Flow</h2>
-                  <p className="text-[12px] text-[#657895]">Interactive 14-node personal tree with automated P4+P5 escalation.</p>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-[#e8f1ff] text-[#2868e8] font-bold text-[11px] border border-[#cde0ff] self-start sm:self-auto">
-                  14 Seats / Slot
-                </span>
-              </div>
+
 
               {/* Show qualification alert banner: strictly 2 active directs required */}
               <MatrixQualificationAlert

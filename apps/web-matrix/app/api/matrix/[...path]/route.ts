@@ -440,6 +440,30 @@ async function getCycleSnapshotDetail(userEthHex: string, slotNumber: number, in
   return { cycleNumber, nodeAddresses, nodeCodes, nodeMemberIds, payoutRecipients, payoutTypes, completedAt };
 }
 
+async function getCycleSnapshot(userEthHex: string, slotNumber: number, index: number) {
+  const params = encodeAddress(userEthHex) + encodeUint256(slotNumber) + encodeUint256(index);
+  const chunks = await callContract(MATRIX_HEX, "getCycleSnapshot(address,uint256,uint256)", params);
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  if (!chunks || chunks.length < 16) return null;
+
+  const cycleNumber = Number(decodeUint256(chunks[0]));
+  const nodeAddresses: string[] = [];
+  for (let i = 0; i < 14; i++) {
+    nodeAddresses.push(chunks[1 + i] ? decodeAddress(chunks[1 + i]) : ZERO);
+  }
+  const completedAt = chunks[15] ? Number(decodeUint256(chunks[15])) : 0;
+
+  return {
+    cycleNumber,
+    nodeAddresses,
+    nodeCodes: Array(14).fill(0),
+    nodeMemberIds: Array(14).fill(0),
+    payoutRecipients: Array(14).fill(ZERO),
+    payoutTypes: Array(14).fill(0),
+    completedAt,
+  };
+}
+
 async function getUserRoyaltyTier(userEthHex: string) {
   try {
     const params = encodeAddress(userEthHex);
@@ -837,7 +861,10 @@ export async function GET(
       );
 
       if (shouldLoadTargetSnapshot) {
-        const snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle! - 1);
+        let snapDetail = await getCycleSnapshotDetail(ethHex, slotNumber, targetCycle! - 1).catch(() => null);
+        if (!snapDetail || !snapDetail.nodeAddresses || snapDetail.nodeAddresses.length < 14) {
+          snapDetail = await getCycleSnapshot(ethHex, slotNumber, targetCycle! - 1).catch(() => null);
+        }
         if (snapDetail) {
           nodes = await buildNodes(
             snapDetail.nodeAddresses,

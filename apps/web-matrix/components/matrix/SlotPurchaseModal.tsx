@@ -69,7 +69,7 @@ export function SlotPurchaseModal({
         if (!cancelled && callValueSun > 0) {
           setLiveTrobCoins((callValueSun / 1_000_000).toFixed(2));
         }
-      } catch {}
+      } catch { }
     }
 
     loadOnChainState();
@@ -156,22 +156,20 @@ export function SlotPurchaseModal({
           <button
             type="button"
             onClick={() => setMode("onchain")}
-            className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-              mode === "onchain"
-                ? "bg-white text-[#2563eb] shadow-xs"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
+            className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${mode === "onchain"
+              ? "bg-white text-[#2563eb] shadow-xs"
+              : "text-[#64748b] hover:text-[#0f172a]"
+              }`}
           >
             On-Chain ({NETWORK_NAME.replace("TrobChain ", "")})
           </button>
           <button
             type="button"
             onClick={() => setMode("sandbox")}
-            className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-              mode === "sandbox"
-                ? "bg-white text-[#2563eb] shadow-xs"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
+            className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${mode === "sandbox"
+              ? "bg-white text-[#2563eb] shadow-xs"
+              : "text-[#64748b] hover:text-[#0f172a]"
+              }`}
           >
             Simulated Sandbox
           </button>
@@ -189,8 +187,8 @@ export function SlotPurchaseModal({
                 {liveTrobCoins && livePriceUsd > 0
                   ? `~${liveTrobCoins} TROB (Live Market: $${livePriceUsd.toFixed(5)}/TROB)`
                   : liveTrobCoins
-                  ? `~${liveTrobCoins} TROB`
-                  : "Fetching live market rate..."}
+                    ? `~${liveTrobCoins} TROB`
+                    : "Fetching live market rate..."}
               </span>
             </div>
           </div>

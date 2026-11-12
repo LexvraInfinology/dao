@@ -310,6 +310,38 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           ? Number((slot1Cost.costSun / 1_000_000).toFixed(2))
           : (liveTrobPrice > 0 ? Number((slot1Cost.costUsd / liveTrobPrice).toFixed(2)) : 0);
 
+        const allSlotsPlacements = Array.isArray(onChainAllSlots)
+          ? onChainAllSlots.reduce((acc: number, s: any) => {
+              if (!s?.isUnlocked) return acc;
+              const cyc = Math.max(1, Number(s.currentCycle || 1));
+              const recs = Math.max(0, Number(s.recyclesCount ?? cyc - 1));
+              const filled = Math.max(0, Number(s.filledNodes || 0));
+              return acc + recs * 14 + filled;
+            }, 0)
+          : 0;
+        const mergedMilestonesCount = Math.max(
+          Number(onChainRank?.milestones ?? 0),
+          allSlotsPlacements
+        );
+        const derivedTierNum = Math.max(
+          Number(onChainRank?.tierNumber ?? 0),
+          mergedMilestonesCount >= 168 ? 4 : mergedMilestonesCount >= 126 ? 3 : mergedMilestonesCount >= 84 ? 2 : mergedMilestonesCount >= 42 ? 1 : 0
+        );
+        const tierNames = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
+        const resolvedRankMilestones = {
+          tierNumber: derivedTierNum,
+          tierName: tierNames[derivedTierNum] || onChainRank?.tierName || "NONE",
+          milestones: mergedMilestonesCount,
+          alphaThreshold: onChainRank?.alphaThreshold ?? 42,
+          primeThreshold: onChainRank?.primeThreshold ?? 84,
+          eliteThreshold: onChainRank?.eliteThreshold ?? 126,
+          crownThreshold: onChainRank?.crownThreshold ?? 168,
+          isAlphaAchieved: Boolean(onChainRank?.isAlphaAchieved || mergedMilestonesCount >= 42),
+          isPrimeAchieved: Boolean(onChainRank?.isPrimeAchieved || mergedMilestonesCount >= 84),
+          isEliteAchieved: Boolean(onChainRank?.isEliteAchieved || mergedMilestonesCount >= 126),
+          isCrownAchieved: Boolean(onChainRank?.isCrownAchieved || mergedMilestonesCount >= 168),
+        };
+
         const onChainDashboard: MatrixDashboardOverview = {
           address: addr,
           currentSlot: isUserRegistered ? (onChainProf?.currentSlot || 1) : 0,
@@ -322,19 +354,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           totalWithdrawnUsd: onChainProf?.withdrawnTotalUsd ?? 0,
           recyclesCount: onChainDetails?.recyclesCount ?? 0,
           trobPriceUsd: liveTrobPrice,
-          rankMilestones: onChainRank || {
-            tierNumber: 0,
-            tierName: "NONE",
-            milestones: 0,
-            alphaThreshold: 42,
-            primeThreshold: 84,
-            eliteThreshold: 126,
-            crownThreshold: 168,
-            isAlphaAchieved: false,
-            isPrimeAchieved: false,
-            isEliteAchieved: false,
-            isCrownAchieved: false,
-          },
+          rankMilestones: resolvedRankMilestones,
           activeSlotProgress: {
             slotNumber: isUserRegistered ? (onChainProf?.currentSlot || 1) : 0,
             filledNodes: filledCount,

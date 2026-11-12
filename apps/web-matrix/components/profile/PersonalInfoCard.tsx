@@ -109,7 +109,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
             <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 text-[#64748b] flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
                 </svg>
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Operative Name</span>
               </div>
@@ -122,7 +122,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
             <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 text-[#64748b] flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Telegram</span>
               </div>
@@ -135,7 +135,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
             <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 text-[#64748b] flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                  <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
                 </svg>
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Twitter / X</span>
               </div>
@@ -148,7 +148,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
             <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 text-[#64748b] flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Sponsor ID</span>
               </div>
@@ -157,14 +157,14 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
                   {!profile
                     ? "—"
                     : profile.isVaultSponsor
-                    ? "Protocol Vault (Apex Root)"
-                    : profile.sponsorUserId
-                    ? `#${profile.sponsorUserId}`
-                    : profile.sponsorCode
-                    ? `#${profile.sponsorCode}`
-                    : profile.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000"
-                    ? `${toTrobBase58(profile.sponsorAddress).slice(0, 6)}...${toTrobBase58(profile.sponsorAddress).slice(-4)}`
-                    : "—"}
+                      ? "Protocol Vault (Apex Root)"
+                      : profile.sponsorUserId
+                        ? `#${profile.sponsorUserId}`
+                        : profile.sponsorCode
+                          ? `#${profile.sponsorCode}`
+                          : profile.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000"
+                            ? `${toTrobBase58(profile.sponsorAddress).slice(0, 6)}...${toTrobBase58(profile.sponsorAddress).slice(-4)}`
+                            : "—"}
                 </span>
               </div>
             </div>
@@ -173,7 +173,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
             <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 text-[#64748b] flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Date Joined</span>
               </div>

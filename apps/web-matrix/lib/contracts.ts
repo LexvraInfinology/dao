@@ -3102,14 +3102,35 @@ export async function getOnChainUserRankMilestones(userAddress: string): Promise
     if (!userHex || userHex === "0x0000000000000000000000000000000000000000") return fallback;
     const param = coder.encode(["address"], [userHex]).slice(2);
 
-    const [milestonesRaw, tierRaw] = await Promise.all([
+    const [milestonesRaw, tierRaw, allSlotsRaw] = await Promise.all([
       queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "userMilestones(address)", param).catch(() => null),
       queryTrobConstant(CONTRACT_ADDRESSES.salaryPool, "getUserTier(address)", param).catch(() => null),
+      queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getAllSlotsStatus(address)", param).catch(() => null),
     ]);
 
+    let totalPlacements = 0;
+    if (allSlotsRaw && allSlotsRaw.length >= 64 * 36) {
+      try {
+        const [unlockedArr, cyclesArr, filledArr] = coder.decode(
+          ["bool[12]", "uint256[12]", "uint256[12]"],
+          "0x" + allSlotsRaw
+        );
+        for (let i = 0; i < 12; i++) {
+          if (unlockedArr[i]) {
+            const cyc = Math.max(1, Number(cyclesArr[i]));
+            const fld = Math.max(0, Number(filledArr[i]));
+            totalPlacements += (cyc - 1) * 14 + fld;
+          }
+        }
+      } catch {}
+    }
+
     const rawMilestones = milestonesRaw ? Number(coder.decode(["uint256"], "0x" + milestonesRaw)[0]) : 0;
-    const tierNumber = tierRaw ? Number(coder.decode(["uint8"], "0x" + tierRaw)[0]) : 0;
-    const milestones = Math.max(rawMilestones, tierNumber * 42);
+    const contractTier = tierRaw ? Number(coder.decode(["uint8"], "0x" + tierRaw)[0]) : 0;
+    const milestones = Math.max(rawMilestones, contractTier * 42, totalPlacements);
+    const derivedTier =
+      milestones >= 168 ? 4 : milestones >= 126 ? 3 : milestones >= 84 ? 2 : milestones >= 42 ? 1 : 0;
+    const tierNumber = Math.max(contractTier, derivedTier);
     const TIER_NAMES = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
 
     return {

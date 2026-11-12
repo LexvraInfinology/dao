@@ -397,34 +397,6 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                     <span>Cycle #02 (Locked)</span>
                   </button>
                 </div>
-
-                {/* Compact Board Switcher when Slot has Recycled */}
-                {snapshotCount > 0 && (
-                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-emerald-50/80 rounded-full border border-emerald-200/90">
-                    <button
-                      type="button"
-                      onClick={() => selectSlotStore(selectedSlotNumber, 1, address || undefined)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                        isViewingSnapshot
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "text-emerald-800 hover:bg-emerald-100/80"
-                      }`}
-                    >
-                      Board #1 (14/14 • ${(6 * slotCost).toFixed(0)})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => selectSlotStore(selectedSlotNumber, undefined, address || undefined)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                        !isViewingSnapshot
-                          ? "bg-[#1e60e5] text-white shadow-xs"
-                          : "text-slate-600 hover:bg-white/80"
-                      }`}
-                    >
-                      Board #{snapshotCount + 1} Live ({liveFilledCount}/14)
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -432,10 +404,10 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             {!isSlotUnlocked
               ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} is currently locked. Unlocks automatically at $0 cost.`
               : isTreeLoading
-              ? `Syncing Slot #${String(selectedSlotNumber).padStart(2, "0")} live board from TrobChain...`
+              ? `Syncing Slot #${String(selectedSlotNumber).padStart(2, "0")} live from TrobChain...`
               : isViewingSnapshot
-              ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} • Board #${storeSelectedCycle || 1} Completed (14/14 Seats Settled 🏆) • On-Chain Verified`
-              : `Slot #${String(selectedSlotNumber).padStart(2, "0")}${snapshotCount > 0 ? ` • Board #${snapshotCount + 1}` : ""} • ${liveFilledCount} / 14 Nodes Filled • Cycle #01 Active`}
+              ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} • 14/14 Seats Settled 🏆 • On-Chain Verified`
+              : `Slot #${String(selectedSlotNumber).padStart(2, "0")} • ${liveFilledCount} / 14 Nodes Filled${snapshotCount > 0 ? ` • ${snapshotCount} Completed Round${snapshotCount > 1 ? "s" : ""} Settled` : ""} • Cycle #01 Active`}
           </p>
         </div>
 

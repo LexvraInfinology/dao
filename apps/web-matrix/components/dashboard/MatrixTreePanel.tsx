@@ -190,7 +190,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const [selectedSlot, setSelectedSlot] = useState<number>(storeSelectedSlot || 1);
   const [selectedGlobalCycle, setSelectedGlobalCycle] = useState<number>(1);
-  const [viewingBoardNum, setViewingBoardNum] = useState<number | null>(storeSelectedCycle ?? null);
   const [viewMode, setViewMode] = useState<"tree" | "table" | "directs">("tree");
   const [directMembersList, setDirectMembersList] = useState<any[]>([]);
   const [selectedNodeModal, setSelectedNodeModal] = useState<SeatMeta | null>(null);
@@ -211,22 +210,15 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     ? Boolean(activeSlotDetails.isUnlocked)
     : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked);
 
-  // Sync when store slot or archived board changes externally
+  // Sync when store slot changes externally
   useEffect(() => {
     if (storeSelectedSlot && storeSelectedSlot !== selectedSlot) {
       setSelectedSlot(storeSelectedSlot);
     }
   }, [storeSelectedSlot]);
 
-  useEffect(() => {
-    setViewingBoardNum(storeSelectedCycle ?? null);
-  }, [storeSelectedCycle]);
-
-  const effectiveFetchCycle = viewingBoardNum !== null ? viewingBoardNum : undefined;
-
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
-    setViewingBoardNum(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
     selectSlotStore(sNum, undefined, active);
@@ -234,33 +226,25 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
   const handleCycleSelect = (cNum: number) => {
     setSelectedGlobalCycle(cNum);
-    setViewingBoardNum(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
     selectSlotStore(selectedSlot, undefined, active);
   };
 
-  const handleBoardArchiveSelect = (boardNum: number | null) => {
-    setViewingBoardNum(boardNum);
-    const raw = address || data?.address;
-    const active = raw ? toHexAddress(raw) : undefined;
-    selectSlotStore(selectedSlot, boardNum ?? undefined, active);
-  };
-
-  // Single unified live poller for currently selected slot & active board
+  // Single unified live poller for currently selected slot
   useEffect(() => {
     const raw = address || data?.address;
     if (!raw) return;
     const active = toHexAddress(raw);
     if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
 
-    fetchSlotDetails(selectedSlot, effectiveFetchCycle, active, true);
+    fetchSlotDetails(selectedSlot, undefined, active, true);
     const interval = setInterval(() => {
-      fetchSlotDetails(selectedSlot, effectiveFetchCycle, active, true);
+      fetchSlotDetails(selectedSlot, undefined, active, true);
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [address, data?.address, selectedSlot, effectiveFetchCycle, fetchSlotDetails]);
+  }, [address, data?.address, selectedSlot, fetchSlotDetails]);
 
   // Fetch direct partners list when active wallet changes
   useEffect(() => {
@@ -732,34 +716,6 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 {!isGlobalCycle2Unlocked && <span className="text-[9px] opacity-75">(Locked)</span>}
               </button>
             </div>
-
-            {/* COMPACT BOARD SWITCHER FOR RECYCLED SLOTS (e.g., Slot #01 Board #1 Settled vs Board #2 Live) */}
-            {isCurrentSlotUnlocked && snapshotCount > 0 && (
-              <div className="inline-flex items-center gap-0.5 p-0.5 bg-emerald-50/80 rounded-full border border-emerald-200/90">
-                <button
-                  type="button"
-                  onClick={() => handleBoardArchiveSelect(1)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                    viewingBoardNum === 1 || isViewingSnapshot
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-emerald-800 hover:bg-emerald-100/80"
-                  }`}
-                >
-                  Board #1 (14/14 • ${(6 * currentSlotCost).toFixed(0)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBoardArchiveSelect(null)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                    viewingBoardNum === null && !isViewingSnapshot
-                      ? "bg-[#1e60e5] text-white shadow-xs"
-                      : "text-slate-600 hover:bg-white/80"
-                  }`}
-                >
-                  Board #{snapshotCount + 1} Live ({liveFilledCount}/14)
-                </button>
-              </div>
-            )}
           </div>
           <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             {!isCurrentSlotUnlocked ? (
@@ -773,14 +729,14 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             ) : isViewingSnapshot || filledCount >= 14 ? (
               <span className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-emerald-700">
-                  Slot #{String(selectedSlot).padStart(2, "0")} • Board #{viewingBoardNum || 1} Completed (14/14 Seats Settled 🏆)
+                  Slot #{String(selectedSlot).padStart(2, "0")} • 14/14 Seats Settled 🏆
                 </span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-500">On-Chain Verified</span>
               </span>
             ) : (
               <span>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {snapshotCount > 0 ? `Board #${snapshotCount + 1} • ` : ""}{filledCount} / 14 Nodes Filled • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
+                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled{snapshotCount > 0 ? ` • ${snapshotCount} Completed Round${snapshotCount > 1 ? "s" : ""} (14/14 Settled)` : ""} • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
               </span>
             )}
           </p>

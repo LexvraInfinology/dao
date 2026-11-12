@@ -910,20 +910,42 @@ async function getUserFinancialsFast(userEthHex: string) {
   };
 }
 
-async function getUserAllSlotsCycles(userEthHex: string): Promise<{ recycles: number; highestSlot: number }> {
+function mergeLiveRankMilestones(royaltyTier: any, totalPlacements: number) {
+  const milestones = Math.max(royaltyTier?.milestones || 0, totalPlacements || 0);
+  const derivedTier =
+    milestones >= 168 ? 4 : milestones >= 126 ? 3 : milestones >= 84 ? 2 : milestones >= 42 ? 1 : 0;
+  const tierNumber = Math.max(royaltyTier?.tierNumber || 0, derivedTier);
+  return {
+    ...royaltyTier,
+    tierNumber,
+    tierName: RANK_TIER_NAMES[tierNumber] || royaltyTier?.tierName || "NONE",
+    milestones,
+    isAlphaAchieved: Boolean(royaltyTier?.isAlphaAchieved || milestones >= 42),
+    isPrimeAchieved: Boolean(royaltyTier?.isPrimeAchieved || milestones >= 84),
+    isEliteAchieved: Boolean(royaltyTier?.isEliteAchieved || milestones >= 126),
+    isCrownAchieved: Boolean(royaltyTier?.isCrownAchieved || milestones >= 168),
+  };
+}
+
+async function getUserAllSlotsCycles(
+  userEthHex: string
+): Promise<{ recycles: number; highestSlot: number; totalPlacements: number }> {
   const chunks = await callContract(MATRIX_HEX, "getAllSlotsStatus(address)", encodeAddress(userEthHex));
-  if (!chunks || chunks.length < 36) return { recycles: 0, highestSlot: 0 };
+  if (!chunks || chunks.length < 36) return { recycles: 0, highestSlot: 0, totalPlacements: 0 };
   let recycles = 0;
   let highestSlot = 0;
+  let totalPlacements = 0;
   for (let i = 0; i < 12; i++) {
     const unlocked = decodeBool(chunks[i]);
     if (unlocked) {
       highestSlot = i + 1;
-      const cycle = Number(decodeUint256(chunks[12 + i]));
+      const cycle = Math.max(1, Number(decodeUint256(chunks[12 + i])));
+      const liveFilled = Math.max(0, Number(decodeUint256(chunks[24 + i])));
       if (cycle > 1) recycles += cycle - 1;
+      totalPlacements += (cycle - 1) * 14 + liveFilled;
     }
   }
-  return { recycles, highestSlot };
+  return { recycles, highestSlot, totalPlacements };
 }
 
 async function countPaidSeatsFallback(userEthHex: string, maxSlotHint: number = 12): Promise<number> {
@@ -1113,7 +1135,11 @@ async function getLiveLeaderboardSnapshot(): Promise<LiveLeaderboardSnapshot> {
               getRegistryUser(addr).catch(() => null),
               getActiveDirects(addr).catch(() => 0),
               getUserRoyaltyTier(addr),
-              getUserAllSlotsCycles(addr).catch(() => ({ recycles: 0, highestSlot: fin.highestSlot || 1 })),
+              getUserAllSlotsCycles(addr).catch(() => ({
+                recycles: 0,
+                highestSlot: fin.highestSlot || 1,
+                totalPlacements: 0,
+              })),
             ]);
 
             if (!regUser?.id) {
@@ -1147,8 +1173,12 @@ async function getLiveLeaderboardSnapshot(): Promise<LiveLeaderboardSnapshot> {
               slotCycleInfo.recycles || 0,
               cycleCompletedByUser.get(addr.toLowerCase()) || 0
             );
-            const rankTier = royaltyTier?.tierNumber || 0;
-            const rankName = royaltyTier?.tierName || RANK_TIER_NAMES[rankTier] || "NONE";
+            const mergedMilestones = mergeLiveRankMilestones(
+              royaltyTier,
+              slotCycleInfo.totalPlacements || 0
+            );
+            const rankTier = mergedMilestones.tierNumber;
+            const rankName = mergedMilestones.tierName;
 
             return {
               address: addr,
@@ -1175,7 +1205,7 @@ async function getLiveLeaderboardSnapshot(): Promise<LiveLeaderboardSnapshot> {
               highestSlot,
               rankTier,
               rankName,
-              milestones: royaltyTier?.milestones || 0,
+              milestones: mergedMilestones.milestones,
             };
           })
         );
@@ -1683,6 +1713,10 @@ async function collectUserSlotsOverview(ethHex: string) {
   }
 
   const totalRecycles = slotSummaries.reduce((acc, s) => acc + s.recyclesCount, 0);
+  const totalPlacementsCount = slotSummaries.reduce(
+    (acc, s) => acc + s.cycleBreakdowns.reduce((bAcc: number, b: any) => bAcc + (b.filledNodes || 0), 0),
+    0
+  );
 
   return {
     stats,
@@ -1695,6 +1729,7 @@ async function collectUserSlotsOverview(ethHex: string) {
     totalEarnedTrob,
     totalEarnedUsd,
     totalRecycles,
+    totalPlacementsCount,
     slotSummaries,
   };
 }
@@ -1732,6 +1767,11 @@ export async function GET(
           ? Number((balanceTrob * overview.trobPriceUsd).toFixed(2))
           : 0;
 
+      const mergedProfileMilestones = mergeLiveRankMilestones(
+        royaltyTier,
+        overview.totalPlacementsCount
+      );
+
       return NextResponse.json({
         success: true,
         data: {
@@ -1755,8 +1795,8 @@ export async function GET(
           isQualified: qualified,
           isRegistered: overview.isRegistered,
           teamCount: directs,
-          rankTier: royaltyTier?.tierNumber || 0,
-          rankName: royaltyTier?.tierName || "NONE",
+          rankTier: mergedProfileMilestones.tierNumber,
+          rankName: mergedProfileMilestones.tierName,
           totalEarnings: overview.totalEarnedUsd,
           totalEarningsTrob: overview.totalEarnedTrob,
           totalEarningsUsd: overview.totalEarnedUsd,
@@ -1773,7 +1813,7 @@ export async function GET(
           highestUnlockedSlot: overview.isRegistered ? overview.highestUnlocked : 0,
           currentSlot: overview.isRegistered ? overview.highestUnlocked : 0,
           isSlot2Reserved: overview.highestUnlocked >= 2,
-          rankMilestones: royaltyTier,
+          rankMilestones: mergedProfileMilestones,
           joinedAt:
             regUser?.regTime && regUser.regTime > 0n
               ? new Date(Number(regUser.regTime) * 1000).toISOString()
@@ -1939,7 +1979,7 @@ export async function GET(
           slotCostUsd: overview.unitCostUsd,
           slotCostTrob: overview.unitCostTrob,
           isQualified: qualified,
-          rankMilestones: royaltyTier,
+          rankMilestones: mergeLiveRankMilestones(royaltyTier, overview.totalPlacementsCount),
           activeDirectsCount: directs,
           sponsorAddress: sponsor,
           isUpline1Qualified,

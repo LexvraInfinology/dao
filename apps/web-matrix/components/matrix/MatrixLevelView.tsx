@@ -61,7 +61,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
           return {
             level: s.slotNumber,
             num: String(s.slotNumber).padStart(2, "0"),
-            status: recycles > 0 ? `Board #${recycles + 1} Live` : (isCompleted ? "Completed" : (s.isUnlocked ? "Active" : "Locked")),
+            status: recycles > 0 ? `Recycled ×${recycles} Live` : (isCompleted ? "Completed" : (s.isUnlocked ? "Active" : "Locked")),
             statusType: isCompleted ? "completed" : (s.isUnlocked ? "active" : "locked"),
             isCompleted,
             isBoard1Settled,
@@ -140,12 +140,12 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                   {lvl.isCompleted ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
                                       <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                                      Board #1 Settled 🏆
+                                      14/14 Settled 🏆
                                     </span>
                                   ) : lvl.recycles > 0 ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#2563eb] ml-1">
                                       <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
-                                      Board #{lvl.recycles + 1} Live ⚡
+                                      Recycled ×{lvl.recycles} • Live ⚡
                                     </span>
                                   ) : lvl.isStandby ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-amber-600 ml-1">
@@ -162,11 +162,11 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
 
                                 <div className="text-[11.5px] font-medium text-[#475569] mt-1">
                                   {lvl.isCompleted
-                                    ? `14 / 14 Nodes Completed • Board #1 Settled 🏆`
+                                    ? `14 / 14 Nodes Completed • Settled 🏆`
                                     : lvl.recycles > 0
-                                    ? `Board #1: 14/14 ($${lvl.settledBoardUsd.toFixed(0)}) • Board #${lvl.recycles + 1}: ${lvl.nodesFilled}/${lvl.totalNodes} Live`
+                                    ? `14/14 Settled ($${lvl.settledBoardUsd.toFixed(0)}) • ${lvl.nodesFilled}/${lvl.totalNodes} Live`
                                     : lvl.isStandby
-                                    ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Board Complete"
+                                    ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Complete"
                                     : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes • Next: Seat #${Math.min(14, lvl.nodesFilled + 1)}`}
                                 </div>
 
@@ -182,7 +182,7 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                   <span>${Number(lvl.earned).toFixed(2)} USD</span>
                                   {lvl.recycles > 0 ? (
                                     <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
-                                      (${lvl.settledBoardUsd.toFixed(0)} Board #1 + ${lvl.liveBoardUsd.toFixed(0)} Live)
+                                      (${lvl.settledBoardUsd.toFixed(0)} Settled + ${lvl.liveBoardUsd.toFixed(0)} Live)
                                     </span>
                                   ) : Number(lvl.earned) > 0 ? (
                                     <span className="text-[11px] font-bold text-emerald-600 ml-1.5">

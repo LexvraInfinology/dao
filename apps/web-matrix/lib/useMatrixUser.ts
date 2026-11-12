@@ -60,7 +60,7 @@ export function useMatrixUser() {
   const refreshAll = useCallback(
     async (force = false, followUp = false) => {
       const curSlot = useMatrixStore.getState().selectedSlotNumber || 1;
-      const curCycle = useMatrixStore.getState().selectedCycle || 1;
+      const curCycle = useMatrixStore.getState().selectedCycle ?? undefined;
       await Promise.all([
         fetchProfile(force),
         fetchDashboard(undefined, force),
@@ -74,7 +74,7 @@ export function useMatrixUser() {
       if (followUp) {
         setTimeout(async () => {
           const s = useMatrixStore.getState().selectedSlotNumber || 1;
-          const c = useMatrixStore.getState().selectedCycle || 1;
+          const c = useMatrixStore.getState().selectedCycle ?? undefined;
           await Promise.all([
             fetchProfile(true),
             fetchDashboard(undefined, true),
@@ -107,7 +107,7 @@ export function useMatrixUser() {
     // 12-second live polling interval directly verifying against blockchain state smoothly
     const interval = setInterval(() => {
       const s = useMatrixStore.getState().selectedSlotNumber || 1;
-      const c = useMatrixStore.getState().selectedCycle || 1;
+      const c = useMatrixStore.getState().selectedCycle ?? undefined;
       Promise.all([
         fetchProfile(true),
         fetchDashboard(undefined, true),

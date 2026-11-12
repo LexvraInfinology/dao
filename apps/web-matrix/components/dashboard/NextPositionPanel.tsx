@@ -125,7 +125,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         const remainder = sEarned - completedCycles * cycleFullUsd;
         for (let c = 1; c <= completedCycles; c++) {
           rows.push({
-            label: `Slot #${slotNum} • Board #${c}`,
+            label: `Slot #${slotNum} (R${c})`,
             formula: `6 × $${slotBaseUsd.toFixed(0)} = $${cycleFullUsd.toFixed(0)}`,
             amount: cycleFullUsd,
           });
@@ -133,7 +133,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
         if (remainder > 0) {
           const payouts = Math.round(remainder / slotBaseUsd);
           rows.push({
-            label: `Slot #${slotNum} • Board #${completedCycles + 1} (Live)`,
+            label: `Slot #${slotNum} (Live)`,
             formula: payouts > 1 ? `${payouts} × $${slotBaseUsd.toFixed(0)} = $${remainder}` : `+$${remainder}`,
             amount: remainder,
           });
@@ -183,7 +183,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Board #{effectiveSelectedCycle} Settled (14/14 🏆)
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • 14/14 Settled 🏆
             </span>
           ) : isSlotStandby ? (
           <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white mb-3.5">
@@ -197,14 +197,14 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               </span>
             </div>
             <p className="text-[11.5px] font-semibold text-slate-700 leading-relaxed">
-              You own this slot tier! Placements will actively route and fill on this board as soon as your Slot #{activeSlotNumber - 1} board completes all 14 positions.
+              You own this slot tier! Placements will actively route and fill on this slot as soon as your Slot #{activeSlotNumber - 1} completes all 14 positions.
             </p>
           </div>
         ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
               {loadingDetails && !details
                 ? `Syncing Slot #${String(activeSlotNumber).padStart(2, "0")}...`
-                : `Slot #${String(activeSlotNumber).padStart(2, "0")} • Board #${currentCycle || 1} Live`}
+                : `Slot #${String(activeSlotNumber).padStart(2, "0")} • Cycle #0${currentCycle || 1} Live`}
             </span>
           )}
         </div>
@@ -229,7 +229,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               {!isSlotUnlocked
                 ? `Slot #${String(activeSlotNumber).padStart(2, "0")} • Awaiting Auto-Unlock ($0 Out-of-Pocket)`
                 : isViewingSnapshot
-                ? `$${cost.toFixed(2)} Tier • Board #${effectiveSelectedCycle} Settled 🏆`
+                ? `$${cost.toFixed(2)} Tier • 14/14 Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
             </span>
           </div>
@@ -287,7 +287,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
                 <>
                   <span className="flex items-center gap-1.5 text-emerald-900">
                     <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>Board #{effectiveSelectedCycle} Settled:</span>
+                    <span>Cycle #0{effectiveSelectedCycle} Settled:</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
                     14/14 Settled

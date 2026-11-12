@@ -193,7 +193,7 @@ export function LeaderboardPodium({
 
                 <div className="min-w-0">
                   <span className="text-[9.5px] sm:text-[10px] xl:text-[10.5px] text-[#64748b] block font-medium whitespace-nowrap">
-                    Cycles
+                    Cycles Settled
                   </span>
                   <span className="text-[14px] sm:text-[15px] font-black text-[#2563eb] block mt-0.5 whitespace-nowrap">
                     {node.cycles}

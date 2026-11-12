@@ -114,7 +114,12 @@ export function LeaderboardRankingsTable({
                 <th className="py-3.5 px-4 min-w-[210px]">MEMBER & WALLET ADDRESS</th>
                 <th className="py-3.5 px-4 text-center">TIER</th>
                 <th className="py-3.5 px-4 text-center">DIRECTS</th>
-                <th className="py-3.5 px-4 text-center">CYCLES</th>
+                <th className="py-3.5 px-4 text-center" title="Completed 14-Seat Board Cycles">
+                  <div className="flex flex-col items-center">
+                    <span>CYCLES</span>
+                    <span className="text-[8.5px] font-medium text-[#94a3b8] tracking-normal">(SETTLED)</span>
+                  </div>
+                </th>
                 <th className="py-3.5 px-4 text-right">MATRIX EARNINGS</th>
                 <th className="py-3.5 px-4 text-right">7D EARNINGS</th>
               </tr>
@@ -220,9 +225,14 @@ export function LeaderboardRankingsTable({
                         {node.directPartners.toLocaleString()}
                       </td>
 
-                      {/* Matrix Cycles */}
-                      <td className="py-3 px-4 text-center font-bold text-[#2563eb]">
-                        {node.matrixCycles}
+                      {/* Matrix Cycles (Completed / Settled Boards) */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-black text-[#2563eb] text-[13.5px]">
+                          {node.matrixCycles}
+                        </span>
+                        <span className="text-[9.5px] text-[#64748b] block font-medium">
+                          {node.matrixCycles > 0 ? `${node.matrixCycles} Settled` : "0 Settled"}
+                        </span>
                       </td>
 
                       {/* Big $ USD + Small Exact TROB */}
@@ -320,7 +330,7 @@ export function LeaderboardRankingsTable({
                   <div className="text-[10.5px] text-[#64748b] mt-0.5 flex items-center gap-1">
                     <span>{node.directPartners.toLocaleString()} Direct</span>
                     <span className="text-[#cbd5e1]">•</span>
-                    <span className="font-extrabold text-[#2563eb]">{node.matrixCycles} Cyc</span>
+                    <span className="font-extrabold text-[#2563eb]">{node.matrixCycles} Settled</span>
                   </div>
                 </div>
               </div>

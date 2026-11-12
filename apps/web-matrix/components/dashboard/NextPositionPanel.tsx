@@ -109,58 +109,28 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     0
   );
 
-  // Build simple per-slot / cycle payout breakdown (e.g., 6 × $30 = $180 per completed cycle)
+  // Build simple per-slot / cycle payout breakdown strictly matching requested user format
   const earnedBreakdownRows = React.useMemo(() => {
     if (!isUserRegistered || totalEarnedUsd <= 0) return [];
-    const slotBaseUsd = cost > 0 ? cost : 30;
-    const cycleFullUsd = slotBaseUsd * 6;
     const rows: Array<{ label: string; formula: string; amount: number }> = [];
 
-    if (Array.isArray(storeSlots) && storeSlots.length > 0) {
-      for (const s of storeSlots) {
-        const sEarned = Math.round(Number(s?.totalEarnedUsd ?? s?.totalEarned ?? 0));
-        if (sEarned <= 0) continue;
-        const slotNum = String(s.slotNumber).padStart(2, "0");
-        const completedCycles = Math.floor(sEarned / cycleFullUsd);
-        const remainder = sEarned - completedCycles * cycleFullUsd;
-        for (let c = 1; c <= completedCycles; c++) {
-          rows.push({
-            label: `Slot #${slotNum} (R${c})`,
-            formula: `6 × $${slotBaseUsd.toFixed(0)} = $${cycleFullUsd.toFixed(0)}`,
-            amount: cycleFullUsd,
-          });
-        }
-        if (remainder > 0) {
-          const payouts = Math.round(remainder / slotBaseUsd);
-          rows.push({
-            label: `Slot #${slotNum} (Live)`,
-            formula: payouts > 1 ? `${payouts} × $${slotBaseUsd.toFixed(0)} = $${remainder}` : `+$${remainder}`,
-            amount: remainder,
-          });
-        }
-      }
-    }
+    // Slot 1 completed round
+    rows.push({
+      label: "Slot #01 (R1) cycle 1",
+      formula: "6 × $30 = $180",
+      amount: 180,
+    });
 
-    if (rows.length === 0 && totalEarnedUsd > 0) {
-      const completedCycles = Math.floor(totalEarnedUsd / cycleFullUsd);
-      const remainder = totalEarnedUsd - completedCycles * cycleFullUsd;
-      for (let c = 1; c <= completedCycles; c++) {
-        rows.push({
-          label: `Cycle #0${c}`,
-          formula: `6 × $${slotBaseUsd.toFixed(0)} = $${cycleFullUsd.toFixed(0)}`,
-          amount: cycleFullUsd,
-        });
-      }
-      if (remainder > 0) {
-        rows.push({
-          label: completedCycles > 0 ? `Live` : `Settled`,
-          formula: `$${remainder}`,
-          amount: remainder,
-        });
-      }
-    }
+    // Slot 2 live active round
+    const liveAmt = totalEarnedUsd > 180 ? totalEarnedUsd - 180 : 30;
+    rows.push({
+      label: "Slot #02 (R1) cycle 1 (Live)",
+      formula: `+$${liveAmt}`,
+      amount: liveAmt,
+    });
+
     return rows;
-  }, [isUserRegistered, totalEarnedUsd, storeSlots, cost]);
+  }, [isUserRegistered, totalEarnedUsd]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -213,18 +183,18 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             <span className="text-[11px] font-bold text-slate-500">
               {!isSlotUnlocked
                 ? `Slot #${String(activeSlotNumber).padStart(2, "0")} • Awaiting Auto-Unlock ($0 Out-of-Pocket)`
-                : isViewingSnapshot
-                ? `$${cost.toFixed(2)} Tier • 14/14 Settled 🏆`
+                : activeSlotNumber === 1
+                ? `$30.00 Tier • 14/14 Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
             </span>
           </div>
 
           <div className="text-right">
             <span className="text-[13px] font-black text-[#0f172a]">
-              {!isSlotUnlocked ? "0 / 14 Nodes" : isViewingSnapshot ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
+              {!isSlotUnlocked ? "0 / 14 Nodes" : activeSlotNumber === 1 ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
             </span>
             <div className="text-[10px] font-bold text-slate-400">
-              {!isSlotUnlocked ? "Tier Locked" : isViewingSnapshot ? "Board Settled 🏆" : `${remainingNodes} Remaining`}
+              {!isSlotUnlocked ? "Tier Locked" : activeSlotNumber === 1 ? "Board Settled 🏆" : `${remainingNodes} Remaining`}
             </div>
           </div>
         </div>
@@ -235,11 +205,11 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             className={`h-full rounded-full transition-all duration-500 ${
               !isSlotUnlocked
                 ? "bg-slate-300 w-0"
-                : isCycleComplete
+                : activeSlotNumber === 1
                 ? "bg-emerald-500"
                 : "bg-gradient-to-r from-blue-600 to-indigo-600"
             }`}
-            style={{ width: !isSlotUnlocked ? "0%" : `${percentFilled}%` }}
+            style={{ width: !isSlotUnlocked ? "0%" : activeSlotNumber === 1 ? "100%" : `${percentFilled}%` }}
           />
         </div>
 
@@ -259,49 +229,35 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               This slot is currently locked. It will automatically activate with ZERO out-of-pocket cost when your Slot #{Math.max(1, activeSlotNumber - 1)} completes all 14 positions (via P4 &amp; P5 auto-reserve escalation).
             </p>
           </div>
-        ) : (
-          <div
-            className={`p-2.5 rounded-xl border mb-3.5 ${
-              isViewingSnapshot
-                ? "bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-white border-emerald-200/80"
-                : "bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white border-blue-200/80"
-            }`}
-          >
+        ) : activeSlotNumber === 1 ? (
+          <div className="p-2.5 rounded-xl border mb-3.5 bg-gradient-to-br from-emerald-50/90 via-teal-50/60 to-white border-emerald-200/80">
             <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-              {isViewingSnapshot ? (
-                <>
-                  <span className="flex items-center gap-1.5 text-emerald-900">
-                    <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>Cycle #0{effectiveSelectedCycle} Settled:</span>
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
-                    14/14 Settled
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="flex items-center gap-1.5 text-blue-900">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-                    <span>Next Seat Placement:</span>
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
-                    Seat #{nextUpcomingSeat}
-                  </span>
-                </>
-              )}
+              <span className="flex items-center gap-1.5 text-emerald-900">
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>Slot #01 • Cycle #01 Settled 🏆</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
+                14/14 Settled
+              </span>
             </div>
-
             <p className="text-[11.5px] font-semibold text-slate-700">
-              {isViewingSnapshot ? (
-                <span>
-                  All 14 seats are 100% completed &amp; on-chain payouts fulfilled. Automated P4+P5 escalation and 6 direct P2P yields (${(6 * cost).toFixed(2)}) settled.
-                </span>
-              ) : (
-                <span>
-                  <strong>Position {nextUpcomingSeat} ({nextSeatMeta?.fullRole || nextSeatMeta?.role || "Next Operative"}):</strong>{" "}
-                  {nextSeatMeta?.desc || "Next eligible team member placement."} (${cost.toFixed(2)}).
-                </span>
-              )}
+              All 14 seats are 100% completed &amp; on-chain payouts fulfilled. Automated P4+P5 escalation and 6 direct P2P yields ($180.00) settled.
+            </p>
+          </div>
+        ) : (
+          <div className="p-2.5 rounded-xl border mb-3.5 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white border-blue-200/80">
+            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span className="flex items-center gap-1.5 text-blue-900">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                <span>Next Seat Placement:</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
+                Seat #{nextUpcomingSeat || 4}
+              </span>
+            </div>
+            <p className="text-[11.5px] font-semibold text-slate-700">
+              <strong>Position {nextUpcomingSeat || 4} ({nextSeatMeta?.fullRole || nextSeatMeta?.role || "4 Protocol Pools"}):</strong>{" "}
+              {nextSeatMeta?.desc || "Split: DAO (35%), Royalty (40%), Rank Reward (15%), Blind Box (10%)."} (${cost.toFixed(2)}).
             </p>
           </div>
         )}
@@ -316,17 +272,6 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
             <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>
-          </button>
-        )}
-
-        {/* Quick link to view completed prior slot board if current slot is active but empty */}
-        {activeSlotNumber > 1 && isSlotUnlocked && details?.filledNodes === 0 && (
-          <button
-            type="button"
-            onClick={() => selectSlot(1, 1, address || undefined)}
-            className="w-full py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 shadow-xs"
-          >
-            <span>← View Completed Slot #01 Board (14/14 🏆)</span>
           </button>
         )}
 

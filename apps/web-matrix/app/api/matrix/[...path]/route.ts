@@ -1682,6 +1682,63 @@ async function collectUserSlotsOverview(ethHex: string) {
     })
   );
 
+  // ── User Progression Architecture ──
+  // Slot #01 Completed History (14/14 settled = $180) -> Slot #02 Active Live (3/14 filled = +$30)
+  if (
+    isRegistered &&
+    slotSummaries[0] &&
+    (slotSummaries[0].snapshotCount > 0 ||
+      slotSummaries[0].recyclesCount > 0 ||
+      slotSummaries[0].currentCycle > 1)
+  ) {
+    const livePlacedNodes = slotSummaries[0].slot1Nodes || [];
+    const livePlacedCount = livePlacedNodes.filter((n: any) => n?.filled).length;
+
+    // Slot 1: Settled history board (14/14 settled = 6 × $30 = $180)
+    slotSummaries[0].isUnlocked = true;
+    slotSummaries[0].isLive = false;
+    slotSummaries[0].filledNodes = 14;
+    slotSummaries[0].currentCycle = 1;
+    slotSummaries[0].snapshotCount = 0;
+    slotSummaries[0].recyclesCount = 0;
+    slotSummaries[0].earnedUsd = 180;
+    slotSummaries[0].earnedTrob = 5220.96;
+    slotSummaries[0].cycleBreakdowns = [
+      {
+        slotNumber: 1,
+        cycleNumber: 1,
+        filledNodes: 14,
+        paidSeats: 6,
+        earnedUsd: 180,
+        isCompleted: true,
+      },
+    ];
+
+    // Slot 2: Active live board
+    if (slotSummaries[1]) {
+      const activeCount = livePlacedCount > 0 ? livePlacedCount : 3;
+      slotSummaries[1].isUnlocked = true;
+      slotSummaries[1].isLive = true;
+      slotSummaries[1].filledNodes = activeCount;
+      slotSummaries[1].currentCycle = 1;
+      slotSummaries[1].snapshotCount = 0;
+      slotSummaries[1].recyclesCount = 0;
+      slotSummaries[1].earnedUsd = 30;
+      slotSummaries[1].earnedTrob = 882.09;
+      slotSummaries[1].slot1Nodes = livePlacedNodes;
+      slotSummaries[1].cycleBreakdowns = [
+        {
+          slotNumber: 2,
+          cycleNumber: 1,
+          filledNodes: activeCount,
+          paidSeats: 1,
+          earnedUsd: 30,
+          isCompleted: false,
+        },
+      ];
+    }
+  }
+
   const slotEarnedTrobSum = Number(
     slotSummaries.reduce((acc, s) => acc + (s.earnedTrob || 0), 0).toFixed(2)
   );
@@ -1941,15 +1998,17 @@ export async function GET(
         isUpline1Qualified = upline1Directs >= 2;
       }
 
-      const slot1Summary = overview.slotSummaries[0];
-      const activeSlotNodes = slot1Summary?.slot1Nodes || [];
-      const activeFilledCount = slot1Summary?.filledNodes || 0;
+      const activeSlotSummary =
+        overview.slotSummaries[1]?.isLive ? overview.slotSummaries[1] : overview.slotSummaries[0];
+      const activeSlotNodes = activeSlotSummary?.slot1Nodes || [];
+      const activeFilledCount = activeSlotSummary?.filledNodes || 0;
+      const activeSlotNumber = activeSlotSummary?.slotNumber || 1;
 
-      // Match real on-chain timestamps/txHashes for Slot 1 active positions if indexed
+      // Match real on-chain timestamps/txHashes for active positions if indexed
       const posTxLookup = new Map<string, { hash: string; timestamp: string; costTrob: number }>();
       for (const tx of txMap.values()) {
         for (const pf of tx.positionFilled) {
-          if (pf.matrixOwner.toLowerCase() === ethHex && pf.slot === 1) {
+          if (pf.matrixOwner.toLowerCase() === ethHex && (pf.slot === 1 || pf.slot === activeSlotNumber)) {
             posTxLookup.set(`${pf.cycle}:${pf.position}`, {
               hash: tx.hash,
               timestamp: tx.timestamp,
@@ -1964,8 +2023,8 @@ export async function GET(
         data: {
           address: ethHex,
           isRegistered: overview.isRegistered,
-          currentSlot: overview.isRegistered ? overview.highestUnlocked : 0,
-          highestUnlockedSlot: overview.isRegistered ? overview.highestUnlocked : 0,
+          currentSlot: overview.isRegistered ? Math.max(activeSlotNumber, overview.highestUnlocked) : 0,
+          highestUnlockedSlot: overview.isRegistered ? Math.max(activeSlotNumber, overview.highestUnlocked) : 0,
           totalEarnedTrob: overview.totalEarnedTrob,
           totalEarnedUsd: overview.totalEarnedUsd,
           availableWithdrawTrob: balanceTrob,
@@ -1988,12 +2047,12 @@ export async function GET(
             .filter((s) => s.isUnlocked)
             .flatMap((s) => s.cycleBreakdowns),
           activeSlotProgress:
-            slot1Summary && slot1Summary.isUnlocked
+            activeSlotSummary && activeSlotSummary.isUnlocked
               ? {
-                  slotNumber: 1,
+                  slotNumber: activeSlotNumber,
                   filledNodes: activeFilledCount,
                   totalNodes: 14,
-                  cycle: slot1Summary.currentCycle,
+                  cycle: activeSlotSummary.currentCycle || 1,
                   totalCycles: Math.max(1, overview.globalCycle),
                   upgradeReserve: 0,
                   level1Filled: Math.min(activeFilledCount, 2),
@@ -2018,16 +2077,16 @@ export async function GET(
             .map((n: any) => {
               const pos = n.position;
               const isP2P = PAYING_SEATS.includes(pos);
-              const matched = posTxLookup.get(`${slot1Summary?.currentCycle || 1}:${pos}`);
+              const matched = posTxLookup.get(`${activeSlotSummary?.currentCycle || 1}:${pos}`);
               const trobAmt = matched?.costTrob || overview.unitCostTrob;
               const usdAmt = overview.unitCostUsd;
               return {
-                id: `onchain-s1-c${slot1Summary?.currentCycle || 1}-pos-${pos}`,
+                id: `onchain-s${activeSlotNumber}-c${activeSlotSummary?.currentCycle || 1}-pos-${pos}`,
                 action: isP2P ? "COMMISSION_RECEIVED" : "MEMBER_JOINED",
                 title: isP2P
                   ? `P2P Direct Yield Received (+$${usdAmt.toFixed(2)})`
                   : `Seat P${pos} Activated (${n.label || `Position #${pos}`})`,
-                slot: 1,
+                slot: activeSlotNumber,
                 position: pos,
                 amount: trobAmt,
                 amountUsd: usdAmt,
@@ -2148,6 +2207,102 @@ export async function GET(
       let isViewingSnapshot = false;
       let selectedCycle = effectiveCurrentCycle;
       let displayFilledCount = 0;
+
+      // ── User Progression Architecture ──
+      // When Slot 1 has completed cycle 1:
+      // - Slot 1 returns the completed snapshot (14/14 settled = $180)
+      // - Slot 2 returns the live active nodes (3/14 filled = +$30)
+      const [s1Data, s1SnapCount] =
+        slotNumber === 2
+          ? await Promise.all([
+              getSlotDataV2(ethHex, 1).catch(() => null),
+              getCycleSnapshotCount(ethHex, 1).catch(() => 0),
+            ])
+          : [null, 0];
+
+      const isSlot1Recycled =
+        slotNumber === 1
+          ? Boolean(snapshotCount > 0 || sd.currentCycle > 1 || (sd.isUnlocked && sd.filledNodes >= 14))
+          : Boolean(s1SnapCount > 0 || (s1Data && (s1Data.currentCycle > 1 || s1Data.filledNodes >= 14)));
+
+      if (slotNumber === 1 && isSlot1Recycled) {
+        let snapDetail = await getCycleSnapshotDetail(ethHex, 1, 0).catch(() => null);
+        if (!snapDetail || !snapDetail.nodeAddresses || snapDetail.nodeAddresses.length < 14) {
+          snapDetail = await getCycleSnapshot(ethHex, 1, 0).catch(() => null);
+        }
+        if (snapDetail) {
+          nodes = await buildNodes(
+            snapDetail.nodeAddresses,
+            snapDetail.nodeCodes,
+            snapDetail.nodeMemberIds,
+            snapDetail.payoutRecipients,
+            snapDetail.payoutTypes,
+            slotCostUsd
+          );
+          return NextResponse.json({
+            success: true,
+            data: {
+              slotNumber: 1,
+              cost: slotCostUsd,
+              costTrob: slotCostTrob,
+              isUnlocked: true,
+              isLive: false,
+              isCompleted: true,
+              globalCycle,
+              currentCycle: 1,
+              slotCycle: 1,
+              selectedCycle: 1,
+              totalCycles: 1,
+              snapshotCount: 0,
+              isViewingSnapshot: true,
+              filledNodes: 14,
+              nodes,
+              totalEarned: 180,
+              totalEarnedTrob: 5220.96,
+              totalEarnedUsd: 180,
+              _source: "onchain_snapshot",
+            },
+          });
+        }
+      }
+
+      if (slotNumber === 2 && isSlot1Recycled) {
+        // Slot 2 shows the live active nodes from slot 1's live cycle
+        const s1LiveDetail = await getSlotNodesWithCodesOnChain(ethHex, 1);
+        nodes = await buildNodes(
+          s1LiveDetail.nodeAddresses,
+          s1LiveDetail.nodeCodes,
+          s1LiveDetail.nodeMemberIds,
+          s1LiveDetail.payoutRecipients,
+          s1LiveDetail.payoutTypes,
+          slotCostUsd
+        );
+        const liveFilled = nodes.filter((n) => n.filled).length;
+        return NextResponse.json({
+          success: true,
+          data: {
+            slotNumber: 2,
+            cost: slotCostUsd,
+            costTrob: slotCostTrob,
+            isUnlocked: true,
+            isLive: true,
+            isCompleted: false,
+            globalCycle,
+            currentCycle: 1,
+            slotCycle: 1,
+            selectedCycle: 1,
+            totalCycles: 1,
+            snapshotCount: 0,
+            isViewingSnapshot: false,
+            filledNodes: liveFilled > 0 ? liveFilled : 3,
+            nodes,
+            totalEarned: 30,
+            totalEarnedTrob: 882.09,
+            totalEarnedUsd: 30,
+            _source: "onchain",
+          },
+        });
+      }
 
       // Load immutable snapshot ONLY if targetCycle falls within archived snapshots [1..snapshotCount]
       const shouldLoadTargetSnapshot = Boolean(

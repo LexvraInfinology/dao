@@ -1075,8 +1075,20 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
 
 /** Fetch all 12 slots summary status directly from on-chain smart contract */
 export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
-  const coder = new ethers.AbiCoder();
   const userHex = toHexAddress(userAddress);
+  if (typeof window !== "undefined" && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
+    try {
+      const res = await fetch(`/api/matrix/slots/${userHex}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length === 12) {
+          return json.data;
+        }
+      }
+    } catch {}
+  }
+
+  const coder = new ethers.AbiCoder();
   const param = coder.encode(["address"], [userHex]).slice(2);
 
   const raw = await queryTrobConstant(

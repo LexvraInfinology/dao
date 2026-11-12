@@ -8,6 +8,7 @@ import {
   type ProtocolPoolsStats,
   getUserClaimablePoolRewards,
   type UserClaimablePoolRewards,
+  getLiveTrobPriceUsd,
   claimSalaryRoyaltyOnChain,
   claimMilestoneRewardOnChain,
   claimMagicBoxRewardOnChain,
@@ -29,6 +30,7 @@ export function ProtocolPoolsPanel({
   isQualified = true,
 }: ProtocolPoolsPanelProps) {
   const [poolStats, setPoolStats] = useState<ProtocolPoolsStats | null>(null);
+  const [trobPrice, setTrobPrice] = useState<number>(0);
   const userAddress = useUserStore((s) => s.address);
   const [claimableRewards, setClaimableRewards] = useState<UserClaimablePoolRewards | null>(null);
   const [claimingPool, setClaimingPool] = useState<string | null>(null);
@@ -54,10 +56,12 @@ export function ProtocolPoolsPanel({
   }, [userAddress]);
 
   useEffect(() => {
-    getOnChainProtocolPoolsStats().then(setPoolStats).catch(() => {});
-    const interval = setInterval(() => {
+    const refreshStatsAndPrice = () => {
       getOnChainProtocolPoolsStats().then(setPoolStats).catch(() => {});
-    }, 30000);
+      getLiveTrobPriceUsd().then((p) => { if (p > 0) setTrobPrice(p); }).catch(() => {});
+    };
+    refreshStatsAndPrice();
+    const interval = setInterval(refreshStatsAndPrice, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -345,7 +349,7 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-[18px] sm:text-[20px] font-black font-mono text-[#0f172a]">
-                  ${((claimableRewards?.totalClaimableTrob || 0) * 0.056).toFixed(2)} USD
+                  ${trobPrice > 0 ? ((claimableRewards?.totalClaimableTrob || 0) * trobPrice).toFixed(2) : "0.00"} USD
                 </span>
                 <span className="text-[11px] font-bold text-[#64748b]">
                   ({(claimableRewards?.totalClaimableTrob || 0).toFixed(2)} TROB)
@@ -403,13 +407,13 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  {((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 34677.56)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[12px] text-[#2868e8] font-black">TROB</span>
                 <span className="text-[10px] text-[#657895] font-semibold">(Streamed)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~${(((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 34677.56)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${trobPrice > 0 ? (((poolStats ? (poolStats.dao.streamedTrob || (poolStats.vault.totalRoutedFromUsers * 0.35)) : 0)) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Streamed instantly to active Genesis DAO council member wallets upon every matrix placement. No idle balance.
@@ -440,13 +444,13 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  {((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 39631.49)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {(poolStats ? poolStats.salaryPool.pendingBalanceTrob : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[12px] text-[#2868e8] font-black">TROB</span>
                 <span className="text-[10px] text-[#657895] font-semibold">(Pending)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~${(((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 39631.49)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${trobPrice > 0 ? ((poolStats ? poolStats.salaryPool.pendingBalanceTrob : 0) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.
@@ -501,13 +505,13 @@ export function ProtocolPoolsPanel({
               </div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#7256d8]">
-                  {((poolStats ? (poolStats.magicBoxPool.balanceTrob ?? 9907.87) : 9907.87)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {(poolStats?.magicBoxPool?.balanceTrob ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[12px] text-[#7256d8] font-black">TROB</span>
                 <span className="text-[10px] text-[#657895] font-semibold">(Pooled)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~${(((poolStats ? (poolStats.magicBoxPool.balanceTrob ?? 9907.87) : 9907.87)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${trobPrice > 0 ? ((poolStats?.magicBoxPool?.balanceTrob ?? 0) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Distributed randomly to active members upon timer expiry. Strictly 1x lifetime gift for NEW members each quarter.
@@ -517,7 +521,7 @@ export function ProtocolPoolsPanel({
                 <span className="font-mono font-bold text-[#b97a17]">
                   {milestoneCountdown.totalSeconds > 0
                     ? `${milestoneCountdown.days}d ${milestoneCountdown.hours}h ${milestoneCountdown.minutes}m`
-                    : "52d 19h 48m"}
+                    : "Pending Settlement"}
                 </span>
               </div>
             </div>
@@ -545,13 +549,13 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#0e9f79]">
-                  {((poolStats ? poolStats.rewardPool.balanceTrob : 29723.62)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {(poolStats ? poolStats.rewardPool.balanceTrob : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <span className="text-[12px] text-[#0e9f79] font-black">TROB</span>
                 <span className="text-[10px] text-[#657895] font-semibold">(Reserve)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~${(((poolStats ? poolStats.rewardPool.balanceTrob : 29723.62)) * 0.038).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)
+                (~${trobPrice > 0 ? ((poolStats ? poolStats.rewardPool.balanceTrob : 0) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Settles on the 21st monthly. Shared equally among all cycle achievers of each rank to prevent early bird drain.
@@ -680,8 +684,8 @@ export function ProtocolPoolsPanel({
         isOpen={showBlindBoxModal}
         onClose={() => setShowBlindBoxModal(false)}
         userAddress={userAddress || ""}
-        claimableAmountTrob={claimableRewards?.magicBoxClaimableTrob || 8.93}
-        claimableAmountUsd={(claimableRewards?.magicBoxClaimableTrob || 8.93) * 0.056}
+        claimableAmountTrob={claimableRewards?.magicBoxClaimableTrob ?? 0}
+        claimableAmountUsd={(claimableRewards?.magicBoxClaimableTrob ?? 0) * trobPrice}
         onRewardClaimed={refreshClaimable}
       />
 

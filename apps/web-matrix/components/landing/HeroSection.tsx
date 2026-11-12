@@ -511,7 +511,13 @@ export function HeroSection() {
               </div>
 
               <Link
-                href={isRegistered ? "/dashboard" : "/gate"}
+                href={
+                  isRegistered
+                    ? "/dashboard"
+                    : typeof window !== "undefined" && window.location.search
+                      ? `/gate${window.location.search}`
+                      : "/gate"
+                }
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3 px-4 rounded-xl bg-[#1d69f0] hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all cursor-pointer text-center"
               >

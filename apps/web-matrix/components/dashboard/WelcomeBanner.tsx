@@ -9,11 +9,12 @@ export function WelcomeBanner() {
   const profile = useUserStore((s) => s.profile);
   const sponsor = profile?.sponsorAddress;
 
-  const isVaultSponsor =
-    !sponsor ||
-    Boolean(profile?.isVaultSponsor) ||
-    sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
-    (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor);
+  const isVaultSponsor = Boolean(
+    profile?.isVaultSponsor ||
+    (sponsor &&
+      (sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+        (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor)))
+  );
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-3.5 gap-2">

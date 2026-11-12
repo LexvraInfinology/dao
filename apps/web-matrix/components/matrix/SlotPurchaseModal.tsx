@@ -36,10 +36,10 @@ export function SlotPurchaseModal({
   const [step, setStep] = useState<"ready_to_join" | "joining" | "success">("ready_to_join");
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
-  const [liveTrobCoins, setLiveTrobCoins] = useState<string>("807.54");
-  const [livePriceUsd, setLivePriceUsd] = useState<number>(0.03715);
+  const [liveTrobCoins, setLiveTrobCoins] = useState<string>("");
+  const [livePriceUsd, setLivePriceUsd] = useState<number>(0);
 
-  const costUsd = "30.00";
+  const costUsd = (cost > 0 ? cost : 30).toFixed(2);
   const slotStr = String(slotNumber).padStart(2, "0");
 
   // Fetch live on-chain TROB balance and live market rates
@@ -87,8 +87,9 @@ export function SlotPurchaseModal({
     try {
       const callValueSun = await getOnChainSlotCostSun(slotNumber);
       const trobCoins = (callValueSun / 1_000_000).toFixed(2);
-      toast.info("Broadcasting Transaction", `Confirm $30.00 USD (${trobCoins} TROB) in wallet...`);
-      const txHash = await joinSlotOnChain(slotNumber, undefined, userAddress, callValueSun);
+      toast.info("Broadcasting Transaction", `Confirm $${costUsd} USD (${trobCoins} TROB) in wallet...`);
+      const existingSponsor = useUserStore.getState().profile?.sponsorAddress || undefined;
+      const txHash = await joinSlotOnChain(slotNumber, existingSponsor, userAddress, callValueSun);
       setLastTxHash(txHash);
       toast.success("Slot Joined On-Chain!", `Tx: ${txHash.slice(0, 10)}...`);
 
@@ -185,7 +186,11 @@ export function SlotPurchaseModal({
                 ${cost}.00 USD
               </span>
               <span className="text-[11px] text-[#16a34a] font-medium block mt-0.5">
-                ~{liveTrobCoins} TROB (Live Market: ${livePriceUsd.toFixed(5)}/TROB)
+                {liveTrobCoins && livePriceUsd > 0
+                  ? `~${liveTrobCoins} TROB (Live Market: $${livePriceUsd.toFixed(5)}/TROB)`
+                  : liveTrobCoins
+                  ? `~${liveTrobCoins} TROB`
+                  : "Fetching live market rate..."}
               </span>
             </div>
           </div>

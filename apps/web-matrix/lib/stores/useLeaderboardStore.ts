@@ -1,13 +1,31 @@
 import { create } from "zustand";
-import { matrixApi, MatrixLeaderboardEntry } from "../api";
+import {
+  matrixApi,
+  MatrixLeaderboardEntry,
+  MatrixLeaderboardSummary,
+} from "../api";
 import { useUserStore } from "./useUserStore";
 
 export type LeaderboardTimeframe = "All Time" | "30 Days" | "7 Days";
 
+export interface LeaderboardUserRank {
+  rank: number | null;
+  totalUsers: number;
+  activeEarners?: number;
+  totalEarnedUsd?: number;
+  totalEarnedTrob?: number;
+  recyclesCount?: number;
+  directCount?: number;
+  milestones?: number;
+  rankTier?: number;
+  rankName?: string;
+}
+
 export interface LeaderboardState {
   entries: MatrixLeaderboardEntry[];
+  summary: MatrixLeaderboardSummary | null;
   timeframe: LeaderboardTimeframe;
-  userRank: { rank: number; totalUsers: number } | null;
+  userRank: LeaderboardUserRank | null;
   loading: boolean;
   error: string | null;
 
@@ -17,8 +35,11 @@ export interface LeaderboardState {
   fetchUserRank: (userAddress?: string) => Promise<void>;
 }
 
+let latestLeaderboardRequestId = 0;
+
 export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
   entries: [],
+  summary: null,
   timeframe: "All Time",
   userRank: null,
   loading: false,
@@ -30,43 +51,50 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
   },
 
   fetchLeaderboard: async (force = false) => {
-    const { timeframe, entries, loading } = get();
-    if (loading) return;
+    const { timeframe, entries } = get();
     if (entries.length > 0 && !force) return;
 
+    const reqId = ++latestLeaderboardRequestId;
     set({ loading: true, error: null });
-    const period = timeframe === "7 Days" ? "week" : timeframe === "30 Days" ? "month" : "all";
+    const period = timeframe === "7 Days" ? "7d" : timeframe === "30 Days" ? "30d" : "all";
 
     try {
-      const data = await matrixApi.getLeaderboard(period, 50).catch(() => null);
-      if (data && data.length > 0) {
-        const cleaned = data.filter((e) => {
-          const a = (e.address || '').toLowerCase();
-          return (
-            (!process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX || a !== process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX.toLowerCase()) && (!process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS || a !== process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS.toLowerCase())
-          );
-        });
-        set({ entries: cleaned, loading: false });
-        return;
-      }
-    } catch {}
+      const res = await matrixApi.getLeaderboard(period, 100);
+      if (reqId !== latestLeaderboardRequestId) return;
+      const rawEntries = Array.isArray(res) ? res : res?.entries || [];
+      const summary = !Array.isArray(res) && res?.summary ? res.summary : get().summary;
 
-    set({ entries: [], loading: false });
+      const genesisHex = process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX?.toLowerCase();
+      const genesisB58 = process.env.NEXT_PUBLIC_GENESIS_ROOT_ADDRESS?.toLowerCase();
+      const cleaned = rawEntries.filter((e) => {
+        const a = (e.address || "").toLowerCase();
+        const b = (e.base58 || "").toLowerCase();
+        if (genesisHex && a === genesisHex) return false;
+        if (genesisB58 && (a === genesisB58 || b === genesisB58)) return false;
+        return true;
+      });
+
+      set({ entries: cleaned, summary: summary || null, loading: false, error: null });
+      return;
+    } catch (err: any) {
+      if (reqId !== latestLeaderboardRequestId) return;
+      set({ entries: [], loading: false, error: err?.message || "Failed to load on-chain leaderboard" });
+    }
   },
 
   fetchUserRank: async (userAddress) => {
     const addr = userAddress || useUserStore.getState().address;
-    if (!addr) return;
+    if (!addr) {
+      set({ userRank: null });
+      return;
+    }
 
     try {
       const rank = await matrixApi.getUserRank(addr).catch(() => null);
       if (rank) {
         set({ userRank: rank });
-        return;
       }
     } catch {}
-
-    
   },
 }));
 

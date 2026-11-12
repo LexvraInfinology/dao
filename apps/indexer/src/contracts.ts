@@ -25,17 +25,21 @@ export const MATRIX_ABI = parseAbi([
   "event SlotJoined(address indexed user, uint256 indexed slot, uint256 cost, address sponsor, uint256 timestamp)",
   // V2: PositionFilled replaces NodeFilled (typed, no eventType string)
   "event PositionFilled(address indexed matrixOwner, uint8 indexed slot, uint256 indexed cycle, uint8 position, address participant, uint256 amount)",
-  // V2: typed distribution audit — one per money movement
+  // V2/V3: typed distribution audit — one per money movement
   "event DistributionExecuted(address indexed recipient, uint256 amount, uint8 payoutType, uint8 slot, uint256 cycle, uint8 position)",
   // V2: spillover resolution
   "event SpilloverResolved(address indexed matrixOwner, address indexed recipient, uint8 position, bool wasOwnerFallback)",
   // V2: upgrade reserve funded
   "event UpgradeReserveFunded(address indexed user, uint8 slot, uint256 amount, uint256 totalReserve)",
-  // V2: auto-upgrade fired
+  // V3: Stage-1 auto-activation fired at P5
+  "event SlotAutoActivated(address indexed user, uint8 indexed fromSlot, uint8 indexed activatedSlot, uint256 timestamp)",
+  // V2 legacy fallback alias
   "event SlotAutoUpgraded(address indexed user, uint8 fromSlot, uint8 toSlot, uint256 timestamp)",
   // Cycle lifecycle
   "event CycleCompleted(address indexed user, uint8 indexed slot, uint256 cycleNumber, uint256 timestamp)",
   "event MatrixRecycled(address indexed user, uint8 indexed slot, uint256 newCycle, uint256 timestamp)",
+  // V3: Protocol pool split at P4/P5
+  "event ProtocolPoolFunded(address indexed matrixOwner, uint256 amount, uint8 slot, uint256 cycle, uint8 position, uint256 timestamp)",
   // V2: DAO pool accumulator
   "event DaoPoolFunded(uint256 amount, uint256 newAccRewardPerShare)",
   "event DaoRewardClaimed(address indexed member, uint256 amount)",

@@ -39,14 +39,16 @@ export async function handleUserRegistered(event: {
       },
     });
 
-    // 2. Increment sponsor's referral count and check qualification (>= 2)
+    // 2. Recompute sponsor's referral count idempotently and check qualification (>= 2)
     if (canonicalSponsor) {
       const sponsor = await tx.user.findUnique({
         where: { address: canonicalSponsor },
       });
 
       if (sponsor) {
-        const newCount = sponsor.directReferralsCount + 1;
+        const newCount = await tx.user.count({
+          where: { sponsorAddress: canonicalSponsor },
+        });
         await tx.user.update({
           where: { address: canonicalSponsor },
           data: {

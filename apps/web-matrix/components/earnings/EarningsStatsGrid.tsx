@@ -22,8 +22,6 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
   );
   let total = rawTotal;
   while (total > 100000) total = total / 1e6;
-  if (total === 198) total = 180;
-  if (total === 0) total = 180;
   const trobAmt = Number(
     (earnings as any)?.totalEarningsTrob ||
     (earnings as any)?.trobAmount ||
@@ -32,7 +30,7 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
   );
   const available = earnings?.availableBalance ?? 0;
   const pending = earnings?.pendingRewards ?? 0;
-  const withdrawn = (earnings?.totalWithdrawn ?? 0) > 0 ? (earnings?.totalWithdrawn ?? 0) : total;
+  const withdrawn = Number((earnings?.totalWithdrawn ?? total) || 0);
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">

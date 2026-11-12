@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { MatrixSlotDetails, MatrixSlotSummary } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
-import { getOnChainQualification, CONTRACT_ADDRESSES, toHexAddress } from "@/lib/contracts";
+import { getOnChainQualification, CONTRACT_ADDRESSES, toHexAddress, getSlotCost } from "@/lib/contracts";
 import { toast } from "@/lib/toast";
 import { formatAddress as formatB58Address, toTrobBase58 } from "@/lib/format";
-import { ShieldCheck, AlertCircle, CheckCircle2, Check, Lock } from "lucide-react";
+import { ShieldCheck, AlertCircle, CheckCircle2, Check, Lock, RefreshCw } from "lucide-react";
 
 export interface MatrixTreeViewProps {
   slotDetails?: MatrixSlotDetails | null;
@@ -15,7 +15,9 @@ export interface MatrixTreeViewProps {
 export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const storeSlotDetails = useMatrixStore((s) => s.slotDetails);
   const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
+  const storeSelectedCycle = useMatrixStore((s) => s.selectedCycle);
   const storeSlots = useMatrixStore((s) => s.slots);
+  const loadingDetails = useMatrixStore((s) => s.loadingDetails);
   const address = useUserStore((s) => s.address);
   const profile = useUserStore((s) => s.profile);
 
@@ -53,6 +55,20 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
 
   const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;
+  const slotCost = getSlotCost(selectedSlotNumber);
+  const snapshotCount = isSlotUnlocked ? ((slotDetails as any)?.snapshotCount ?? 0) : 0;
+  const isViewingSnapshot = isSlotUnlocked && Boolean((slotDetails as any)?.isViewingSnapshot);
+  const slot12Summary = slots?.find((s) => s.slotNumber === 12);
+  const isGlobalCycle2Unlocked = Boolean(
+    (slotDetails as any)?.globalCycle >= 2 ||
+    (slot12Summary && (slot12Summary.recyclesCount > 0 || slot12Summary.currentCycle >= 2))
+  );
+  const liveFilledCount = isSlotUnlocked
+    ? (isViewingSnapshot
+        ? ((useMatrixStore.getState().slotDetailsCache[`${selectedSlotNumber}_live`]?.nodes?.filter((n: any) => n?.filled).length) ?? 0)
+        : (rawNodes.filter((n: any) => n?.filled).length || slotDetails?.filledNodes || 0))
+    : 0;
+  const isTreeLoading = isSlotUnlocked && (!slotDetails || slotDetails.slotNumber !== selectedSlotNumber || (loadingDetails && !slotDetails));
   const nodes = isSlotUnlocked && slotDetails?.slotNumber === selectedSlotNumber ? rawNodes : [];
 
   // Live on-chain qualification state
@@ -81,7 +97,7 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const getNodeRole = (pos: number) => {
     if (pos <= 2) return { role: "DIRECT", label: `Direct Ref #${pos}` };
     if (pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12) {
-      return { role: "OWNER", label: `YOU (+$30)` };
+      return { role: "OWNER", label: `YOU (+$${slotCost})` };
     }
     if (pos === 4 || pos === 5 || pos === 14) {
       return {
@@ -136,11 +152,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
       if (isDirectNode) {
         if (isDepositedDirect) {
           bgClasses = "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400";
-          statusLabel = `Active ($30)`;
+          statusLabel = `Active ($${slotCost})`;
           badgeColor = "bg-emerald-200";
         } else {
           bgClasses = "bg-amber-50 border-2 border-dashed border-amber-400 hover:bg-amber-100 text-amber-900";
-          statusLabel = "Awaiting $30";
+          statusLabel = `Awaiting $${slotCost}`;
           badgeColor = "bg-amber-500";
         }
       } else if (roleInfo.role === "POOL") {
@@ -174,11 +190,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             if (effectiveAddr) {
               navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
-                `Position #${pos} Settled ($30)`,
+                `Position #${pos} Settled ($${slotCost})`,
                 `Paid to: ${recipient} • Address copied!`
               );
             } else {
-              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($30)`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
             }
           }}
           className={`${widthClass} ${bgClasses} rounded-xl p-2.5 sm:p-3 text-center transition-all cursor-pointer select-none`}
@@ -294,11 +310,11 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
             if (effectiveAddr) {
               navigator.clipboard?.writeText(toTrobBase58(effectiveAddr));
               toast.success(
-                `Position #${pos} Settled ($30)`,
+                `Position #${pos} Settled ($${slotCost})`,
                 `Paid to: ${recipient} • Address copied!`
               );
             } else {
-              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($30)`);
+              toast.info(`Position #${pos} Settled`, `Paid to: ${recipient} ($${slotCost})`);
             }
           }}
           className={`${bg} text-white rounded-lg py-1.5 px-1 text-center shadow-xs transition-all cursor-pointer select-none`}
@@ -351,52 +367,86 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
                 <Lock className="w-3 h-3 text-slate-500" />
                 LOCKED TIER
               </span>
-            ) : (selectedSlotNumber === 1 && ((slotDetails as any)?.snapshotCount > 0 || (slotDetails as any)?.isViewingSnapshot || isSlot1Complete)) ? (
-              <div className="flex items-center gap-1 p-0.5 bg-[#eff6ff] rounded-lg border border-[#bfdbfe]">
-                <button
-                  type="button"
-                  onClick={() => selectSlotStore(1, 1, address || undefined)}
-                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
-                    (slotDetails as any)?.isViewingSnapshot || (slotDetails?.currentCycle === 1 && (slotDetails?.filledNodes ?? 0) >= 14)
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "text-[#2563eb] hover:bg-blue-100/60"
-                  }`}
-                >
-                  🏆 Board #1 History (14/14 Settled)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectSlotStore(1, undefined, address || undefined)}
-                  className={`px-2.5 py-1 rounded-md text-[10.5px] font-bold transition-all cursor-pointer ${
-                    !(slotDetails as any)?.isViewingSnapshot
-                      ? "bg-[#2563eb] text-white shadow-xs"
-                      : "text-[#2563eb] hover:bg-blue-100/60"
-                  }`}
-                >
-                  ⚡ Active Board ({(slotDetails?.nodes ?? []).filter((n: any) => n?.filled).length}/14)
-                </button>
-              </div>
             ) : (
-              <span className="px-2 py-0.5 rounded-md bg-[#dbeafe] text-[#1d4ed8] text-[10.5px] font-bold">
-                CYCLE #{String(currentCycle || 1).padStart(2, "0")} (ACTIVE)
-              </span>
+              <>
+                {/* Unified Global Cycle Pill */}
+                <div className="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-full border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => selectSlotStore(selectedSlotNumber, undefined, address || undefined)}
+                    className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-600 text-white shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Cycle #01 (Active)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isGlobalCycle2Unlocked) {
+                        selectSlotStore(selectedSlotNumber, undefined, address || undefined);
+                      } else {
+                        toast.info(
+                          "Cycle #02 Locked",
+                          "Cycle #02 unlocks automatically when all 12 slots in Cycle #01 (168 positions total) are completed on-chain."
+                        );
+                      }
+                    }}
+                    className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-slate-400 hover:text-slate-600 hover:bg-slate-200/40 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    {!isGlobalCycle2Unlocked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
+                    <span>Cycle #02 (Locked)</span>
+                  </button>
+                </div>
+
+                {/* Compact Board Switcher when Slot has Recycled */}
+                {snapshotCount > 0 && (
+                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-emerald-50/80 rounded-full border border-emerald-200/90">
+                    <button
+                      type="button"
+                      onClick={() => selectSlotStore(selectedSlotNumber, 1, address || undefined)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                        isViewingSnapshot
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-emerald-800 hover:bg-emerald-100/80"
+                      }`}
+                    >
+                      Board #1 (14/14 • ${(6 * slotCost).toFixed(0)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectSlotStore(selectedSlotNumber, undefined, address || undefined)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                        !isViewingSnapshot
+                          ? "bg-[#1e60e5] text-white shadow-xs"
+                          : "text-slate-600 hover:bg-white/80"
+                      }`}
+                    >
+                      Board #{snapshotCount + 1} Live ({liveFilledCount}/14)
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <p className="text-[12px] text-[#64748b] mt-0.5">
             {!isSlotUnlocked
               ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} is currently locked. Unlocks automatically at $0 cost.`
-              : "Single-leg binary matrix engine governed by Solidity smart contracts. Instant on-chain payouts."}
+              : isTreeLoading
+              ? `Syncing Slot #${String(selectedSlotNumber).padStart(2, "0")} live board from TrobChain...`
+              : isViewingSnapshot
+              ? `Slot #${String(selectedSlotNumber).padStart(2, "0")} • Board #${storeSelectedCycle || 1} Completed (14/14 Seats Settled 🏆) • On-Chain Verified`
+              : `Slot #${String(selectedSlotNumber).padStart(2, "0")}${snapshotCount > 0 ? ` • Board #${snapshotCount + 1}` : ""} • ${liveFilledCount} / 14 Nodes Filled • Cycle #01 Active`}
           </p>
         </div>
 
         <div className="hidden sm:flex items-center gap-3 text-[11px] font-semibold text-[#64748b]">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-            <span>Active Direct (+$30)</span>
+            <span>Active Direct (+${slotCost})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]" />
-            <span>Owner (+$30 YOU)</span>
+            <span>Owner (+${slotCost} YOU)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-700" />
@@ -435,29 +485,9 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
         </div>
       )}
 
-      {/* ── ON-CHAIN QUALIFICATION STATUS BANNER ── */}
-      <div className="mt-3.5">
-        {qualification.isQualified ? (
-          <div className="p-3 sm:p-3.5 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl flex items-center justify-between gap-3 text-emerald-950">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">
-                <CheckCircle2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <div className="text-[12.5px] font-extrabold text-emerald-900 tracking-wide uppercase flex items-center gap-1.5">
-                  Matrix Qualified (2/2 Active Directs Deposited)
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-                <div className="text-[11.5px] text-emerald-700/90 font-medium">
-                  Your personal earnings are live: Positions P3, P6, P8, P9, P11, P12 route directly to your TrobSafe wallet.
-                </div>
-              </div>
-            </div>
-            <div className="hidden sm:block px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">
-              Earning Active
-            </div>
-          </div>
-        ) : (
+      {/* ── ON-CHAIN QUALIFICATION STATUS BANNER (hidden once qualified to prioritize tree) ── */}
+      {!qualification.isQualified && (
+        <div className="mt-3.5">
           <div className="p-3 sm:p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-3 text-amber-950">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-amber-500/20">
@@ -476,9 +506,18 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
               {2 - Math.min(2, qualification.activeDirectsCount)} More Needed
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
+      {isTreeLoading ? (
+        <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-500">
+          <RefreshCw className="w-6 h-6 text-[#2563eb] animate-spin" />
+          <span className="text-xs font-semibold">
+            Loading Slot #{String(selectedSlotNumber).padStart(2, "0")} • Cycle #01 from TrobChain...
+          </span>
+        </div>
+      ) : (
+        <>
       {/* Detailed Matrix Tree (Tablet md 768px and up) */}
       <div className="hidden md:flex flex-col items-center pt-6 pb-4 overflow-x-auto w-full max-w-full">
         <div className="relative w-[620px] flex flex-col items-center">
@@ -778,6 +817,8 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* ── SOLIDITY PAYOUT ROUTING EXPLANATION BAR ── */}
       <div className="mt-4 pt-3 border-t border-[#f1f5f9] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-[11px]">

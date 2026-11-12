@@ -7,6 +7,9 @@ export interface TransactionsStatsProps {
   stats?: {
     totalInflow: number;
     totalOutflow: number;
+    totalInflowTrob?: number;
+    totalOutflowTrob?: number;
+    netProfitTrob?: number;
     pendingCount: number;
     netProfit: number;
   } | null;
@@ -14,11 +17,15 @@ export interface TransactionsStatsProps {
 
 export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) {
   const storeStats = useFinanceStore((s) => s.transactionStats);
-  const stats = propStats !== undefined ? propStats : storeStats;
-  const totalInflow = stats?.totalInflow ?? 0.0;
-  const totalOutflow = stats?.totalOutflow ?? 0.0;
-  const pendingCount = stats?.pendingCount ?? 0;
-  const netProfit = stats?.netProfit ?? Math.max(0, totalInflow - totalOutflow);
+  const stats = (propStats !== undefined ? propStats : storeStats) as TransactionsStatsProps["stats"];
+  const totalInflow = Number(stats?.totalInflow ?? 0);
+  const totalOutflow = Number(stats?.totalOutflow ?? 0);
+  const totalInflowTrob = Number(stats?.totalInflowTrob ?? 0);
+  const totalOutflowTrob = Number(stats?.totalOutflowTrob ?? 0);
+  const pendingCount = Number(stats?.pendingCount ?? 0);
+  const netProfit = Number(stats?.netProfit ?? totalInflow - totalOutflow);
+  const netProfitTrob = Number(stats?.netProfitTrob ?? totalInflowTrob - totalOutflowTrob);
+  const roiPct = totalOutflow > 0 ? Math.round((netProfit / totalOutflow) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">
@@ -35,9 +42,9 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
           ${totalInflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
-        {totalInflow > 0 && (
+        {totalInflow > 0 && totalInflowTrob > 0 && (
           <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-            ({(totalInflow === 180 ? 5220.96 : (totalInflow / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+            ({totalInflowTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
           </div>
         )}
         <div className="flex items-center justify-between mt-2">
@@ -63,14 +70,14 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         <div className="text-[18px] lg:text-[22px] font-black text-[#0f172a] leading-tight">
           ${totalOutflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
-        {totalOutflow > 0 && (
+        {totalOutflow > 0 && totalOutflowTrob > 0 && (
           <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-            ({(totalOutflow === 30 ? 870.16 : (totalOutflow / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+            ({totalOutflowTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
           </div>
         )}
         <div className="flex items-center justify-between mt-2">
           <div className="text-[10.5px] font-bold text-[#e11d48] flex items-center gap-0.5">
-            Outflow (1x Lifetime Entry)
+            {totalOutflow > 0 ? "Outflow (1x Lifetime Entry)" : "No Outflow Recorded"}
           </div>
         </div>
       </div>
@@ -104,16 +111,18 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
             </svg>
           </div>
         </div>
-        <div className="text-[18px] lg:text-[22px] font-black text-[#16a34a] leading-tight">
+        <div className={`text-[18px] lg:text-[22px] font-black leading-tight ${netProfit >= 0 ? "text-[#16a34a]" : "text-[#e11d48]"}`}>
           {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
-        {netProfit !== 0 && (
-          <div className="text-[10.5px] font-medium text-emerald-600 mt-0.5">
-            ({(netProfit === 150 ? 4350.80 : (netProfit / 30) * 870.16).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+        {netProfit !== 0 && netProfitTrob !== 0 && (
+          <div className={`text-[10.5px] font-medium mt-0.5 ${netProfit >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+            ({netProfitTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
           </div>
         )}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[10px] text-[#16a34a] font-semibold">Net Realized (+500% ROI)</span>
+          <span className={`text-[10px] font-semibold ${netProfit >= 0 ? "text-[#16a34a]" : "text-[#64748b]"}`}>
+            {totalOutflow > 0 ? `Net Realized (${roiPct >= 0 ? "+" : ""}${roiPct}% ROI)` : "On-Chain Net"}
+          </span>
         </div>
       </div>
     </div>

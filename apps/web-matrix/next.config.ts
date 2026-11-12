@@ -41,26 +41,12 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const isVercel = process.env.VERCEL === "1";
-    const rawBackend = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-    const isLocalhost = !rawBackend || rawBackend.includes("localhost") || rawBackend.includes("127.0.0.1");
-
-    const rewritesList = [
+    return [
       {
         source: "/api/trob-market/price",
         destination: "https://backend.trobchain.com/v1/market/price",
       },
     ];
-
-    // External API proxying only if explicitly configured
-    if (rawBackend && !isLocalhost) {
-      rewritesList.unshift({
-        source: "/api/matrix/:path*",
-        destination: `${rawBackend.replace(/\/+$/, "")}/api/matrix/:path*`,
-      });
-    }
-
-    return rewritesList;
   },
 };
 

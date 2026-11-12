@@ -21,18 +21,45 @@ export default function LeaderboardPage() {
   const { address, changeAddress } = useMatrixUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const timeframe = useLeaderboardStore((s) => s.timeframe);
   const setTimeframe = useLeaderboardStore((s) => s.setTimeframe);
   const leaderboard = useLeaderboardStore((s) => s.entries);
+  const summary = useLeaderboardStore((s) => s.summary);
+  const userRank = useLeaderboardStore((s) => s.userRank);
+  const loading = useLeaderboardStore((s) => s.loading);
   const fetchLeaderboard = useLeaderboardStore((s) => s.fetchLeaderboard);
+  const fetchUserRank = useLeaderboardStore((s) => s.fetchUserRank);
 
   React.useEffect(() => {
-    fetchLeaderboard();
+    fetchLeaderboard(true);
   }, [fetchLeaderboard]);
 
+  React.useEffect(() => {
+    if (address) {
+      fetchUserRank(address);
+    }
+  }, [address, fetchUserRank]);
+
   const handleCopy = (addressToCopy: string) => {
-    toast.copy(toTrobBase58(addressToCopy), "Ranked Address");
+    const b58 = toTrobBase58(addressToCopy);
+    setCopiedAddress(b58);
+    toast.copy(b58, "Ranked Address");
+    setTimeout(() => setCopiedAddress((cur) => (cur === b58 ? null : cur)), 2000);
   };
+
+  const filteredEntries = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return leaderboard;
+    return leaderboard.filter((e) => {
+      const idMatch = e.userId && `#${e.userId}`.includes(q);
+      const codeMatch = e.code && String(e.code).toLowerCase().includes(q);
+      const addrMatch = (e.address || "").toLowerCase().includes(q) || (e.base58 || "").toLowerCase().includes(q);
+      const tierMatch = (e.rankName || "").toLowerCase().includes(q);
+      return Boolean(idMatch || codeMatch || addrMatch || tierMatch);
+    });
+  }, [leaderboard, searchQuery]);
 
   const navItems = [
     {
@@ -262,7 +289,9 @@ export default function LeaderboardPage() {
               </svg>
               <input
                 type="text"
-                placeholder="Search member ID / wallet / transaction..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search member ID / wallet / tier..."
                 className="w-full h-[40px] pl-10 pr-9 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] transition-all"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-[#f1f5f9] border border-[#e2e8f0] text-[11px] font-semibold text-[#94a3b8] flex items-center justify-center select-none">
@@ -359,16 +388,29 @@ export default function LeaderboardPage() {
         {/* ═══════════ MAIN CONTENT ═══════════ */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 max-w-[1400px] w-full mx-auto space-y-4 lg:space-y-6 min-w-0">
           {/* ═══════════ HEADER / HERO SECTION ═══════════ */}
-          <LeaderboardHeader timeframe={timeframe} setTimeframe={setTimeframe} handleCopy={handleCopy} />
+          <LeaderboardHeader
+            timeframe={timeframe}
+            setTimeframe={setTimeframe}
+            handleCopy={handleCopy}
+            summary={summary}
+            userRank={userRank}
+            loading={loading}
+          />
 
           {/* ═══════════ ON-CHAIN PODIUM SECTION ═══════════ */}
-          <LeaderboardPodium entries={leaderboard} handleCopy={handleCopy} copiedAddress={null} />
+          <LeaderboardPodium
+            entries={leaderboard}
+            handleCopy={handleCopy}
+            copiedAddress={copiedAddress}
+            loading={loading}
+          />
 
           {/* ═══════════ GLOBAL RANKINGS SECTION ═══════════ */}
           <LeaderboardRankingsTable
             handleCopy={handleCopy}
-            copiedAddress={null}
-            entries={leaderboard}
+            copiedAddress={copiedAddress}
+            entries={filteredEntries}
+            loading={loading}
           />
         </main>
       </div>

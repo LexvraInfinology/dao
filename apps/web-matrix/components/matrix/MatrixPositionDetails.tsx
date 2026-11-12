@@ -38,16 +38,17 @@ export function MatrixPositionDetails(props: MatrixPositionDetailsProps = {}) {
   const percent = Math.min(Math.round((filledNodes / 14) * 100), 100);
   const remaining = Math.max(14 - filledNodes, 0);
   const nextSlotNum = Math.min(slotNum + 1, 12);
+  const isRegistered = Boolean(profile?.isRegistered);
   const isSlotUnlocked = slotSummary
-    ? slotSummary.isUnlocked
-    : (isMatchesDetail ? slotDetails!.isUnlocked : slotNum <= 4);
+    ? Boolean(slotSummary.isUnlocked)
+    : (isMatchesDetail ? Boolean(slotDetails!.isUnlocked) : (isRegistered && slotNum === 1));
 
-  const yieldUsd = isMatchesDetail && slotDetails?.totalEarnedUsd !== undefined && slotDetails.totalEarnedUsd > 0
+  const yieldUsd = isMatchesDetail && slotDetails?.totalEarnedUsd !== undefined
     ? slotDetails.totalEarnedUsd
-    : (slotSummary?.totalEarnedUsd ?? slotSummary?.totalEarned ?? (slotNum === 1 ? 210 : slotNum === 2 ? 360 : slotNum === 3 ? 720 : 0));
+    : (slotSummary?.totalEarnedUsd ?? slotSummary?.totalEarned ?? 0);
   const yieldTrob = isMatchesDetail && slotDetails?.totalEarnedTrob !== undefined
     ? slotDetails.totalEarnedTrob
-    : (yieldUsd / 0.056);
+    : (slotSummary?.totalEarnedTrob ?? 0);
 
   return (
     <div className="bg-white border border-[#e8ecf1] rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xs flex flex-col justify-between min-w-0">

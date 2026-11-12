@@ -17,8 +17,8 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
   const isSlotActive = true;
   const currentSlotStr = currentSlot.toString().padStart(2, "0");
 
-  // Dynamic Market Oracle Peg: 1 Matrix Slot Payout = $30.00 USD
-  const [trobPrice, setTrobPrice] = React.useState<number>(0.033994);
+  // Live TROB Market / Contract Rate
+  const [trobPrice, setTrobPrice] = React.useState<number>(0);
 
   React.useEffect(() => {
     fetch("/api/price/trob")
@@ -105,7 +105,9 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
             <span className="text-[10px] sm:text-[11px] font-semibold text-[#94a3b8]">USD</span>
           </div>
           <span className="text-[10px] sm:text-[11px] text-[#64748b] mt-1 sm:mt-1.5 truncate">
-            {totalEarnedTrob > 0 ? `${totalEarnedTrob.toFixed(0)} TROB • Matrix Yield` : "Lifetime matrix yield"}
+            {totalEarnedTrob > 0
+              ? `${totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB • Matrix Yield`
+              : "Lifetime matrix yield"}
           </span>
         </div>
       </Link>
@@ -132,7 +134,9 @@ export function DashboardStats({ data: propData }: DashboardStatsProps) {
             <span className="text-[10px] sm:text-[11px] font-semibold text-[#16a34a]">USD</span>
           </div>
           <span className="text-[10px] sm:text-[11px] text-[#16a34a] mt-1 sm:mt-1.5 truncate font-semibold">
-            {totalEarnedTrob > 0 ? `${totalEarnedTrob.toFixed(0)} TROB • P2P Direct` : "Instant on-chain P2P"}
+            {totalEarnedTrob > 0
+              ? `${totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB • P2P Direct`
+              : "Instant on-chain P2P"}
           </span>
         </div>
       </Link>

@@ -10,6 +10,7 @@ import {
   MatrixUserProfileDTO,
   MatrixDashboardDTO,
   MatrixLeaderboardEntryDTO,
+  MatrixLeaderboardResponseDTO,
   MatrixTransactionDTO,
   MatrixSettingsDTO,
   MatrixEarningsOverviewDTO,
@@ -36,8 +37,8 @@ export function getSlotCost(slotNumber: number): number {
   return 30;
 }
 
-export const DEFAULT_BENCHMARK_TROB_PRICE = 0.037146; // Live market fallback
-export const TROB_PRICE_USD = DEFAULT_BENCHMARK_TROB_PRICE;
+export const DEFAULT_BENCHMARK_TROB_PRICE = 0; // Live oracle/API price only — never hardcode
+export const TROB_PRICE_USD = 0;
 
 export function getRankName(tier: number): string {
   switch (tier) {
@@ -91,7 +92,7 @@ export async function getRootMatrixOwnerAddress(): Promise<string> {
 function getFallbackProfile(canonicalAddress: string): MatrixUserProfileDTO {
   return {
     address: canonicalAddress,
-    userId: 1,
+    userId: 0,
     username: `Operative #${canonicalAddress.slice(2, 6).toUpperCase()}`,
     avatarUrl: null,
     bio: null,
@@ -115,7 +116,7 @@ function getFallbackProfile(canonicalAddress: string): MatrixUserProfileDTO {
     highestUnlockedSlot: 0,
     referralCode: null,
     sponsorCode: null,
-    joinedAt: new Date(),
+    joinedAt: null as any,
   };
 }
 
@@ -124,9 +125,9 @@ function getFallbackUserSlots(): MatrixSlotSummaryDTO[] {
     const slotNumber = i + 1;
     return {
       slotNumber,
-      cost: SLOT_COSTS[slotNumber] || 0,
+      cost: 30,
       isUnlocked: false,
-      currentCycle: 1,
+      currentCycle: 0,
       recyclesCount: 0,
       filledNodes: 0,
       upgradeReserve: 0,
@@ -157,7 +158,7 @@ function getFallbackSlotDetails(slotNumber: number, cycle: number = 1): MatrixSl
   });
   return {
     slotNumber,
-    cost: SLOT_COSTS[slotNumber] || 0,
+    cost: 30,
     isUnlocked: false,
     currentCycle: cycle,
     recyclesCount: 0,
@@ -170,20 +171,20 @@ function getFallbackSlotDetails(slotNumber: number, cycle: number = 1): MatrixSl
 
 function getFallbackDashboard(canonicalAddress: string): MatrixDashboardDTO {
   return {
-    currentSlot: 1,
+    currentSlot: 0,
     totalEarnedTrob: 0,
     totalEarnedUsd: 0,
     availableWithdrawTrob: 0,
     availableWithdrawUsd: 0,
     recyclesCount: 0,
-    trobPriceUsd: TROB_PRICE_USD,
+    trobPriceUsd: 0,
     isQualified: false,
     activeDirectsCount: 0,
     activeSlotProgress: {
-      slotNumber: 1,
+      slotNumber: 0,
       filledNodes: 0,
       totalNodes: 14,
-      cycle: 1,
+      cycle: 0,
       upgradeReserve: 0,
       level1Filled: 0,
       level2Filled: 0,
@@ -191,16 +192,15 @@ function getFallbackDashboard(canonicalAddress: string): MatrixDashboardDTO {
     },
     nextPosition: {
       positionNumber: 1,
-      title: "Position #1 - Direct Line 1",
-      description: "Distributed directly to level 1 direct upline",
-      rewardType: "Pass-Up / Sponsor",
+      title: "Not Enrolled",
+      description: "Activate Slot #01 ($30 USD) on TrobChain to enter the matrix.",
+      rewardType: "Slot Entry",
     },
     recentActivity: [],
   };
 }
 
 function getFallbackEarningsOverview(): MatrixEarningsOverviewDTO {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return {
     totalEarnings: 0,
     totalEarningsUsd: 0,
@@ -208,14 +208,14 @@ function getFallbackEarningsOverview(): MatrixEarningsOverviewDTO {
     availableBalanceUsd: 0,
     withdrawnTotal: 0,
     withdrawnTotalUsd: 0,
-    trobPriceUsd: TROB_PRICE_USD,
+    trobPriceUsd: 0,
     breakdown: {
       directBonus: 0,
       matrixPlacements: 0,
       upgradeReserves: 0,
       poolShares: 0,
     },
-    chartData: days.map((day) => ({ date: day, amount: 0 })),
+    chartData: [],
     recentPayouts: [],
   };
 }
@@ -355,8 +355,8 @@ export async function syncUserFromChain(userAddress: string, force = false): Pro
             const cycle = parseInt(hex.slice(64, 128), 16) || 1;
             const filled = parseInt(hex.slice(128, 192), 16) || 0;
             const earnedTrob = parseInt(hex.slice(1088, 1152), 16) / 1e6 || 0;
-            const slotCost = 30 * Math.pow(2, slot - 1);
-            const payingCount = (canonical === '0x7124b32b48786a13177f3bdc9620e7a48eb9c902' && slot === 1) ? 6 : Math.min(6, Math.max(0, filled >= 12 ? 6 : Math.floor(filled / 2)));
+            const slotCost = 30;
+            const payingCount = [3, 6, 8, 9, 11, 12].filter((p) => filled >= p).length;
             const earned = (Math.max(0, cycle - 1) * 6 * slotCost) + (payingCount * slotCost);
 
             await prisma.matrixSlot.upsert({
@@ -552,7 +552,7 @@ export async function fetchOnChainSlotDetailsLive(
     isLive,
     currentCycle: isViewingSnapshot ? targetCycle : currentCycle,
     recyclesCount: Math.max(0, currentCycle - 1),
-    snapshotCount: Math.max(0, currentCycle - 1, slotNumber === 1 ? 1 : 0),
+    snapshotCount: Math.max(0, currentCycle - 1),
     isViewingSnapshot,
     filledNodes: isViewingSnapshot ? 14 : Math.max(rootData?.filledNodes || 0, filledCount),
     upgradeReserve: 0,
@@ -1625,34 +1625,35 @@ export class MatrixService {
         include: { matrixProfile: true, matrixSettings: true, matrixSlots: true }
       });
       if (!user) {
+        const livePrice = await this.getLiveTrobPriceUsd();
         return {
-          address: canonicalAddress,
-          user: getFallbackProfile(canonicalAddress),
-          activeSlot: {
-            slotNumber: 1,
+          currentSlot: 0,
+          totalEarnedTrob: 0,
+          totalEarnedUsd: 0,
+          availableWithdrawTrob: 0,
+          availableWithdrawUsd: 0,
+          recyclesCount: 0,
+          trobPriceUsd: livePrice,
+          isQualified: false,
+          activeDirectsCount: 0,
+          activeSlotProgress: {
+            slotNumber: 0,
             filledNodes: 0,
-            currentCycle: 1,
+            totalNodes: 14,
+            cycle: 0,
             upgradeReserve: 0,
+            level1Filled: 0,
+            level2Filled: 0,
+            level3Filled: 0,
           },
-          highestUnlockedSlot: 0,
-          level1Count: 0,
-          level2Count: 0,
-          level3Count: 0,
-          nextCommissionTarget: {
+          nextPosition: {
             positionNumber: 1,
-            title: "Position #1",
-            description: "Direct matrix commission distribution",
-            reward: "Direct Distribution",
+            title: "Not Enrolled",
+            description: "Activate Slot #01 ($30 USD) on TrobChain to enter the matrix.",
+            rewardType: "Slot Entry",
           },
-          retopupState: {
-            hasCappedSlot: false,
-            cappedSlotNumber: null,
-            deadline: null,
-            hoursRemaining: 0,
-            isLocked: false,
-          },
-          recentActivities: [],
-        } as any;
+          recentActivity: [],
+        };
       }
 
       const userProfile = await this.getUserProfile(canonicalAddress);
@@ -1661,11 +1662,11 @@ export class MatrixService {
         orderBy: { slotNumber: "desc" },
       });
 
-      const highestSlot = slots[0]?.slotNumber || 1;
+      const highestSlot = slots[0]?.slotNumber || 0;
       const activeSlot = slots[0] || {
-        slotNumber: 1,
+        slotNumber: 0,
         filledNodes: 0,
-        currentCycle: 1,
+        currentCycle: 0,
         upgradeReserve: 0,
       };
 
@@ -1742,9 +1743,9 @@ export class MatrixService {
 
       return {
         currentSlot: highestSlot,
-        totalEarnedTrob: livePrice > 0 ? Math.round((userProfile.totalEarnings / livePrice) * 100) / 100 : userProfile.totalEarnings,
+        totalEarnedTrob: livePrice > 0 ? Math.round((userProfile.totalEarnings / livePrice) * 100) / 100 : 0,
         totalEarnedUsd: userProfile.totalEarnings,
-        availableWithdrawTrob: livePrice > 0 ? Math.round((userProfile.availableBalance / livePrice) * 100) / 100 : userProfile.availableBalance,
+        availableWithdrawTrob: livePrice > 0 ? Math.round((userProfile.availableBalance / livePrice) * 100) / 100 : 0,
         availableWithdrawUsd: userProfile.availableBalance,
         recyclesCount: userProfile.recyclesCount,
         trobPriceUsd: livePrice,
@@ -1769,78 +1770,209 @@ export class MatrixService {
         recentActivity,
       };
     } catch (dbErr: any) {
-      console.warn(`[MatrixService] DB notice in getDashboardOverview(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
-      return getFallbackDashboard(canonicalAddress);
+      console.error(`[MatrixService] Error in getDashboardOverview(${canonicalAddress}):`, dbErr?.message || dbErr);
+      throw dbErr;
     }
   }
 
   // ── LEADERBOARD ───────────────────────────────────────────────────────────
 
   async getLeaderboard(
-    period: "all" | "month" | "week" = "all",
-    limit = 25
-  ): Promise<MatrixLeaderboardEntryDTO[]> {
+    period: "all" | "month" | "week" | "30d" | "7d" = "all",
+    limit = 50
+  ): Promise<MatrixLeaderboardResponseDTO> {
     const vaultCanonical = VAULT_CONTRACT_CANONICAL;
-    const profiles = await prisma.matrixProfile.findMany({
-      where: {
-        userAddress: {
-          notIn: [
-            vaultCanonical,
-            (process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX || process.env.GENESIS_ROOT_HEX || '').toLowerCase(),
-          ],
-        },
-      },
-      orderBy: { totalEarnings: "desc" },
-      take: limit,
-      include: {
-        user: {
-          select: {
-            address: true,
-            userId: true,
-            directReferralsCount: true,
-            matrixSlots: {
-              where: { isUnlocked: true },
-              orderBy: { slotNumber: "desc" },
-              take: 1,
+    const genesisHex = (process.env.NEXT_PUBLIC_GENESIS_ROOT_HEX || process.env.GENESIS_ROOT_HEX || "").toLowerCase();
+    const exclude = [vaultCanonical, ...(genesisHex ? [genesisHex] : [])];
+
+    const cutoffMs =
+      period === "week" || period === "7d"
+        ? Date.now() - 7 * 86_400_000
+        : period === "month" || period === "30d"
+          ? Date.now() - 30 * 86_400_000
+          : 0;
+    const cutoff7d = new Date(Date.now() - 7 * 86_400_000);
+
+    const [profiles, allTimeTrobAgg, sevenDayAgg, cycleAgg, totalUsers, poolStates] = await Promise.all([
+      prisma.matrixProfile.findMany({
+        where: { userAddress: { notIn: exclude } },
+        orderBy: { totalEarnings: "desc" },
+        take: Math.max(limit, 100),
+        include: {
+          user: {
+            select: {
+              address: true,
+              userId: true,
+              directReferralsCount: true,
+              matrixSlots: {
+                where: { isUnlocked: true },
+                orderBy: { slotNumber: "desc" },
+                take: 1,
+              },
             },
           },
         },
-      },
-    });
+      }),
+      prisma.matrixTransaction.groupBy({
+        by: ["userAddress"],
+        where: {
+          type: { in: ["COMMISSION_EARNED", "SPILLOVER_RECEIVED"] },
+          ...(cutoffMs > 0 ? { timestamp: { gte: new Date(cutoffMs) } } : {}),
+        },
+        _sum: { amount: true, amountUsd: true },
+      }),
+      prisma.matrixTransaction.groupBy({
+        by: ["userAddress"],
+        where: {
+          type: { in: ["COMMISSION_EARNED", "SPILLOVER_RECEIVED"] },
+          timestamp: { gte: cutoff7d },
+        },
+        _sum: { amount: true, amountUsd: true },
+      }),
+      prisma.matrixCycleEvent.groupBy({
+        by: ["userAddress"],
+        _count: { _all: true },
+      }),
+      prisma.user.count(),
+      prisma.matrixRankPoolState.findMany().catch(() => []),
+    ]);
 
-    return profiles.map((p: any, idx: number) => {
-      const highestSlot = p.user?.matrixSlots[0]?.slotNumber || 1;
-      const totalEarned = Number(p.totalEarnings);
-      return {
-        rank: idx + 1,
-        address: p.userAddress,
-        userId: p.user?.userId || idx + 1,
-        username: p.username || `Operative #${p.user?.userId || idx + 1}`,
-        avatarUrl: p.avatarUrl,
-        totalEarned,
-        totalEarnedUsd: totalEarned,
-        directCount: p.user?.directReferralsCount || 0,
-        highestSlot,
-        rankTier: p.rankTier,
-        rankName: getRankName(p.rankTier),
-      };
-    });
+    const trobByUser = new Map<string, { usd: number; trob: number }>();
+    for (const row of allTimeTrobAgg) {
+      trobByUser.set(row.userAddress.toLowerCase(), {
+        usd: Number(row._sum.amountUsd || 0),
+        trob: Number(row._sum.amount || 0),
+      });
+    }
+
+    const stats7dByUser = new Map<string, { usd: number; trob: number }>();
+    for (const row of sevenDayAgg) {
+      stats7dByUser.set(row.userAddress.toLowerCase(), {
+        usd: Number(row._sum.amountUsd || 0),
+        trob: Number(row._sum.amount || 0),
+      });
+    }
+
+    const cyclesByUser = new Map<string, number>();
+    for (const row of cycleAgg) {
+      cyclesByUser.set(row.userAddress.toLowerCase(), row._count._all || 0);
+    }
+
+    const entries: MatrixLeaderboardEntryDTO[] = profiles
+      .map((p: any, idx: number) => {
+        const key = p.userAddress.toLowerCase();
+        const agg = trobByUser.get(key);
+        const s7d = stats7dByUser.get(key);
+        const periodUsd = Number((cutoffMs > 0 ? agg?.usd || 0 : agg?.usd || Number(p.totalEarnings)).toFixed(2));
+        const periodTrob = Number((agg?.trob || 0).toFixed(2));
+        const recyclesCount = Math.max(p.recyclesCount || 0, cyclesByUser.get(key) || 0);
+        const highestSlot = p.user?.matrixSlots[0]?.slotNumber || 1;
+        return {
+          rank: idx + 1,
+          address: p.userAddress,
+          userId: p.user?.userId || 0,
+          username: p.username || `Member #${p.user?.userId || idx + 1}`,
+          avatarUrl: p.avatarUrl,
+          totalEarned: periodUsd,
+          totalEarnedUsd: periodUsd,
+          totalEarnedTrob: periodTrob,
+          earned7dUsd: Number((s7d?.usd || 0).toFixed(2)),
+          earned7dTrob: Number((s7d?.trob || 0).toFixed(2)),
+          directCount: p.user?.directReferralsCount || 0,
+          recyclesCount,
+          highestSlot,
+          rankTier: p.rankTier,
+          rankName: getRankName(p.rankTier),
+        };
+      })
+      .filter((e: MatrixLeaderboardEntryDTO) => (cutoffMs > 0 ? e.totalEarnedUsd > 0 || e.totalEarnedTrob > 0 : e.totalEarnedUsd > 0 || e.totalEarnedTrob > 0))
+      .sort(
+        (a: MatrixLeaderboardEntryDTO, b: MatrixLeaderboardEntryDTO) =>
+          b.totalEarnedUsd - a.totalEarnedUsd || b.totalEarnedTrob - a.totalEarnedTrob || b.directCount - a.directCount
+      )
+      .slice(0, limit)
+      .map((e: MatrixLeaderboardEntryDTO, idx: number) => ({ ...e, rank: idx + 1 }));
+
+    const tierCount = (tier: number) => {
+      const stateRow = poolStates.find((s: any) => s.tier === tier);
+      if (stateRow) return stateRow.qualifierCount || 0;
+      return entries.filter((e) => e.rankTier === tier).length;
+    };
+
+    const alpha = tierCount(1);
+    const prime = tierCount(2);
+    const elite = tierCount(3);
+    const crown = tierCount(4);
+
+    return {
+      entries,
+      summary: {
+        totalMatrixUsers: totalUsers,
+        activeEarnersCount: entries.length,
+        totalRecycles: entries.reduce((sum, e) => sum + (e.recyclesCount || 0), 0),
+        totalDistributedUsd: Number(entries.reduce((sum, e) => sum + e.totalEarnedUsd, 0).toFixed(2)),
+        totalDistributedTrob: Number(entries.reduce((sum, e) => sum + e.totalEarnedTrob, 0).toFixed(2)),
+        poolAchievers: {
+          alpha,
+          prime,
+          elite,
+          crown,
+          totalAchievers: alpha + prime + elite + crown,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      period,
+    };
   }
 
-  async getUserRank(address: string): Promise<{ rank: number; totalUsers: number }> {
+  async getUserRank(address: string): Promise<{
+    rank: number | null;
+    totalUsers: number;
+    totalEarnedUsd: number;
+    totalEarnedTrob: number;
+    recyclesCount: number;
+    rankTier: number;
+    rankName: string;
+  }> {
     const canonicalAddress = toCanonicalAddress(address);
-    const userProfile = await prisma.matrixProfile.findUnique({
-      where: { userAddress: canonicalAddress },
-    });
+    const [userProfile, trobAgg, cycleCount, totalUsers] = await Promise.all([
+      prisma.matrixProfile.findUnique({ where: { userAddress: canonicalAddress } }),
+      prisma.matrixTransaction.aggregate({
+        where: {
+          userAddress: canonicalAddress,
+          type: { in: ["COMMISSION_EARNED", "SPILLOVER_RECEIVED"] },
+        },
+        _sum: { amount: true, amountUsd: true },
+      }),
+      prisma.matrixCycleEvent.count({ where: { userAddress: canonicalAddress } }),
+      prisma.user.count(),
+    ]);
 
-    if (!userProfile) return { rank: 1, totalUsers: 1 };
+    if (!userProfile) {
+      return {
+        rank: null,
+        totalUsers,
+        totalEarnedUsd: 0,
+        totalEarnedTrob: 0,
+        recyclesCount: 0,
+        rankTier: 0,
+        rankName: "NONE",
+      };
+    }
 
     const higherCount = await prisma.matrixProfile.count({
       where: { totalEarnings: { gt: userProfile.totalEarnings } },
     });
-    const totalUsers = await prisma.matrixProfile.count();
 
-    return { rank: higherCount + 1, totalUsers: Math.max(totalUsers, 1) };
+    return {
+      rank: higherCount + 1,
+      totalUsers: Math.max(totalUsers, 1),
+      totalEarnedUsd: Number(userProfile.totalEarnings),
+      totalEarnedTrob: Number((Number(trobAgg._sum.amount || 0)).toFixed(2)),
+      recyclesCount: Math.max(userProfile.recyclesCount || 0, cycleCount || 0),
+      rankTier: userProfile.rankTier,
+      rankName: getRankName(userProfile.rankTier),
+    };
   }
 
   // ── TRANSACTIONS ──────────────────────────────────────────────────────────
@@ -1889,19 +2021,22 @@ export class MatrixService {
       let totalInflow = 0;
       let totalOutflow = 0;
       let pendingCount = 0;
+      const livePrice = await this.getLiveTrobPriceUsd();
+      const nonCashflowTypes = new Set(["UPGRADE_RESERVE", "UPGRADE_DEDUCTION", "BOARD_ROUTING", "POOL_ROUTING"]);
 
       for (const t of allUserTxs) {
-        // Enforce fixed protocol USD tier value ($30, $60, etc.) to never confuse native TROB tokens with USD
         const rawAmt = Number(t.amount);
-        const slotVal = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30;
-        const usd = (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
+        const slotVal = 30;
+        const usd = nonCashflowTypes.has(t.type)
+          ? 0
+          : (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
           ? Number(t.amountUsd)
           : (rawAmt > 100 ? slotVal : (rawAmt > 0 ? rawAmt : slotVal));
 
         if (t.type === "WITHDRAWAL" || (t.type === "SLOT_PURCHASE" && (t.slotNumber === 1 || !t.slotNumber))) {
           totalOutflow += usd;
-        } else if (t.type === "UPGRADE_RESERVE" || t.type === "UPGRADE_DEDUCTION") {
-          // Internal protocol auto-reserve escalation ($0 user out-of-pocket); does not impact cash flow
+        } else if (nonCashflowTypes.has(t.type) || t.type === "SLOT_PURCHASE") {
+          // Internal protocol auto-reserve/routing or Stage-1/2 auto-unlocked slot ($0 personal cashflow)
         } else {
           totalInflow += usd;
         }
@@ -1910,10 +2045,14 @@ export class MatrixService {
 
       const items: MatrixTransactionDTO[] = txs.map((t: any) => {
         const rawAmt = Number(t.amount);
-        const slotVal = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30;
-        const usd = (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
+        const slotVal = 30;
+        const isRoutingOrReserve = nonCashflowTypes.has(t.type) || (t.type === "SLOT_PURCHASE" && (t.slotNumber || 1) >= 2);
+        const usd = isRoutingOrReserve
+          ? 0
+          : (t.amountUsd && Number(t.amountUsd) > 0 && Number(t.amountUsd) <= 1000)
           ? Number(t.amountUsd)
           : (rawAmt > 100 ? slotVal : (rawAmt > 0 ? rawAmt : slotVal));
+        const derivedTrob = rawAmt > 0 ? rawAmt : (livePrice > 0 && usd > 0 ? Math.round((usd / livePrice) * 100) / 100 : undefined);
 
         return {
           id: t.id,
@@ -1924,7 +2063,7 @@ export class MatrixService {
           amount: usd,
           amountUsd: usd,
           token: "USD",
-          trobAmount: rawAmt > 0 ? rawAmt : undefined,
+          trobAmount: derivedTrob,
           fromAddress: t.fromAddress,
           toAddress: t.toAddress,
           txHash: t.txHash,
@@ -1933,43 +2072,6 @@ export class MatrixService {
           timestamp: t.timestamp,
         };
       });
-
-      // If the database has no payout records (COMMISSION_EARNED) but user has placed nodes in Slot 1,
-      // synthesize the on-chain partner reward settlements directly from their active slot board!
-      const hasPayouts = items.some((it) => it.type === "COMMISSION_EARNED");
-      if (!hasPayouts) {
-        try {
-          const slotDetails = await this.getSlotDetails(canonicalAddress, 1);
-          if (slotDetails && slotDetails.nodes) {
-            const payingPositions = [3, 6, 8, 9, 11, 12];
-            for (const pos of payingPositions) {
-              const node = slotDetails.nodes[pos - 1];
-              if (node && node.filled && node.placedUser) {
-                const payoutUsd = 30.0;
-                totalInflow += payoutUsd;
-                items.unshift({
-                  id: `tx-reward-${canonicalAddress.slice(2, 8)}-p${pos}`,
-                  type: "COMMISSION_EARNED",
-                  slotNumber: 1,
-                  cycle: 1,
-                  position: pos,
-                  amount: payoutUsd,
-                  amountUsd: payoutUsd,
-                  trobAmount: 870.16,
-                  trobSubtitle: "870.16 TROB",
-                  token: "USD",
-                  fromAddress: node.placedUser,
-                  toAddress: canonicalAddress,
-                  txHash: "0x" + Buffer.from(canonicalAddress + "-p" + pos).toString("hex").padEnd(64, "0").slice(0, 64),
-                  status: "COMPLETED",
-                  description: `Matrix Position #${pos} P2P Settlement (+ $30.00 USD)`,
-                  timestamp: node.timestamp ? new Date(node.timestamp) : new Date(),
-                });
-              }
-            }
-          }
-        } catch {}
-      }
 
       return {
         items,
@@ -2009,6 +2111,8 @@ export class MatrixService {
     try {
       const user = await this.getUserProfile(canonicalAddress);
 
+      const livePrice = await this.getLiveTrobPriceUsd();
+
       const recentTxs = await prisma.matrixTransaction.findMany({
         where: {
           userAddress: canonicalAddress,
@@ -2025,7 +2129,7 @@ export class MatrixService {
         cycle: t.cycle,
         position: t.position,
         amount: Number(t.amount),
-        amountUsd: t.amountUsd ? Number(t.amountUsd) : Number(t.amount) * TROB_PRICE_USD,
+        amountUsd: t.amountUsd ? Number(t.amountUsd) : (livePrice > 0 ? Number(t.amount) * livePrice : 0),
         token: t.token,
         fromAddress: t.fromAddress,
         toAddress: t.toAddress,
@@ -2039,35 +2143,56 @@ export class MatrixService {
       const rawEarned = Number(user.totalEarnings || 0);
       const cleanTotal = rawEarned > 100000 ? Math.round(rawEarned / 1e6) : rawEarned;
       const total = cleanTotal;
-      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      const chartData = days.map((day, idx) => ({
-        date: day,
-        amount: Math.round((total / 7) * (0.6 + (idx * 0.12)) * 100) / 100,
+
+      const allPayoutTxs = await prisma.matrixTransaction.findMany({
+        where: {
+          userAddress: canonicalAddress,
+          type: { notIn: ["SLOT_PURCHASE", "UPGRADE_RESERVE", "BOARD_ROUTING", "POOL_ROUTING"] },
+        },
+        orderBy: { timestamp: "asc" },
+      }).catch(() => []);
+
+      const chartMap = new Map<string, number>();
+      for (const tx of allPayoutTxs) {
+        const dt = tx.timestamp ? new Date(tx.timestamp) : null;
+        if (!dt || Number.isNaN(dt.getTime())) continue;
+        const key = dt.toISOString().slice(0, 10);
+        const usd = tx.amountUsd ? Number(tx.amountUsd) : Number(tx.amount || 0);
+        chartMap.set(key, Math.round(((chartMap.get(key) || 0) + usd) * 100) / 100);
+      }
+      const chartData = Array.from(chartMap.entries()).map(([date, amount]) => ({
+        date,
+        amount,
       }));
 
-      const livePrice = await this.getLiveTrobPriceUsd();
-      const exactTrob = canonicalAddress === "0x7124b32b48786a13177f3bdc9620e7a48eb9c902" ? 5220.96 : (livePrice > 0 ? Math.round((total / livePrice) * 100) / 100 : total);
+      const reserveAgg = await prisma.matrixSlot.aggregate({
+        where: { userAddress: canonicalAddress },
+        _sum: { upgradeReserve: true },
+      }).catch(() => null);
+      const totalReserveUsd = Number(reserveAgg?._sum?.upgradeReserve || 0);
+
+      const exactTrob = livePrice > 0 ? Math.round((total / livePrice) * 100) / 100 : 0;
 
       return {
         totalEarnings: exactTrob,
         totalEarningsUsd: total,
-        availableBalance: livePrice > 0 ? Math.round((user.availableBalance / livePrice) * 100) / 100 : user.availableBalance,
+        availableBalance: livePrice > 0 ? Math.round((user.availableBalance / livePrice) * 100) / 100 : 0,
         availableBalanceUsd: user.availableBalance,
-        withdrawnTotal: livePrice > 0 ? Math.round((user.withdrawnTotal / livePrice) * 100) / 100 : user.withdrawnTotal,
+        withdrawnTotal: livePrice > 0 ? Math.round((user.withdrawnTotal / livePrice) * 100) / 100 : 0,
         withdrawnTotalUsd: user.withdrawnTotal,
         trobPriceUsd: livePrice,
         breakdown: {
-          directBonus: user.directEarnings && user.directEarnings <= 100000 ? user.directEarnings : total,
-          matrixPlacements: user.matrixEarnings && user.matrixEarnings <= 100000 ? user.matrixEarnings : total,
-          upgradeReserves: Math.round(total * 0.1 * 100) / 100,
-          poolShares: user.poolEarnings && user.poolEarnings <= 100000 ? user.poolEarnings : Math.round(total * 0.1 * 100) / 100,
+          directBonus: user.directEarnings && user.directEarnings <= 100000 ? user.directEarnings : 0,
+          matrixPlacements: user.matrixEarnings && user.matrixEarnings <= 100000 ? user.matrixEarnings : 0,
+          upgradeReserves: totalReserveUsd,
+          poolShares: user.poolEarnings && user.poolEarnings <= 100000 ? user.poolEarnings : 0,
         },
         chartData,
         recentPayouts,
       };
     } catch (dbErr: any) {
-      console.warn(`[MatrixService] DB notice in getEarningsOverview(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
-      return getFallbackEarningsOverview();
+      console.error(`[MatrixService] Error in getEarningsOverview(${canonicalAddress}):`, dbErr?.message || dbErr);
+      throw dbErr;
     }
   }
 
@@ -2439,7 +2564,7 @@ export class MatrixService {
         joinedAt: d.registrationTimestamp,
         activeSlots: d.matrixSlots?.length || 0,
         totalContributed: (d.matrixSlots || []).reduce(
-          (sum: number, s: any) => sum + (SLOT_COSTS[s.slotNumber] || 0),
+          (sum: number, s: any) => sum + 30,
           0
         ),
       }));
@@ -2456,7 +2581,27 @@ export class MatrixService {
       const p = await priceService.getTrobUsdPrice();
       if (p && p.priceUsd > 0) return p.priceUsd;
     } catch {}
-    return DEFAULT_BENCHMARK_TROB_PRICE;
+    try {
+      const ocRes = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggerconstantcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: MATRIX_CONTRACT_HEX,
+          contract_address: MATRIX_CONTRACT_HEX,
+          function_selector: "trobPriceUsd6()",
+          parameter: "",
+        }),
+      });
+      if (ocRes.ok) {
+        const ocJson = await ocRes.json() as any;
+        const hex = ocJson?.constant_result?.[0];
+        if (hex && hex.length >= 64) {
+          const usd6 = Number(BigInt("0x" + hex.slice(0, 64)));
+          if (usd6 > 0) return usd6 / 1e6;
+        }
+      }
+    } catch {}
+    return 0;
   }
 
   // ── MATRIX STATS & PROTOCOL POOL ──────────────────────────────────────────

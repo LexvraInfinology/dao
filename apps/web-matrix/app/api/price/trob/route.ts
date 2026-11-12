@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ethers } from 'ethers';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,7 +7,51 @@ let cachedTrobPayload: any = null;
 let lastTrobFetchTime = 0;
 let inFlightPromise: Promise<any> | null = null;
 
-const BENCHMARK_PRICE = 0.056;
+const RPC_URL =
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  process.env.RPC_URL ||
+  process.env.FULLNODE_URL ||
+  'https://fullnode-one.trobchain.com';
+
+const MATRIX_HEX = (
+  process.env.NEXT_PUBLIC_MATRIX_HEX ||
+  '41b48f1e72c64b776ce5864df74926b3b935fef308'
+).toLowerCase();
+
+const CALLER_HEX = '410000000000000000000000000000000000000000';
+
+async function fetchOnChainOraclePrice(): Promise<number> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4500);
+    const selector = ethers.id('trobPriceUsd6()').slice(2, 10);
+    const res = await fetch(`${RPC_URL}/wallet/triggerconstantcontract`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        owner_address: CALLER_HEX,
+        contract_address: MATRIX_HEX,
+        function_selector: 'trobPriceUsd6()',
+        parameter: '',
+        visible: false,
+      }),
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return 0;
+    const json = await res.json();
+    const hex = json?.constant_result?.[0];
+    if (hex && hex.length >= 64) {
+      const val = Number(BigInt('0x' + hex.slice(0, 64)));
+      if (Number.isFinite(val) && val > 0) return val / 1_000_000;
+    }
+    void selector;
+  } catch {
+    // ignore and try other sources
+  }
+  return 0;
+}
 
 async function fetchLiveTrobPrice(): Promise<any> {
   const now = Date.now();
@@ -65,18 +110,25 @@ async function fetchLiveTrobPrice(): Promise<any> {
       }
     }
 
-    // Benchmark fallback
-    return {
-      success: true,
-      data: {
-        priceUsd: BENCHMARK_PRICE,
-        price: BENCHMARK_PRICE,
-        timestamp: Date.now(),
-        source: 'benchmark_fallback',
-      },
-      priceUsd: BENCHMARK_PRICE,
-      price: BENCHMARK_PRICE,
-    };
+    const oraclePrice = await fetchOnChainOraclePrice();
+    if (oraclePrice > 0) {
+      const payload = {
+        success: true,
+        data: {
+          priceUsd: oraclePrice,
+          price: oraclePrice,
+          timestamp: Date.now(),
+          source: 'onchain_oracle',
+        },
+        priceUsd: oraclePrice,
+        price: oraclePrice,
+      };
+      cachedTrobPayload = payload;
+      lastTrobFetchTime = Date.now();
+      return payload;
+    }
+
+    return null;
   })().finally(() => {
     inFlightPromise = null;
   });
@@ -87,6 +139,21 @@ async function fetchLiveTrobPrice(): Promise<any> {
 export async function GET() {
   try {
     const payload = await fetchLiveTrobPrice();
+    if (!payload) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Live TROB market & on-chain oracle unavailable',
+        },
+        {
+          status: 503,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          },
+        }
+      );
+    }
     return NextResponse.json(payload, {
       headers: {
         'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
@@ -97,17 +164,11 @@ export async function GET() {
   } catch (err: any) {
     return NextResponse.json(
       {
-        success: true,
-        data: {
-          priceUsd: BENCHMARK_PRICE,
-          price: BENCHMARK_PRICE,
-          timestamp: Date.now(),
-          source: 'error_fallback',
-        },
-        priceUsd: BENCHMARK_PRICE,
-        price: BENCHMARK_PRICE,
+        success: false,
+        error: err?.message || 'Live TROB price lookup failed',
       },
       {
+        status: 503,
         headers: {
           'Access-Control-Allow-Origin': '*',
         },

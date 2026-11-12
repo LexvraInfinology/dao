@@ -72,8 +72,8 @@ export function MagicBlindBoxModal({
     }
   };
 
-  const finalUsd = liveStatus?.prizeUsd || claimableAmountUsd || 0.50;
-  const finalTrob = liveStatus?.prizeTrob || claimableAmountTrob || 8.93;
+  const finalUsd = liveStatus?.prizeUsd ?? claimableAmountUsd ?? 0;
+  const finalTrob = liveStatus?.prizeTrob ?? claimableAmountTrob ?? 0;
 
   // ── Stage 2: Full Screen Video Playback ────────────────────────────────────
   if (stage === "playing") {

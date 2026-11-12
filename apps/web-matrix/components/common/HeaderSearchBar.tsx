@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { searchOperativeOnChain, EXPLORER_URL } from "@/lib/contracts";
+import { searchOperativeOnChain, EXPLORER_URL, getSlotCost } from "@/lib/contracts";
 import { useMatrixUser } from "@/lib/useMatrixUser";
 import { useMatrixStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
@@ -208,7 +208,7 @@ export function HeaderSearchBar({ className = "" }: HeaderSearchBarProps) {
 
     // 2. All 12 Matrix Slots
     for (let s = 1; s <= 12; s++) {
-      const costUsd = 30 * Math.pow(2, s - 1);
+      const costUsd = getSlotCost(s);
       items.push({
         id: `slot-${s}`,
         category: "SLOT",

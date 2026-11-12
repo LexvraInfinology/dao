@@ -63,31 +63,43 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       ]);
 
       if (data && onChainProf) {
+        const apiTotal = Number(data.totalEarningsUsd ?? data.totalEarnings ?? 0);
+        const effTotal = apiTotal > 0 ? apiTotal : onChainProf.totalEarnings;
+        const apiSettled = Number(data.totalWithdrawn ?? data.withdrawnTotalUsd ?? 0);
+        const effSettled =
+          apiSettled > 0
+            ? apiSettled
+            : onChainProf.withdrawnTotal > 0
+              ? onChainProf.withdrawnTotal
+              : effTotal;
+        const apiAvail = Number(data.availableBalanceUsd ?? data.availableBalance ?? 0);
         set({
           earnings: {
             ...data,
-            totalEarnings: onChainProf.totalEarnings,
-            totalEarningsUsd: onChainProf.totalEarnings,
-            availableBalance: onChainProf.availableBalance,
-            availableBalanceUsd: onChainProf.availableBalance,
-            withdrawnTotal: onChainProf.withdrawnTotal,
-            withdrawnTotalUsd: onChainProf.withdrawnTotal,
-            totalWithdrawn: onChainProf.withdrawnTotal,
+            totalEarnings: effTotal,
+            totalEarningsUsd: effTotal,
+            availableBalance: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
+            availableBalanceUsd: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
+            withdrawnTotal: effSettled,
+            withdrawnTotalUsd: effSettled,
+            totalWithdrawn: effSettled,
           },
           loadingEarnings: false,
         });
       } else if (data) {
         set({ earnings: data, loadingEarnings: false });
       } else if (onChainProf) {
+        const effSettled =
+          onChainProf.withdrawnTotal > 0 ? onChainProf.withdrawnTotal : onChainProf.totalEarnings;
         set({
           earnings: {
             totalEarnings: onChainProf.totalEarnings,
             totalEarningsUsd: onChainProf.totalEarnings,
             availableBalance: onChainProf.availableBalance,
             availableBalanceUsd: onChainProf.availableBalance,
-            withdrawnTotal: onChainProf.withdrawnTotal,
-            withdrawnTotalUsd: onChainProf.withdrawnTotal,
-            totalWithdrawn: onChainProf.withdrawnTotal,
+            withdrawnTotal: effSettled,
+            withdrawnTotalUsd: effSettled,
+            totalWithdrawn: effSettled,
             pendingRewards: 0,
             breakdown: {
               directBonus: onChainProf.directEarnings,

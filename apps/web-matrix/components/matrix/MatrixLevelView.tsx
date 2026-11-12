@@ -1,6 +1,7 @@
 import React from "react";
 import { MatrixSlotSummary } from "@/lib/api";
-import { useMatrixStore } from "@/lib/stores";
+import { getSlotCost } from "@/lib/contracts";
+import { useMatrixStore, useUserStore } from "@/lib/stores";
 
 export interface MatrixLevelViewProps {
   slots?: MatrixSlotSummary[];
@@ -14,15 +15,17 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
   const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
   const storeSelectSlot = useMatrixStore((s) => s.selectSlot);
   const storeBuySlot = useMatrixStore((s) => s.buySlot);
+  const profile = useUserStore((s) => s.profile);
 
   const slots = props.slots ?? storeSlots;
   const onSelectSlot = props.onSelectSlot ?? storeSelectSlot;
   const onBuySlot = props.onBuySlot;
   const selectedSlotNumber = props.selectedSlotNumber ?? storeSelectedSlot;
+  const isRegistered = Boolean(profile?.isRegistered);
   const defaultProgressionLevels = Array.from({ length: 12 }, (_, i) => {
     const lvl = i + 1;
-    const isUnlocked = lvl === 1;
-    const cost = 30 * Math.pow(2, lvl - 1);
+    const isUnlocked = isRegistered && lvl === 1;
+    const cost = getSlotCost(lvl);
     const recycles = 0;
     const earnedVal = 0;
     return {
@@ -44,29 +47,37 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
     slots && slots.length > 0
       ? slots.map((s) => {
           const isStandby = false;
-          const cost = s.cost || (30 * Math.pow(2, s.slotNumber - 1));
-          const isSlot1Fulfilled = s.slotNumber === 1 && (s.recyclesCount > 0 || s.filledNodes >= 14);
+          const cost = s.cost || getSlotCost(s.slotNumber);
+          const recycles = s.recyclesCount || 0;
+          const isBoard1Settled = recycles > 0 || s.filledNodes >= 14;
           const earned = (s.totalEarnedUsd !== undefined && s.totalEarnedUsd > 0)
             ? s.totalEarnedUsd
-            : (s.totalEarned > 0 ? s.totalEarned : (s.recyclesCount ? s.recyclesCount * 6 * cost : 0));
-          const filled = isSlot1Fulfilled ? 14 : (s.filledNodes || 0);
-          const isCompleted = isSlot1Fulfilled || s.filledNodes >= 14;
+            : (s.totalEarned > 0 ? s.totalEarned : (recycles ? recycles * 6 * cost : 0));
+          const settledBoardUsd = recycles * 6 * cost;
+          const liveBoardUsd = Math.max(0, Number(earned) - settledBoardUsd);
+          const liveFilled = s.filledNodes || 0;
+          const displayFilled = recycles > 0 ? liveFilled : (isBoard1Settled ? 14 : liveFilled);
+          const isCompleted = isBoard1Settled && recycles === 0;
           return {
             level: s.slotNumber,
             num: String(s.slotNumber).padStart(2, "0"),
-            status: isCompleted ? "Completed" : (s.isUnlocked ? (isStandby ? "Standby" : "Active") : "Locked"),
-            statusType: isCompleted ? "completed" : (s.isUnlocked ? (isStandby ? "standby" : "active") : "locked"),
+            status: recycles > 0 ? `Board #${recycles + 1} Live` : (isCompleted ? "Completed" : (s.isUnlocked ? "Active" : "Locked")),
+            statusType: isCompleted ? "completed" : (s.isUnlocked ? "active" : "locked"),
             isCompleted,
-            nodesFilled: filled,
+            isBoard1Settled,
+            recycles,
+            nodesFilled: displayFilled,
             totalNodes: 14,
-            progress: Math.min(100, Math.round((filled / 14) * 100)),
+            progress: Math.min(100, Math.round((displayFilled / 14) * 100)),
             earned: `${Number(earned).toFixed(2)}`,
+            settledBoardUsd,
+            liveBoardUsd,
             isActive: s.isUnlocked,
             isStandby,
             cost,
           };
         })
-      : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false, isCompleted: false }));
+      : defaultProgressionLevels.map((d) => ({ ...d, isStandby: false, isCompleted: false, isBoard1Settled: false, recycles: 0, settledBoardUsd: 0, liveBoardUsd: 0 }));
 
   const unlockedCount = slots && slots.length > 0 ? slots.filter((s) => s.isUnlocked).length : 1;
 
@@ -122,14 +133,19 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                               </div>
 
                               <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 leading-none">
+                                <div className="flex items-center gap-1.5 leading-none flex-wrap">
                                   <h3 className="font-extrabold text-[15px] sm:text-[16px] text-[#0f172a]">
                                     Level {lvl.level}
                                   </h3>
                                   {lvl.isCompleted ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#10b981] ml-1">
                                       <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                                      Completed 🏆
+                                      Board #1 Settled 🏆
+                                    </span>
+                                  ) : lvl.recycles > 0 ? (
+                                    <span className="flex items-center gap-1 text-[11.5px] font-bold text-[#2563eb] ml-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
+                                      Board #{lvl.recycles + 1} Live ⚡
                                     </span>
                                   ) : lvl.isStandby ? (
                                     <span className="flex items-center gap-1 text-[11.5px] font-bold text-amber-600 ml-1">
@@ -146,7 +162,9 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
 
                                 <div className="text-[11.5px] font-medium text-[#475569] mt-1">
                                   {lvl.isCompleted
-                                    ? "14 / 14 Nodes Completed • Cycle #01 Settled 🏆"
+                                    ? `14 / 14 Nodes Completed • Board #1 Settled 🏆`
+                                    : lvl.recycles > 0
+                                    ? `Board #1: 14/14 ($${lvl.settledBoardUsd.toFixed(0)}) • Board #${lvl.recycles + 1}: ${lvl.nodesFilled}/${lvl.totalNodes} Live`
                                     : lvl.isStandby
                                     ? "Reserved at Node 5 ($0 Out-of-Pocket) • Live on Board Complete"
                                     : `${lvl.nodesFilled} / ${lvl.totalNodes} Nodes • Next: Seat #${Math.min(14, lvl.nodesFilled + 1)}`}
@@ -162,7 +180,11 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
 
                                 <div className="font-black text-[14px] sm:text-[15px] text-[#0f172a] mt-2">
                                   <span>${Number(lvl.earned).toFixed(2)} USD</span>
-                                  {Number(lvl.earned) > 0 ? (
+                                  {lvl.recycles > 0 ? (
+                                    <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
+                                      (${lvl.settledBoardUsd.toFixed(0)} Board #1 + ${lvl.liveBoardUsd.toFixed(0)} Live)
+                                    </span>
+                                  ) : Number(lvl.earned) > 0 ? (
                                     <span className="text-[11px] font-bold text-emerald-600 ml-1.5">
                                       ({Math.round(Number(lvl.earned) / lvl.cost)} × ${lvl.cost} Direct Yield)
                                     </span>
@@ -227,14 +249,10 @@ export function MatrixLevelView(props: MatrixLevelViewProps = {}) {
                                   <span>Locked</span>
                                 </div>
 
-                                {lvl.level <= 4 && (
-                                  <>
                                     <div className="text-[11.5px] font-medium text-[#94a3b8] mt-1">
                                       0 / 14 Nodes
                                     </div>
                                     <div className="w-36 sm:w-44 h-1.5 bg-[#f1f5f9] rounded-full mt-1.5" />
-                                  </>
-                                )}
                               </div>
                             </div>
 

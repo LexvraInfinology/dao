@@ -182,7 +182,7 @@ export function isDeployerAddress(addr?: string | null): boolean {
       for (const dep of DEPLOYER_ADDRESSES) {
         if (hex.toLowerCase() === dep.toLowerCase()) return true;
       }
-    } catch {}
+    } catch { }
   }
   return false;
 }
@@ -333,7 +333,7 @@ export async function getOnChainTokenBalance(userAddress: string): Promise<numbe
           if (sun !== undefined && sun !== null && !isNaN(Number(sun))) {
             return Number(sun) / 1e6;
           }
-        } catch {}
+        } catch { }
       }
       if (tw?.trob?.getBalance) {
         try {
@@ -341,7 +341,7 @@ export async function getOnChainTokenBalance(userAddress: string): Promise<numbe
           if (sun !== undefined && sun !== null && !isNaN(Number(sun))) {
             return Number(sun) / 1e6;
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -357,7 +357,7 @@ export async function getOnChainTokenBalance(userAddress: string): Promise<numbe
       if (data && typeof data.balance === "number") {
         return data.balance / 1e6;
       }
-    } catch {}
+    } catch { }
 
     // 3. Fallback: check TRC20 token balance if using wrapped token
     const coder = new ethers.AbiCoder();
@@ -432,9 +432,9 @@ export async function getOnChainSlotStatus(
 
 /**
  * Queries total members registered in EquoraMatrix.sol.
- * If 0, the very first entrant is the Genesis Apex node whose sponsor routes to Protocol Pools.
+ * Returns null if the RPC call fails so transient errors are never mistaken for Genesis (0 members).
  */
-export async function getOnChainTotalMembers(): Promise<number> {
+export async function getOnChainTotalMembers(): Promise<number | null> {
   try {
     const raw = await queryTrobConstant(
       CONTRACT_ADDRESSES.matrix,
@@ -449,28 +449,45 @@ export async function getOnChainTotalMembers(): Promise<number> {
   } catch (err) {
     console.warn("[getOnChainTotalMembers] query notice:", err);
   }
-  return 0;
-}
-export function getSlotCost(slotNumber: number): number {
-  if (!slotNumber || slotNumber <= 1) return 30;
-  return 30 * Math.pow(2, Math.min(11, slotNumber - 1));
+  return null;
 }
 
+const livePriceCache: { priceUsd: number; timestamp: number } = { priceUsd: 0, timestamp: 0 };
+const liveSlotCostCache = new Map<number, { costSun: number; costUsd: number; timestamp: number }>();
+const dynamicSlotUsdCosts: Record<number, number> = {};
+
 /**
- * Fetches the exact on-chain required deposit in SUN (6 decimals) from EquoraMatrix.sol.
- * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
+ * Queries live TROB/USD price directly from EquoraMatrix.trobPriceUsd6() or live price endpoints.
+ * Returns 0 if unavailable (never returns a hardcoded benchmark price).
  */
-export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
-  // 1. Fetch live market price directly from local same-origin proxies (avoids browser CORS)
-  let livePrice = 0;
-  const endpoints = [
-    "/api/price/trob",
-    "/api/price",
-    "/api/trob-market/price",
-  ];
-  if (typeof window === "undefined") {
-    endpoints.push("https://backend.trobchain.com/v1/market/price");
+export async function getLiveTrobPriceUsd(): Promise<number> {
+  if (livePriceCache.priceUsd > 0 && Date.now() - livePriceCache.timestamp < 30_000) {
+    return livePriceCache.priceUsd;
   }
+
+  try {
+    const rawPrice = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "trobPriceUsd6()",
+      ""
+    );
+    if (rawPrice && rawPrice.length >= 64) {
+      const coder = new ethers.AbiCoder();
+      const [p6] = coder.decode(["uint256"], "0x" + rawPrice);
+      const p = Number(p6) / 1_000_000;
+      if (p > 0) {
+        livePriceCache.priceUsd = p;
+        livePriceCache.timestamp = Date.now();
+        return p;
+      }
+    }
+  } catch { }
+
+  const endpoints =
+    typeof window !== "undefined"
+      ? ["/api/price/trob", "/api/price", "/api/trob-market/price"]
+      : ["https://backend.trobchain.com/v1/market/price"];
+
   for (const ep of endpoints) {
     try {
       const res = await fetch(ep, { cache: "no-store" });
@@ -478,46 +495,75 @@ export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<num
         const json = await res.json();
         const p = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price ?? 0);
         if (p > 0) {
-          livePrice = p;
+          livePriceCache.priceUsd = p;
+          livePriceCache.timestamp = Date.now();
+          return p;
+        }
+      }
+    } catch { }
+  }
+
+  return livePriceCache.priceUsd;
+}
+
+/**
+ * Fetches exact live on-chain slot cost (in SUN) and live USD equivalent from EquoraMatrix.sol.
+ */
+export async function getLiveSlotCostUsdAndSun(
+  slotNumber: number = 1
+): Promise<{ costSun: number; costUsd: number; priceUsd: number }> {
+  const slot = Math.max(1, Math.min(12, Math.floor(slotNumber || 1)));
+  const cached = liveSlotCostCache.get(slot);
+  const priceUsd = await getLiveTrobPriceUsd();
+
+  if (cached && Date.now() - cached.timestamp < 30_000 && cached.costSun > 0) {
+    return { costSun: cached.costSun, costUsd: cached.costUsd, priceUsd };
+  }
+
+  const coder = new ethers.AbiCoder();
+  const param = coder.encode(["uint256"], [slot]).slice(2);
+  let onChainSun = 0;
+
+  for (const fn of ["getSlotCost(uint256)", "getRequiredTrobForSlot(uint256)", "slotCosts(uint256)"]) {
+    try {
+      const raw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, fn, param);
+      if (raw && raw.length >= 64) {
+        const [val] = coder.decode(["uint256"], "0x" + raw);
+        const n = Number(val);
+        if (n > 0) {
+          onChainSun = n;
           break;
         }
       }
-    } catch {}
+    } catch { }
   }
 
-  const liveSun = livePrice > 0 ? Math.round((30 / livePrice) * 1_000_000) : 0;
+  const costUsd =
+    onChainSun > 0 && priceUsd > 0
+      ? Number(((onChainSun / 1_000_000) * priceUsd).toFixed(2))
+      : dynamicSlotUsdCosts[slot] ?? 30;
 
-  // 2. Query on-chain getSlotCost, getRequiredTrobForSlot or slotCosts
-  const coder = new ethers.AbiCoder();
-  const param = coder.encode(["uint256"], [slotNumber]).slice(2);
-  let onChainSun = 0;
-  try {
-    const raw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "getSlotCost(uint256)",
-      param
-    );
-    if (raw && raw.length >= 64) {
-      const [costSun] = coder.decode(["uint256"], "0x" + raw);
-      onChainSun = Number(costSun);
-    }
-  } catch (err) {
-    try {
-      const raw2 = await queryTrobConstant(
-        CONTRACT_ADDRESSES.matrix,
-        "getRequiredTrobForSlot(uint256)",
-        param
-      );
-      if (raw2 && raw2.length >= 64) {
-        const [costSun2] = coder.decode(["uint256"], "0x" + raw2);
-        onChainSun = Number(costSun2);
-      }
-    } catch {}
+  if (onChainSun > 0) {
+    dynamicSlotUsdCosts[slot] = costUsd;
+    liveSlotCostCache.set(slot, { costSun: onChainSun, costUsd, timestamp: Date.now() });
   }
 
-  if (liveSun > 0) return liveSun;
-  if (onChainSun > 0) return onChainSun;
-  return 937_558_597; // Dynamic market rate based on live TROB API
+  return { costSun: onChainSun, costUsd, priceUsd };
+}
+export function getSlotCost(slotNumber: number): number {
+  const slot = Math.max(1, Math.min(12, Math.floor(slotNumber || 1)));
+  return dynamicSlotUsdCosts[slot] ?? 30;
+}
+
+/**
+ * Fetches the exact on-chain required deposit in SUN (6 decimals) from EquoraMatrix.sol.
+ * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
+ */
+export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
+  const { costSun, priceUsd } = await getLiveSlotCostUsdAndSun(slotNumber);
+  if (costSun > 0) return costSun;
+  if (priceUsd > 0) return Math.round((getSlotCost(slotNumber) / priceUsd) * 1_000_000);
+  return 0;
 }
 
 // Fast cache for direct referrals
@@ -575,14 +621,13 @@ export async function getOnChainSlotDetails(
         const json = await res.json();
         if (json.success && json.data && Array.isArray(json.data.nodes) && json.data.nodes.length === 14) {
           // If we asked for an archived cycle snapshot, make sure API returned a true snapshot
-          if (targetCycle && !json.data.isViewingSnapshot) {
-            // Fall through to direct on-chain RPC query below to get 14-seat historical snapshot!
+          if (targetCycle && (json.data.snapshotCount ?? 0) >= targetCycle && !json.data.isViewingSnapshot) {
+            // Fall through to direct on-chain RPC query below to get historical snapshot!
           } else {
             const snapCnt = Math.max(
               json.data.snapshotCount ?? 0,
               json.data.recyclesCount ?? 0,
-              Math.max(0, (json.data.currentCycle ?? 1) - 1),
-              slotNumber === 1 ? 1 : 0
+              Math.max(0, (json.data.currentCycle ?? 1) - 1)
             );
             return {
               ...json.data,
@@ -591,7 +636,7 @@ export async function getOnChainSlotDetails(
           }
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const coder = new ethers.AbiCoder();
@@ -648,13 +693,17 @@ export async function getOnChainSlotDetails(
           prevSlotCompleted = true;
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const liveFilledNodes = isUnlocked ? Number(filledNodes) : 0;
 
+  const { costUsd: liveSlotUsd, costSun: liveSlotSun, priceUsd: liveTrobPrice } =
+    await getLiveSlotCostUsdAndSun(slotNumber);
+
   // Check how many completed cycle snapshots exist on-chain for this slot
   let snapshotCount = 0;
+  let snapshotCountFetched = false;
   if (isUnlocked) {
     try {
       const countRaw = await queryTrobConstant(
@@ -664,10 +713,11 @@ export async function getOnChainSlotDetails(
       );
       if (countRaw) {
         snapshotCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
+        snapshotCountFetched = true;
       }
-    } catch {}
-    if (snapshotCount === 0) {
-      snapshotCount = Math.max(0, (Number(currentCycle) || 1) - 1, slotNumber === 1 ? 1 : 0);
+    } catch { }
+    if (!snapshotCountFetched) {
+      snapshotCount = Math.max(0, (Number(currentCycle) || 1) - 1);
     }
   }
 
@@ -685,42 +735,65 @@ export async function getOnChainSlotDetails(
           globalCycle = Math.max(2, Number(s12C));
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const slotOnChainCycle = isUnlocked ? (Number(currentCycle) || 1) : 0;
-  // Rule: Cycle 1 is active for the whole project (Slots 1–12, 168 positions total).
-  // Cycle 2 only opens when Slot 12 completes all 14 positions (168 positions total)!
-  const totalCycles = globalCycle;
-  const effectiveCurrentCycle = globalCycle;
+  const totalCycles = Math.max(globalCycle, slotOnChainCycle, snapshotCount > 0 ? snapshotCount + 1 : 1);
+  const effectiveCurrentCycle = isUnlocked ? slotOnChainCycle : 0;
 
-  // Snapshot is loaded if targetCycle is explicitly requested for an archived board history
+  // Load archived snapshot ONLY when targetCycle points to a verified historical snapshot (1..snapshotCount)
   const isTargetingArchivedCycle = Boolean(
     isUnlocked &&
+    snapshotCount > 0 &&
     targetCycle !== undefined &&
     targetCycle !== null &&
     targetCycle > 0 &&
-    (targetCycle <= snapshotCount || targetCycle < slotOnChainCycle || (slotNumber === 1 && targetCycle === 1))
+    targetCycle <= snapshotCount
   );
 
   const effectiveCycle = isUnlocked
-    ? (isTargetingArchivedCycle ? targetCycle : effectiveCurrentCycle)
+    ? (isTargetingArchivedCycle ? targetCycle! : effectiveCurrentCycle)
     : 0;
   const isViewingSnapshot = isTargetingArchivedCycle;
 
   let displayNodes = isUnlocked ? [...nodes] : Array(14).fill("0x0000000000000000000000000000000000000000");
+  let onChainCodes: number[] = [];
+  let onChainIds: number[] = [];
+  let onChainRecipients: string[] = [];
+  let onChainPayoutTypes: number[] = [];
+
   if (isUnlocked && isViewingSnapshot) {
     try {
       const snapIdx = Math.max(0, (effectiveCycle || 1) - 1);
       const snapParam = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, snapIdx]).slice(2);
-      const snapRaw = await queryTrobConstant(
+      const detailSnapRaw = await queryTrobConstant(
         CONTRACT_ADDRESSES.matrix,
-        "getCycleSnapshot(address,uint256,uint256)",
+        "getCycleSnapshotDetail(address,uint256,uint256)",
         snapParam
-      );
-      if (snapRaw) {
-        const snapDecoded = coder.decode(["uint256", "address[14]", "uint256"], "0x" + snapRaw);
-        displayNodes = snapDecoded[1];
+      ).catch(() => null);
+      if (detailSnapRaw) {
+        const [, snapAddrs, snapCodes, snapIds, snapRecips, snapTypes] = coder.decode(
+          ["uint256", "address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]", "uint256"],
+          "0x" + detailSnapRaw
+        );
+        if (snapAddrs && snapAddrs.length === 14) {
+          displayNodes = [...snapAddrs];
+        }
+        onChainCodes = snapCodes.map((c: any) => Number(c));
+        onChainIds = snapIds.map((id: any) => Number(id));
+        onChainRecipients = snapRecips.map((r: any) => String(r));
+        onChainPayoutTypes = snapTypes.map((t: any) => Number(t));
+      } else {
+        const snapRaw = await queryTrobConstant(
+          CONTRACT_ADDRESSES.matrix,
+          "getCycleSnapshot(address,uint256,uint256)",
+          snapParam
+        );
+        if (snapRaw) {
+          const snapDecoded = coder.decode(["uint256", "address[14]", "uint256"], "0x" + snapRaw);
+          displayNodes = [...snapDecoded[1]];
+        }
       }
     } catch (err) {
       console.warn("[OnChain] Cycle snapshot query notice:", err);
@@ -738,7 +811,7 @@ export async function getOnChainSlotDetails(
     if (liveRaw) {
       isLive = Boolean(coder.decode(["bool"], "0x" + liveRaw)[0]);
     }
-  } catch {}
+  } catch { }
 
   if (slotNumber > 1 && isUnlocked && !isLive) {
     if (prevSlotCompleted) {
@@ -746,48 +819,46 @@ export async function getOnChainSlotDetails(
     }
   }
 
-  // Fetch real on-chain 5-digit member codes, member IDs, authoritative nodes, and live payout recipients
-  let onChainCodes: number[] = [];
-  let onChainIds: number[] = [];
-  let onChainRecipients: string[] = [];
-  let onChainPayoutTypes: number[] = [];
-  try {
-    const detailRaw = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "getSlotNodesDetail(address,uint256)",
-      param
-    );
-    if (detailRaw) {
-      const [decodedAddresses, codesDecoded, idsDecoded, recipientsDecoded, typesDecoded] = coder.decode(
-        ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
-        "0x" + detailRaw
-      );
-      if (!isViewingSnapshot && decodedAddresses && decodedAddresses.length === 14) {
-        displayNodes = [...decodedAddresses];
-      }
-      onChainCodes = codesDecoded.map((c: any) => Number(c));
-      onChainIds = idsDecoded.map((id: any) => Number(id));
-      onChainRecipients = recipientsDecoded.map((r: any) => String(r));
-      onChainPayoutTypes = typesDecoded.map((t: any) => Number(t));
-    } else {
-      const nodesWithCodesRaw = await queryTrobConstant(
+  // Fetch real on-chain 5-digit member codes, member IDs, authoritative nodes, and live payout recipients ONLY when viewing live active board
+  if (isUnlocked && !isViewingSnapshot) {
+    try {
+      const detailRaw = await queryTrobConstant(
         CONTRACT_ADDRESSES.matrix,
-        "getSlotNodesWithCodes(address,uint256)",
+        "getSlotNodesDetail(address,uint256)",
         param
       );
-      if (nodesWithCodesRaw) {
-        const [decodedAddresses, codesDecoded, idsDecoded] = coder.decode(
-          ["address[14]", "uint32[14]", "uint256[14]"],
-          "0x" + nodesWithCodesRaw
+      if (detailRaw) {
+        const [decodedAddresses, codesDecoded, idsDecoded, recipientsDecoded, typesDecoded] = coder.decode(
+          ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
+          "0x" + detailRaw
         );
-        if (!isViewingSnapshot && decodedAddresses && decodedAddresses.length === 14) {
+        if (decodedAddresses && decodedAddresses.length === 14) {
           displayNodes = [...decodedAddresses];
         }
         onChainCodes = codesDecoded.map((c: any) => Number(c));
         onChainIds = idsDecoded.map((id: any) => Number(id));
+        onChainRecipients = recipientsDecoded.map((r: any) => String(r));
+        onChainPayoutTypes = typesDecoded.map((t: any) => Number(t));
+      } else {
+        const nodesWithCodesRaw = await queryTrobConstant(
+          CONTRACT_ADDRESSES.matrix,
+          "getSlotNodesWithCodes(address,uint256)",
+          param
+        );
+        if (nodesWithCodesRaw) {
+          const [decodedAddresses, codesDecoded, idsDecoded] = coder.decode(
+            ["address[14]", "uint32[14]", "uint256[14]"],
+            "0x" + nodesWithCodesRaw
+          );
+          if (decodedAddresses && decodedAddresses.length === 14) {
+            displayNodes = [...decodedAddresses];
+          }
+          onChainCodes = codesDecoded.map((c: any) => Number(c));
+          onChainIds = idsDecoded.map((id: any) => Number(id));
+        }
       }
-    }
-  } catch {}
+    } catch { }
+  }
 
   // Ensure any filled node resolves their true on-chain code and on-chain member ID directly from Registry
   await Promise.all(
@@ -802,14 +873,14 @@ export async function getOnChainSlotDetails(
           promises.push(
             getOnChainCodeByUser(occupant).then((c) => {
               if (c) onChainCodes[idx] = c;
-            }).catch(() => {})
+            }).catch(() => { })
           );
         }
         if (!onChainIds[idx] || onChainIds[idx] === 0) {
           promises.push(
             getOnChainUserId(occupant).then((id) => {
               if (id) onChainIds[idx] = id;
-            }).catch(() => {})
+            }).catch(() => { })
           );
         }
         if (promises.length > 0) {
@@ -831,20 +902,32 @@ export async function getOnChainSlotDetails(
 
     if (isFilled) computedFilledCount++;
 
-    // Contract-aligned payout types
+    // Contract-aligned payout types (honoring live on-chain payoutTypes enum when filled)
+    const CONTRACT_PAYOUT_NAMES = [
+      "OWNER_DIRECT",
+      "UPLINE_1",
+      "UPLINE_2",
+      "PROTOCOL_POOL",
+      "SPILLOVER_DOWNLINE1",
+      "SPILLOVER_DOWNLINE2",
+    ];
     let payoutType = "OWNER_DIRECT";
-    if (pos === 1) payoutType = "UPLINE_1";
-    else if (pos === 2) payoutType = "UPLINE_2";
-    else if (pos === 4 || pos === 5 || pos === 14) payoutType = "PROTOCOL_POOL";
-    else if (pos === 7 || pos === 10) payoutType = "SPILLOVER_DOWNLINE1";
-    else if (pos === 13) payoutType = "SPILLOVER_DOWNLINE2";
+    if (isFilled && onChainPayoutTypes[pos - 1] !== undefined && CONTRACT_PAYOUT_NAMES[onChainPayoutTypes[pos - 1]]) {
+      payoutType = CONTRACT_PAYOUT_NAMES[onChainPayoutTypes[pos - 1]];
+    } else {
+      if (pos === 1) payoutType = "UPLINE_1";
+      else if (pos === 2) payoutType = "UPLINE_2";
+      else if (pos === 4 || pos === 5 || pos === 14) payoutType = "PROTOCOL_POOL";
+      else if (pos === 7 || pos === 10) payoutType = "SPILLOVER_DOWNLINE1";
+      else if (pos === 13) payoutType = "SPILLOVER_DOWNLINE2";
+    }
 
     const realCode = isUnlocked ? (onChainCodes[pos - 1] || null) : null;
     const realId = isUnlocked ? (onChainIds[pos - 1] || null) : null;
     const rawRecip = isFilled && onChainRecipients[pos - 1] ? onChainRecipients[pos - 1] : null;
     const realRecipBase58 = rawRecip && rawRecip !== "0x0000000000000000000000000000000000000000" && rawRecip !== "0x0"
       ? toTrobBase58(rawRecip)
-      : (pos === 4 || pos === 5 || pos === 14 ? toTrobBase58(CONTRACT_ADDRESSES.vault) : null);
+      : (isFilled && (pos === 4 || pos === 5 || pos === 14) ? toTrobBase58(CONTRACT_ADDRESSES.vault) : null);
 
     formattedNodes.push({
       position: pos,
@@ -858,7 +941,7 @@ export async function getOnChainSlotDetails(
       payoutType,
       recipientAddress: realRecipBase58,
       wasFallback: false,
-      amount: getSlotCost(slotNumber),
+      amount: liveSlotUsd,
       timestamp: isFilled ? new Date().toISOString() : null,
       txHash: null,
       isDirect: pos <= 2,
@@ -868,24 +951,56 @@ export async function getOnChainSlotDetails(
   }
 
   const rawEarnedTrob = Number(ethers.formatUnits(slotEarned, 6));
+  const slotCostUsd = liveSlotUsd;
 
-  // Determine true direct matrix USD earnings from paying positions (P3, P6, P8, P9, P11, P12)
-  const slotCostUsd = getSlotCost(slotNumber);
+  const payingPositionsFilled = formattedNodes.filter((n) => {
+    if (!n.filled || n.payoutType !== "OWNER_DIRECT") return false;
+    if (n.recipientAddress) {
+      return toHexAddress(n.recipientAddress).toLowerCase() === userHex.toLowerCase();
+    }
+    return true;
+  }).length;
 
-  // Authoritative on-chain slot earnings from EquoraMatrix.sol (m.totalEarned)
-  // Evaluated in fixed protocol tier USD increments ($30 for Slot 1, $60 for Slot 2)
-  const payingPositionsFilled = formattedNodes.filter(
-    (n) => n.filled && n.payoutType === "OWNER_DIRECT"
-  ).length;
-  const slotP2PPayoutCount = rawEarnedTrob > 0 ? Math.max(1, Math.round(rawEarnedTrob / 888)) : payingPositionsFilled;
-  const effectivePayoutCount = Math.max(slotP2PPayoutCount, payingPositionsFilled);
-  const totalEarnedUsd = isUnlocked ? effectivePayoutCount * slotCostUsd : 0;
-  const totalEarnedTrob = isUnlocked && rawEarnedTrob > 0 ? rawEarnedTrob : (totalEarnedUsd > 0 ? totalEarnedUsd / 0.056 : 0);
-  const cycleEarnedUsd = totalEarnedUsd;
+  let historicalSnapshotPayingCount = 0;
+  if (isUnlocked && !isViewingSnapshot && snapshotCount > 0) {
+    const payingIndices = [2, 5, 7, 8, 10, 11];
+    const snapCounts = await Promise.all(
+      Array.from({ length: Math.min(snapshotCount, 12) }, async (_, idx) => {
+        try {
+          const sp = coder.encode(["address", "uint256", "uint256"], [userHex, slotNumber, idx]).slice(2);
+          const sr = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotDetail(address,uint256,uint256)", sp);
+          if (sr) {
+            const [, , , , sRecips, sTypes] = coder.decode(
+              ["uint256", "address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]", "uint256"],
+              "0x" + sr
+            );
+            return payingIndices.filter((pi) => {
+              const r = String(sRecips[pi] || "").toLowerCase();
+              const t = Number(sTypes[pi]);
+              return t === 0 || (r && r === userHex.toLowerCase());
+            }).length;
+          }
+        } catch { }
+        return 6;
+      })
+    );
+    historicalSnapshotPayingCount = snapCounts.reduce((acc, c) => acc + c, 0);
+  }
+
+  const cycleEarnedUsd = isUnlocked ? payingPositionsFilled * slotCostUsd : 0;
+  let totalEarnedUsd = isUnlocked
+    ? (isViewingSnapshot ? cycleEarnedUsd : (historicalSnapshotPayingCount + payingPositionsFilled) * slotCostUsd)
+    : 0;
+  if (isUnlocked && !isViewingSnapshot && rawEarnedTrob > 0 && totalEarnedUsd === 0) {
+    totalEarnedUsd = liveTrobPrice > 0
+      ? Math.round(rawEarnedTrob * liveTrobPrice)
+      : (liveSlotSun > 0 ? Math.round((rawEarnedTrob / (liveSlotSun / 1_000_000)) * slotCostUsd) : 0);
+  }
+  const totalEarnedTrob = isUnlocked ? rawEarnedTrob : 0;
 
   return {
     slotNumber,
-    cost: getSlotCost(slotNumber),
+    cost: slotCostUsd,
     isUnlocked: Boolean(isUnlocked),
     isLive: Boolean(isUnlocked && isLive),
     isStandby: Boolean(slotNumber > 1 && isUnlocked && !prevSlotCompleted),
@@ -894,17 +1009,17 @@ export async function getOnChainSlotDetails(
     slot1FilledNodes: slotNumber === 2 ? (prevSlotCompleted ? 14 : prevSlotFilledCount) : 0,
     globalCycle,
     currentCycle: effectiveCurrentCycle,
-    totalCycles: globalCycle,
+    totalCycles,
     selectedCycle: effectiveCycle,
     snapshotCount,
     isViewingSnapshot: Boolean(isUnlocked && isViewingSnapshot),
     recyclesCount: isUnlocked ? Math.max(0, slotOnChainCycle - 1) : 0,
-    filledNodes: isUnlocked ? (isViewingSnapshot ? 14 : Math.max(Number(liveFilledNodes) || 0, computedFilledCount)) : 0,
+    filledNodes: isUnlocked ? (isViewingSnapshot ? Math.max(14, computedFilledCount) : Math.max(Number(liveFilledNodes) || 0, computedFilledCount)) : 0,
     upgradeReserve: 0,
     cycleEarnedUsd,
     totalEarned: totalEarnedUsd,
-    totalEarnedUsd: totalEarnedUsd,
-    totalEarnedTrob: totalEarnedTrob,
+    totalEarnedUsd,
+    totalEarnedTrob,
     nodes: formattedNodes,
   };
 }
@@ -932,7 +1047,7 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
       if (countRaw) {
         activeDirectsCount = Number(coder.decode(["uint256"], "0x" + countRaw)[0]);
       }
-    } catch {}
+    } catch { }
 
     // Query on-chain smart contract isMatrixQualified (includes Genesis Root, Cycle 2+ and Slot 2+ permanent qualification)
     let isQualified = false;
@@ -945,7 +1060,7 @@ export async function getOnChainQualification(userAddress: string): Promise<{ is
       if (qualRaw) {
         isQualified = Boolean(coder.decode(["bool"], "0x" + qualRaw)[0]);
       }
-    } catch {}
+    } catch { }
 
     if (!isQualified && activeDirectsCount >= 2) {
       isQualified = true;
@@ -998,67 +1113,122 @@ export async function getOnChainAllSlots(userAddress: string): Promise<any[]> {
       const decodedLive = coder.decode(["bool[12]"], "0x" + liveRaw)[0];
       liveArr = decodedLive.map((b: any) => Boolean(b));
     }
-  } catch {}
+  } catch { }
+
+  const { costUsd: baseCostUsd, priceUsd: liveTrobPrice } = await getLiveSlotCostUsdAndSun(1);
 
   const result = [];
   for (let i = 1; i <= 12; i++) {
-    let isUnlocked = Boolean(unlockedArr[i - 1]);
-    let isLive = liveArr[i - 1] !== undefined ? liveArr[i - 1] : (i <= 4 ? isUnlocked : false);
-    const cycle = Number(cyclesArr[i - 1]) || (isUnlocked ? 1 : 0);
-    const filled = Number(filledArr[i - 1]) || 0;
-    const cost = getSlotCost(i);
-    const recycles = Math.max(0, cycle - 1);
-
-    // Each completed cycle fulfilled 14 nodes and yielded 6 direct P2P payments (6 * cost)
-    // Slot 1: 1 * 6 * $30 = $180.00
-    // Slot 2: 1 * 6 * $60 = $360.00
-    // Slot 3: 1 * 6 * $120 = $720.00
-    const earnedUsd = isUnlocked ? recycles * 6 * cost : 0;
-    const displayFilled = filled > 0 ? filled : (recycles > 0 ? 14 : 0);
+    const isUnlocked = Boolean(unlockedArr[i - 1]);
+    const isLive = liveArr[i - 1] !== undefined ? liveArr[i - 1] : false;
+    const cycle = isUnlocked ? (Number(cyclesArr[i - 1]) || 1) : 0;
+    const filled = isUnlocked ? (Number(filledArr[i - 1]) || 0) : 0;
+    const recycles = isUnlocked ? Math.max(0, cycle - 1) : 0;
 
     result.push({
       slotNumber: i,
-      cost,
+      cost: baseCostUsd,
       isUnlocked,
-      isLive,
+      isLive: Boolean(isUnlocked && isLive),
       currentCycle: cycle,
       recyclesCount: recycles,
-      filledNodes: displayFilled,
+      filledNodes: filled,
       upgradeReserve: 0,
-      totalEarned: earnedUsd,
-      totalEarnedUsd: earnedUsd,
-      totalEarnedTrob: earnedUsd / 0.056,
+      totalEarned: 0,
+      totalEarnedUsd: 0,
+      totalEarnedTrob: 0,
       unlockedAt: isUnlocked ? "On-Chain Active" : null,
     });
   }
 
-  // Populate active board direct payout additions if any in current cycle
+  // Query authoritative per-slot earned TROB and verified OWNER_DIRECT payout counts for all unlocked slots
   try {
-    for (let s = 1; s <= 4; s++) {
-      if (result[s - 1]?.isUnlocked) {
-        const slotParam = coder.encode(["address", "uint256"], [userHex, s]).slice(2);
-        const slotRaw = await queryTrobConstant(
-          CONTRACT_ADDRESSES.matrix,
-          "getSlotData(address,uint256)",
-          slotParam
-        ).catch(() => null);
-        if (slotRaw) {
+    await Promise.all(
+      result
+        .filter((r) => r.isUnlocked)
+        .map(async (r) => {
+          const s = r.slotNumber;
+          const slotParam = coder.encode(["address", "uint256"], [userHex, s]).slice(2);
+          const [{ costUsd: sCostUsd, costSun: sCostSun }, slotRaw, detailRaw, snapCntRaw] = await Promise.all([
+            getLiveSlotCostUsdAndSun(s),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", slotParam).catch(() => null),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotNodesDetail(address,uint256)", slotParam).catch(() => null),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotCount(address,uint256)", slotParam).catch(() => null),
+          ]);
+          r.cost = sCostUsd;
+          if (!slotRaw) return;
           const [, currentCycleVal, , nodesVal, slotEarnedVal] = coder.decode(
             ["bool", "uint256", "uint256", "address[14]", "uint256"],
             "0x" + slotRaw
           );
           const onChainSlotEarnedTrob = Number(ethers.formatUnits(slotEarnedVal, 6));
-          const sCost = getSlotCost(s);
-          const perNodeTrob = sCost * 29.0053486;
-          const slotPayoutCount = onChainSlotEarnedTrob > 0 ? Math.max(1, Math.round(onChainSlotEarnedTrob / perNodeTrob)) : 0;
-          const slotEarnedUsd = onChainSlotEarnedTrob > 0 ? slotPayoutCount * sCost : 0;
-          result[s - 1].totalEarned = slotEarnedUsd;
-          result[s - 1].totalEarnedUsd = slotEarnedUsd;
-          result[s - 1].totalEarnedTrob = onChainSlotEarnedTrob;
-        }
-      }
-    }
-  } catch {}
+          const cNum = Number(currentCycleVal) || 1;
+          const snapCount = snapCntRaw
+            ? Number(coder.decode(["uint256"], "0x" + snapCntRaw)[0])
+            : Math.max(0, cNum - 1);
+
+          let livePaying = 0;
+          const payingIndices = [2, 5, 7, 8, 10, 11];
+          if (detailRaw) {
+            const [, , , recipientsDecoded, typesDecoded] = coder.decode(
+              ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
+              "0x" + detailRaw
+            );
+            livePaying = payingIndices.filter((pi) => {
+              const nodeAddr = String(nodesVal[pi] || "").toLowerCase();
+              if (!nodeAddr || nodeAddr === "0x0000000000000000000000000000000000000000" || nodeAddr === "0x0") return false;
+              const recip = String(recipientsDecoded[pi] || "").toLowerCase();
+              const t = Number(typesDecoded[pi]);
+              return t === 0 || (recip && recip === userHex.toLowerCase());
+            }).length;
+          } else if (nodesVal) {
+            livePaying = payingIndices.filter((pi) => {
+              const nodeAddr = String(nodesVal[pi] || "").toLowerCase();
+              return nodeAddr && nodeAddr !== "0x0000000000000000000000000000000000000000" && nodeAddr !== "0x0";
+            }).length;
+          }
+
+          let snapPaying = 0;
+          if (snapCount > 0) {
+            const counts = await Promise.all(
+              Array.from({ length: Math.min(snapCount, 12) }, async (_, idx) => {
+                try {
+                  const sp = coder.encode(["address", "uint256", "uint256"], [userHex, s, idx]).slice(2);
+                  const sr = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotDetail(address,uint256,uint256)", sp);
+                  if (sr) {
+                    const [, , , , sRecips, sTypes] = coder.decode(
+                      ["uint256", "address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]", "uint256"],
+                      "0x" + sr
+                    );
+                    return payingIndices.filter((pi) => {
+                      const recip = String(sRecips[pi] || "").toLowerCase();
+                      const t = Number(sTypes[pi]);
+                      return t === 0 || (recip && recip === userHex.toLowerCase());
+                    }).length;
+                  }
+                } catch { }
+                return 6;
+              })
+            );
+            snapPaying = counts.reduce((acc, c) => acc + c, 0);
+          }
+
+          const totalPayoutCount = snapPaying + livePaying;
+          const slotEarnedUsd =
+            onChainSlotEarnedTrob > 0
+              ? (totalPayoutCount > 0
+                ? totalPayoutCount * sCostUsd
+                : (liveTrobPrice > 0
+                  ? Number((onChainSlotEarnedTrob * liveTrobPrice).toFixed(2))
+                  : (sCostSun > 0 ? Math.round((onChainSlotEarnedTrob / (sCostSun / 1_000_000)) * sCostUsd) : 0)))
+              : totalPayoutCount * sCostUsd;
+
+          r.totalEarned = slotEarnedUsd;
+          r.totalEarnedUsd = slotEarnedUsd;
+          r.totalEarnedTrob = onChainSlotEarnedTrob;
+        })
+    );
+  } catch { }
 
   return result;
 }
@@ -1106,14 +1276,16 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
           break;
         }
       }
-    } catch {}
+    } catch { }
   }
 
-  // Determine live matrix board earnings & Auto-escalation from Slot 1 data
+  // Determine live matrix board earnings across all unlocked slots
   let boardEarnedTrob = 0;
   let slot1FilledCount = 0;
   let isSlot1Complete = false;
   let calculatedUsdEarned = 0;
+  const { costUsd: baseSlotUsd, priceUsd: livePrice } = await getLiveSlotCostUsdAndSun(1);
+
   if (slot1Raw) {
     try {
       const [, s1Cycle, s1Filled, s1Nodes, s1Earned] = coder.decode(
@@ -1127,46 +1299,129 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
       }
       boardEarnedTrob = Number(ethers.formatUnits(s1Earned, 6));
 
-      // Calculate exact paying positions (P3, P6, P8, P9, P11, P12) in Slot 1 ($30 fixed each)
+      const s1Param = coder.encode(["address", "uint256"], [userHex, 1]).slice(2);
+      const [s1DetailRaw, s1SnapCntRaw] = await Promise.all([
+        queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotNodesDetail(address,uint256)", s1Param).catch(() => null),
+        queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotCount(address,uint256)", s1Param).catch(() => null),
+      ]);
+      const payingIndices = [2, 5, 7, 8, 10, 11];
       let s1PayingCount = 0;
-      if (s1Nodes && Array.isArray(s1Nodes)) {
-        const payingIndices = [2, 5, 7, 8, 10, 11];
-        for (const idx of payingIndices) {
-          if (s1Nodes[idx] && s1Nodes[idx] !== "0x0000000000000000000000000000000000000000" && s1Nodes[idx] !== "0x0") {
-            s1PayingCount++;
-          }
-        }
+      if (s1DetailRaw) {
+        const [, , , recipsDec, typesDec] = coder.decode(
+          ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
+          "0x" + s1DetailRaw
+        );
+        s1PayingCount = payingIndices.filter((pi) => {
+          const n = String(s1Nodes?.[pi] || "").toLowerCase();
+          if (!n || n === "0x0000000000000000000000000000000000000000" || n === "0x0") return false;
+          const r = String(recipsDec[pi] || "").toLowerCase();
+          return Number(typesDec[pi]) === 0 || (r && r === userHex.toLowerCase());
+        }).length;
+      } else if (s1Nodes && Array.isArray(s1Nodes)) {
+        s1PayingCount = payingIndices.filter((idx) => {
+          const n = String(s1Nodes[idx] || "").toLowerCase();
+          return n && n !== "0x0000000000000000000000000000000000000000" && n !== "0x0";
+        }).length;
       }
-      calculatedUsdEarned += (Math.max(0, cNum - 1) * 6 * 30) + (s1PayingCount * 30);
-    } catch {}
+      const s1SnapCnt = s1SnapCntRaw
+        ? Number(coder.decode(["uint256"], "0x" + s1SnapCntRaw)[0])
+        : Math.max(0, cNum - 1);
+      let s1SnapPaying = 0;
+      if (s1SnapCnt > 0) {
+        const counts = await Promise.all(
+          Array.from({ length: Math.min(s1SnapCnt, 12) }, async (_, idx) => {
+            try {
+              const sp = coder.encode(["address", "uint256", "uint256"], [userHex, 1, idx]).slice(2);
+              const sr = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotDetail(address,uint256,uint256)", sp);
+              if (sr) {
+                const [, , , , sRecips, sTypes] = coder.decode(
+                  ["uint256", "address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]", "uint256"],
+                  "0x" + sr
+                );
+                return payingIndices.filter((pi) => {
+                  const r = String(sRecips[pi] || "").toLowerCase();
+                  return Number(sTypes[pi]) === 0 || (r && r === userHex.toLowerCase());
+                }).length;
+              }
+            } catch { }
+            return 6;
+          })
+        );
+        s1SnapPaying = counts.reduce((acc, c) => acc + c, 0);
+      }
+      calculatedUsdEarned += (s1SnapPaying + s1PayingCount) * baseSlotUsd;
+    } catch { }
   }
 
   // Count earnings from higher slots if unlocked
   if (highestUnlockedSlot >= 2) {
-    for (let s = 2; s <= Math.min(12, highestUnlockedSlot); s++) {
-      try {
-        const sParam = coder.encode(["address", "uint256"], [userHex, s]).slice(2);
-        const sRaw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", sParam).catch(() => null);
-        if (sRaw) {
-          const [, sCycle, , sNodes] = coder.decode(
+    await Promise.all(
+      Array.from({ length: Math.min(12, highestUnlockedSlot) - 1 }, async (_, offset) => {
+        const s = offset + 2;
+        try {
+          const sParam = coder.encode(["address", "uint256"], [userHex, s]).slice(2);
+          const [{ costUsd: sCost }, sRaw, sDetailRaw, sSnapCntRaw] = await Promise.all([
+            getLiveSlotCostUsdAndSun(s),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", sParam).catch(() => null),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotNodesDetail(address,uint256)", sParam).catch(() => null),
+            queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotCount(address,uint256)", sParam).catch(() => null),
+          ]);
+          if (!sRaw) return;
+          const [, sCycle, , sNodes, sEarned] = coder.decode(
             ["bool", "uint256", "uint256", "address[14]", "uint256"],
             "0x" + sRaw
           );
-          const sCost = 30 * Math.pow(2, s - 1);
+          boardEarnedTrob += Number(ethers.formatUnits(sEarned, 6));
           const cNum = Number(sCycle) || 1;
+          const payingIndices = [2, 5, 7, 8, 10, 11];
           let sPayingCount = 0;
-          if (sNodes && Array.isArray(sNodes)) {
-            const payingIndices = [2, 5, 7, 8, 10, 11];
-            for (const idx of payingIndices) {
-              if (sNodes[idx] && sNodes[idx] !== "0x0000000000000000000000000000000000000000" && sNodes[idx] !== "0x0") {
-                sPayingCount++;
-              }
-            }
+          if (sDetailRaw) {
+            const [, , , recipsDec, typesDec] = coder.decode(
+              ["address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]"],
+              "0x" + sDetailRaw
+            );
+            sPayingCount = payingIndices.filter((pi) => {
+              const n = String(sNodes?.[pi] || "").toLowerCase();
+              if (!n || n === "0x0000000000000000000000000000000000000000" || n === "0x0") return false;
+              const r = String(recipsDec[pi] || "").toLowerCase();
+              return Number(typesDec[pi]) === 0 || (r && r === userHex.toLowerCase());
+            }).length;
+          } else if (sNodes && Array.isArray(sNodes)) {
+            sPayingCount = payingIndices.filter((idx) => {
+              const n = String(sNodes[idx] || "").toLowerCase();
+              return n && n !== "0x0000000000000000000000000000000000000000" && n !== "0x0";
+            }).length;
           }
-          calculatedUsdEarned += (Math.max(0, cNum - 1) * 6 * sCost) + (sPayingCount * sCost);
-        }
-      } catch {}
-    }
+          const sSnapCnt = sSnapCntRaw
+            ? Number(coder.decode(["uint256"], "0x" + sSnapCntRaw)[0])
+            : Math.max(0, cNum - 1);
+          let sSnapPaying = 0;
+          if (sSnapCnt > 0) {
+            const counts = await Promise.all(
+              Array.from({ length: Math.min(sSnapCnt, 12) }, async (_, idx) => {
+                try {
+                  const sp = coder.encode(["address", "uint256", "uint256"], [userHex, s, idx]).slice(2);
+                  const sr = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getCycleSnapshotDetail(address,uint256,uint256)", sp);
+                  if (sr) {
+                    const [, , , , sRecips, sTypes] = coder.decode(
+                      ["uint256", "address[14]", "uint32[14]", "uint256[14]", "address[14]", "uint8[14]", "uint256"],
+                      "0x" + sr
+                    );
+                    return payingIndices.filter((pi) => {
+                      const r = String(sRecips[pi] || "").toLowerCase();
+                      return Number(sTypes[pi]) === 0 || (r && r === userHex.toLowerCase());
+                    }).length;
+                  }
+                } catch { }
+                return 6;
+              })
+            );
+            sSnapPaying = counts.reduce((acc, c) => acc + c, 0);
+          }
+          calculatedUsdEarned += (sSnapPaying + sPayingCount) * sCost;
+        } catch { }
+      })
+    );
   }
   const rawTrobEarned = totalEarned > 0 ? totalEarned : (boardEarnedTrob > 0 ? boardEarnedTrob : 0);
   const effectiveEarnedTrob = rawTrobEarned;
@@ -1178,26 +1433,35 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     directReferralsCount = activeDirectsCount;
   }
 
-  
+
 
   // Strict qualification requirement: Must have at least 2 active direct referrals
   const isQualified = activeDirectsCount >= 2;
 
   let sponsorAddress: string | null = null;
+  let hasSponsorFromChain = false;
   if (sponsorRaw) {
     const sp = coder.decode(["address"], "0x" + sponsorRaw)[0];
+    hasSponsorFromChain = true;
     if (sp && sp !== "0x0000000000000000000000000000000000000000") {
       sponsorAddress = sp.toLowerCase();
     }
   }
-    // If unreferred / root account, dynamically default sponsor to Protocol Vault from .env.local
-  if (!sponsorAddress) {
+  const isRegistered = isRegRaw ? Boolean(coder.decode(["bool"], "0x" + isRegRaw)[0]) : false;
+  const isGenesisRootUser =
+    userHex.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase() ||
+    toTrobBase58(userHex) === GENESIS_ROOT_MEMBER_BASE58;
+
+  // Attribute Protocol Vault ONLY for Genesis Root or a registered user whose on-chain sponsor is explicitly Vault/0x0
+  if (!sponsorAddress && (isGenesisRootUser || (isRegistered && hasSponsorFromChain))) {
     sponsorAddress = toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
   }
 
-  const isVaultSponsor =
-    sponsorAddress === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
-    isDeployerAddress(sponsorAddress);
+  const isVaultSponsor = Boolean(
+    sponsorAddress &&
+    (sponsorAddress === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
+      isDeployerAddress(sponsorAddress))
+  );
 
   let upline2Address: string | null = null;
   let sponsorCode: number | null = null;
@@ -1234,7 +1498,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
               upline2DirectsCount = Number(coder.decode(["uint256"], "0x" + up2DirectsRaw)[0]);
               isUpline2Qualified = upline2DirectsCount >= 2;
             }
-          } catch {}
+          } catch { }
         }
       }
     } catch (upErr) {
@@ -1266,42 +1530,26 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
         if (!onChainUserId && Number(dec[4]) > 0) {
           onChainUserId = Number(dec[4]);
         }
-      } catch {}
+      } catch { }
     }
-  } catch {}
-
-  const isRegistered = isRegRaw ? Boolean(coder.decode(["bool"], "0x" + isRegRaw)[0]) : false;
+  } catch { }
 
   const rankTier =
     highestUnlockedSlot >= 12
       ? 4
       : highestUnlockedSlot >= 9
-      ? 3
-      : highestUnlockedSlot >= 6
-      ? 2
-      : highestUnlockedSlot >= 3
-      ? 1
-      : 0;
+        ? 3
+        : highestUnlockedSlot >= 6
+          ? 2
+          : highestUnlockedSlot >= 3
+            ? 1
+            : 0;
   const rankNames = ["NONE", "ALPHA", "PRIME", "ELITE", "CROWN"];
 
-  let livePrice = 0.033994;
-  try {
-    const rawPrice = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "trobPriceUsd6()",
-      ""
-    );
-    if (rawPrice) {
-      const [p6] = coder.decode(["uint256"], "0x" + rawPrice);
-      if (Number(p6) > 0) livePrice = Number(p6) / 1_000_000;
-    }
-  } catch {}
-
-  const availableBalanceUsd = Math.round(availableBalance * livePrice);
-  const withdrawnTotalUsd = Math.round(withdrawnTotal * livePrice);
-  // Fixed USD tiering: $30 fixed per slot paying position (6 nodes = $180.00 USD)
-  const inferredUsdFromTrob = rawTrobEarned > 0 ? Math.round(rawTrobEarned / 870.16) * 30 : 0;
-  const effectiveEarnedUsd = calculatedUsdEarned > 0 ? calculatedUsdEarned : (inferredUsdFromTrob > 0 ? inferredUsdFromTrob : (isRegistered ? 180 : 0));
+  const availableBalanceUsd = livePrice > 0 ? Math.round(availableBalance * livePrice) : 0;
+  const withdrawnTotalUsd = livePrice > 0 ? Math.round(withdrawnTotal * livePrice) : 0;
+  const inferredUsdFromTrob = rawTrobEarned > 0 && livePrice > 0 ? Math.round(rawTrobEarned * livePrice) : 0;
+  const effectiveEarnedUsd = calculatedUsdEarned > 0 ? calculatedUsdEarned : inferredUsdFromTrob;
   const cleanHighestSlot = isRegistered ? Math.max(highestUnlockedSlot, 1) : 0;
 
   return {
@@ -1311,8 +1559,8 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     username: onChainUserId
       ? `Operative #${onChainUserId}`
       : userReferralCode
-      ? `Member #${userReferralCode}`
-      : `Member ${toTrobBase58(userHex).slice(0, 6)}...`,
+        ? `Member #${userReferralCode}`
+        : `Member ${toTrobBase58(userHex).slice(0, 6)}...`,
     avatarUrl: null,
     bio: isQualified ? "Qualified Matrix Leader (2+ Directs)" : "Matrix Member",
     telegram: null,
@@ -1359,7 +1607,11 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
  * Once registered on-chain, the user MUST NEVER see the /gate purchase page.
  * If user is unregistered, any stale local cache is purged immediately.
  */
-export async function isUserRegisteredInMatrix(userAddress: string): Promise<boolean> {
+/**
+ * Authoritative on-chain Slot 1 check in EquoraMatrix contract.
+ * Returns null on RPC failure/timeout so transient outages never impersonate unregistered status.
+ */
+export async function checkOnChainRegistrationAuthoritative(userAddress: string): Promise<boolean | null> {
   if (!userAddress) return false;
   const clean = userAddress.trim().toLowerCase();
 
@@ -1374,10 +1626,26 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
   const b58 = toTrobBase58(userAddress);
   const hex = toHexAddress(userAddress).toLowerCase();
 
-  // Authoritative on-chain Slot 1 status in EquoraMatrix contract
   try {
-    const slot1 = await getOnChainSlotStatus(userAddress, 1);
-    if (slot1 && slot1.isUnlocked) {
+    const coder = new ethers.AbiCoder();
+    const userHex = toHexAddress(userAddress);
+    if (!userHex || userHex === "0x0000000000000000000000000000000000000000") {
+      return false;
+    }
+    const param = coder.encode(["address", "uint256"], [userHex, 1]).slice(2);
+    const raw = await queryTrobConstant(
+      CONTRACT_ADDRESSES.matrix,
+      "getSlotData(address,uint256)",
+      param
+    );
+    if (!raw || raw.length < 64) {
+      return null;
+    }
+    const [isUnlocked] = coder.decode(
+      ["bool", "uint256", "uint256", "address[14]", "uint256"],
+      "0x" + raw
+    );
+    if (isUnlocked) {
       if (typeof window !== "undefined") {
         localStorage.setItem(`equora_matrix_registered_${clean}`, "true");
         localStorage.setItem(`equora_matrix_registered_${b58.toLowerCase()}`, "true");
@@ -1394,10 +1662,14 @@ export async function isUserRegisteredInMatrix(userAddress: string): Promise<boo
       return false;
     }
   } catch (err) {
-    console.warn("[isUserRegisteredInMatrix] Slot 1 check notice:", err);
+    console.warn("[checkOnChainRegistrationAuthoritative] Slot 1 check notice:", err);
+    return null;
   }
+}
 
-  return false;
+export async function isUserRegisteredInMatrix(userAddress: string): Promise<boolean> {
+  const status = await checkOnChainRegistrationAuthoritative(userAddress);
+  return status === true;
 }
 
 /** Fetch real active direct referrals from on-chain smart contract */
@@ -1460,7 +1732,7 @@ export async function getOnChainDirectMembers(userAddress: string): Promise<any[
       }
     }
 
-    
+
 
     const resolvedDirects = await Promise.all(
       directs.map(async (addr: string) => {
@@ -1574,7 +1846,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
           activeUser = stored;
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const ownerBase58 = toTrobBase58(activeUser);
@@ -1603,7 +1875,7 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
       });
       const preJson = await preRes.json();
       if (preJson?.result?.result && preJson?.transaction) {
-        const signFn = trob.trx?.sign || trob.signTransaction || trob.sign ;
+        const signFn = trob.trx?.sign || trob.signTransaction || trob.sign;
         if (typeof signFn === "function") {
           try {
             const rawSigned = await signFn.call(trob.trx || trob, preJson.transaction);
@@ -1635,8 +1907,8 @@ export async function callTrobContractOnChain(opts: CallContractOptions): Promis
 
     const activeNetwork =
       TARGET_NETWORK === "testnet" ||
-      contractBase58 === TESTNET_DEFAULT_ADDRESSES.matrix ||
-      ACTIVE_RPC_URL.includes("testnet")
+        contractBase58 === TESTNET_DEFAULT_ADDRESSES.matrix ||
+        ACTIVE_RPC_URL.includes("testnet")
         ? "testnet"
         : "mainnet";
 
@@ -2126,17 +2398,34 @@ export async function joinSlotOnChain(
   userAddress?: string,
   callValueSun?: number
 ): Promise<string> {
+  const coder = new ethers.AbiCoder();
   let targetSponsor = (sponsorAddress || "").trim();
 
-  // If a 5-digit numeric referral code was passed, resolve to wallet address
+  // If a 5-digit numeric referral code was passed, resolve to its real registered wallet address
   if (/^\d{5}$/.test(targetSponsor)) {
     const resolvedFromCode = await getOnChainUserByCode(targetSponsor);
-    if (resolvedFromCode) {
-      targetSponsor = resolvedFromCode;
-    } else {
-      // Unresolved 5-digit code fallback to genesis sponsor
-      targetSponsor = await getOnChainGenesisSponsor();
+    if (!resolvedFromCode) {
+      throw new Error(`Referral code #${targetSponsor} could not be verified on-chain. Please check your referrer's link.`);
     }
+    targetSponsor = resolvedFromCode;
+  }
+
+  // For Slot > 1 (or already-registered members), preserve the user's actual on-chain sponsor from Registry
+  const userHex = userAddress ? toHexAddress(userAddress).toLowerCase() : "";
+  if (slotNumber > 1 && !targetSponsor && userHex) {
+    try {
+      const spRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.registry,
+        "getSponsor(address)",
+        coder.encode(["address"], [userHex]).slice(2)
+      );
+      if (spRaw) {
+        const existingSponsor = String(coder.decode(["address"], "0x" + spRaw)[0] || "").toLowerCase();
+        if (existingSponsor && existingSponsor !== "0x0000000000000000000000000000000000000000") {
+          targetSponsor = existingSponsor;
+        }
+      }
+    } catch { }
   }
 
   // Check total members on chain or if connected user is Genesis Root Member
@@ -2144,31 +2433,60 @@ export async function joinSlotOnChain(
   if (
     userAddress &&
     (toTrobBase58(userAddress) === GENESIS_ROOT_MEMBER_BASE58 ||
-      userAddress.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
+      userHex === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
   ) {
     isFirstMember = true;
   } else {
-    try {
-      const count = await getOnChainTotalMembers();
-      if (count === 0) isFirstMember = true;
-    } catch {}
+    const count = await getOnChainTotalMembers();
+    if (count === 0) isFirstMember = true;
   }
 
-  const hexCheck = toHexAddress(targetSponsor);
-  const isValidAddress = ethers.isAddress(hexCheck) && hexCheck !== "0x0000000000000000000000000000000000000000";
+  const hexCheck = targetSponsor ? toHexAddress(targetSponsor).toLowerCase() : "";
+  const isValidAddress =
+    Boolean(hexCheck) &&
+    ethers.isAddress(hexCheck) &&
+    hexCheck !== "0x0000000000000000000000000000000000000000";
+  const isSelfSponsor = Boolean(userHex && hexCheck && hexCheck === userHex);
+  const isVaultAddr =
+    Boolean(hexCheck) &&
+    hexCheck === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase();
 
   if (
     !targetSponsor ||
     !isValidAddress ||
-    targetSponsor === "0x0000000000000000000000000000000000000000" ||
-    targetSponsor === "410000000000000000000000000000000000000000" ||
+    isSelfSponsor ||
     isDeployerAddress(targetSponsor) ||
     isDeployerAddress(hexCheck)
   ) {
-    targetSponsor = await getOnChainGenesisSponsor();
+    if (isFirstMember) {
+      targetSponsor = await getOnChainGenesisSponsor();
+    } else {
+      throw new Error("A valid registered referrer/sponsor address is required before joining.");
+    }
+  } else if (!isFirstMember && slotNumber === 1) {
+    if (isVaultAddr) {
+      throw new Error("Protocol Vault is reserved for the Genesis Root node. Please use your referrer's registered wallet address or 5-digit referral code.");
+    }
+    // Fail closed so EquoraRegistry never silently rewrites an unverified sponsor to Root (#1)
+    let sponsorRegistered: boolean | null = null;
+    for (let attempt = 0; attempt < 2 && sponsorRegistered === null; attempt++) {
+      const regRaw = await queryTrobConstant(
+        CONTRACT_ADDRESSES.registry,
+        "isRegistered(address)",
+        coder.encode(["address"], [hexCheck]).slice(2)
+      ).catch(() => null);
+      if (regRaw) {
+        sponsorRegistered = Boolean(coder.decode(["bool"], "0x" + regRaw)[0]);
+      }
+    }
+    if (sponsorRegistered === null) {
+      throw new Error("Unable to verify sponsor registration on TrobChain right now. Please wait a moment and try again.");
+    }
+    if (!sponsorRegistered) {
+      throw new Error("The provided sponsor wallet is not registered in Equora Matrix yet.");
+    }
   }
   const sponsorHex = toHexAddress(targetSponsor);
-  const coder = new ethers.AbiCoder();
   const parameterHex = coder.encode(["uint256", "address"], [slotNumber, sponsorHex]).slice(2);
 
   return callTrobContractOnChain({
@@ -2360,6 +2678,25 @@ export interface ProtocolPoolsStats {
   };
 }
 
+/** Query true native TROB balance from /wallet/getaccount (SUN -> TROB). */
+async function getNativeAccountBalanceTrob(addr: string): Promise<number> {
+  try {
+    const tronHex = "41" + toHexAddress(addr).replace(/^0x/i, "").slice(-40);
+    const res = await fetch(`${ACTIVE_RPC_URL}/wallet/getaccount`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: tronHex }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return 0;
+    const acct = await res.json();
+    const sun = Number(acct?.balance || 0);
+    return Number.isFinite(sun) ? sun / 1_000_000 : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats> {
   // 1. Fast, reliable Next.js API route first
   if (typeof window !== "undefined") {
@@ -2373,18 +2710,18 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
             vault: {
               address: CONTRACT_ADDRESSES.vault,
               totalRoutedFromMatrix: d.vault?.totalRoutedFromMatrix ?? 0,
-              totalRoutedFromUsers: d.vault?.totalRoutedFromUsers ?? 99078.73,
+              totalRoutedFromUsers: d.vault?.totalRoutedFromUsers ?? 0,
             },
             dao: {
               address: CONTRACT_ADDRESSES.dao,
               sharePercent: 35,
-              streamedTrob: d.dao?.streamedTrob ?? 34677.56,
+              streamedTrob: d.dao?.streamedTrob ?? 0,
               balanceTrob: d.dao?.balanceTrob ?? 0,
             },
             salaryPool: {
               address: CONTRACT_ADDRESSES.salaryPool,
               sharePercent: 40,
-              pendingBalanceTrob: d.salaryPool?.pendingBalanceTrob ?? 39631.49,
+              pendingBalanceTrob: d.salaryPool?.pendingBalanceTrob ?? 0,
               totalDistributedTrob: d.salaryPool?.totalDistributedTrob ?? 0,
               settlementsCount: d.salaryPool?.settlementsCount ?? 0,
               lastSettlementTimestamp: d.salaryPool?.lastSettlementTimestamp ?? 0,
@@ -2398,22 +2735,22 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
             rewardPool: {
               address: CONTRACT_ADDRESSES.rewardPool,
               sharePercent: 15,
-              balanceTrob: d.rewardPool?.balanceTrob ?? 29723.62,
+              balanceTrob: d.rewardPool?.balanceTrob ?? 0,
               totalDistributedTrob: d.rewardPool?.totalDistributedTrob ?? 0,
             },
             magicBoxPool: {
               address: CONTRACT_ADDRESSES.magicBoxPool,
               sharePercent: 10,
-              balanceTrob: d.magicBoxPool?.balanceTrob ?? 9907.87,
+              balanceTrob: d.magicBoxPool?.balanceTrob ?? 0,
               totalDistributedTrob: d.magicBoxPool?.totalDistributedTrob ?? 0,
               distributionCount: d.magicBoxPool?.totalDraws ?? d.magicBoxPool?.distributionCount ?? 0,
               eligibleUsersCount: d.magicBoxPool?.eligibleUsersCount ?? 0,
-              timeUntilNextDrawSeconds: d.magicBoxPool?.timeUntilNextDrawSeconds ?? 4557000,
+              timeUntilNextDrawSeconds: d.magicBoxPool?.timeUntilNextDrawSeconds ?? 0,
             },
           };
         }
       }
-    } catch {}
+    } catch { }
   }
 
   const coder = new ethers.AbiCoder();
@@ -2427,6 +2764,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     rStatsRaw,
     mStatsRaw,
     mTimeRaw,
+    nativeRewardBal,
   ] = await Promise.all([
     queryTrobConstant(CONTRACT_ADDRESSES.vault, "totalRoutedFromMatrix()", "").catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.vault, "totalRoutedFromUsers()", "").catch(() => null),
@@ -2435,20 +2773,21 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     queryTrobConstant(CONTRACT_ADDRESSES.rewardPool, "getPoolStats()", "").catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getGlobalStats()", "").catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getTimeUntilNextDraw()", "").catch(() => null),
+    getNativeAccountBalanceTrob(CONTRACT_ADDRESSES.rewardPool),
   ]);
 
   let totalRoutedFromMatrix = 0;
   if (vMatrixRaw) {
     try {
       totalRoutedFromMatrix = Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + vMatrixRaw)[0], 6));
-    } catch {}
+    } catch { }
   }
 
   let totalRoutedFromUsers = 0;
   if (vUsersRaw) {
     try {
       totalRoutedFromUsers = Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + vUsersRaw)[0], 6));
-    } catch {}
+    } catch { }
   }
 
   let pendingSalary = 0;
@@ -2462,7 +2801,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
       totalDistributedSalary = Number(ethers.formatUnits(sDec[1], 6));
       settlementsCount = Number(sDec[2]);
       lastSettlementTimestamp = Number(sDec[3]);
-    } catch {}
+    } catch { }
   }
 
   let alphaCount = 0, primeCount = 0, eliteCount = 0, crownCount = 0;
@@ -2473,17 +2812,16 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
       primeCount = Number(cDec[1]);
       eliteCount = Number(cDec[2]);
       crownCount = Number(cDec[3]);
-    } catch {}
+    } catch { }
   }
 
-  let rewardBalance = 0;
+  const rewardBalance = nativeRewardBal;
   let rewardTotalDist = 0;
   if (rStatsRaw) {
     try {
       const rDec = coder.decode(["uint256", "uint256"], "0x" + rStatsRaw);
-      rewardBalance = Number(ethers.formatUnits(rDec[0], 6));
       rewardTotalDist = Number(ethers.formatUnits(rDec[1], 6));
-    } catch {}
+    } catch { }
   }
 
   let magicBoxBalance = 0;
@@ -2502,14 +2840,14 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
       magicBoxTotalDist = Number(ethers.formatUnits(mDec[1], 6));
       magicBoxRounds = Number(mDec[2]);
       magicBoxUsers = Number(mDec[3]);
-    } catch {}
+    } catch { }
   }
 
   let timeUntilNextDraw = 0;
   if (mTimeRaw) {
     try {
       timeUntilNextDraw = Number(coder.decode(["uint256"], "0x" + mTimeRaw)[0]);
-    } catch {}
+    } catch { }
   }
 
   return {
@@ -2813,103 +3151,112 @@ export async function getOnChainUserTransactions(userAddress: string) {
   // Fast internal API check in browser runtime
   if (typeof window !== "undefined" && userHex && userHex !== "0x0000000000000000000000000000000000000000") {
     try {
-      const res = await fetch(`/api/matrix/transactions/${userHex}`);
+      const res = await fetch(`/api/matrix/transactions/${userHex}`, { cache: "no-store" });
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data && Array.isArray(json.data.items) && json.data.items.length > 0) {
+        if (json.success && json.data && Array.isArray(json.data.items)) {
           return json.data;
         }
       }
-    } catch {}
+    } catch { }
   }
 
+  const livePrice = await getLiveTrobPriceUsd();
   try {
-    // 1. Matrix Slot 1 Details & Direct Commissions
-    let slotDetails = await getOnChainSlotDetails(userHex, 1).catch(() => null);
-    if (slotDetails && slotDetails.snapshotCount > 0 && (!slotDetails.nodes || slotDetails.nodes.filter((n: any) => n && n.filled).length < 6)) {
-      const snapDetails = await getOnChainSlotDetails(userHex, 1, 1).catch(() => null);
-      if (snapDetails && snapDetails.nodes && snapDetails.nodes.some((n: any) => n && n.filled)) {
-        slotDetails = snapDetails;
-      }
-    }
+    const { costUsd: slot1Usd, costSun: slot1Sun } = await getLiveSlotCostUsdAndSun(1);
+    const liveSlot1Trob = slot1Sun > 0 ? Number((slot1Sun / 1_000_000).toFixed(2)) : (livePrice > 0 ? Number((slot1Usd / livePrice).toFixed(2)) : 0);
 
-    if (slotDetails && slotDetails.isUnlocked) {
+    // 1. Matrix Slot 1 Details (all completed cycle snapshots + active board) & Direct Commissions
+    const slot1Details = await getOnChainSlotDetails(userHex, 1).catch(() => null);
+    if (slot1Details && slot1Details.isUnlocked) {
       const payingPositions = [3, 6, 8, 9, 11, 12];
-      for (const pos of payingPositions) {
-        const node = slotDetails.nodes?.[pos - 1];
-        if (node && node.filled && node.placedUser) {
-          totalInflow += 30.0;
+      const maxCycle = Math.max(1, slot1Details.currentCycle || 1);
+      for (let cyc = 1; cyc <= maxCycle; cyc++) {
+        const cycDetails = cyc < maxCycle || (slot1Details.snapshotCount > 0 && cyc <= slot1Details.snapshotCount)
+          ? await getOnChainSlotDetails(userHex, 1, cyc).catch(() => null)
+          : slot1Details;
+        if (!cycDetails || !Array.isArray(cycDetails.nodes)) continue;
+        const paidInCyc = payingPositions.filter((p) => {
+          const n = cycDetails.nodes[p - 1];
+          return n && n.filled && n.payoutType === "OWNER_DIRECT";
+        });
+        const perNodeTrob = cycDetails.totalEarnedTrob > 0 && paidInCyc.length > 0
+          ? Number((cycDetails.totalEarnedTrob / paidInCyc.length).toFixed(2))
+          : liveSlot1Trob;
+        for (const pos of paidInCyc) {
+          const node = cycDetails.nodes[pos - 1];
+          totalInflow += slot1Usd;
           const senderB58 = node.base58 || toTrobBase58(node.placedUser);
-          const perNodeTrob = slotDetails.totalEarnedTrob && slotDetails.totalEarnedTrob > 0
-            ? Number((slotDetails.totalEarnedTrob / payingPositions.filter((p: number) => slotDetails.nodes?.[p - 1]?.filled).length).toFixed(2))
-            : 870.16;
           items.push({
-            id: `tx-reward-${userHex.slice(2, 8)}-p${pos}`,
+            id: `tx-reward-${userHex.slice(2, 8)}-s1-c${cyc}-p${pos}`,
             type: "COMMISSION_EARNED",
             slotNumber: 1,
-            cycle: 1,
+            cycle: cyc,
             position: pos,
-            amount: 30.0,
-            amountUsd: 30.0,
+            amount: slot1Usd,
+            amountUsd: slot1Usd,
             trobAmount: perNodeTrob,
-            trobSubtitle: `${perNodeTrob.toFixed(2)} TROB`,
+            trobSubtitle: perNodeTrob > 0 ? `${perNodeTrob.toFixed(2)} TROB` : undefined,
             token: "USD",
             fromAddress: senderB58,
             toAddress: "You",
             txHash: node.txHash || null,
             status: "COMPLETED",
-            description: `Matrix Position #${pos} P2P Settlement (+ $30.00 USD)`,
+            description: `Slot #01 Cycle #${cyc} Position #${pos} P2P Settlement (+ $${slot1Usd.toFixed(2)} USD)`,
             timestamp: node.timestamp || new Date().toISOString(),
           });
         }
       }
 
-      totalOutflow += 30.0;
+      totalOutflow += slot1Usd;
       items.push({
         id: `tx-slot-1-${userHex.slice(2, 8)}`,
         type: "SLOT_PURCHASE",
         slotNumber: 1,
         cycle: 1,
         position: null,
-        amount: -30.0,
-        amountUsd: -30.0,
-        trobAmount: 870.16,
-        trobSubtitle: "870.16 TROB",
+        amount: -slot1Usd,
+        amountUsd: -slot1Usd,
+        trobAmount: liveSlot1Trob,
+        trobSubtitle: liveSlot1Trob > 0 ? `${liveSlot1Trob.toFixed(2)} TROB` : undefined,
         token: "USD",
         fromAddress: "You",
         toAddress: "System",
         txHash: null,
         status: "COMPLETED",
-        description: "Slot #01 Entry Tier Activation (- $30.00 USD One-Time Out-of-Pocket)",
+        description: `Slot #01 Entry Tier Activation (- $${slot1Usd.toFixed(2)} USD One-Time Out-of-Pocket)`,
         timestamp: new Date().toISOString(),
       });
     }
 
-    // 2. Matrix Slot 2 Details & Unlocks
-    const slot2Details = await getOnChainSlotDetails(userHex, 2).catch(() => null);
-    if (slot2Details && slot2Details.isUnlocked && slot2Details.isLive) {
-      // Slot 2 was funded via P4+P5 reserve ($0 out-of-pocket); do NOT add to totalOutflow
+    // 2. Matrix Slots 2..12 Details & Auto-Escalations (fallback when internal API unavailable)
+    for (let sNum = 2; sNum <= 12; sNum++) {
+      const slotInfo = await getOnChainSlotDetails(userHex, sNum).catch(() => null);
+      if (!slotInfo || !slotInfo.isUnlocked) continue;
+      const { costUsd: sUsd, costSun: sSun } = await getLiveSlotCostUsdAndSun(sNum);
+      const sTrob = sSun > 0 ? Number((sSun / 1_000_000).toFixed(2)) : (livePrice > 0 ? Number((sUsd / livePrice).toFixed(2)) : 0);
       items.push({
-        id: `tx-slot-2-${userHex.slice(2, 8)}`,
+        id: `tx-slot-${sNum}-${userHex.slice(2, 8)}`,
         type: "UPGRADE_RESERVE",
-        slotNumber: 2,
-        cycle: 1,
+        slotNumber: sNum,
+        cycle: slotInfo.currentCycle || 1,
         position: null,
-        amount: 60.0,
-        amountUsd: 60.0,
-        trobAmount: 1740.32,
-        trobSubtitle: "1,740.32 TROB (Auto-Reserve Funded)",
+        amount: 0,
+        amountUsd: 0,
+        routedAmountUsd: sUsd,
+        trobAmount: sTrob,
+        trobSubtitle: sTrob > 0 ? `${sTrob.toFixed(2)} TROB ($0 Out-of-Pocket)` : "$0 Out-of-Pocket",
         token: "USD",
-        fromAddress: "Slot #01 Auto-Reserve (P4+P5)",
-        toAddress: "Slot #02 Contract",
-        fromLabel: "Slot #01 Auto-Reserve (P4+P5)",
-        toLabel: "Slot #02 Contract",
-        purpose: "Slot #02 Tier Escalation ($60.00 USD Reserve)",
+        fromAddress: `Slot #${String(sNum - 1).padStart(2, "0")} Auto-Reserve (P4+P5)`,
+        toAddress: `Slot #${String(sNum).padStart(2, "0")} Tier Unlocked`,
+        fromLabel: `Slot #${String(sNum - 1).padStart(2, "0")} Auto-Reserve (P4+P5)`,
+        toLabel: `Slot #${String(sNum).padStart(2, "0")} Tier Unlocked`,
+        purpose: `Slot #${String(sNum).padStart(2, "0")} Tier Escalation ($${sUsd.toFixed(2)} Value • $0 Out-of-Pocket)`,
         distributionRule: "Automated Protocol Escalation ($0 Out-of-Pocket via P4+P5 Reserve)",
         txHash: null,
         status: "COMPLETED",
-        description: "Slot #02 Automated Escalation ($60.00 Tier • $0 Out-of-Pocket via P4+P5)",
-        timestamp: new Date().toISOString(),
+        description: `Slot #${String(sNum).padStart(2, "0")} Auto-Activation ($${sUsd.toFixed(2)} Value • $0.00 Out-of-Pocket)`,
+        timestamp: null,
       });
     }
 
@@ -2925,7 +3272,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
       const pendingTrob = pendingRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + pendingRaw)[0], 6)) : 0;
 
       if (claimedTrob > 0) {
-        const usdVal = Number((claimedTrob * 0.056).toFixed(2));
+        const usdVal = livePrice > 0 ? Number((claimedTrob * livePrice).toFixed(2)) : 0;
         totalInflow += usdVal;
         items.push({
           id: `tx-royalty-claimed-${userHex.slice(2, 8)}`,
@@ -2946,7 +3293,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
         });
       }
       if (pendingTrob > 0) {
-        const usdVal = Number((pendingTrob * 0.056).toFixed(2));
+        const usdVal = livePrice > 0 ? Number((pendingTrob * livePrice).toFixed(2)) : 0;
         items.push({
           id: `tx-royalty-pending-${userHex.slice(2, 8)}`,
           type: "ROYALTY_DIVIDEND",
@@ -2965,7 +3312,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
           timestamp: new Date().toISOString(),
         });
       }
-    } catch {}
+    } catch { }
 
     // 4. Reward Pool Rewards (Rank Milestones 15%)
     try {
@@ -2979,7 +3326,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
       const pendingRewardTrob = pendingRewardRaw ? Number(ethers.formatUnits(coder.decode(["uint256"], "0x" + pendingRewardRaw)[0], 6)) : 0;
 
       if (rewardedTrob > 0) {
-        const usdVal = Number((rewardedTrob * 0.056).toFixed(2));
+        const usdVal = livePrice > 0 ? Number((rewardedTrob * livePrice).toFixed(2)) : 0;
         totalInflow += usdVal;
         items.push({
           id: `tx-milestone-claimed-${userHex.slice(2, 8)}`,
@@ -3000,7 +3347,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
         });
       }
       if (pendingRewardTrob > 0) {
-        const usdVal = Number((pendingRewardTrob * 0.056).toFixed(2));
+        const usdVal = livePrice > 0 ? Number((pendingRewardTrob * livePrice).toFixed(2)) : 0;
         items.push({
           id: `tx-milestone-pending-${userHex.slice(2, 8)}`,
           type: "RANK_MILESTONE",
@@ -3019,13 +3366,13 @@ export async function getOnChainUserTransactions(userAddress: string) {
           timestamp: new Date().toISOString(),
         });
       }
-    } catch {}
+    } catch { }
 
     // 5. Magic Blind Box Gifts (10%)
     try {
       const magicStatus = await getUserMagicBoxStatus(userAddress).catch(() => null);
       if (magicStatus && (magicStatus.hasReceived || magicStatus.canClaim) && magicStatus.prizeTrob > 0) {
-        const prizeUsd = magicStatus.prizeUsd > 0 ? magicStatus.prizeUsd : Number((magicStatus.prizeTrob * 0.056).toFixed(2));
+        const prizeUsd = magicStatus.prizeUsd > 0 ? magicStatus.prizeUsd : (livePrice > 0 ? Number((magicStatus.prizeTrob * livePrice).toFixed(2)) : 0);
         if (magicStatus.hasReceived) {
           totalInflow += prizeUsd;
         }
@@ -3047,7 +3394,7 @@ export async function getOnChainUserTransactions(userAddress: string) {
           timestamp: magicStatus.receivedTimestamp ? new Date(magicStatus.receivedTimestamp * 1000).toISOString() : new Date().toISOString(),
         });
       }
-    } catch {}
+    } catch { }
   } catch (err) {
     console.warn("[OnChainTransactions] Error building on-chain txs:", err);
   }

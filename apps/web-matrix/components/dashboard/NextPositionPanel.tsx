@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { SEAT_METAS } from "./MatrixTreePanel";
-import { Sparkles, ArrowRight, CheckCircle2, Lock } from "lucide-react";
-import { getSlotCost, getOnChainSlotDetails, toHexAddress } from "@/lib/contracts";
+import { Sparkles, Lock, CheckCircle2 } from "lucide-react";
+import { getSlotCost } from "@/lib/contracts";
 
 interface NextPositionPanelProps {
   data?: MatrixDashboardOverview | null;
@@ -19,13 +19,14 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const storeSelectedCycle = useMatrixStore((s) => s.selectedCycle);
   const selectSlot = useMatrixStore((s) => s.selectSlot);
   const storeSlotDetails = useMatrixStore((s) => s.slotDetails);
+  const loadingDetails = useMatrixStore((s) => s.loadingDetails);
+  const storeSlots = useMatrixStore((s) => s.slots);
   const address = useUserStore((s) => s.address);
   const profile = useUserStore((s) => s.profile);
   const settings = useUserStore((s) => s.settings);
   const updateSettings = useUserStore((s) => s.updateSettings);
 
   const [localAutoProgression, setLocalAutoProgression] = useState<boolean | null>(null);
-  const [liveDetails, setLiveDetails] = useState<any>(null);
 
   const autoProgression = localAutoProgression !== null ? localAutoProgression : (settings?.autoUpgrade ?? true);
 
@@ -42,36 +43,11 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const activeSlotNumber = storeSelectedSlot || data?.currentSlot || 1;
   const cost = getSlotCost(activeSlotNumber);
 
-  // Poll on-chain slot data for the currently selected slot and cycle
-  useEffect(() => {
-    let isMounted = true;
-    const fetchSlot = async () => {
-      const raw = address || data?.address;
-      if (!raw) return;
-      const active = toHexAddress(raw);
-      if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
-      try {
-        const details = await getOnChainSlotDetails(active, activeSlotNumber, storeSelectedCycle || undefined);
-        if (isMounted && details) {
-          setLiveDetails(details);
-        }
-      } catch (err) {
-        console.warn("[NextPositionPanel] Failed to fetch on-chain slot details:", err);
-      }
-    };
-
-    fetchSlot();
-    const interval = setInterval(fetchSlot, 4000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [address, data?.address, activeSlotNumber, storeSelectedCycle]);
-
-  // Determine active slot details from store or live query
+  // Use single source of truth from store matching the currently selected slot
   const details =
-    (storeSlotDetails && storeSlotDetails.slotNumber === activeSlotNumber ? storeSlotDetails : null) ||
-    (liveDetails && liveDetails.slotNumber === activeSlotNumber ? liveDetails : null);
+    storeSlotDetails && storeSlotDetails.slotNumber === activeSlotNumber
+      ? storeSlotDetails
+      : null;
 
   // Real filled nodes for current inspected cycle
   const nodesList = details?.nodes && Array.isArray(details.nodes) ? details.nodes : [];
@@ -80,43 +56,19 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const isUserRegistered = Boolean(profile?.isRegistered);
   const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? (isUserRegistered ? 1 : 0));
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
-  const isSlotUnlocked = activeSlotNumber === 1
-    ? true
-    : (details ? Boolean(details.isUnlocked) : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked));
-
-  const isSlot1Complete = Boolean(
-    (details as any)?.prevSlotCompleted ||
-    (details as any)?.isSlot1Completed ||
-    (details as any)?.slot1FilledNodes >= 14 ||
-    (data?.recyclesCount && data.recyclesCount > 0) ||
-    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
-    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
-    (profile as any)?.isSlot1Complete
-  );
+  const isSlotUnlocked = details
+    ? Boolean(details.isUnlocked)
+    : (isUserRegistered && activeSlotNumber <= effectiveHighestUnlocked);
 
   const isSlotLive = Boolean(isSlotUnlocked);
   const isSlotStandby = false;
 
-  const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? 1) : 0;
-  const totalCycles = isSlotUnlocked ? (details?.totalCycles ?? currentCycle) : 0;
-  const snapshotCount = isSlotUnlocked
-    ? Math.max(
-        details?.snapshotCount ?? 0,
-        details?.recyclesCount ?? 0,
-        Math.max(0, (details?.currentCycle ?? 1) - 1),
-        activeSlotNumber === 1
-          ? Math.max(
-              data?.recyclesCount ?? 0,
-              Math.max(0, (data?.activeSlotProgress?.cycle ?? 1) - 1),
-              1
-            )
-          : 0
-      )
-    : 0;
+  const currentCycle = isSlotUnlocked ? (details?.currentCycle ?? (storeSelectedCycle || 1)) : 0;
+  const snapshotCount = isSlotUnlocked ? (details?.snapshotCount ?? 0) : 0;
   const isViewingSnapshot = Boolean(isSlotUnlocked && details?.isViewingSnapshot);
-  const effectiveSelectedCycle = isViewingSnapshot
-    ? (details?.selectedCycle || storeSelectedCycle || 1)
-    : currentCycle;
+  const effectiveSelectedCycle = isSlotUnlocked
+    ? (details?.selectedCycle || storeSelectedCycle || currentCycle || 1)
+    : 0;
   const filledNodes = isSlotUnlocked
     ? (isViewingSnapshot ? 14 : (realFilledNodes > 0 ? realFilledNodes : (details?.filledNodes ?? 0)))
     : 0;
@@ -144,19 +96,71 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
   const nextTierNumber = Math.min(activeSlotNumber + 1, 12);
   const nextTierCost = getSlotCost(nextTierNumber);
 
+  const livePrice = data?.trobPriceUsd || 0;
   const rawEarnedUsd = Number(
-    details?.totalEarnedUsd ||
     data?.totalEarnedUsd ||
     profile?.totalEarningsUsd ||
     (profile?.totalEarnings ?? 0)
   );
   const totalEarnedUsd = rawEarnedUsd > 100000 ? Math.round(rawEarnedUsd / 1e6) : Math.round(rawEarnedUsd);
   const totalEarnedTrob = Number(
-    details?.totalEarnedTrob ||
     data?.totalEarnedTrob ||
     profile?.totalEarningsTrob ||
-    (totalEarnedUsd > 0 ? totalEarnedUsd / 0.056 : 0)
+    0
   );
+
+  // Build simple per-slot / cycle payout breakdown (e.g., 6 × $30 = $180 per completed cycle)
+  const earnedBreakdownRows = React.useMemo(() => {
+    if (!isUserRegistered || totalEarnedUsd <= 0) return [];
+    const slotBaseUsd = cost > 0 ? cost : 30;
+    const cycleFullUsd = slotBaseUsd * 6;
+    const rows: Array<{ label: string; formula: string; amount: number }> = [];
+
+    if (Array.isArray(storeSlots) && storeSlots.length > 0) {
+      for (const s of storeSlots) {
+        const sEarned = Math.round(Number(s?.totalEarnedUsd ?? s?.totalEarned ?? 0));
+        if (sEarned <= 0) continue;
+        const slotNum = String(s.slotNumber).padStart(2, "0");
+        const completedCycles = Math.floor(sEarned / cycleFullUsd);
+        const remainder = sEarned - completedCycles * cycleFullUsd;
+        for (let c = 1; c <= completedCycles; c++) {
+          rows.push({
+            label: `Slot #${slotNum} • Board #${c}`,
+            formula: `6 × $${slotBaseUsd.toFixed(0)} = $${cycleFullUsd.toFixed(0)}`,
+            amount: cycleFullUsd,
+          });
+        }
+        if (remainder > 0) {
+          const payouts = Math.round(remainder / slotBaseUsd);
+          rows.push({
+            label: `Slot #${slotNum} • Board #${completedCycles + 1} (Live)`,
+            formula: payouts > 1 ? `${payouts} × $${slotBaseUsd.toFixed(0)} = $${remainder}` : `+$${remainder}`,
+            amount: remainder,
+          });
+        }
+      }
+    }
+
+    if (rows.length === 0 && totalEarnedUsd > 0) {
+      const completedCycles = Math.floor(totalEarnedUsd / cycleFullUsd);
+      const remainder = totalEarnedUsd - completedCycles * cycleFullUsd;
+      for (let c = 1; c <= completedCycles; c++) {
+        rows.push({
+          label: `Cycle #0${c}`,
+          formula: `6 × $${slotBaseUsd.toFixed(0)} = $${cycleFullUsd.toFixed(0)}`,
+          amount: cycleFullUsd,
+        });
+      }
+      if (remainder > 0) {
+        rows.push({
+          label: completedCycles > 0 ? `Live` : `Settled`,
+          formula: `$${remainder}`,
+          amount: remainder,
+        });
+      }
+    }
+    return rows;
+  }, [isUserRegistered, totalEarnedUsd, storeSlots, cost]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -179,7 +183,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #01 Completed (14/14 🏆)
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Board #{effectiveSelectedCycle} Settled (14/14 🏆)
             </span>
           ) : isSlotStandby ? (
           <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white mb-3.5">
@@ -198,12 +202,23 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           </div>
         ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #01 Active
+              {loadingDetails && !details
+                ? `Syncing Slot #${String(activeSlotNumber).padStart(2, "0")}...`
+                : `Slot #${String(activeSlotNumber).padStart(2, "0")} • Board #${currentCycle || 1} Live`}
             </span>
           )}
         </div>
 
         {/* Slot Title & Node Count */}
+        {loadingDetails && !details && isSlotUnlocked ? (
+          <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500">
+            <div className="w-5 h-5 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[11px] font-semibold">
+              Fetching Slot #{String(activeSlotNumber).padStart(2, "0")} on-chain state...
+            </span>
+          </div>
+        ) : (
+        <>
         <div className="flex items-center justify-between mb-2">
           <div>
             <h3 className="text-[24px] lg:text-[28px] font-black text-[#0f172a] leading-tight flex items-center gap-1.5">
@@ -214,7 +229,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               {!isSlotUnlocked
                 ? `Slot #${String(activeSlotNumber).padStart(2, "0")} • Awaiting Auto-Unlock ($0 Out-of-Pocket)`
                 : isViewingSnapshot
-                ? `$${cost.toFixed(2)} Tier • Cycle #01 Settled 🏆`
+                ? `$${cost.toFixed(2)} Tier • Board #${effectiveSelectedCycle} Settled 🏆`
                 : `$${cost.toFixed(2)} P2P Matrix Tier`}
             </span>
           </div>
@@ -272,7 +287,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
                 <>
                   <span className="flex items-center gap-1.5 text-emerald-900">
                     <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>Cycle #01 Settled:</span>
+                    <span>Board #{effectiveSelectedCycle} Settled:</span>
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-black">
                     14/14 Settled
@@ -305,52 +320,18 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             </p>
           </div>
         )}
+        </>
+        )}
 
-        {/* Navigation & Action Buttons */}
-        {!isSlotUnlocked && activeSlotNumber > 1 ? (
+        {/* Return to Active Slot when inspecting a locked tier */}
+        {!isSlotUnlocked && activeSlotNumber > 1 && effectiveHighestUnlocked > 0 && (
           <button
             type="button"
-            onClick={() => selectSlot(effectiveHighestUnlocked || 1, undefined, address || undefined)}
+            onClick={() => selectSlot(effectiveHighestUnlocked, undefined, address || undefined)}
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
             <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>
           </button>
-        ) : (
-          <>
-            {/* View Slot 2 if on Slot 1 and Slot 2 is unlocked */}
-            {activeSlotNumber === 1 && effectiveHighestUnlocked >= 2 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(2, undefined, address || undefined)}
-                className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
-              >
-                <span>View Active Slot #02 Board ($60 Tier)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* When on Slot 2, easily inspect completed Slot 1 tree */}
-            {activeSlotNumber === 2 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(1, 1, address || undefined)}
-                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
-              >
-                <span>← View Completed Slot #01 Board (14/14 🏆)</span>
-              </button>
-            )}
-
-            {/* When on Slot > 2, view previous slot */}
-            {activeSlotNumber > 2 && (
-              <button
-                type="button"
-                onClick={() => selectSlot(activeSlotNumber - 1, undefined, address || undefined)}
-                className="w-full py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 border border-slate-200"
-              >
-                <span>← View Slot #{String(activeSlotNumber - 1).padStart(2, "0")} Tree</span>
-              </button>
-            )}
-          </>
         )}
 
         {/* Smart Contract Automated Tier Escalation Status */}
@@ -397,10 +378,22 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               <span className="text-[#cbd5e1]">•</span>
               <span className="text-[11px] font-semibold text-[#0e9f79]">Verified On-Chain</span>
             </div>
-            {totalEarnedUsd > 0 && (
-              <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] font-semibold text-slate-600 flex items-center justify-between">
-                <span>Slot #01 Breakdown:</span>
-                <span className="font-bold text-emerald-600">6 × $30.00 = $180.00 USD</span>
+            {earnedBreakdownRows.length > 0 && (
+              <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1 text-[11px] font-semibold text-slate-600">
+                {earnedBreakdownRows.map((row, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2">
+                    <span>{row.label}:</span>
+                    <span className="font-bold text-emerald-600 font-mono">{row.formula}</span>
+                  </div>
+                ))}
+                {earnedBreakdownRows.length > 1 && (
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[#0f172a]">
+                    <span>Total:</span>
+                    <span className="font-extrabold text-emerald-700 font-mono">
+                      {earnedBreakdownRows.map((r) => `$${r.amount}`).join(" + ")} = ${totalEarnedUsd} USD
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             <div className="hidden">

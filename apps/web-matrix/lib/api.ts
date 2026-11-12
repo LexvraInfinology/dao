@@ -3,23 +3,13 @@
 // ==============================================================================
 
 export function getApiBaseUrl(): string {
-  // In the browser:
+  // Always serve frontend API calls from Next.js App Router on-chain endpoint (/api/matrix)
+  // so Postgres DB and live blockchain data are never mixed or doubled.
   if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return "http://localhost:4000/api/matrix";
-    }
-    // Remote / Tunnel / Mobile / Domain access — use relative path rewritten by Next.js to backend API
     return "/api/matrix";
   }
-  // Server-side (Node SSR)
-  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.startsWith("/")) {
-    const raw = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
-    return raw.endsWith("/api/matrix") ? raw : `${raw}/api/matrix`;
-  }
-  return process.env.NODE_ENV === "production"
-    ? "https://api.equorafidao.com/api/matrix"
-    : "http://127.0.0.1:4000/api/matrix";
+  const port = process.env.PORT || "3001";
+  return `http://127.0.0.1:${port}/api/matrix`;
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -171,6 +161,7 @@ export interface MatrixSlotSummary {
   isUnlocked: boolean;
   isLive?: boolean;
   currentCycle: number;
+  slotCycle?: number;
   recyclesCount: number;
   filledNodes: number;
   upgradeReserve: number;
@@ -185,6 +176,10 @@ export interface MatrixNodePlacement {
   level: number;
   filled: boolean;
   placedUser: string | null;
+  base58?: string | null;
+  txHash?: string | null;
+  label?: string | null;
+  code?: number | string | null;
   userId: number | null;
   payoutType: string | null;
   recipientAddress: string | null;
@@ -202,6 +197,9 @@ export interface MatrixSlotDetails {
   isUnlocked: boolean;
   isLive?: boolean;
   currentCycle: number;
+  globalCycle?: number;
+  selectedCycle?: number;
+  snapshotCount?: number;
   totalCycles?: number;
   isViewingSnapshot?: boolean;
   recyclesCount: number;
@@ -216,15 +214,45 @@ export interface MatrixSlotDetails {
 export interface MatrixLeaderboardEntry {
   rank: number;
   address: string;
+  base58?: string;
   userId: number;
+  code?: number | null;
   username: string;
   avatarUrl: string | null;
   totalEarned: number;
   totalEarnedUsd: number;
+  totalEarnedTrob: number;
+  earned7dUsd?: number;
+  earned7dTrob?: number;
   directCount: number;
+  recyclesCount?: number;
   highestSlot: number;
   rankTier: number;
   rankName: string;
+}
+
+export interface MatrixLeaderboardPoolAchievers {
+  alpha: number;
+  prime: number;
+  elite: number;
+  crown: number;
+  totalAchievers: number;
+}
+
+export interface MatrixLeaderboardSummary {
+  totalMatrixUsers: number;
+  activeEarnersCount: number;
+  totalRecycles: number;
+  totalDistributedUsd: number;
+  totalDistributedTrob: number;
+  poolAchievers: MatrixLeaderboardPoolAchievers;
+  updatedAt?: string;
+}
+
+export interface MatrixLeaderboardResponse {
+  entries: MatrixLeaderboardEntry[];
+  summary: MatrixLeaderboardSummary;
+  period: string;
 }
 
 export interface MatrixTransaction {
@@ -443,12 +471,28 @@ export const matrixApi = {
   },
 
   /** Leaderboard */
-  async getLeaderboard(period = "all", limit = 25): Promise<MatrixLeaderboardEntry[]> {
-    return apiFetch<MatrixLeaderboardEntry[]>(`/leaderboard?period=${period}&limit=${limit}`);
+  async getLeaderboard(
+    period = "all",
+    limit = 50
+  ): Promise<MatrixLeaderboardResponse | MatrixLeaderboardEntry[]> {
+    return apiFetch<MatrixLeaderboardResponse | MatrixLeaderboardEntry[]>(
+      `/leaderboard?period=${period}&limit=${limit}`
+    );
   },
 
-  async getUserRank(address: string): Promise<{ rank: number; totalUsers: number }> {
-    return apiFetch<{ rank: number; totalUsers: number }>(`/leaderboard/rank/${address.toLowerCase()}`);
+  async getUserRank(address: string): Promise<{
+    rank: number | null;
+    totalUsers: number;
+    activeEarners?: number;
+    totalEarnedUsd?: number;
+    totalEarnedTrob?: number;
+    recyclesCount?: number;
+    directCount?: number;
+    milestones?: number;
+    rankTier?: number;
+    rankName?: string;
+  }> {
+    return apiFetch(`/leaderboard/rank/${address.toLowerCase()}`);
   },
 
   /** Transactions */
@@ -545,14 +589,7 @@ export const matrixApi = {
       }
     } catch {}
 
-    const benchmarkPrice = 0.037146; // Live market benchmark
-    return {
-      priceUsd: benchmarkPrice,
-      priceSource: "pegged-floor-benchmark",
-      updatedAt: new Date().toISOString(),
-      isStale: false,
-      slot1Trob: Math.round((30 / benchmarkPrice) * 100) / 100,
-    };
+    throw new Error("Live TROB price oracle unavailable");
   },
 
   /**

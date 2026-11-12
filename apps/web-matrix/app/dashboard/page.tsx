@@ -64,12 +64,19 @@ export default function DashboardPage() {
   );
   // Cycle 2+ or Slot 2+ permanent qualification exemption:
   // The 2 direct referral restriction strictly applies only to initial Slot 1 Cycle 1 onboarding.
+  const isRegisteredUser =
+    profile?.isRegistered !== false &&
+    ((dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 0) >= 1);
   const isCycledOrHigherSlot = Boolean(
-    (dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 1) > 1 ||
-    (dashboard?.recyclesCount && dashboard.recyclesCount > 0) ||
-    (((dashboard?.activeSlotProgress as any)?.totalCycles || 0) > 1)
+    isRegisteredUser && (
+      (dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 0) > 1 ||
+      (dashboard?.recyclesCount && dashboard.recyclesCount > 0) ||
+      (((dashboard?.activeSlotProgress as any)?.totalCycles || 0) > 1)
+    )
   );
-  const isQualified = isCycledOrHigherSlot || activeDirectsCount >= 2;
+  const isQualified = Boolean(
+    profile?.isQualified || dashboard?.isQualified || isCycledOrHigherSlot || activeDirectsCount >= 2
+  );
 
   if (!mounted || (loading && !dashboard)) {
     return (
@@ -434,8 +441,8 @@ export default function DashboardPage() {
           {activeTab === "pools" && (
             <div className="space-y-4 animate-fade-in">
               <ProtocolPoolsPanel
-                currentSlot={dashboard?.currentSlot ?? profile?.currentSlot ?? 1}
-                isQualified={profile?.isQualified ?? false}
+                currentSlot={profile?.isRegistered === false ? 0 : (dashboard?.currentSlot ?? profile?.currentSlot ?? 0)}
+                isQualified={isQualified}
               />
             </div>
           )}

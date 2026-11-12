@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MatrixDashboardOverview } from "@/lib/api";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
-import { CONTRACT_ADDRESSES, getOnChainSlotDetails, getOnChainDirectMembers, toHexAddress, EXPLORER_URL, APEX_LEADER_HEX } from "@/lib/contracts";
+import { CONTRACT_ADDRESSES, getSlotCost, getOnChainDirectMembers, toHexAddress, EXPLORER_URL, APEX_LEADER_HEX } from "@/lib/contracts";
 import {
   CheckCircle2,
   Plus,
@@ -178,6 +178,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const storeSlotDetails = useMatrixStore((s) => s.slotDetails);
   const storeSelectedSlot = useMatrixStore((s) => s.selectedSlotNumber);
   const selectSlotStore = useMatrixStore((s) => s.selectSlot);
+  const fetchSlotDetails = useMatrixStore((s) => s.fetchSlotDetails);
+  const loadingDetails = useMatrixStore((s) => s.loadingDetails);
+  const storeSlots = useMatrixStore((s) => s.slots);
   const storeSelectedCycle = useMatrixStore((s) => s.selectedCycle);
   const profile = useUserStore((s) => s.profile);
   const address = useUserStore((s) => s.address);
@@ -186,9 +189,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const currentActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? 1;
 
   const [selectedSlot, setSelectedSlot] = useState<number>(storeSelectedSlot || 1);
-  const [selectedCycle, setSelectedCycle] = useState<number | null>(storeSelectedCycle ?? null);
   const [selectedGlobalCycle, setSelectedGlobalCycle] = useState<number>(1);
-  const [liveSlotData, setLiveSlotData] = useState<any>(null);
+  const [viewingBoardNum, setViewingBoardNum] = useState<number | null>(storeSelectedCycle ?? null);
   const [viewMode, setViewMode] = useState<"tree" | "table" | "directs">("tree");
   const [directMembersList, setDirectMembersList] = useState<any[]>([]);
   const [selectedNodeModal, setSelectedNodeModal] = useState<SeatMeta | null>(null);
@@ -196,191 +198,108 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const [celebrationModalOpen, setCelebrationModalOpen] = useState(false);
   const [celebrationUnlockedSlot, setCelebrationUnlockedSlot] = useState<number>(2);
 
+  // Use single source of truth from store matching the active slot (prevents cross-slot flickering)
   const activeSlotDetails =
-    (liveSlotData && liveSlotData.slotNumber === selectedSlot ? liveSlotData : null) ||
-    (storeSlotDetails && storeSlotDetails.slotNumber === selectedSlot ? storeSlotDetails : null);
-  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? 1);
-
-  const slot1FilledCount =
-    (activeSlotDetails?.slotNumber === 1 ? (activeSlotDetails?.filledNodes ?? (activeSlotDetails?.nodes ? activeSlotDetails.nodes.filter((n: any) => n?.filled).length : 0)) : 0) ||
-    (data?.activeSlotProgress?.filledNodes ?? 0);
+    storeSlotDetails && storeSlotDetails.slotNumber === selectedSlot
+      ? storeSlotDetails
+      : null;
   const isUserRegistered = Boolean(profile?.isRegistered);
+  const highestUnlockedSlot = profile?.highestUnlockedSlot ?? (data?.highestUnlockedSlot ?? (isUserRegistered ? 1 : 0));
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
-  const isSlot1Escalated = highestUnlockedSlot >= 2;
 
-  const isCurrentSlotUnlocked = selectedSlot === 1
-    ? true
-    : (activeSlotDetails ? Boolean(activeSlotDetails.isUnlocked) : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked));
+  const isCurrentSlotUnlocked = activeSlotDetails
+    ? Boolean(activeSlotDetails.isUnlocked)
+    : (isUserRegistered && selectedSlot <= effectiveHighestUnlocked);
 
-  // Slot 1 completion check: When Slot 1 is 14/14 complete, Slot 2 is fully Live & Activated!
-  const isSlot1Complete = Boolean(
-    activeSlotDetails?.prevSlotCompleted ||
-    (activeSlotDetails as any)?.isSlot1Completed ||
-    (activeSlotDetails as any)?.slot1FilledNodes >= 14 ||
-    slot1FilledCount >= 14 ||
-    (data?.recyclesCount && data.recyclesCount > 0) ||
-    (data?.activeSlotProgress?.filledNodes && data.activeSlotProgress.filledNodes >= 14) ||
-    (data?.activeSlotProgress?.cycle && data.activeSlotProgress.cycle > 1) ||
-    (profile as any)?.isSlot1Complete ||
-    effectiveHighestUnlocked >= 2
-  );
-
-
-  // Sync when store slot changes externally
+  // Sync when store slot or archived board changes externally
   useEffect(() => {
     if (storeSelectedSlot && storeSelectedSlot !== selectedSlot) {
       setSelectedSlot(storeSelectedSlot);
     }
   }, [storeSelectedSlot]);
 
-  // Sync when store cycle changes externally
   useEffect(() => {
-    if (storeSelectedCycle && storeSelectedCycle !== selectedCycle) {
-      setSelectedCycle(storeSelectedCycle);
-    }
+    setViewingBoardNum(storeSelectedCycle ?? null);
   }, [storeSelectedCycle]);
+
+  const effectiveFetchCycle = viewingBoardNum !== null ? viewingBoardNum : undefined;
 
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);
-    const queryCycle = (selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete) ? 1 : undefined;
-    setSelectedCycle(queryCycle ?? null);
+    setViewingBoardNum(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    const cacheKey = queryCycle ? `${sNum}_cycle_${queryCycle}` : `${sNum}_live`;
-    const cached = useMatrixStore.getState().slotDetailsCache[cacheKey];
-    if (cached && cached.slotNumber === sNum) {
-      setLiveSlotData(cached);
-      useMatrixStore.setState({ slotDetails: cached, selectedSlotNumber: sNum, selectedCycle: queryCycle ?? null });
-    } else {
-      // Clean default state for newly selected slot representing the active cycle
-      const slotCost = 30 * Math.pow(2, Math.max(0, sNum - 1));
-      const isSlotCompleted = Boolean(selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete);
-      const defaultNodes = Array.from({ length: 14 }, (_, i) => ({
-        position: i + 1,
-        level: i < 2 ? 1 : i < 6 ? 2 : 3,
-        filled: isSlotCompleted,
-        placedUser: null,
-        base58: null,
-        code: null,
-        userId: null,
-        amount: slotCost,
-        label: `Seat #${i + 1}`,
-      }));
-      const initialSlotData = {
-        slotNumber: sNum,
-        cost: slotCost,
-        isUnlocked: sNum <= effectiveHighestUnlocked,
-        isLive: true,
-        currentCycle: selectedGlobalCycle,
-        totalCycles: 1,
-        filledNodes: isSlotCompleted ? 14 : 0,
-        snapshotCount: isSlotCompleted ? 1 : 0,
-        isViewingSnapshot: isSlotCompleted,
-        recyclesCount: isSlotCompleted ? 1 : 0,
-        upgradeReserve: 0,
-        totalEarned: isSlotCompleted ? 180 : 0,
-        nodes: defaultNodes,
-      } as any;
-      setLiveSlotData(initialSlotData);
-      useMatrixStore.setState({ slotDetails: initialSlotData, selectedSlotNumber: sNum, selectedCycle: queryCycle ?? null });
-    }
-    selectSlotStore(sNum, queryCycle, active);
+    selectSlotStore(sNum, undefined, active);
   };
 
   const handleCycleSelect = (cNum: number) => {
     setSelectedGlobalCycle(cNum);
-    const queryCycle = (cNum === 1 && selectedSlot === 1 && isSlot1Complete) ? 1 : undefined;
-    setSelectedCycle(queryCycle ?? null);
+    setViewingBoardNum(null);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    selectSlotStore(selectedSlot, queryCycle, active);
+    selectSlotStore(selectedSlot, undefined, active);
   };
 
-  // Poll live on-chain 14-node board data with cycle snapshot support
+  const handleBoardArchiveSelect = (boardNum: number | null) => {
+    setViewingBoardNum(boardNum);
+    const raw = address || data?.address;
+    const active = raw ? toHexAddress(raw) : undefined;
+    selectSlotStore(selectedSlot, boardNum ?? undefined, active);
+  };
+
+  // Single unified live poller for currently selected slot & active board
+  useEffect(() => {
+    const raw = address || data?.address;
+    if (!raw) return;
+    const active = toHexAddress(raw);
+    if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
+
+    fetchSlotDetails(selectedSlot, effectiveFetchCycle, active, true);
+    const interval = setInterval(() => {
+      fetchSlotDetails(selectedSlot, effectiveFetchCycle, active, true);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [address, data?.address, selectedSlot, effectiveFetchCycle, fetchSlotDetails]);
+
+  // Fetch direct partners list when active wallet changes
   useEffect(() => {
     let isMounted = true;
-    const fetchBoard = async () => {
-      const raw = address || data?.address;
-      if (!raw) return;
-      const active = toHexAddress(raw);
-      if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
-      try {
-        const queryCycle = (selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete)
-          ? 1
-          : (selectedCycle ?? undefined);
-        const details = await getOnChainSlotDetails(active, selectedSlot, queryCycle);
-        if (isMounted && details) {
-          setLiveSlotData(details);
-          const cacheKey = queryCycle ? `${selectedSlot}_cycle_${queryCycle}` : `${selectedSlot}_live`;
-          useMatrixStore.setState({
-            slotDetails: details,
-            slotDetailsCache: {
-              ...useMatrixStore.getState().slotDetailsCache,
-              [cacheKey]: details,
-            },
-          });
-        }
-      } catch (err) {
-        console.warn("[MatrixTreePanel] On-chain board query notice:", err);
-      }
-    };
-
-    fetchBoard();
-    const interval = setInterval(fetchBoard, 4000);
-
-    // Fetch direct members for Direct Partners view
     const rawTarget = address || data?.address;
     const targetAddr = rawTarget ? toHexAddress(rawTarget) : "";
-    if (targetAddr) {
-      getOnChainDirectMembers(targetAddr)
-        .then((list) => {
-          if (isMounted && Array.isArray(list)) setDirectMembersList(list);
-        })
-        .catch(() => {});
-    }
-
+    if (!targetAddr || targetAddr === "0x0000000000000000000000000000000000000000") return;
+    getOnChainDirectMembers(targetAddr)
+      .then((list) => {
+        if (isMounted && Array.isArray(list)) setDirectMembersList(list);
+      })
+      .catch(() => { });
     return () => {
       isMounted = false;
-      clearInterval(interval);
     };
-  }, [address, data?.address, selectedSlot, selectedCycle, selectedGlobalCycle, isSlot1Complete]);
+  }, [address, data?.address]);
 
-  const isCurrentSlotLive = Boolean(isCurrentSlotUnlocked);
   const isSlotStandby = false;
-
-
-  const currentSlotCost = 30 * Math.pow(2, Math.max(0, selectedSlot - 1));
-  const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? 1) : 0;
-  const totalCycles = isCurrentSlotUnlocked ? (activeSlotDetails?.totalCycles ?? currentCycle) : 0;
+  const currentSlotCost = getSlotCost(selectedSlot);
+  const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedGlobalCycle) : 0;
   const snapshotCount = isCurrentSlotUnlocked ? (activeSlotDetails?.snapshotCount ?? 0) : 0;
   const isViewingSnapshot = isCurrentSlotUnlocked && Boolean(activeSlotDetails?.isViewingSnapshot);
-  const effectiveSelectedCycle = isViewingSnapshot
-    ? (activeSlotDetails?.selectedCycle || selectedCycle || 1)
-    : (selectedCycle || currentCycle);
+  const slot12Summary = storeSlots?.find((s) => s.slotNumber === 12);
+  const isGlobalCycle2Unlocked = Boolean(
+    (activeSlotDetails?.globalCycle && activeSlotDetails.globalCycle >= 2) ||
+    (slot12Summary && (slot12Summary.recyclesCount > 0 || slot12Summary.currentCycle >= 2))
+  );
+
   const nodes = isCurrentSlotUnlocked
     ? (activeSlotDetails && Array.isArray(activeSlotDetails.nodes) && activeSlotDetails.nodes.length > 0
-        ? activeSlotDetails.nodes
-        : (selectedSlot === 1 && data?.activeSlotProgress?.nodes && data.activeSlotProgress.nodes.length > 0
-            ? data.activeSlotProgress.nodes
-            : Array.from({ length: 14 }, (_, i) => ({
-                position: i + 1,
-                level: i < 2 ? 1 : i < 6 ? 2 : 3,
-                filled: false,
-                placedUser: null,
-                base58: null,
-                code: null,
-                userId: null,
-                amount: currentSlotCost,
-                label: `Seat #${i + 1}`,
-              }))
-          ))
+      ? activeSlotDetails.nodes
+      : [])
     : [];
   const realFilledCount = isCurrentSlotUnlocked && nodes.length > 0 ? nodes.filter((n: any) => n?.filled).length : 0;
   const filledCount = realFilledCount > 0
     ? realFilledCount
     : (isCurrentSlotUnlocked && activeSlotDetails?.slotNumber === selectedSlot
-        ? (activeSlotDetails?.filledNodes ?? 0)
-        : (selectedSlot === 1 ? (data?.activeSlotProgress?.filledNodes ?? 0) : 0));
+      ? (activeSlotDetails?.filledNodes ?? 0)
+      : 0);
   const firstOpenIdx = nodes.length > 0 ? nodes.findIndex((n: any) => !n?.filled) : -1;
   const firstOpenSeat = firstOpenIdx >= 0 ? firstOpenIdx + 1 : (filledCount < 14 ? filledCount + 1 : 1);
 
@@ -451,12 +370,13 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   };
 
   const sponsor = profile?.sponsorAddress || data?.sponsorAddress;
-  const isVaultSponsor =
-    !sponsor ||
-    Boolean(profile?.isVaultSponsor) ||
-    sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
-    sponsor.toLowerCase() === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
-    (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor);
+  const isVaultSponsor = Boolean(
+    profile?.isVaultSponsor ||
+    (sponsor &&
+      (sponsor.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+        sponsor.toLowerCase() === toHexAddress(CONTRACT_ADDRESSES.vault).toLowerCase() ||
+        (sponsor.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsor)))
+  );
 
   const copyText = (txt: string) => {
     navigator.clipboard?.writeText(txt);
@@ -487,7 +407,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             iconBg: "bg-emerald-500 text-white shadow-xs",
             badge: "bg-emerald-100/90 text-emerald-900 border-emerald-300 font-extrabold",
             labelColor: "text-emerald-950",
-            pillText: "+$30 YOU",
+            pillText: `+$${currentSlotCost.toFixed(0)} YOU`,
           };
         case "pool":
           return {
@@ -549,7 +469,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             iconBg: "bg-emerald-100/70 text-emerald-600",
             badge: "bg-white/80 text-emerald-700 border-emerald-200",
             labelColor: "text-slate-800",
-            pillText: "+$30 YOU",
+            pillText: `+$${currentSlotCost.toFixed(0)} YOU`,
           };
         case "pool":
           return {
@@ -738,8 +658,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           !isCurrentSlotUnlocked
             ? `Position #${pos} is Locked (Slot #${selectedSlot} unlocks via Slot #${selectedSlot - 1} auto-reserve)`
             : isLockedUnqualified
-            ? `Position #${pos} is Locked: 2 Direct Referrals required to unlock personal tree progression.`
-            : `Position #${pos} (${cfg.fullRole}): ${filled ? `Filled by ${node.label || "Operative"}` : isNextUp ? "NEXT UP to be filled!" : "Open"}`
+              ? `Position #${pos} is Locked: 2 Direct Referrals required to unlock personal tree progression.`
+              : `Position #${pos} (${cfg.fullRole}): ${filled ? `Filled by ${node.label || "Operative"}` : isNextUp ? "NEXT UP to be filled!" : "Open"}`
         }
       >
         <div className="flex items-center justify-between w-full px-1.5">
@@ -780,11 +700,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <button
                 type="button"
                 onClick={() => handleCycleSelect(1)}
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                  selectedGlobalCycle === 1
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                }`}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${selectedGlobalCycle === 1
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  }`}
                 title="Cycle #01 (Active)"
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${selectedGlobalCycle === 1 ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`} />
@@ -793,7 +712,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <button
                 type="button"
                 onClick={() => {
-                  if (totalCycles >= 2) {
+                  if (isGlobalCycle2Unlocked) {
                     handleCycleSelect(2);
                   } else {
                     toast.info(
@@ -802,37 +721,66 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     );
                   }
                 }}
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                  selectedGlobalCycle === 2
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/40"
-                }`}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${selectedGlobalCycle === 2
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/40"
+                  }`}
                 title="Cycle #02 unlocks after Slot 12 completes all 14 positions (168 positions total)"
               >
-                <Lock className="w-2.5 h-2.5 text-slate-400" />
+                {!isGlobalCycle2Unlocked && <Lock className="w-2.5 h-2.5 text-slate-400" />}
                 <span>Cycle #02</span>
-                <span className="text-[9px] opacity-75">(Locked)</span>
+                {!isGlobalCycle2Unlocked && <span className="text-[9px] opacity-75">(Locked)</span>}
               </button>
             </div>
+
+            {/* COMPACT BOARD SWITCHER FOR RECYCLED SLOTS (e.g., Slot #01 Board #1 Settled vs Board #2 Live) */}
+            {isCurrentSlotUnlocked && snapshotCount > 0 && (
+              <div className="inline-flex items-center gap-0.5 p-0.5 bg-emerald-50/80 rounded-full border border-emerald-200/90">
+                <button
+                  type="button"
+                  onClick={() => handleBoardArchiveSelect(1)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                    viewingBoardNum === 1 || isViewingSnapshot
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-emerald-800 hover:bg-emerald-100/80"
+                  }`}
+                >
+                  Board #1 (14/14 • ${(6 * currentSlotCost).toFixed(0)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBoardArchiveSelect(null)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                    viewingBoardNum === null && !isViewingSnapshot
+                      ? "bg-[#1e60e5] text-white shadow-xs"
+                      : "text-slate-600 hover:bg-white/80"
+                  }`}
+                >
+                  Board #{snapshotCount + 1} Live ({liveFilledCount}/14)
+                </button>
+              </div>
+            )}
           </div>
           <p className="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5">
             {!isCurrentSlotUnlocked ? (
               <span className="font-semibold text-slate-500">
                 {selectedSlot === 1
-                  ? "Slot #01 • Entry Tier ($30 USD) • Join Matrix to Activate"
+                  ? `Slot #01 • Entry Tier ($${currentSlotCost} USD) • Join Matrix to Activate`
                   : `Slot #${String(selectedSlot).padStart(2, "0")} • Locked Tier • Automatically unlocks at $0 out-of-pocket cost via Slot #${Math.max(1, selectedSlot - 1)} (P4 & P5)`}
               </span>
-            ) : selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete ? (
+            ) : (loadingDetails || !activeSlotDetails) && (!activeSlotDetails || activeSlotDetails.slotNumber !== selectedSlot) ? (
+              <span className="text-[#1e60e5] font-semibold">Syncing Slot #{String(selectedSlot).padStart(2, "0")} • Cycle #0{selectedGlobalCycle} from TrobChain...</span>
+            ) : isViewingSnapshot || filledCount >= 14 ? (
               <span className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-emerald-700">
-                  Slot #01 • Cycle #01 Completed (14/14 Seats Settled 🏆)
+                  Slot #{String(selectedSlot).padStart(2, "0")} • Board #{viewingBoardNum || 1} Completed (14/14 Seats Settled 🏆)
                 </span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-500">On-Chain Verified</span>
               </span>
             ) : (
               <span>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {liveFilledCount} / 14 Nodes Filled • Cycle #0${selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
+                Slot #{String(selectedSlot).padStart(2, "0")} • {snapshotCount > 0 ? `Board #${snapshotCount + 1} • ` : ""}{filledCount} / 14 Nodes Filled • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
               </span>
             )}
           </p>
@@ -843,9 +791,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <button
             type="button"
             onClick={() => setViewMode("tree")}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              viewMode === "tree" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${viewMode === "tree" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             <Network className="w-3.5 h-3.5" />
             <span>Tree</span>
@@ -853,9 +800,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <button
             type="button"
             onClick={() => setViewMode("table")}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             <ListOrdered className="w-3.5 h-3.5" />
             <span>Positions</span>
@@ -863,9 +809,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           <button
             type="button"
             onClick={() => setViewMode("directs")}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              viewMode === "directs" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${viewMode === "directs" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
           >
             <Users className="w-3.5 h-3.5" />
             <span>Direct Partners ({Math.max(directsCount, directMembersList.length)})</span>
@@ -879,22 +824,25 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       <div className="py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((sNum) => {
           const isActive = selectedSlot === sNum;
-          const isSlotUnlocked = sNum <= effectiveHighestUnlocked;
-          const isCompleted = isSlotUnlocked && ((selectedGlobalCycle === 1 && sNum === 1 && isSlot1Complete) || (activeSlotDetails?.slotNumber === sNum && activeSlotDetails?.filledNodes >= 14));
+          const slotItem = storeSlots?.find((s) => s.slotNumber === sNum);
+          const isSlotUnlocked = slotItem ? Boolean(slotItem.isUnlocked) : (isUserRegistered && sNum <= effectiveHighestUnlocked);
+          const isCompleted = isSlotUnlocked && Boolean(
+            (slotItem && (slotItem.recyclesCount >= selectedGlobalCycle || slotItem.filledNodes >= 14)) ||
+            (isActive && (isViewingSnapshot || filledCount >= 14))
+          );
           return (
             <button
               key={sNum}
               type="button"
               onClick={() => handleSelectSlot(sNum)}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                isActive
-                  ? isSlotUnlocked
-                    ? "bg-[#2563eb] text-white shadow-sm shadow-blue-500/25"
-                    : "bg-slate-800 text-white shadow-sm"
-                  : isSlotUnlocked
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${isActive
+                ? isSlotUnlocked
+                  ? "bg-[#2563eb] text-white shadow-sm shadow-blue-500/25"
+                  : "bg-slate-800 text-white shadow-sm"
+                : isSlotUnlocked
                   ? "bg-slate-50 hover:bg-blue-50 text-slate-700 border border-slate-200"
                   : "bg-slate-50/60 text-slate-400 border border-slate-200/60 hover:border-slate-300"
-              }`}
+                }`}
             >
               <span>Slot #{String(sNum).padStart(2, "0")}</span>
               {isCompleted ? (
@@ -937,7 +885,7 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
         </div>
       )}
 
-      
+
       {/* ───────────────── STANDBY RESERVED SLOT BANNER ───────────────── */}
       {isSlotStandby && (
         <div className="my-2.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 via-sky-50 to-blue-50 border border-blue-200 text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
@@ -1004,60 +952,69 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
             <span className="font-extrabold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">14 Seats</span>
           </div>
 
-          <div className="py-2 sm:py-4 w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent pb-3">
-            <div className="w-[640px] mx-auto shrink-0 flex flex-col items-center">
-              {/* Root Node: YOU */}
-              <div className="animate-tree-node w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white font-black flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 text-xs sm:text-sm">
-                <span>YOU</span>
-                <span className="text-[9px] font-bold opacity-90 text-blue-100">Root Node</span>
-              </div>
+          {isCurrentSlotUnlocked && (!activeSlotDetails || (loadingDetails && activeSlotDetails.slotNumber !== selectedSlot)) ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-500">
+              <RefreshCw className="w-6 h-6 text-[#2563eb] animate-spin" />
+              <span className="text-xs font-semibold">
+                Loading Slot #{String(selectedSlot).padStart(2, "0")} • Cycle #0{selectedGlobalCycle} from TrobChain...
+              </span>
+            </div>
+          ) : (
+            <div className="py-2 sm:py-4 w-full overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent pb-3">
+              <div className="w-[640px] mx-auto shrink-0 flex flex-col items-center">
+                {/* Root Node: YOU */}
+                <div className="animate-tree-node w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white font-black flex flex-col items-center justify-center shadow-lg shadow-blue-500/30 ring-4 ring-blue-400/30 text-xs sm:text-sm">
+                  <span>YOU</span>
+                  <span className="text-[9px] font-bold opacity-90 text-blue-100">Root Node</span>
+                </div>
 
-              {/* Connector: Root to Level 1 */}
-              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
-                <path d="M 320 0 V 18 H 160 V 36" stroke={isNodeFilled(1) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(1) ? "none" : "3 3"} />
-                <path d="M 320 18 H 480 V 36" stroke={isNodeFilled(2) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(2) ? "none" : "3 3"} />
-              </svg>
+                {/* Connector: Root to Level 1 */}
+                <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                  <path d="M 320 0 V 18 H 160 V 36" stroke={isNodeFilled(1) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(1) ? "none" : "3 3"} />
+                  <path d="M 320 18 H 480 V 36" stroke={isNodeFilled(2) ? "#2563eb" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(2) ? "none" : "3 3"} />
+                </svg>
 
-              {/* Level 1: 2 Nodes (1, 2) */}
-              <div className="w-[640px] flex justify-between px-[115px]">
-                {renderTreeNode(1)}
-                {renderTreeNode(2)}
-              </div>
+                {/* Level 1: 2 Nodes (1, 2) */}
+                <div className="w-[640px] flex justify-between px-[115px]">
+                  {renderTreeNode(1)}
+                  {renderTreeNode(2)}
+                </div>
 
-              {/* Connector: Level 1 to Level 2 */}
-              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
-                <path d="M 160 0 V 18 H 80 V 36" stroke={isNodeFilled(3) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(3) ? "none" : "3 3"} />
-                <path d="M 160 18 H 240 V 36" stroke={isNodeFilled(4) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(4) ? "none" : "3 3"} />
-                <path d="M 480 0 V 18 H 400 V 36" stroke={isNodeFilled(5) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(5) ? "none" : "3 3"} />
-                <path d="M 480 18 H 560 V 36" stroke={isNodeFilled(6) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(6) ? "none" : "3 3"} />
-              </svg>
+                {/* Connector: Level 1 to Level 2 */}
+                <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                  <path d="M 160 0 V 18 H 80 V 36" stroke={isNodeFilled(3) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(3) ? "none" : "3 3"} />
+                  <path d="M 160 18 H 240 V 36" stroke={isNodeFilled(4) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(4) ? "none" : "3 3"} />
+                  <path d="M 480 0 V 18 H 400 V 36" stroke={isNodeFilled(5) ? "#f59e0b" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(5) ? "none" : "3 3"} />
+                  <path d="M 480 18 H 560 V 36" stroke={isNodeFilled(6) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(6) ? "none" : "3 3"} />
+                </svg>
 
-              {/* Level 2: 4 Nodes (3, 4, 5, 6) */}
-              <div className="w-[640px] flex justify-between px-[40px]">
-                {renderTreeNode(3)}
-                {renderTreeNode(4)}
-                {renderTreeNode(5)}
-                {renderTreeNode(6)}
-              </div>
+                {/* Level 2: 4 Nodes (3, 4, 5, 6) */}
+                <div className="w-[640px] flex justify-between px-[40px]">
+                  {renderTreeNode(3)}
+                  {renderTreeNode(4)}
+                  {renderTreeNode(5)}
+                  {renderTreeNode(6)}
+                </div>
 
-              {/* Connector: Level 2 to Level 3 */}
-              <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
-                <path d="M 80 0 V 18 H 40 V 36" stroke={isNodeFilled(7) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(7) ? "none" : "3 3"} />
-                <path d="M 80 18 H 120 V 36" stroke={isNodeFilled(8) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(8) ? "none" : "3 3"} />
-                <path d="M 240 0 V 18 H 200 V 36" stroke={isNodeFilled(9) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(9) ? "none" : "3 3"} />
-                <path d="M 240 18 H 280 V 36" stroke={isNodeFilled(10) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(10) ? "none" : "3 3"} />
-                <path d="M 400 0 V 18 H 360 V 36" stroke={isNodeFilled(11) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(11) ? "none" : "3 3"} />
-                <path d="M 400 18 H 440 V 36" stroke={isNodeFilled(12) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(12) ? "none" : "3 3"} />
-                <path d="M 560 0 V 18 H 520 V 36" stroke={isNodeFilled(13) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(13) ? "none" : "3 3"} />
-                <path d="M 560 18 H 600 V 36" stroke={isNodeFilled(14) ? "#f43f5e" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(14) ? "none" : "3 3"} />
-              </svg>
+                {/* Connector: Level 2 to Level 3 */}
+                <svg className="w-[640px] h-9 overflow-visible" viewBox="0 0 640 36" fill="none">
+                  <path d="M 80 0 V 18 H 40 V 36" stroke={isNodeFilled(7) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(7) ? "none" : "3 3"} />
+                  <path d="M 80 18 H 120 V 36" stroke={isNodeFilled(8) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(8) ? "none" : "3 3"} />
+                  <path d="M 240 0 V 18 H 200 V 36" stroke={isNodeFilled(9) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(9) ? "none" : "3 3"} />
+                  <path d="M 240 18 H 280 V 36" stroke={isNodeFilled(10) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(10) ? "none" : "3 3"} />
+                  <path d="M 400 0 V 18 H 360 V 36" stroke={isNodeFilled(11) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(11) ? "none" : "3 3"} />
+                  <path d="M 400 18 H 440 V 36" stroke={isNodeFilled(12) ? "#10b981" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(12) ? "none" : "3 3"} />
+                  <path d="M 560 0 V 18 H 520 V 36" stroke={isNodeFilled(13) ? "#a855f7" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(13) ? "none" : "3 3"} />
+                  <path d="M 560 18 H 600 V 36" stroke={isNodeFilled(14) ? "#f43f5e" : "#cbd5e1"} strokeWidth="2" strokeDasharray={isNodeFilled(14) ? "none" : "3 3"} />
+                </svg>
 
-              {/* Level 3: 8 Nodes (7 through 14) */}
-              <div className="w-[640px] flex justify-between px-[5px]">
-                {[7, 8, 9, 10, 11, 12, 13, 14].map((pos) => renderTreeNode(pos))}
+                {/* Level 3: 8 Nodes (7 through 14) */}
+                <div className="w-[640px] flex justify-between px-[5px]">
+                  {[7, 8, 9, 10, 11, 12, 13, 14].map((pos) => renderTreeNode(pos))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Bottom Metrics: 3 Columns matching Figma */}
           <div className="pt-4 border-t border-slate-100 grid grid-cols-3 text-left divide-x divide-slate-100 mt-3">
@@ -1078,9 +1035,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">
                 {!isCurrentSlotUnlocked
                   ? "Auto-Reserve Escalation"
-                  : isViewingSnapshot || (selectedGlobalCycle === 1 && selectedSlot === 1 && isSlot1Complete)
-                  ? "14/14 Settled 🏆"
-                  : "Live Active Tier"}
+                  : isViewingSnapshot || filledCount >= 14
+                    ? "14/14 Settled 🏆"
+                    : "Live Active Tier"}
               </div>
             </div>
             <div className="px-2 sm:px-4">
@@ -1144,16 +1101,16 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                         {cfg.type === "income"
                           ? `+$30 (YOU)`
                           : pos === 1
-                          ? "Direct 1 (Pass-Up)"
-                          : pos === 2
-                          ? "Direct 2 (Pass-Up)"
-                          : pos === 7
-                          ? "Downline 1 Spill"
-                          : pos === 10
-                          ? "Downline 2 Spill"
-                          : pos === 13
-                          ? "Waterfall Spill"
-                          : "Protocol Pools"}
+                            ? "Direct 1 (Pass-Up)"
+                            : pos === 2
+                              ? "Direct 2 (Pass-Up)"
+                              : pos === 7
+                                ? "Downline 1 Spill"
+                                : pos === 10
+                                  ? "Downline 2 Spill"
+                                  : pos === 13
+                                    ? "Waterfall Spill"
+                                    : "Protocol Pools"}
                       </span>
                     </div>
                   ) : !isCurrentSlotUnlocked ? (
@@ -1183,11 +1140,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                 First 2 direct referrals qualify your matrix for 100% P2P yields. All subsequent directs spill over dynamically top-to-bottom, left-to-right to strengthen your team!
               </p>
             </div>
-            <span className={`px-2.5 py-1 rounded-xl text-[10.5px] font-extrabold border self-start sm:self-auto shrink-0 ${
-              isOwnerQualified
-                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                : "bg-amber-100 text-amber-800 border-amber-300"
-            }`}>
+            <span className={`px-2.5 py-1 rounded-xl text-[10.5px] font-extrabold border self-start sm:self-auto shrink-0 ${isOwnerQualified
+              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+              : "bg-amber-100 text-amber-800 border-amber-300"
+              }`}>
               {isOwnerQualified ? "100% Yield Qualified" : `${Math.max(0, 2 - directsCount)} More Direct to Qualify (2 Required)`}
             </span>
           </div>
@@ -1205,8 +1161,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               const roleTag = isDirect1
                 ? "Level 1 • Seat #1 (Direct 1 Qualified)"
                 : isDirect2
-                ? "Level 1 • Seat #2 (Direct 2 Qualified)"
-                : `Team Spillover • Direct #${idx + 1}`;
+                  ? "Level 1 • Seat #2 (Direct 2 Qualified)"
+                  : `Team Spillover • Direct #${idx + 1}`;
 
               return (
                 <div
@@ -1237,11 +1193,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
-                      idx < 2
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-blue-50 text-blue-700 border-blue-200"
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${idx < 2
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-blue-50 text-blue-700 border-blue-200"
+                      }`}>
                       {roleTag}
                     </span>
                     <a
@@ -1283,9 +1238,8 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
 
             <div className="flex items-center gap-2.5 mb-3">
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
-                  getCategoryStyles(selectedNodeModal.type, getNodeInfo(selectedNodeModal.pos).filled).iconBg
-                }`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${getCategoryStyles(selectedNodeModal.type, getNodeInfo(selectedNodeModal.pos).filled).iconBg
+                  }`}
               >
                 {selectedNodeModal.label}
               </div>
@@ -1404,11 +1358,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     <div className="pt-1.5 pb-1 border-b border-emerald-200/50 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Payout Recipient:</span>
-                        <span className={`font-extrabold px-2 py-0.5 rounded border text-[10.5px] ${
-                          selectedNodeModal.type === "income" && !isOwnerQualified
-                            ? "text-amber-800 bg-amber-50 border-amber-300"
-                            : "text-blue-800 bg-blue-50 border-blue-200"
-                        }`}>
+                        <span className={`font-extrabold px-2 py-0.5 rounded border text-[10.5px] ${selectedNodeModal.type === "income" && !isOwnerQualified
+                          ? "text-amber-800 bg-amber-50 border-amber-300"
+                          : "text-blue-800 bg-blue-50 border-blue-200"
+                          }`}>
                           {recipientLabel}
                         </span>
                       </div>
@@ -1417,11 +1370,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                         <button
                           type="button"
                           onClick={() => copyText(recipientWallet)}
-                          className={`font-mono text-[10.5px] px-2 py-0.5 rounded border flex items-center gap-1 cursor-pointer font-bold transition-colors ${
-                            selectedNodeModal.type === "income" && !isOwnerQualified
-                              ? "text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300"
-                              : "text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200/70 border-emerald-300"
-                          }`}
+                          className={`font-mono text-[10.5px] px-2 py-0.5 rounded border flex items-center gap-1 cursor-pointer font-bold transition-colors ${selectedNodeModal.type === "income" && !isOwnerQualified
+                            ? "text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300"
+                            : "text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200/70 border-emerald-300"
+                            }`}
                           title="Click to copy on-chain recipient address"
                         >
                           {formatAddress(recipientWallet)}
@@ -1483,10 +1435,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
                     const previewWallet = isPool
                       ? toTrobBase58(CONTRACT_ADDRESSES.vault)
                       : selectedNodeModal.type === "income"
-                      ? toTrobBase58(address || "")
-                      : selectedNodeModal.pos === 1
-                      ? toTrobBase58(profile?.sponsorAddress || data?.sponsorAddress || CONTRACT_ADDRESSES.vault)
-                      : toTrobBase58(CONTRACT_ADDRESSES.vault);
+                        ? toTrobBase58(address || "")
+                        : selectedNodeModal.pos === 1
+                          ? toTrobBase58(profile?.sponsorAddress || data?.sponsorAddress || CONTRACT_ADDRESSES.vault)
+                          : toTrobBase58(CONTRACT_ADDRESSES.vault);
 
                     if (!previewWallet) return null;
 

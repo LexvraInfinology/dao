@@ -37,16 +37,16 @@ const IS_MAINNET = rawMainnetEnv !== undefined
 const TARGET_NETWORK = IS_MAINNET ? "mainnet" : "testnet";
 
 const MAINNET_DEFAULT_CONTRACTS = {
-  registry: "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
-  token:    "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-  nft:      "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
-  vesting:  "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
-  dao:      "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
-  matrix:   "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
-  vault:    "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
-  salary:   "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
-  reward:   "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
-  magicBox: "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
+  registry: "TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T",
+  token:    "TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8",
+  nft:      "TH9wqQqL6vW3Lcp6PKq7pnJz6r8ByXTiCD",
+  vesting:  "TH9wqQqL6vW3Lcp6PKq7pnJz6r8ByXTiCD",
+  dao:      "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf",
+  matrix:   "TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx",
+  vault:    "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9",
+  salary:   "TPH8E3PYKreaB5CjCPXTrEnEu1bhVCvHkZ",
+  reward:   "TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v",
+  magicBox: "TDuKBBieferWEHwSESRA1YKiKhJovidYsw",
 };
 
 const TESTNET_DEFAULT_CONTRACTS = {
@@ -69,7 +69,7 @@ export const config = {
   rpcUrl: IS_MAINNET
     ? (process.env.MAINNET_RPC_URL || (process.env.RPC_URL && !process.env.RPC_URL.includes("testnet") ? process.env.RPC_URL : "https://fullnode-one.trobchain.com"))
     : (process.env.TESTNET_RPC_URL || process.env.RPC_URL || "https://fullnode-one-testnet.trobchain.com"),
-  pollIntervalMs: parseInt(process.env.INDEXER_POLL_INTERVAL_MS || "5000", 10),
+  pollIntervalMs: parseInt(process.env.INDEXER_POLL_INTERVAL_MS || "4000", 10),
   startBlock: BigInt(process.env.INDEXER_START_BLOCK || "0"),
   contracts: {
     registry: to0xAddress(IS_MAINNET ? (process.env.NEXT_PUBLIC_MAINNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || DEFAULT_CONTRACTS.registry) : (process.env.NEXT_PUBLIC_TESTNET_REGISTRY_ADDRESS || process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || DEFAULT_CONTRACTS.registry)),
@@ -79,5 +79,6 @@ export const config = {
     dao:      to0xAddress(IS_MAINNET ? (process.env.NEXT_PUBLIC_MAINNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || DEFAULT_CONTRACTS.dao) : (process.env.NEXT_PUBLIC_TESTNET_DAO_ADDRESS || process.env.NEXT_PUBLIC_DAO_ADDRESS || DEFAULT_CONTRACTS.dao)),
     matrix:   to0xAddress(IS_MAINNET ? (process.env.NEXT_PUBLIC_MAINNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || DEFAULT_CONTRACTS.matrix) : (process.env.NEXT_PUBLIC_TESTNET_MATRIX_ADDRESS || process.env.NEXT_PUBLIC_MATRIX_ADDRESS || DEFAULT_CONTRACTS.matrix)),
     vault:    to0xAddress(IS_MAINNET ? (process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || DEFAULT_CONTRACTS.vault) : (process.env.NEXT_PUBLIC_TESTNET_VAULT_ADDRESS || process.env.NEXT_PUBLIC_VAULT_ADDRESS || DEFAULT_CONTRACTS.vault)),
+    salary:   to0xAddress(IS_MAINNET ? (process.env.NEXT_PUBLIC_MAINNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || DEFAULT_CONTRACTS.salary) : (process.env.NEXT_PUBLIC_TESTNET_SALARY_POOL_ADDRESS || process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || DEFAULT_CONTRACTS.salary)),
   },
 };

@@ -13,6 +13,8 @@ import {
   getOnChainUserProfile,
   getOnChainQualification,
   getOnChainUserRankMilestones,
+  getLiveTrobPriceUsd,
+  getLiveSlotCostUsdAndSun,
 } from "../contracts";
 import { useUserStore } from "./useUserStore";
 
@@ -105,19 +107,24 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
   },
 
     selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
-    const isLive = cycle === undefined;
-    const cacheKey = isLive ? `${slotNum}_live` : `${slotNum}_cycle_${cycle}`;
-    const cached = get().slotDetailsCache[cacheKey];
+    const targetCycleNorm = cycle ?? null;
+    const prevSlot = get().slotDetails?.slotNumber;
+    const prevCycle = get().selectedCycle ?? null;
+    const isChangingView = prevSlot !== slotNum || prevCycle !== targetCycleNorm;
 
-    // If cached, immediately show cached board to prevent jitter / blank flashes
-    if (cached) {
+    // Show clean on-chain loader on explicit slot/board switch so stale or unverified trees never flash
+    if (isChangingView || !get().slotDetails) {
       set({
         selectedSlotNumber: slotNum,
-        selectedCycle: cycle ?? null,
-        slotDetails: cached,
+        selectedCycle: targetCycleNorm,
+        slotDetails: null,
+        loadingDetails: true,
       });
     } else {
-      set({ selectedSlotNumber: slotNum, selectedCycle: cycle ?? null });
+      set({
+        selectedSlotNumber: slotNum,
+        selectedCycle: targetCycleNorm,
+      });
     }
 
     await get().fetchSlotDetails(slotNum, cycle, userAddress, true);
@@ -154,8 +161,10 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       const onChainDetails = await getOnChainSlotDetails(addr, targetSlot, cycle);
       if (onChainDetails) {
         const newCache = { ...get().slotDetailsCache, [cacheKey]: onChainDetails };
-        // Only update current slotDetails if the user is still on this slot
-        if (get().selectedSlotNumber === targetSlot) {
+        const currentSelectedCycle = get().selectedCycle ?? null;
+        const targetCycleNorm = cycle ?? null;
+        // Only update current slotDetails if the user is still on this exact slot and cycle
+        if (get().selectedSlotNumber === targetSlot && currentSelectedCycle === targetCycleNorm) {
           set({
             slotDetails: onChainDetails,
             slotDetailsCache: newCache,
@@ -174,7 +183,9 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
       const details = await matrixApi.getSlotDetails(addr, targetSlot, cycle);
       if (details) {
         const newCache = { ...get().slotDetailsCache, [cacheKey]: details };
-        if (get().selectedSlotNumber === targetSlot) {
+        const currentSelectedCycle = get().selectedCycle ?? null;
+        const targetCycleNorm = cycle ?? null;
+        if (get().selectedSlotNumber === targetSlot && currentSelectedCycle === targetCycleNorm) {
           set({
             slotDetails: details,
             slotDetailsCache: newCache,
@@ -254,30 +265,54 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
     set({ loadingDashboard: true, error: null });
 
-    // 1. Prioritize live on-chain contract state
+    // 1. Prioritize live on-chain contract state across unlocked slots
     try {
-      const [onChainDetails, onChainProf, onChainQual, onChainRank] = await Promise.all([
+      const [onChainDetails, onChainProf, onChainQual, onChainRank, onChainAllSlots, livePrice, slot1Cost] = await Promise.all([
         getOnChainSlotDetails(addr, 1).catch(() => null),
         getOnChainUserProfile(addr).catch(() => null),
         getOnChainQualification(addr).catch(() => null),
         getOnChainUserRankMilestones(addr).catch(() => null),
+        getOnChainAllSlots(addr).catch(() => []),
+        getLiveTrobPriceUsd().catch(() => 0),
+        getLiveSlotCostUsdAndSun(1).catch(() => ({ costUsd: 30, costSun: 0, priceUsd: 0 })),
       ]);
 
       if (onChainDetails || onChainProf) {
-        const TROB_PRICE_USD = 0.056;
-        const totalEarnedUsd = (onChainDetails?.totalEarnedUsd && onChainDetails.totalEarnedUsd > 0)
-          ? onChainDetails.totalEarnedUsd
-          : (onChainProf?.totalEarningsUsd ?? 0);
-        const totalEarnedTrob = onChainDetails?.totalEarnedTrob ?? onChainProf?.totalEarningsTrob ?? (totalEarnedUsd > 0 ? totalEarnedUsd / TROB_PRICE_USD : 0);
+        const liveTrobPrice = livePrice || slot1Cost.priceUsd || 0;
+        const slotSumUsd = Array.isArray(onChainAllSlots)
+          ? onChainAllSlots.reduce((acc: number, s: any) => acc + Number(s?.totalEarnedUsd ?? s?.totalEarned ?? 0), 0)
+          : 0;
+        const slotSumTrob = Array.isArray(onChainAllSlots)
+          ? onChainAllSlots.reduce((acc: number, s: any) => acc + Number(s?.totalEarnedTrob ?? 0), 0)
+          : 0;
+
+        const isUserRegistered = Boolean(onChainProf?.isRegistered);
+        const totalEarnedUsd = isUserRegistered
+          ? Math.max(
+              Number(onChainProf?.totalEarningsUsd ?? 0),
+              slotSumUsd,
+              Number(onChainDetails?.totalEarnedUsd ?? 0)
+            )
+          : 0;
+        const totalEarnedTrob = isUserRegistered
+          ? Math.max(
+              Number(onChainProf?.totalEarningsTrob ?? 0),
+              slotSumTrob,
+              Number(onChainDetails?.totalEarnedTrob ?? 0)
+            )
+          : 0;
+
         const availableWithdrawUsd = totalEarnedUsd;
         const availableWithdrawTrob = totalEarnedTrob;
         const filledCount = onChainDetails?.filledNodes ?? 0;
-        const isUserRegistered = Boolean(onChainProf?.isRegistered);
         const effectiveHighestSlot = isUserRegistered ? (onChainProf?.highestUnlockedSlot || 1) : 0;
+        const slot1CostTrob = slot1Cost.costSun > 0
+          ? Number((slot1Cost.costSun / 1_000_000).toFixed(2))
+          : (liveTrobPrice > 0 ? Number((slot1Cost.costUsd / liveTrobPrice).toFixed(2)) : 0);
 
         const onChainDashboard: MatrixDashboardOverview = {
           address: addr,
-          currentSlot: onChainProf?.currentSlot || 1,
+          currentSlot: isUserRegistered ? (onChainProf?.currentSlot || 1) : 0,
           highestUnlockedSlot: effectiveHighestSlot,
           totalEarnedTrob,
           totalEarnedUsd,
@@ -286,7 +321,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           totalWithdrawnTrob: onChainProf?.withdrawnTotalTrob ?? 0,
           totalWithdrawnUsd: onChainProf?.withdrawnTotalUsd ?? 0,
           recyclesCount: onChainDetails?.recyclesCount ?? 0,
-          trobPriceUsd: TROB_PRICE_USD,
+          trobPriceUsd: liveTrobPrice,
           rankMilestones: onChainRank || {
             tierNumber: 0,
             tierName: "NONE",
@@ -301,10 +336,10 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
             isCrownAchieved: false,
           },
           activeSlotProgress: {
-            slotNumber: 1,
+            slotNumber: isUserRegistered ? (onChainProf?.currentSlot || 1) : 0,
             filledNodes: filledCount,
             totalNodes: 14,
-            cycle: onChainDetails?.currentCycle ?? 1,
+            cycle: onChainDetails?.currentCycle ?? (isUserRegistered ? 1 : 0),
             upgradeReserve: 0,
             level1Filled: Math.min(2, filledCount),
             level2Filled: Math.max(0, Math.min(4, filledCount - 2)),
@@ -317,8 +352,9 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
               const pos = n.position;
               const isP2P = pos === 3 || pos === 6 || pos === 8 || pos === 9 || pos === 11 || pos === 12;
               const action = isP2P ? "COMMISSION_RECEIVED" : "MEMBER_JOINED";
+              const usdVal = Number(n.amountUsd ?? slot1Cost.costUsd ?? 30);
               const title = isP2P
-                ? `P2P Direct Yield Received (+$30.00)`
+                ? `P2P Direct Yield Received (+$${usdVal.toFixed(2)})`
                 : `Seat P${pos} Activated (${n.label || (n.code ? `Member #${n.code}` : `Position #${pos}`)})`;
 
               return {
@@ -327,14 +363,14 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
                 title,
                 slot: 1,
                 position: pos,
-                amount: n.amount || 882.51,
-                amountUsd: 30.0,
+                amount: Number(n.amount || slot1CostTrob || 0),
+                amountUsd: usdVal,
                 token: "TROB",
                 fromAddress: n.placedUser || n.base58,
                 toAddress: addr,
                 txHash: n.txHash || null,
                 status: "CONFIRMED",
-                description: `Position #${pos} placed • ${n.label || (n.code ? `Operative #${n.code}` : "Downline")} (${n.payoutType || "+$30 Yield"})`,
+                description: `Position #${pos} placed • ${n.label || (n.code ? `Operative #${n.code}` : "Downline")} (${n.payoutType || `+$${usdVal.toFixed(2)} Yield`})`,
                 timestamp: n.timestamp || new Date().toISOString(),
               };
             }),
@@ -343,11 +379,19 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
           sponsorAddress: onChainProf?.sponsorAddress || null,
         };
 
-        set({ dashboard: onChainDashboard, loadingDashboard: false });
+        const currentState = get();
+        set({
+          dashboard: onChainDashboard,
+          loadingDashboard: false,
+          ...(Array.isArray(onChainAllSlots) && onChainAllSlots.length > 0 ? { slots: onChainAllSlots } : {}),
+        });
 
-        // Synchronize slotDetails so tree view components have the complete node array
-        if (onChainDetails) {
-          set({ slotDetails: onChainDetails });
+        // Only populate initial slotDetails when user has not switched away from live Slot 1
+        if (onChainDetails && currentState.selectedSlotNumber === 1 && !currentState.selectedCycle) {
+          set({
+            slotDetails: onChainDetails,
+            slotDetailsCache: { ...get().slotDetailsCache, ["1_live"]: onChainDetails },
+          });
         }
         return;
       }

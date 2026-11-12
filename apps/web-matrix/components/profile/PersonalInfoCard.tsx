@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore } from "@/lib/stores";
 import { toast } from "@/lib/toast";
-import { formatDateSafe } from "@/lib/format";
+import { formatDateSafe, toTrobBase58 } from "@/lib/format";
 
 export interface PersonalInfoCardProps {
   profile?: MatrixUserProfile | null;
@@ -154,7 +154,17 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="text-[13px] sm:text-[13.5px] font-bold text-[#2563eb]">
-                  {profile?.sponsorUserId ? `#${profile.sponsorUserId}` : "Genesis (Root)"}
+                  {!profile
+                    ? "—"
+                    : profile.isVaultSponsor
+                    ? "Protocol Vault (Apex Root)"
+                    : profile.sponsorUserId
+                    ? `#${profile.sponsorUserId}`
+                    : profile.sponsorCode
+                    ? `#${profile.sponsorCode}`
+                    : profile.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000"
+                    ? `${toTrobBase58(profile.sponsorAddress).slice(0, 6)}...${toTrobBase58(profile.sponsorAddress).slice(-4)}`
+                    : "—"}
                 </span>
               </div>
             </div>

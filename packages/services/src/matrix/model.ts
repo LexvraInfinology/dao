@@ -168,10 +168,34 @@ export interface MatrixLeaderboardEntryDTO {
   avatarUrl: string | null;
   totalEarned: number;
   totalEarnedUsd: number;
+  totalEarnedTrob: number;
+  earned7dUsd?: number;
+  earned7dTrob?: number;
   directCount: number;
+  recyclesCount?: number;
   highestSlot: number;
   rankTier: number;
   rankName: string;
+}
+
+export interface MatrixLeaderboardResponseDTO {
+  entries: MatrixLeaderboardEntryDTO[];
+  summary: {
+    totalMatrixUsers: number;
+    activeEarnersCount: number;
+    totalRecycles: number;
+    totalDistributedUsd: number;
+    totalDistributedTrob: number;
+    poolAchievers: {
+      alpha: number;
+      prime: number;
+      elite: number;
+      crown: number;
+      totalAchievers: number;
+    };
+    updatedAt: string;
+  };
+  period: string;
 }
 
 export interface MatrixTransactionDTO {

@@ -17,12 +17,10 @@ export function EarningsBreakdownChart() {
     }
     return Math.max(0, v);
   };
-  let totalLifetime = cleanVal(Number((earnings as any)?.totalEarningsUsd ?? earnings?.totalEarnings ?? (profile as any)?.totalEarningsUsd ?? profile?.totalEarnings ?? 180));
-  if (totalLifetime === 198) totalLifetime = 180;
-  if (totalLifetime === 0) totalLifetime = 180;
+  const totalLifetime = cleanVal(Number((earnings as any)?.totalEarningsUsd ?? earnings?.totalEarnings ?? (profile as any)?.totalEarningsUsd ?? profile?.totalEarnings ?? 0));
 
-  // Single source of truth: User's $180.00 USD P2P settled earnings (5,220.96 TROB)
-  let directAmount = totalLifetime;
+  // Direct on-chain settled earnings breakdown
+  const directAmount = totalLifetime;
   let levelAmount = 0;
   let referralAmount = 0;
   const totalAmount = totalLifetime;

@@ -28,12 +28,15 @@ import {
   handleSlotJoined,
   handlePositionFilled,
   handleDistributionExecuted,
+  handleSlotAutoActivated,
   handleSlotAutoUpgraded,
+  handleProtocolPoolFunded,
   handleCycleCompleted,
   handleMagicBoxUnlocked,
   handleDaoPoolFunded,
   handleDaoRewardClaimed,
   handleRankPoolFunded,
+  handleRankAchieved,
 } from "./handlers/matrix.handler";
 
 import { createLogger } from "@equora/logger";
@@ -121,6 +124,7 @@ export class BlockchainIndexer {
   private hasLoggedOnline = false;
   private lastTrobMembersCount = 0;
   private lastProcessedBlock = 0n;
+  private matrixSyncTick = 0;
 
   constructor() {
     this.client = createPublicClient({
@@ -155,6 +159,7 @@ export class BlockchainIndexer {
       try {
         if (this.isTrobChain()) {
           await this.syncTrobChain();
+          await this.syncTrobChainMatrix();
         } else {
           await this.syncNewBlocks();
         }
@@ -373,6 +378,305 @@ export class BlockchainIndexer {
     // Update cursor
     try {
       await this.updateCursor("EquoraDAO", currentBlock);
+    } catch {}
+  }
+
+  /**
+   * Idempotent chunked TrobChain Mainnet Matrix & Registry event indexer.
+   * Fetches confirmed transactions from explorer API + fullnode /wallet/gettransactioninfobyid
+   * and replays V3 events in strict chronological log order every 3-5s poll cycle.
+   */
+  private async syncTrobChainMatrix() {
+    if (!config.contracts.matrix || config.contracts.matrix === "0x0000000000000000000000000000000000000000") {
+      return;
+    }
+
+    const TOPIC_USER_REGISTERED      = "b626e6cc43dfdcd60d2e41d199e03d0c90c4c7bb5c76193c8d6c31b88217f96c";
+    const TOPIC_SLOT_JOINED          = "7e2b702419ffd2a85ba01fe01ef74fe54d739945e9b49382d02ed7def63f88bf";
+    const TOPIC_POSITION_FILLED      = "42d060340aa5f20eedd25f97edb158bec9932d144acabe55a9d25654f43d1190";
+    const TOPIC_DISTRIBUTION_EXEC    = "0f79e4865d07257d0cd65a1b0c4f973d40b9560870968cac1e7e8fe0a0478756";
+    const TOPIC_SLOT_AUTO_ACTIVATED  = "972fc40fa49e0285cc46ec9cfbaeb31499345d5fa20792e320786cd7f2c871d8";
+    const TOPIC_PROTOCOL_POOL_FUNDED = "eff9bcc4fa6ad3f562c89e603ceec41c0088ee21d2d1213004b14a743e934c23";
+    const TOPIC_SPILLOVER_RESOLVED   = "efebe7790cea02090dc3214f813c124c663566a2a941d0babcc9653bfb51ac8c";
+    const TOPIC_CYCLE_COMPLETED      = "b6e98e22c7e457ea5ccfbee8c4873ca4fe77c1dc9d598cb28fec67999f630445";
+    const TOPIC_RANK_ACHIEVED        = "cd128610aee95a512dd8de94c18c10e5dd150ef2ebfa70a286e33946750ed6fc";
+
+    const topicAddr = (topic?: string): string => {
+      if (!topic || topic.length < 40) return "0x0000000000000000000000000000000000000000";
+      return ("0x" + topic.slice(-40)).toLowerCase();
+    };
+    const wordHex = (data: string, wordIdx: number): string => {
+      const start = wordIdx * 64;
+      if (!data || data.length < start + 64) return "0".repeat(64);
+      return data.slice(start, start + 64);
+    };
+    const wordBigInt = (data: string, wordIdx: number): bigint => BigInt("0x" + wordHex(data, wordIdx));
+    const wordAddr = (data: string, wordIdx: number): string => ("0x" + wordHex(data, wordIdx).slice(24)).toLowerCase();
+
+    const matrixHex20 = config.contracts.matrix.replace(/^0x/i, "").toLowerCase();
+    const matrixBase58 = hexToTrobBase58("41" + matrixHex20);
+    const registryHex20 = config.contracts.registry.replace(/^0x/i, "").toLowerCase();
+    const salaryHex20 = config.contracts.salary.replace(/^0x/i, "").toLowerCase();
+    const salaryTronHex = ("41" + salaryHex20).toLowerCase();
+
+    this.matrixSyncTick++;
+    if (this.matrixSyncTick % 5 === 1) {
+      await this.syncTrobRoyaltyPools(salaryTronHex).catch(() => {});
+    }
+    const explorerBase =
+      config.chainId === 1001
+        ? (process.env.TESTNET_EXPLORER_API_URL || "https://testnet-backend.trobchain.com/v1")
+        : (process.env.EXPLORER_API_URL || "https://backend.trobchain.com/v1");
+
+    const cursor = await prisma.indexerCursor.findUnique({
+      where: {
+        contractName_chainId: {
+          contractName: "EquoraMatrixTx",
+          chainId: config.chainId,
+        },
+      },
+    }).catch(() => null);
+
+    const lastBlock = Number(cursor?.lastIndexedBlock ?? 0n);
+    const pendingTxs: Array<{ hash: string; blockNumber: number; timestampSec: number }> = [];
+
+    for (let page = 0; page < 20; page++) {
+      const offset = page * 50;
+      const listRes = await fetch(`${explorerBase}/accounts/${matrixBase58}/transactions?limit=50&offset=${offset}`, {
+        headers: { "User-Agent": "EquoraIndexer/1.0" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!listRes.ok) break;
+      const listJson = (await listRes.json()) as any;
+      const rows: any[] = Array.isArray(listJson?.data) ? listJson.data : [];
+      if (rows.length === 0) break;
+
+      let reachedProcessedHorizon = false;
+      for (const tx of rows) {
+        if (tx.result && tx.result !== "SUCCESS") continue;
+        const hash = String(tx.hash || tx.txID || tx.transaction_id || "").trim().toLowerCase();
+        const blockNum = Number(tx.block_number || tx.blockNumber || tx.block || 0);
+        if (!hash) continue;
+        if (lastBlock > 0 && blockNum > 0 && blockNum < lastBlock) {
+          reachedProcessedHorizon = true;
+          continue;
+        }
+        const rawTs = tx.timestamp ? Date.parse(tx.timestamp) : Date.now();
+        const tsSec = Number.isFinite(rawTs) ? Math.floor(rawTs / 1000) : Math.floor(Date.now() / 1000);
+        pendingTxs.push({ hash, blockNumber: blockNum, timestampSec: tsSec });
+      }
+      if (reachedProcessedHorizon || rows.length < 50) break;
+    }
+
+    if (pendingTxs.length === 0) return;
+
+    // Sort oldest -> newest so slot joins & cascades replay in exact blockchain execution order
+    pendingTxs.sort((a, b) => (a.blockNumber - b.blockNumber) || (a.timestampSec - b.timestampSec));
+    const batch = pendingTxs.slice(0, 40);
+    let maxSyncedBlock = lastBlock;
+
+    // Fetch receipts in chunks of 5 to keep RPC responsive
+    for (let i = 0; i < batch.length; i += 5) {
+      const chunk = batch.slice(i, i + 5);
+      const receipts = await Promise.all(
+        chunk.map(async (item) => {
+          try {
+            const res = await fetch(`${config.rpcUrl}/wallet/gettransactioninfobyid`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ value: item.hash }),
+              signal: AbortSignal.timeout(8000),
+            });
+            if (!res.ok) return { item, info: null };
+            return { item, info: (await res.json()) as any };
+          } catch {
+            return { item, info: null };
+          }
+        })
+      );
+
+      for (const { item, info } of receipts) {
+        if (!info || (info.receipt?.result && info.receipt.result !== "SUCCESS")) continue;
+        const logs: any[] = Array.isArray(info.log) ? info.log : [];
+        const blockNumBig = BigInt(info.blockNumber || item.blockNumber || 0);
+        const blockTsSec = info.blockTimeStamp ? Math.floor(Number(info.blockTimeStamp) / 1000) : item.timestampSec;
+        const activeCtx = new Map<string, { matrixOwner: string; participant: string }>();
+        const fallbackCtx = new Map<number, boolean>();
+        let lastCtx: { matrixOwner: string; participant: string } | null = null;
+
+        for (const l of logs) {
+          const logAddr = String(l.address || "").replace(/^0x/i, "").toLowerCase();
+          const topics: string[] = Array.isArray(l.topics) ? l.topics : [];
+          if (topics.length === 0) continue;
+          const t0 = String(topics[0] || "").toLowerCase();
+          const data = String(l.data || "").replace(/^0x/i, "");
+
+          if (logAddr === registryHex20 && t0 === TOPIC_USER_REGISTERED && topics.length >= 4) {
+            await handleUserRegistered({
+              user: topicAddr(topics[1]),
+              sponsor: topicAddr(topics[2]),
+              userId: BigInt("0x" + topics[3]),
+              timestamp: wordBigInt(data, 0),
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+            });
+            continue;
+          }
+
+          if (logAddr === salaryHex20 && t0 === TOPIC_RANK_ACHIEVED && topics.length >= 2) {
+            await handleRankAchieved({
+              user: topicAddr(topics[1]),
+              newTier: Number(wordBigInt(data, 0)),
+              timestamp: wordBigInt(data, 2),
+              txHash: item.hash,
+            });
+            continue;
+          }
+
+          if (logAddr !== matrixHex20) continue;
+
+          if (t0 === TOPIC_SLOT_JOINED && topics.length >= 3) {
+            await handleSlotJoined({
+              user: topicAddr(topics[1]),
+              slot: BigInt("0x" + topics[2]),
+              cost: wordBigInt(data, 0),
+              sponsor: wordAddr(data, 1),
+              timestamp: wordBigInt(data, 2),
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+            });
+          } else if (t0 === TOPIC_POSITION_FILLED && topics.length >= 4) {
+            const matrixOwner = topicAddr(topics[1]);
+            const slot = Number(BigInt("0x" + topics[2]));
+            const cycle = BigInt("0x" + topics[3]);
+            const position = Number(wordBigInt(data, 0));
+            const participant = wordAddr(data, 1);
+            const amount = wordBigInt(data, 2);
+
+            const ctxObj = { matrixOwner, participant };
+            activeCtx.set(`${slot}-${position}`, ctxObj);
+            lastCtx = ctxObj;
+
+            await handlePositionFilled({
+              matrixOwner,
+              participant,
+              slot,
+              cycle,
+              position,
+              amount,
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+              timestamp: BigInt(blockTsSec),
+            });
+          } else if (t0 === TOPIC_SPILLOVER_RESOLVED && topics.length >= 3) {
+            const pos = Number(wordBigInt(data, 0));
+            const wasFallback = wordBigInt(data, 1) !== 0n;
+            fallbackCtx.set(pos, wasFallback);
+          } else if (t0 === TOPIC_DISTRIBUTION_EXEC && topics.length >= 2) {
+            const recipient = topicAddr(topics[1]);
+            const amount = wordBigInt(data, 0);
+            const payoutTypeIndex = Number(wordBigInt(data, 1));
+            const slot = Number(wordBigInt(data, 2));
+            const cycle = wordBigInt(data, 3);
+            const position = Number(wordBigInt(data, 4));
+
+            const ctx = activeCtx.get(`${slot}-${position}`) ?? lastCtx ?? { matrixOwner: recipient, participant: recipient };
+            await handleDistributionExecuted({
+              recipient,
+              amount,
+              payoutTypeIndex,
+              slot,
+              cycle,
+              position,
+              matrixOwner: ctx.matrixOwner,
+              participant: ctx.participant,
+              wasFallback: fallbackCtx.get(position) ?? false,
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+              timestamp: BigInt(blockTsSec),
+            });
+          } else if (t0 === TOPIC_SLOT_AUTO_ACTIVATED && topics.length >= 4) {
+            await handleSlotAutoActivated({
+              user: topicAddr(topics[1]),
+              fromSlot: Number(BigInt("0x" + topics[2])),
+              toSlot: Number(BigInt("0x" + topics[3])),
+              timestamp: wordBigInt(data, 0),
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+            });
+          } else if (t0 === TOPIC_PROTOCOL_POOL_FUNDED && topics.length >= 2) {
+            await handleProtocolPoolFunded({
+              matrixOwner: topicAddr(topics[1]),
+              amount: wordBigInt(data, 0),
+              slot: Number(wordBigInt(data, 1)),
+              cycle: wordBigInt(data, 2),
+              position: Number(wordBigInt(data, 3)),
+              timestamp: wordBigInt(data, 4),
+              txHash: item.hash,
+            });
+          } else if (t0 === TOPIC_CYCLE_COMPLETED && topics.length >= 3) {
+            await handleCycleCompleted({
+              user: topicAddr(topics[1]),
+              slot: Number(BigInt("0x" + topics[2])),
+              cycleNumber: wordBigInt(data, 0),
+              timestamp: wordBigInt(data, 1),
+              txHash: item.hash,
+              blockNumber: blockNumBig,
+            });
+          }
+        }
+
+        const bNum = Number(blockNumBig);
+        if (bNum > maxSyncedBlock) maxSyncedBlock = bNum;
+      }
+
+      if (maxSyncedBlock > lastBlock) {
+        await this.updateCursor("EquoraMatrixTx", BigInt(maxSyncedBlock)).catch(() => {});
+      }
+    }
+
+    logger.info(`✅ [TrobChain] Indexed ${batch.length} Matrix transactions up to block #${maxSyncedBlock}`);
+  }
+
+  private async syncTrobRoyaltyPools(salaryTronHex: string) {
+    try {
+      const res = await fetch(`${config.rpcUrl}/wallet/triggerconstantcontract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_address: salaryTronHex,
+          contract_address: salaryTronHex,
+          function_selector: "getPoolCounts()",
+          parameter: "",
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return;
+      const json = (await res.json()) as any;
+      const raw = String(json?.constant_result?.[0] || "");
+      if (raw.length < 256) return;
+
+      const tiers = [
+        { tier: 1, tierName: "ALPHA", count: Number(BigInt("0x" + raw.slice(0, 64))) },
+        { tier: 2, tierName: "PRIME", count: Number(BigInt("0x" + raw.slice(64, 128))) },
+        { tier: 3, tierName: "ELITE", count: Number(BigInt("0x" + raw.slice(128, 192))) },
+        { tier: 4, tierName: "CROWN", count: Number(BigInt("0x" + raw.slice(192, 256))) },
+      ];
+
+      for (const item of tiers) {
+        await prisma.matrixRankPoolState.upsert({
+          where: { tier: item.tier },
+          create: {
+            tier: item.tier,
+            tierName: item.tierName,
+            qualifierCount: item.count,
+          },
+          update: {
+            tierName: item.tierName,
+            qualifierCount: item.count,
+          },
+        }).catch(() => {});
+      }
     } catch {}
   }
 
@@ -692,10 +996,10 @@ export class BlockchainIndexer {
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "PositionFilled",       fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "DistributionExecuted", fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "SpilloverResolved",    fromBlock, toBlock }),
-      this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "SlotAutoUpgraded",     fromBlock, toBlock }),
+      this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "SlotAutoActivated",    fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "CycleCompleted",       fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "MagicBoxUnlocked",     fromBlock, toBlock }),
-      this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "DaoPoolFunded",        fromBlock, toBlock }),
+      this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "ProtocolPoolFunded",   fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "DaoRewardClaimed",     fromBlock, toBlock }),
       this.client.getContractEvents({ address: config.contracts.matrix, abi: MATRIX_ABI, eventName: "RankPoolFunded",       fromBlock, toBlock }),
     ]);
@@ -748,10 +1052,17 @@ export class BlockchainIndexer {
       });
     }
 
-    // ── SlotAutoUpgraded ─────────────────────────────────────────────────────
+    // ── SlotAutoActivated / SlotAutoUpgraded ─────────────────────────────────
     for (const log of autoUpgradedLogs) {
-      const { user, fromSlot, toSlot, timestamp } = log.args as any;
-      await handleSlotAutoUpgraded({ user, fromSlot: Number(fromSlot), toSlot: Number(toSlot), timestamp, txHash: log.transactionHash!, blockNumber: log.blockNumber! });
+      const args = log.args as any;
+      await handleSlotAutoActivated({
+        user: args.user,
+        fromSlot: Number(args.fromSlot),
+        toSlot: Number(args.activatedSlot ?? args.toSlot),
+        timestamp: args.timestamp,
+        txHash: log.transactionHash!,
+        blockNumber: log.blockNumber!,
+      });
     }
 
     // ── CycleCompleted ───────────────────────────────────────────────────────
@@ -766,10 +1077,22 @@ export class BlockchainIndexer {
       await handleMagicBoxUnlocked({ user, slot, rank: Number(rank), timestamp, txHash: log.transactionHash!, blockNumber: log.blockNumber! });
     }
 
-    // ── DaoPoolFunded ────────────────────────────────────────────────────────
+    // ── ProtocolPoolFunded ───────────────────────────────────────────────────
     for (const log of daoPoolFundedLogs) {
-      const { amount, newAccRewardPerShare } = log.args as any;
-      await handleDaoPoolFunded({ amount, newAccRewardPerShare, txHash: log.transactionHash!, blockNumber: log.blockNumber! });
+      const args = log.args as any;
+      if (args.matrixOwner) {
+        await handleProtocolPoolFunded({
+          matrixOwner: args.matrixOwner,
+          amount: args.amount,
+          slot: Number(args.slot),
+          cycle: args.cycle,
+          position: Number(args.position),
+          timestamp: args.timestamp,
+          txHash: log.transactionHash!,
+        });
+      } else {
+        await handleDaoPoolFunded({ amount: args.amount, newAccRewardPerShare: args.newAccRewardPerShare, txHash: log.transactionHash!, blockNumber: log.blockNumber! });
+      }
     }
 
     // ── DaoRewardClaimed ─────────────────────────────────────────────────────

@@ -39,9 +39,9 @@ export function ProtocolNotificationsModal({
       ? [
           {
             id: "notif-slot2-unlocked",
-            title: "🎉 Next Slot #02 ($60) Activated!",
+            title: "🎉 Next Slot #02 ($30 Matrix) Activated!",
             description:
-              "Your Slot #02 ($60 Tier) board is active on-chain for dynamic follow-me upgrades and team placements.",
+              "Your Slot #02 ($30 Matrix Board) is active on-chain for dynamic follow-me escalations and team placements.",
             category: "pool" as const,
             timestamp: "Active On-Chain",
             badge: "SLOT 2 OPENED",

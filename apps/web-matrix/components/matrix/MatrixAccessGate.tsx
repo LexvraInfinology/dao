@@ -40,6 +40,8 @@ import {
   getOnChainTokenBalance,
   getOnChainSlotStatus,
   getOnChainSlotCostSun,
+  getLiveTrobPriceUsd,
+  getLiveSlotCostUsdAndSun,
   joinSlotOnChain,
   getOnChainGenesisSponsor,
   getOnChainDaoMemberForSeat,
@@ -49,6 +51,7 @@ import {
   toHexAddress,
   toTronHex,
   isUserRegisteredInMatrix,
+  checkOnChainRegistrationAuthoritative,
   getOnChainTotalMembers,
   GENESIS_ROOT_MEMBER_BASE58,
   GENESIS_ROOT_MEMBER_HEX,
@@ -133,6 +136,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // Verification state
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [isSlot1Unlocked, setIsSlot1Unlocked] = useState(false);
+  const [confirmedUnregistered, setConfirmedUnregistered] = useState(false);
 
   // Financial & Contract State
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
@@ -144,7 +148,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     isCustom: boolean;
     isGenesis: boolean;
     error?: string;
-  }>({ isValid: true, isCustom: false, isGenesis: true });
+  }>({ isValid: false, isCustom: false, isGenesis: false });
   const [resolvingSponsor, setResolvingSponsor] = useState(false);
   const [totalMembers, setTotalMembers] = useState<number | null>(null);
 
@@ -165,32 +169,34 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   // Genesis DAO Seat from URL query (if referred from DAO)
   const [daoSeat, setDaoSeat] = useState<number | null>(null);
 
-  const isRootWallet = false;
-  const isFirstMember = (totalMembers !== null && totalMembers === 0) || daoSeat === 1;
+  const isRootWallet = Boolean(
+    address &&
+      (toTrobBase58(address) === GENESIS_ROOT_MEMBER_BASE58 ||
+        address.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
+  );
+  const isFirstMember = isRootWallet || (totalMembers !== null && totalMembers === 0);
 
-  // Dynamic $30.00 USD entry cost based on live TrobChain oracle
-  const [slotCostSun, setSlotCostSun] = useState<number>(937558597);
-  const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0.031998);
+  // Dynamic entry cost based on live TrobChain oracle & EquoraMatrix contract
+  const [slotCostSun, setSlotCostSun] = useState<number>(0);
+  const [slotCostUsd, setSlotCostUsd] = useState<number>(0);
+  const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0);
 
   useEffect(() => {
     let mounted = true;
     const updateLivePricing = async () => {
       try {
-        const res = await fetch("/api/price/trob", { cache: "no-store" }).catch(() => fetch("/api/price", { cache: "no-store" }));
-        if (res && res.ok) {
-          const json = await res.json();
-          const p = Number(json?.data?.priceUsd ?? json?.priceUsd ?? json?.price);
-          if (p && !isNaN(p) && p > 0 && mounted) {
-            setTrobPriceUsd(p);
-            setSlotCostSun(Math.round((30 / p) * 1_000_000));
-          }
-        }
-      } catch {}
-
-      try {
-        const sun = await getOnChainSlotCostSun(1);
-        if (sun > 0 && mounted) {
-          setSlotCostSun(sun);
+        const [{ costUsd, costSun }, livePrice] = await Promise.all([
+          getLiveSlotCostUsdAndSun(1),
+          getLiveTrobPriceUsd(),
+        ]);
+        if (!mounted) return;
+        if (livePrice > 0) setTrobPriceUsd(livePrice);
+        if (costUsd > 0) setSlotCostUsd(costUsd);
+        if (costSun > 0) {
+          setSlotCostSun(costSun);
+        } else {
+          const sun = await getOnChainSlotCostSun(1);
+          if (sun > 0 && mounted) setSlotCostSun(sun);
         }
       } catch {}
 
@@ -210,7 +216,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     };
   }, []);
 
-  const requiredTrob = Number((slotCostSun / 1_000_000).toFixed(2));
+  const requiredTrob = slotCostSun > 0 ? Number((slotCostSun / 1_000_000).toFixed(2)) : 0;
+  const displayEntryUsd = slotCostUsd > 0 ? slotCostUsd : 30;
 
   // Helper to extract clean address from full URL or raw string
   const cleanSponsorInput = (raw: string): string => {
@@ -231,7 +238,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const handleSponsorInputChange = (val: string) => {
     setSponsorInput(val);
     const cleaned = cleanSponsorInput(val);
-    const isFirstId = totalMembers === 0 || daoSeat === 1;
+    const isFirstId = isRootWallet || (totalMembers !== null && totalMembers === 0);
 
     if (!cleaned) {
       if (isFirstId) {
@@ -308,10 +315,21 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         isGenesis: false,
         error: undefined,
       });
-      // Asynchronously resolve on-chain to sponsor wallet address
-      getOnChainUserByCode(codeNum).then((resolvedAddr) => {
-        setResolvingSponsor(false);
-        if (resolvedAddr) {
+      // Asynchronously resolve on-chain to sponsor wallet address AND verify registration
+      getOnChainUserByCode(codeNum).then(async (resolvedAddr) => {
+        if (resolvedAddr && !isDeployerAddress(resolvedAddr)) {
+          const isReg = await isUserRegisteredInMatrix(resolvedAddr).catch(() => true);
+          setResolvingSponsor(false);
+          if (!isReg) {
+            setSponsorAddress("");
+            setSponsorStatus({
+              isValid: false,
+              isCustom: true,
+              isGenesis: false,
+              error: `Code #${codeNum} resolved wallet is not active in Equora Matrix yet.`,
+            });
+            return;
+          }
           setSponsorAddress(resolvedAddr);
           setSponsorStatus({
             isValid: true,
@@ -319,7 +337,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             isGenesis: false,
           });
           localStorage.setItem("equora_sponsor", resolvedAddr);
+          try { sessionStorage.setItem("equora_sponsor", resolvedAddr); } catch {}
         } else if (isFirstId) {
+          setResolvingSponsor(false);
           setSponsorAddress(CONTRACT_ADDRESSES.vault);
           setSponsorStatus({
             isValid: true,
@@ -327,15 +347,13 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             isGenesis: true,
           });
         } else {
+          setResolvingSponsor(false);
           setSponsorAddress("");
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("equora_sponsor");
-          }
           setSponsorStatus({
             isValid: false,
             isCustom: true,
             isGenesis: false,
-            error: `Referral code #${codeNum} is not registered on-chain yet.`,
+            error: `Referral code #${codeNum} could not be verified on-chain yet. Please check or retry.`,
           });
         }
       }).catch(() => {
@@ -345,14 +363,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
         } else {
           setSponsorAddress("");
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("equora_sponsor");
-          }
           setSponsorStatus({
             isValid: false,
             isCustom: true,
             isGenesis: false,
-            error: `Failed to verify referral code #${codeNum}.`,
+            error: `Network timeout verifying referral code #${codeNum}. Please retry.`,
           });
         }
       });
@@ -380,15 +395,52 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       return;
     }
 
+    localStorage.setItem("equora_sponsor", cleaned);
+    try { sessionStorage.setItem("equora_sponsor", cleaned); } catch {}
+
+    if (!isGen && !isFirstId) {
+      setResolvingSponsor(true);
+      setSponsorStatus({
+        isValid: false,
+        isCustom: true,
+        isGenesis: false,
+        error: undefined,
+      });
+      isUserRegisteredInMatrix(cleaned)
+        .then((isReg) => {
+          setResolvingSponsor(false);
+          if (!isReg) {
+            setSponsorStatus({
+              isValid: false,
+              isCustom: true,
+              isGenesis: false,
+              error: "This wallet is not registered in Equora Matrix yet. Using an unregistered address would assign you to Root.",
+            });
+          } else {
+            setSponsorStatus({
+              isValid: true,
+              isCustom: true,
+              isGenesis: false,
+            });
+          }
+        })
+        .catch(() => {
+          setResolvingSponsor(false);
+          setSponsorStatus({
+            isValid: false,
+            isCustom: true,
+            isGenesis: false,
+            error: "Unable to verify this sponsor wallet on-chain right now. Please retry.",
+          });
+        });
+      return;
+    }
+
     setSponsorStatus({
       isValid: true,
       isCustom: !isGen,
       isGenesis: Boolean(isGen),
     });
-
-    if (!isGen) {
-      localStorage.setItem("equora_sponsor", cleaned);
-    }
   };
 
   const handlePasteSponsor = async () => {
@@ -433,7 +485,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
         });
       }
-    } else if (totalMembers === 0 || daoSeat === 1) {
+    } else if (isRootWallet || (totalMembers !== null && totalMembers === 0)) {
       const vaultAddr = CONTRACT_ADDRESSES.vault;
       setSponsorAddress(vaultAddr);
       const b58 = vaultAddr.startsWith("T") ? vaultAddr : toTrobBase58(vaultAddr);
@@ -477,7 +529,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         }
 
         // Query total on-chain members to detect 1st ID
-        const membersCount = await getOnChainTotalMembers().catch(() => 0);
+        const membersCount = await getOnChainTotalMembers();
         if (isMounted) setTotalMembers(membersCount);
         // Compute isFirstId using fresh address value from closure
         const currentAddress = useUserStore.getState().address;
@@ -486,7 +538,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           (toTrobBase58(currentAddress) === GENESIS_ROOT_MEMBER_BASE58 ||
             currentAddress.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase())
         );
-        const isFirstId = isCurrentRootWallet || membersCount === 0 || daoSeat === 1;
+        const isFirstId = isCurrentRootWallet || (membersCount !== null && membersCount === 0);
 
         // Purge only deployer or zero-address cached sponsor from localStorage
         if (typeof window !== "undefined") {
@@ -516,99 +568,94 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           }
 
           // Case 1: Explicit referral code passed in URL (e.g. ?ref=54821)
-          if (ref && /^\d{5}$/.test(ref)) {
-            const userFromCode = await getOnChainUserByCode(ref);
-            if (userFromCode) {
+          if (ref && /^\d{5}$/.test(ref.trim())) {
+            const cleanCode = ref.trim();
+            localStorage.setItem("equora_sponsor", cleanCode);
+            localStorage.setItem("equora_sponsor_code", cleanCode);
+            try { sessionStorage.setItem("equora_sponsor", cleanCode); } catch {}
+            const userFromCode = await getOnChainUserByCode(cleanCode);
+            if (userFromCode && !isDeployerAddress(userFromCode)) {
               resolved = userFromCode;
               isCustomFound = true;
               localStorage.setItem("equora_sponsor", userFromCode);
+              try { sessionStorage.setItem("equora_sponsor", userFromCode); } catch {}
             } else {
-              resolved = "";
-              localStorage.removeItem("equora_sponsor");
+              // Preserve URL code for retry/error UI without wiping stored sponsor on transient RPC miss
+              resolved = cleanCode;
+              isCustomFound = true;
             }
           }
           // Case 2: Explicit referral wallet address passed in URL (e.g. ?ref=T... or ?ref=0x...)
-          else if (ref && (ref.startsWith("0x") || ref.startsWith("T"))) {
-            if (!isDeployerAddress(ref)) {
-              resolved = ref;
+          else if (ref && (ref.trim().startsWith("0x") || ref.trim().startsWith("T"))) {
+            const cleanRef = ref.trim();
+            if (!isDeployerAddress(cleanRef)) {
+              resolved = cleanRef;
               isCustomFound = true;
-              localStorage.setItem("equora_sponsor", ref);
+              localStorage.setItem("equora_sponsor", cleanRef);
+              try { sessionStorage.setItem("equora_sponsor", cleanRef); } catch {}
             }
           }
-          // Case 3: Stored referral in localStorage from previous link
-          else if (typeof window !== "undefined" && localStorage.getItem("equora_sponsor")) {
-            const stored = localStorage.getItem("equora_sponsor")!;
+          // Case 3: Stored referral in localStorage or sessionStorage from previous link
+          else if (typeof window !== "undefined") {
+            let stored = localStorage.getItem("equora_sponsor");
+            if (!stored) {
+              try { stored = sessionStorage.getItem("equora_sponsor"); } catch {}
+            }
             if (stored && !isDeployerAddress(stored)) {
-              if (/^\d{5}$/.test(stored)) {
-                const userFromCode = await getOnChainUserByCode(stored);
-                if (userFromCode) {
-                  resolved = userFromCode;
+              const trimmedStored = stored.trim();
+              if (/^\d{5}$/.test(trimmedStored)) {
+                const resolvedFromStored = await getOnChainUserByCode(trimmedStored);
+                if (resolvedFromStored && !isDeployerAddress(resolvedFromStored)) {
+                  resolved = resolvedFromStored;
+                  isCustomFound = true;
+                  localStorage.setItem("equora_sponsor", resolvedFromStored);
+                  try { sessionStorage.setItem("equora_sponsor", resolvedFromStored); } catch {}
+                } else {
+                  resolved = trimmedStored;
                   isCustomFound = true;
                 }
-              } else if (stored.startsWith("0x") || stored.startsWith("T")) {
-                resolved = stored;
+              } else if (trimmedStored.startsWith("0x") || trimmedStored.startsWith("T")) {
+                resolved = trimmedStored;
                 isCustomFound = true;
+                localStorage.setItem("equora_sponsor", trimmedStored);
               }
             }
           }
-          // Case 4: 1st ID on Mainnet or Apex Founding Member (#0001) -> Routes directly to Protocol Pools
-          else if (isFirstId || parsedSeat === 1) {
-            resolved = CONTRACT_ADDRESSES.vault;
-            isRootAllowed = true;
-          }
-          // Case C: Genesis Council Members (Seats 2 to 100) 4-Quadrant Symmetrical Binary Tree
-          // Quadrant q = floor((S-1)/25) + 1, k = ((S-1)%25) + 1
-          // k <= 2: connects to Gateway anchor (IDs 3, 4, 5, 6)
-          // k >= 3: connects to parent seat (q-1)*25 + floor((k-1)/2)
-          else if (parsedSeat && parsedSeat >= 2 && parsedSeat <= 100) {
-            const boundedPos = Math.max(1, Math.min(100, parsedSeat));
-            const quadrant = Math.floor((boundedPos - 1) / 25) + 1;
-            const k = ((boundedPos - 1) % 25) + 1;
 
-            if (k <= 2) {
-              const gatewayAnchors: Record<number, string> = {
-                1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || CONTRACT_ADDRESSES.vault,
-                2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || CONTRACT_ADDRESSES.vault,
-                3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || CONTRACT_ADDRESSES.vault,
-                4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || CONTRACT_ADDRESSES.vault,
-              };
-              resolved = gatewayAnchors[quadrant] || CONTRACT_ADDRESSES.vault;
-              isCustomFound = true;
-            } else {
-              const parentSeat = (quadrant - 1) * 25 + Math.floor((k - 1) / 2);
-              const parentMember = await getOnChainDaoMemberForSeat(parentSeat);
-              if (parentMember && (parentMember.startsWith("T") || parentMember.startsWith("0x"))) {
-                resolved = parentMember;
+          // Only apply Genesis / DAO seat mapping if no explicit/stored friend referral was captured
+          if (!resolved) {
+            if (isFirstId) {
+              resolved = CONTRACT_ADDRESSES.vault;
+              isRootAllowed = true;
+            } else if (parsedSeat && parsedSeat >= 2 && parsedSeat <= 100) {
+              const boundedPos = Math.max(1, Math.min(100, parsedSeat));
+              const quadrant = Math.floor((boundedPos - 1) / 25) + 1;
+              const k = ((boundedPos - 1) % 25) + 1;
+
+              if (k <= 2) {
+                const gatewayAnchors: Record<number, string> = {
+                  1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || CONTRACT_ADDRESSES.vault,
+                  2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || CONTRACT_ADDRESSES.vault,
+                  3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || CONTRACT_ADDRESSES.vault,
+                  4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || CONTRACT_ADDRESSES.vault,
+                };
+                resolved = gatewayAnchors[quadrant] || CONTRACT_ADDRESSES.vault;
                 isCustomFound = true;
-                localStorage.setItem("equora_sponsor", parentMember);
-              }
-            }
-          }
-          // Case D: General entrant — check localStorage for previous sponsor
-          else {
-            const stored = localStorage.getItem("equora_sponsor");
-            if (stored && (stored.startsWith("0x") || stored.startsWith("T") || /^\d{5}$/.test(stored))) {
-              if (!isDeployerAddress(stored)) {
-                if (/^\d{5}$/.test(stored)) {
-                  const resolvedFromStored = await getOnChainUserByCode(stored);
-                  if (resolvedFromStored) {
-                    resolved = resolvedFromStored;
-                    isCustomFound = true;
-                    localStorage.setItem("equora_sponsor", resolvedFromStored);
-                  } else {
-                    localStorage.removeItem("equora_sponsor");
-                  }
-                } else {
-                  resolved = stored;
+              } else {
+                const parentSeat = (quadrant - 1) * 25 + Math.floor((k - 1) / 2);
+                const parentMember = await getOnChainDaoMemberForSeat(parentSeat);
+                if (parentMember && (parentMember.startsWith("T") || parentMember.startsWith("0x"))) {
+                  resolved = parentMember;
                   isCustomFound = true;
+                  localStorage.setItem("equora_sponsor", parentMember);
                 }
               }
             }
           }
         }
 
-        // If still unresolved and it is the 1st ID on Mainnet, default to Protocol Pools
-        if (!resolved && (isFirstId || daoSeat === 1)) {
+        // If still unresolved and it is strictly the 1st ID on Mainnet, default to Protocol Pools
+        if (!resolved && isFirstId) {
           resolved = CONTRACT_ADDRESSES.vault;
           isRootAllowed = true;
         }
@@ -621,9 +668,29 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
           if (isCode) {
             const resolvedAddr = await getOnChainUserByCode(resolved);
-            if (resolvedAddr) {
-              setSponsorAddress(resolvedAddr);
-              setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
+            if (resolvedAddr && !isDeployerAddress(resolvedAddr)) {
+              const isSponsorReg = await isUserRegisteredInMatrix(resolvedAddr).catch(() => null);
+              if (isSponsorReg === false) {
+                setSponsorAddress("");
+                setSponsorStatus({
+                  isValid: false,
+                  isCustom: true,
+                  isGenesis: false,
+                  error: `Referral code #${resolved} wallet is not registered in Equora Matrix yet.`,
+                });
+              } else if (isSponsorReg === null) {
+                setSponsorStatus({
+                  isValid: false,
+                  isCustom: true,
+                  isGenesis: false,
+                  error: `Unable to verify referral code #${resolved} on-chain right now. Please retry.`,
+                });
+              } else {
+                localStorage.setItem("equora_sponsor", resolvedAddr);
+                try { sessionStorage.setItem("equora_sponsor", resolvedAddr); } catch {}
+                setSponsorAddress(resolvedAddr);
+                setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
+              }
             } else if (isFirstId) {
               setSponsorAddress(CONTRACT_ADDRESSES.vault);
               setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
@@ -633,8 +700,44 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                 isValid: false,
                 isCustom: true,
                 isGenesis: false,
-                error: `Referral code #${resolved} is not registered on-chain yet.`,
+                error: `Referral code #${resolved} could not be verified on-chain yet. Refresh or enter your referrer's wallet address.`,
               });
+            }
+          } else if (!isRootAllowed && !isFirstId) {
+            const isVaultOrGenRoot =
+              resolved.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+              (resolved.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === resolved);
+            if (isVaultOrGenRoot) {
+              setSponsorAddress("");
+              setSponsorStatus({
+                isValid: false,
+                isCustom: false,
+                isGenesis: false,
+                error: "Protocol Vault is reserved for the Genesis Root node. Please enter your referrer's registered wallet address or 5-digit code.",
+              });
+            } else {
+              const isSponsorReg = await isUserRegisteredInMatrix(resolved).catch(() => null);
+              if (isSponsorReg === false) {
+                setSponsorStatus({
+                  isValid: false,
+                  isCustom: true,
+                  isGenesis: false,
+                  error: "This referrer wallet is not registered in Equora Matrix yet. Using an unregistered address would assign you to Root.",
+                });
+              } else if (isSponsorReg === null) {
+                setSponsorStatus({
+                  isValid: false,
+                  isCustom: true,
+                  isGenesis: false,
+                  error: "Unable to verify sponsor wallet on-chain right now. Please retry before joining.",
+                });
+              } else {
+                setSponsorStatus({
+                  isValid: true,
+                  isCustom: isCustomFound,
+                  isGenesis: false,
+                });
+              }
             }
           } else {
             setSponsorStatus({
@@ -668,17 +771,25 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     };
   }, [address]);
 
-  // Auto-Assign Protocol Pools to Genesis Root Member
+  // Auto-Assign Protocol Pools ONLY to the Genesis Root Member Wallet (never overwrite a visitor's referral)
   useEffect(() => {
     if (address) {
       const isRoot =
         toTrobBase58(address) === GENESIS_ROOT_MEMBER_BASE58 ||
         address.toLowerCase() === GENESIS_ROOT_MEMBER_HEX.toLowerCase();
-      if (isRoot || totalMembers === 0) {
+      const hasUrlOrStoredRef =
+        typeof window !== "undefined" &&
+        Boolean(
+          new URLSearchParams(window.location.search).get("ref") ||
+          new URLSearchParams(window.location.search).get("sponsor") ||
+          new URLSearchParams(window.location.search).get("code") ||
+          localStorage.getItem("equora_sponsor")
+        );
+      if (isRoot || (totalMembers !== null && totalMembers === 0 && !hasUrlOrStoredRef)) {
         setSponsorAddress(CONTRACT_ADDRESSES.vault);
         setSponsorInput(toTrobBase58(CONTRACT_ADDRESSES.vault));
         setSponsorStatus({ isValid: true, isCustom: false, isGenesis: true });
-        if (typeof window !== "undefined") {
+        if (isRoot && typeof window !== "undefined") {
           localStorage.removeItem("equora_sponsor");
         }
       }
@@ -800,6 +911,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     if (!address) {
       setCheckingStatus(false);
       setIsSlot1Unlocked(false);
+      setConfirmedUnregistered(false);
       setTokenBalance(null);
       setEligibility(null);
       return;
@@ -808,48 +920,89 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     if (!initialCheckDoneRef.current) {
       setCheckingStatus(true);
     }
+    setConfirmedUnregistered(false);
     setActionError(null);
 
-    // Fast path: check on-chain registration status
-    const knownRegistered = await isUserRegisteredInMatrix(address);
-    if (knownRegistered) {
+    const userHex = toHexAddress(address);
+
+    // Fetch balance and eligibility in background without blocking registration resolution.
+    getOnChainTokenBalance(address)
+      .then((bal) => setTokenBalance(bal))
+      .catch(() => {});
+    fetchEligibility(address).catch(() => {});
+
+    const markUnlocked = () => {
       setIsSlot1Unlocked(true);
-      setCheckingStatus(false);
+      setConfirmedUnregistered(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`equora_matrix_registered_${address.toLowerCase()}`, "true");
+      }
       if (isStandaloneGate) {
         router.replace("/dashboard");
-        return;
       }
-    }
+    };
+
+    const profileCheck = async (): Promise<boolean | null> => {
+      if (!userHex) return null;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      try {
+        const res = await fetch(`/api/matrix/profile/${encodeURIComponent(userHex)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!res.ok) return null;
+        const json = await res.json();
+        const data = json?.data;
+        if (!json?.success || !data) return null;
+        if (data.isRegistered === true || Number(data.currentSlot || 0) >= 1) {
+          return true;
+        }
+        if (data.isRegistered === false && Number(data.currentSlot || 0) === 0) {
+          return false;
+        }
+        return null;
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    };
 
     const safetyTimeout = new Promise<void>((resolve) =>
-      setTimeout(resolve, 4000)
+      setTimeout(resolve, 15000)
     );
 
     try {
-      await Promise.race([
-        Promise.all([
-          getOnChainSlotStatus(address, 1)
-            .then((res) => {
-              if (res.isUnlocked) {
-                setIsSlot1Unlocked(true);
-                if (typeof window !== "undefined") {
-                  localStorage.setItem(`equora_matrix_registered_${address.toLowerCase()}`, "true");
-                }
-                if (isStandaloneGate) {
-                  router.replace("/dashboard");
-                }
-              }
-            })
-            .catch((err) => {
-              console.warn("[MatrixGate] On-chain slot 1 check error:", err);
-            }),
-          getOnChainTokenBalance(address)
-            .then((bal) => setTokenBalance(bal))
-            .catch(() => {}),
-          fetchEligibility(address).catch(() => {}),
-        ]),
-        safetyTimeout,
-      ]);
+      let resolvedUnlocked = false;
+
+      const directPromise = checkOnChainRegistrationAuthoritative(address)
+        .then((res) => {
+          if (res === true) {
+            resolvedUnlocked = true;
+            markUnlocked();
+          }
+          return res;
+        })
+        .catch(() => null);
+
+      const apiPromise = profileCheck()
+        .then((res) => {
+          if (res === true) {
+            resolvedUnlocked = true;
+            markUnlocked();
+          }
+          return res;
+        })
+        .catch(() => null);
+
+      const bothChecks = Promise.all([directPromise, apiPromise]).then(([directRes, apiRes]) => {
+        if (!resolvedUnlocked && (directRes === false || (directRes === null && apiRes === false))) {
+          setConfirmedUnregistered(true);
+        }
+      });
+
+      await Promise.race([bothChecks, safetyTimeout]);
     } catch (err: any) {
       console.warn("[MatrixGate] On-chain check error:", err);
     } finally {
@@ -1086,6 +1239,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       toast.error("SR Vote Required", "You must cast a vote for the official Super Representative before entering Slot 1.");
       return;
     }
+    if (isPriceLoading) {
+      toast.info("Loading Entry Price", "Fetching live on-chain slot cost...");
+      return;
+    }
     if (!hasEnoughBalance) {
       toast.error("Insufficient Balance", `Slot 1 requires ~${requiredTrob.toFixed(2)} TROB.`);
       return;
@@ -1146,11 +1303,20 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   useEffect(() => {
     if (isStandaloneGate && isSlot1Unlocked) {
       router.replace("/dashboard");
-    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked) {
+    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked && (!address || confirmedUnregistered)) {
       const search = typeof window !== "undefined" ? window.location.search : "";
       router.replace(`/gate${search}`);
     }
-  }, [checkingStatus, isSlot1Unlocked, isStandaloneGate, router]);
+  }, [address, checkingStatus, confirmedUnregistered, isSlot1Unlocked, isStandaloneGate, router]);
+
+  // Auto-retry verification if transient RPC outage prevented definitive on-chain resolution
+  useEffect(() => {
+    if (checkingStatus || isSlot1Unlocked || !address || confirmedUnregistered) return;
+    const retryTimer = setTimeout(() => {
+      verifyAccess();
+    }, 3000);
+    return () => clearTimeout(retryTimer);
+  }, [address, checkingStatus, confirmedUnregistered, isSlot1Unlocked, verifyAccess]);
 
   const handleCopy = () => {
     if (!displayAddress) return;
@@ -1190,8 +1356,16 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     return <>{children}</>;
   }
 
-  // If not unlocked and on a protected route, show redirecting state while navigating to /gate
+  // If not unlocked and on a protected route, only redirect once unregistered status is confirmed (or no wallet)
   if (!isStandaloneGate) {
+    if (address && !confirmedUnregistered) {
+      return (
+        <EquoraLogoLoader
+          message="Verifying Matrix Identity"
+          submessage={`Syncing on-chain Slot 1 status on ${NETWORK_NAME}...`}
+        />
+      );
+    }
     return (
       <div className="min-h-screen bg-[#F1F5F9] flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-md flex items-center justify-center mb-3">
@@ -1210,14 +1384,15 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   const displayAddress = address ? toTrobBase58(address) : "";
   const displaySponsor = sponsorAddress ? toTrobBase58(sponsorAddress) : "";
   const isVaultSponsor = Boolean(
-    (sponsorAddress && (
-      sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
-      toTrobBase58(sponsorAddress) === toTrobBase58(CONTRACT_ADDRESSES.vault)
-    )) ||
-    isFirstMember ||
-    sponsorStatus.isGenesis
+    !resolvingSponsor &&
+      ((sponsorAddress &&
+        (sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+          toTrobBase58(sponsorAddress) === toTrobBase58(CONTRACT_ADDRESSES.vault)) &&
+        (isFirstMember || sponsorStatus.isGenesis)) ||
+        isFirstMember)
   );
-  const hasEnoughBalance = tokenBalance !== null && tokenBalance >= requiredTrob;
+  const isPriceLoading = slotCostSun <= 0 || trobPriceUsd <= 0;
+  const hasEnoughBalance = tokenBalance !== null && requiredTrob > 0 && tokenBalance >= requiredTrob;
 
   const energyRequired = eligibility?.condition2.energy.requiredTrob ?? 107;
   const energyStaked = eligibility?.condition2.energy.stakedTrob ?? 0;
@@ -1286,7 +1461,10 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             Matrix Slot 1 Activation
           </h1>
           <p className="text-xs text-[#526682] mt-1 leading-normal">
-            Entry cost: <span className="font-semibold text-[#102341]">$30.00 USD</span> (~{requiredTrob.toFixed(2)} TROB at ${trobPriceUsd.toFixed(5)}). Higher slots recycle and auto-escalate on-chain.
+            Entry cost: <span className="font-semibold text-[#102341]">${displayEntryUsd.toFixed(2)} USD</span>{" "}
+            {requiredTrob > 0 && trobPriceUsd > 0
+              ? `(~${requiredTrob.toFixed(2)} TROB at $${trobPriceUsd.toFixed(5)})`
+              : "(loading live TROB rate...)"}. Higher slots recycle and auto-escalate on-chain.
           </p>
         </div>
 
@@ -1295,9 +1473,9 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           <div className="flex items-center justify-between">
             <span className="text-[#526682]">Entry Cost</span>
             <div className="text-right">
-              <span className="font-bold text-[#102341] font-mono">$30.00 USD</span>
+              <span className="font-bold text-[#102341] font-mono">${displayEntryUsd.toFixed(2)} USD</span>
               <span className="text-[11px] text-[#2868e8] font-mono ml-1.5 font-medium">
-                (~{requiredTrob.toFixed(2)} TROB)
+                {requiredTrob > 0 ? `(~${requiredTrob.toFixed(2)} TROB)` : "(loading...)"}
               </span>
             </div>
           </div>
@@ -1325,12 +1503,12 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             <div className="flex items-center justify-between pt-2 border-t border-[#e0eaf7]">
               <span className="text-[#526682]">Liquid Balance</span>
               <div className="text-right">
-                <span className={`font-mono font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-amber-600"}`}>
+                <span className={`font-mono font-semibold ${isPriceLoading || hasEnoughBalance ? "text-emerald-600" : "text-amber-600"}`}>
                   {tokenBalance !== null ? `${tokenBalance.toFixed(2)} TROB` : "Loading..."}
                 </span>
-                {tokenBalance !== null && (
+                {tokenBalance !== null && trobPriceUsd > 0 && (
                   <span className="text-[10px] text-[#526682] ml-1">
-                    (${ (tokenBalance * trobPriceUsd).toFixed(2) } USD)
+                    (${(tokenBalance * trobPriceUsd).toFixed(2)} USD)
                   </span>
                 )}
               </div>
@@ -1343,15 +1521,15 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           <div className="flex items-center justify-between text-[#526682] font-medium">
             <span>Sponsor / Upline Node</span>
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-              isVaultSponsor || isFirstMember
-                ? "bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa]"
-                : resolvingSponsor
+              resolvingSponsor
                 ? "bg-amber-50 text-amber-700 border border-amber-200"
+                : isVaultSponsor || isFirstMember
+                ? "bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa]"
                 : sponsorStatus.isValid
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 : "bg-rose-50 text-rose-700 border border-rose-200"
             }`}>
-              {isVaultSponsor || isFirstMember ? "Protocol Vault (Apex Root)" : resolvingSponsor ? "Verifying..." : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
+              {resolvingSponsor ? "Verifying..." : isVaultSponsor || isFirstMember ? "Protocol Vault (Apex Root)" : sponsorStatus.isValid ? "Verified Upline" : "Invalid Sponsor"}
             </span>
           </div>
 
@@ -1449,8 +1627,8 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
 
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">4. Liquid Balance</span>
-              <span className={`text-[10.5px] font-semibold ${hasEnoughBalance ? "text-emerald-600" : "text-rose-600 font-bold"}`}>
-                {tokenBalance !== null ? tokenBalance.toFixed(2) : 0} / {requiredTrob.toFixed(2)} TROB {hasEnoughBalance ? "✓ (Required)" : "(Insufficient ✕)"}
+              <span className={`text-[10.5px] font-semibold ${isPriceLoading ? "text-[#526682]" : hasEnoughBalance ? "text-emerald-600" : "text-rose-600 font-bold"}`}>
+                {tokenBalance !== null ? tokenBalance.toFixed(2) : "0.00"} / {requiredTrob > 0 ? `${requiredTrob.toFixed(2)} TROB` : "Loading..."} {requiredTrob > 0 ? (hasEnoughBalance ? "✓ (Required)" : "(Insufficient ✕)") : ""}
               </span>
             </div>
 
@@ -1538,6 +1716,15 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
               <Loader2 className="w-4 h-4 animate-spin text-white" />
               <span>Confirming in Wallet...</span>
             </button>
+          ) : isPriceLoading ? (
+            <button
+              type="button"
+              disabled
+              className="w-full py-3 px-4 rounded-xl bg-slate-100 text-slate-500 text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-[#2868e8]" />
+              <span>Loading Live Entry Price...</span>
+            </button>
           ) : !hasEnoughBalance ? (
             <button
               type="button"
@@ -1596,7 +1783,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
                   <span>Confirming in Wallet...</span>
                 </>
               ) : (
-                <span>Activate Slot 1 ($30.00 USD / ~{requiredTrob.toFixed(2)} TROB)</span>
+                <span>Activate Slot 1 (${displayEntryUsd.toFixed(2)} USD / ~{requiredTrob.toFixed(2)} TROB)</span>
               )}
             </button>
           )}

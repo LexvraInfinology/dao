@@ -31,7 +31,11 @@ export function OverviewTab({
 
   const rawEarnedUsd = dashboard?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0));
   const totalEarnedUsd = Math.round(rawEarnedUsd);
-  const totalEarnedTrob = dashboard?.totalEarnedTrob ?? (profile?.totalEarningsTrob ?? (totalEarnedUsd / 0.056));
+  const totalEarnedTrob = Number(
+    dashboard?.totalEarnedTrob ??
+    profile?.totalEarningsTrob ??
+    0
+  );
 
   const directsCount = Math.max(
     dashboard?.activeDirectsCount ?? 0,
@@ -142,6 +146,11 @@ export function OverviewTab({
           </div>
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
             ${totalEarnedUsd % 1 === 0 ? totalEarnedUsd.toLocaleString() : totalEarnedUsd.toFixed(2)}
+            {totalEarnedTrob > 0 && (
+              <span className="ml-1.5 text-[11px] sm:text-[12px] font-bold text-[#64748b] tabular-nums">
+                ({totalEarnedTrob.toLocaleString(undefined, { maximumFractionDigits: 2 })} TROB)
+              </span>
+            )}
           </div>
           <div className="text-[10.5px] text-[#0e9f79] font-bold mt-1.5 truncate">
             All slots combined • P2P Settled on Blockchain
@@ -334,13 +343,15 @@ export function OverviewTab({
             </div>
           </div>
 
-          {/* Income Eligibility Footer */}
-          <div className="pt-2.5 border-t border-[#edf2f8] mt-3.5 flex items-center justify-between text-[11px]">
-            <span className="text-[#657895] font-medium">Income eligibility:</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-[#e8fbf5] text-[#138261] border border-[#bbf7d0] font-black text-[10.5px]">
-              {isQualified ? "Active & Qualified (100% Payouts)" : "Needs 2 Direct Referrals (Unqualified)"}
-            </span>
-          </div>
+          {/* Income Eligibility Footer (hidden once qualified to avoid redundant clutter) */}
+          {!isQualified && (
+            <div className="pt-2.5 border-t border-[#edf2f8] mt-3.5 flex items-center justify-between text-[11px]">
+              <span className="text-[#657895] font-medium">Income eligibility:</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-black text-[10.5px]">
+                Needs 2 Direct Referrals (Unqualified)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* RIGHT: Latest Activity Panel */}

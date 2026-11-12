@@ -49,7 +49,7 @@ export function EarningsOverviewChart({ payouts: propPayouts }: EarningsOverview
       dailyValues.push({ day: dayLabel, value: val });
     }
 
-    const scaleMax = maxVal > 0 ? Math.max(60, Math.ceil(maxVal / 10) * 10) : 60;
+    const scaleMax = maxVal > 0 ? Math.max(30, Math.ceil(maxVal / 10) * 10) : 30;
 
     return dailyValues.map((item) => ({
       day: item.day,
@@ -61,7 +61,7 @@ export function EarningsOverviewChart({ payouts: propPayouts }: EarningsOverview
 
   const maxTick = useMemo(() => {
     const maxVal = Math.max(...chartData.map((d) => d.value), 0);
-    return maxVal > 0 ? Math.max(60, Math.ceil(maxVal / 10) * 10) : 60;
+    return maxVal > 0 ? Math.max(30, Math.ceil(maxVal / 10) * 10) : 30;
   }, [chartData]);
 
   const ticks = [maxTick, Math.round(maxTick * 0.75), Math.round(maxTick * 0.5), Math.round(maxTick * 0.25), 0];

@@ -34,10 +34,11 @@ export function ReferralLinkCard({
     process.env.NEXT_PUBLIC_MATRIX_URL || "https://equorafimatrix.com"
   );
 
-  const isVaultSponsor =
-    !sponsorAddress ||
-    sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
-    (sponsorAddress.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsorAddress);
+  const isVaultSponsor = Boolean(
+    sponsorAddress &&
+    (sponsorAddress.toLowerCase() === CONTRACT_ADDRESSES.vault.toLowerCase() ||
+      (sponsorAddress.startsWith("T") && toTrobBase58(CONTRACT_ADDRESSES.vault) === sponsorAddress))
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {

@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
-import { getOnChainProtocolPoolsStats, ProtocolPoolsStats, CONTRACT_ADDRESSES, EXPLORER_URL } from "@/lib/contracts";
+import { getOnChainProtocolPoolsStats, getLiveTrobPriceUsd, ProtocolPoolsStats, CONTRACT_ADDRESSES, EXPLORER_URL } from "@/lib/contracts";
 
 export function BlindBoxSection() {
   const [stats, setStats] = useState<ProtocolPoolsStats | null>(null);
+  const [trobPrice, setTrobPrice] = useState<number>(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -15,8 +16,12 @@ export function BlindBoxSection() {
 
     const fetchPoolStats = async () => {
       try {
-        const data = await getOnChainProtocolPoolsStats();
+        const [data, price] = await Promise.all([
+          getOnChainProtocolPoolsStats(),
+          getLiveTrobPriceUsd(),
+        ]);
         if (active && data) setStats(data);
+        if (active && price > 0) setTrobPrice(price);
       } catch (err) {
         console.warn("[BlindBoxSection] Pool stats notice:", err);
       }
@@ -30,19 +35,18 @@ export function BlindBoxSection() {
     };
   }, []);
 
-  const TROB_PRICE = 0.056;
   const magicPoolTrob = stats?.magicBoxPool?.balanceTrob ?? 0;
   // Vault routes 10% of Matrix fees to MagicBox
   const vaultRoutedTrob = (stats?.vault?.totalRoutedFromMatrix ?? 0) * 0.1;
   const effectivePoolTrob = Math.max(magicPoolTrob, vaultRoutedTrob);
-  const effectivePoolUsd = effectivePoolTrob * TROB_PRICE;
+  const effectivePoolUsd = trobPrice > 0 ? effectivePoolTrob * trobPrice : 0;
 
   const eligibleCount = stats?.magicBoxPool?.eligibleUsersCount ?? 0;
 
   const targetUsd = 500;
   const progressPercent = Math.min(
     100,
-    Math.max(18, Math.round(((effectivePoolUsd || 50) / targetUsd) * 100))
+    effectivePoolUsd > 0 ? Math.max(5, Math.round((effectivePoolUsd / targetUsd) * 100)) : 0
   );
 
   const explorerContractUrl =

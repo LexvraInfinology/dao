@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import { MatrixTransaction } from "@/lib/api";
 import { useFinanceStore, useUserStore } from "@/lib/stores";
 import { formatAddress, formatDateSafe } from "@/lib/format";
-import { EXPLORER_URL } from "@/lib/contracts";
+import { EXPLORER_URL, getSlotCost } from "@/lib/contracts";
 
 export type TxType =
   | "Receive"
   | "Send"
   | "Matrix Cycle"
+  | "Matrix Routing"
+  | "Pool Routing"
   | "Partner Reward"
   | "Auto-Reserve"
   | "Leadership Royalty"
@@ -198,9 +200,10 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
           const isAutoReserve =
             t.type === "UPGRADE_RESERVE" ||
             t.type === "UPGRADE_DEDUCTION" ||
-            (t as any).isAutoReserve ||
-            (t.slotNumber === 2 && Number(t.amount) === 60 && t.fromAddress?.includes("Reserve"));
+            Boolean((t as any).isAutoReserve);
 
+          const isPoolRouting = t.type === "POOL_ROUTING";
+          const isBoardRouting = t.type === "BOARD_ROUTING" || isPoolRouting;
           const isSlot1Purchase =
             t.type === "SLOT_PURCHASE" && (t.slotNumber === 1 || !t.slotNumber);
           const isWithdrawal = t.type === "WITHDRAWAL";
@@ -208,6 +211,10 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
 
           const txType: TxType = isAutoReserve
             ? "Auto-Reserve"
+            : isPoolRouting
+            ? "Pool Routing"
+            : isBoardRouting
+            ? "Matrix Routing"
             : t.type === "CYCLE_COMPLETED"
             ? "Matrix Cycle"
             : isCommission
@@ -226,61 +233,89 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
 
           let timeStr = "";
           try {
-            const d = new Date(t.timestamp);
-            if (!isNaN(d.getTime())) {
-              timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            if (t.timestamp) {
+              const d = new Date(t.timestamp);
+              if (!isNaN(d.getTime())) {
+                timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              }
             }
           } catch {
             timeStr = "";
           }
 
-          const rawAmt = Math.abs(Number(t.amount));
-          const rawUsd = t.amountUsd !== null && t.amountUsd !== undefined ? Math.abs(Number(t.amountUsd)) : rawAmt;
-          const slotTierUsd = t.slotNumber ? 30 * Math.pow(2, Math.max(0, t.slotNumber - 1)) : 30.0;
+          const slotTierUsd = getSlotCost(t.slotNumber || 1) || 30;
+          const rawAmt = Math.abs(Number(t.amount || 0));
+          const rawUsd =
+            t.amountUsd !== null && t.amountUsd !== undefined
+              ? Math.abs(Number(t.amountUsd))
+              : rawAmt;
           const displayUsd =
-            rawUsd > 0 && rawUsd <= 500
+            isAutoReserve || isBoardRouting
+              ? 0
+              : rawUsd > 0 && rawUsd <= 5000
               ? rawUsd
-              : rawAmt > 0 && rawAmt <= 500
+              : rawAmt > 0 && rawAmt <= 5000
               ? rawAmt
-              : slotTierUsd;
-
+              : 0;
+          const routedUsd = Number((t as any).routedAmountUsd ?? (rawUsd > 0 ? rawUsd : slotTierUsd));
           const trobTokens = (t as any).trobAmount || (rawAmt > 500 ? rawAmt : null);
 
-          // Flow & labels
-          let fromStr = "Network";
+          let fromStr = t.fromAddress ? formatAddress(t.fromAddress) : "Protocol Network";
           let fromLabelStr: string | null = (t as any).fromLabel || null;
-          let toStr = "You";
+          let toStr =
+            t.toAddress && t.toAddress !== "You"
+              ? formatAddress(t.toAddress)
+              : "You";
           let toLabelStr: string | null = (t as any).toLabel || null;
-          let purposeStr = t.description || "Protocol Settlement";
-          let distRuleStr = (t as any).distributionRule || "100% Direct P2P Instant Payout";
+          let purposeStr = t.description || "On-Chain Matrix Settlement";
+          let distRuleStr = (t as any).distributionRule || "Verified Smart Contract Routing";
 
           if (isCommission) {
-            fromStr = t.fromAddress ? formatAddress(t.fromAddress) : "Team Operative";
-            toStr = "You";
-            toLabelStr = "You (Root Matrix Owner)";
+            fromStr = t.fromAddress ? formatAddress(t.fromAddress) : "Team Member";
+            toStr = t.toAddress && t.toAddress !== "You" ? formatAddress(t.toAddress) : "You";
+            toLabelStr = (t as any).toLabel || "You (Personal Wallet)";
             purposeStr =
               t.description ||
               (t.slotNumber
-                ? `Slot #${String(t.slotNumber).padStart(2, "0")} • Board #${t.cycle || 1} • Seat #${t.position || ""} Direct Yield`
-                : "Level 2/3 Direct 100% P2P Commission");
-            distRuleStr = "100% P2P Instant Blockchain Payout";
+                ? `Slot #${String(t.slotNumber).padStart(2, "0")} • Cycle #${t.cycle || 1} • Seat #${t.position || ""} Direct Yield`
+                : "Direct 100% P2P Commission");
+            distRuleStr = (t as any).distributionRule || "100% Direct P2P Instant Payout";
           } else if (isSlot1Purchase) {
-            fromStr = "You";
-            fromLabelStr = "You (Personal Wallet)";
-            toStr = "EquoraMatrix Protocol";
-            toLabelStr = "EquoraMatrix Protocol";
-            purposeStr = "Slot #01 Entry Tier Lifetime Activation";
-            distRuleStr = "One-Time Initial Out-of-Pocket Protocol Entry";
+            fromStr = t.fromAddress ? formatAddress(t.fromAddress) : "You";
+            fromLabelStr = (t as any).fromLabel || "You (Personal Wallet)";
+            toStr = t.toAddress ? formatAddress(t.toAddress) : "EquoraMatrix Protocol";
+            toLabelStr = (t as any).toLabel || "EquoraMatrix Protocol";
+            purposeStr = t.description || "Slot #01 Entry Tier Lifetime Activation";
+            distRuleStr = (t as any).distributionRule || "1x Lifetime Wallet Entry";
           } else if (isAutoReserve) {
-            fromStr = "Slot #01 Reserve";
-            fromLabelStr = "Slot #01 Auto-Reserve (P4+P5)";
-            toStr = "Slot #02 Contract";
-            toLabelStr = "Slot #02 Contract";
-            purposeStr = "Slot #02 Automated Escalation ($60.00 Tier)";
-            distRuleStr = "Protocol Reserve Escalation ($0 User Out-of-Pocket)";
+            const targetSlot = t.slotNumber || 2;
+            const prevSlot = Math.max(1, targetSlot - 1);
+            fromStr = t.fromAddress || `Slot #${String(prevSlot).padStart(2, "0")} Reserve`;
+            fromLabelStr =
+              (t as any).fromLabel ||
+              `Slot #${String(prevSlot).padStart(2, "0")} Auto-Reserve (P4+P5)`;
+            toStr = t.toAddress ? formatAddress(t.toAddress) : `Slot #${String(targetSlot).padStart(2, "0")}`;
+            toLabelStr = (t as any).toLabel || `Slot #${String(targetSlot).padStart(2, "0")} Tier Unlocked`;
+            purposeStr =
+              t.description ||
+              `Slot #${String(targetSlot).padStart(2, "0")} Automated Escalation ($${routedUsd.toFixed(2)} Value)`;
+            distRuleStr =
+              (t as any).distributionRule || "Protocol Reserve Escalation ($0 Out-of-Pocket)";
           }
 
           const isOutflow = isSlot1Purchase || isWithdrawal;
+          const signedAmount = isAutoReserve || isBoardRouting ? 0 : isOutflow ? -displayUsd : displayUsd;
+          const amountDisplay =
+            isAutoReserve || isBoardRouting
+              ? "$0.00"
+              : `${isOutflow ? "-" : "+"} $${displayUsd.toFixed(2)}`;
+          const trobSubtitle =
+            (t as any).trobSubtitle ||
+            (isBoardRouting
+              ? `$${routedUsd.toFixed(2)} Routed On-Chain`
+              : trobTokens
+              ? `${Number(trobTokens).toFixed(2)} TROB`
+              : null);
 
           return {
             id: idx + 1,
@@ -294,24 +329,20 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
             slotNumber: t.slotNumber,
             cycle: t.cycle,
             position: t.position,
-            amount: isOutflow ? -displayUsd : displayUsd,
-            amountDisplay: `${isOutflow ? "-" : "+"} $${displayUsd.toFixed(2)}`,
-            trobSubtitle: isAutoReserve
-              ? "1,740.32 TROB (Auto-Reserve Funded)"
-              : trobTokens
-              ? `${trobTokens.toFixed(2)} TROB`
-              : `${((displayUsd / 30) * 870.16).toFixed(2)} TROB`,
-            isAutoReserve,
+            amount: signedAmount,
+            amountDisplay,
+            trobSubtitle,
+            isAutoReserve: isAutoReserve || isBoardRouting,
             status:
               t.status === "COMPLETED" || t.status === "Confirmed"
                 ? "Confirmed"
                 : t.status === "PENDING"
                 ? "Pending"
                 : "Failed",
-            date: formatDateSafe(t.timestamp),
+            date: t.timestamp ? formatDateSafe(t.timestamp) : "On-Chain State",
             time: timeStr,
-            txHash: t.txHash ? `${t.txHash.slice(0, 8)}...${t.txHash.slice(-4)}` : "—",
-            rawTxHash: t.txHash,
+            txHash: t.txHash ? `${t.txHash.slice(0, 8)}...${t.txHash.slice(-4)}` : "On-Chain State",
+            rawTxHash: t.txHash || null,
           };
         })
       : [];
@@ -330,6 +361,8 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
     if (
       activeTab === "Matrix" &&
       tx.type !== "Matrix Cycle" &&
+      tx.type !== "Matrix Routing" &&
+      tx.type !== "Pool Routing" &&
       tx.type !== "Matrix Slot" &&
       tx.type !== "Auto-Reserve" &&
       tx.type !== "Partner Reward"
@@ -340,6 +373,8 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
       activeTab === "System" &&
       tx.type !== "Matrix Slot" &&
       tx.type !== "Auto-Reserve" &&
+      tx.type !== "Pool Routing" &&
+      tx.type !== "Matrix Routing" &&
       tx.type !== "Blind Box Gift" &&
       tx.type !== "Leadership Royalty" &&
       tx.type !== "Milestone Bounty"
@@ -391,6 +426,8 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
             >
               <option value="All Types">All Types</option>
               <option value="Partner Reward">Partner Reward</option>
+              <option value="Matrix Routing">Matrix Routing</option>
+              <option value="Pool Routing">Pool Routing</option>
               <option value="Auto-Reserve">Auto-Reserve</option>
               <option value="Matrix Slot">Matrix Slot</option>
               <option value="Matrix Cycle">Matrix Cycle</option>
@@ -547,22 +584,26 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono text-[11.5px] text-[#64748b]">{tx.txHash}</span>
-                      <button
-                        type="button"
-                        onClick={() => copy(tx.rawTxHash || tx.txHash)}
-                        className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"
-                        title="Copy Transaction Hash"
-                      >
-                        <CopyIcon />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openExplorer(tx.rawTxHash)}
-                        className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"
-                        title="View on TrobScan Explorer"
-                      >
-                        <ExternalIcon />
-                      </button>
+                      {tx.rawTxHash ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => copy(tx.rawTxHash!)}
+                            className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"
+                            title="Copy Transaction Hash"
+                          >
+                            <CopyIcon />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openExplorer(tx.rawTxHash)}
+                            className="p-1 rounded hover:bg-[#f1f5f9] text-[#94a3b8] hover:text-[#2563eb] cursor-pointer"
+                            title="View on TrobScan Explorer"
+                          >
+                            <ExternalIcon />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -650,20 +691,24 @@ export function TransactionsTable({ copy, items: propItems }: TransactionsTableP
 
                 <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#64748b]">
                   <span>{tx.txHash}</span>
-                  <button
-                    type="button"
-                    onClick={() => copy(tx.rawTxHash || tx.txHash)}
-                    className="p-1 rounded text-[#94a3b8] hover:text-[#2563eb]"
-                  >
-                    <CopyIcon />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openExplorer(tx.rawTxHash)}
-                    className="p-1 rounded text-[#94a3b8] hover:text-[#2563eb]"
-                  >
-                    <ExternalIcon />
-                  </button>
+                  {tx.rawTxHash ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => copy(tx.rawTxHash!)}
+                        className="p-1 rounded text-[#94a3b8] hover:text-[#2563eb]"
+                      >
+                        <CopyIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openExplorer(tx.rawTxHash)}
+                        className="p-1 rounded text-[#94a3b8] hover:text-[#2563eb]"
+                      >
+                        <ExternalIcon />
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
             </div>

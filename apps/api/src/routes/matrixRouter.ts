@@ -309,11 +309,9 @@ matrixRouter.post("/settings/:address", async (req: Request, res: Response) => {
     const updated = await matrixService.updateUserSettings(address, req.body);
     res.json({ success: true, data: updated, message: "Settings saved successfully" });
   } catch (err: any) {
-    console.warn(`[MatrixRouter] Failed to update settings for ${req.params.address}, acknowledging:`, err?.message);
-    res.json({
-      success: true,
-      data: req.body,
-      message: "Settings saved locally",
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Failed to persist settings",
     });
   }
 });
@@ -324,6 +322,12 @@ matrixRouter.post("/settings/:address", async (req: Request, res: Response) => {
  * POST /api/matrix/dev/seed
  */
 matrixRouter.post("/dev/seed", async (req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({
+      success: false,
+      error: "Dev seeding is disabled in production",
+    });
+  }
   try {
     const { address } = req.body;
     if (!address) {

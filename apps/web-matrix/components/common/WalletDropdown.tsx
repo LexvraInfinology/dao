@@ -140,12 +140,8 @@ export function WalletDropdown() {
     profile?.matrixEarnings ??
     0
   );
-  let matrixEarningsUsd = rawMatrixEarnings > 100000 ? Math.round(rawMatrixEarnings / 1e6) : rawMatrixEarnings;
-  if (matrixEarningsUsd === 198 || matrixEarningsUsd === 0) {
-    matrixEarningsUsd = 180;
-  }
-
-  const matrixEarningsTrob = Number(profile?.totalEarningsTrob ?? 5220.96);
+  const matrixEarningsUsd = rawMatrixEarnings > 100000 ? rawMatrixEarnings / 1e6 : rawMatrixEarnings;
+  const matrixEarningsTrob = Number(profile?.totalEarningsTrob ?? 0);
 
   return (
     <div className="relative" ref={dropdownRef}>

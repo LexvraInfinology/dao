@@ -3,6 +3,7 @@
 import React from "react";
 import { Lock } from "lucide-react";
 import { MatrixSlotSummary, MatrixUserProfile } from "@/lib/api";
+import { getSlotCost } from "@/lib/contracts";
 import { useMatrixStore, useUserStore } from "@/lib/stores";
 
 export interface MatrixStatsProps {
@@ -31,8 +32,8 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
   const currentSlotSummary = slots?.find((s) => s.slotNumber === selectedSlotNumber);
   const filledNodes = currentSlotSummary?.filledNodes ?? 0;
   const currentCycle = currentSlotSummary?.currentCycle ?? (currentSlotSummary?.isUnlocked ? 1 : 0);
-  const isUnlocked = Boolean(currentSlotSummary?.isUnlocked ?? (selectedSlotNumber === 1));
-  const slotCost = currentSlotSummary?.cost ?? (30 * Math.pow(2, selectedSlotNumber - 1));
+  const isUnlocked = Boolean(currentSlotSummary?.isUnlocked ?? (profile?.isRegistered && selectedSlotNumber === 1));
+  const slotCost = currentSlotSummary?.cost ?? getSlotCost(selectedSlotNumber);
   const totalEarned = profile?.matrixEarnings ?? profile?.totalEarnings ?? slots?.reduce((sum, s) => sum + (s.totalEarned || 0), 0) ?? 0;
 
   return (
@@ -122,8 +123,8 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
           {Array.from({ length: 12 }, (_, i) => {
             const slotNum = i + 1;
             const item = slots?.find((s) => s.slotNumber === slotNum);
-            const cost = item?.cost ?? (30 * Math.pow(2, slotNum - 1));
-            const unlocked = item?.isUnlocked ?? (slotNum <= 4);
+            const cost = item?.cost ?? getSlotCost(slotNum);
+            const unlocked = Boolean(item?.isUnlocked ?? (profile?.isRegistered && slotNum === 1));
             const isSelected = selectedSlotNumber === slotNum;
 
             return (

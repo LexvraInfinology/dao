@@ -183,24 +183,9 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • 14/14 Settled 🏆
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Board #{effectiveSelectedCycle} Settled 🏆
             </span>
-          ) : isSlotStandby ? (
-          <div className="p-3 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-white mb-3.5">
-            <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-              <span className="flex items-center gap-1.5 text-blue-900">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                <span>Standby Mode (Tier Reserved)</span>
-              </span>
-              <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
-                Reserved Tier
-              </span>
-            </div>
-            <p className="text-[11.5px] font-semibold text-slate-700 leading-relaxed">
-              You own this slot tier! Placements will actively route and fill on this slot as soon as your Slot #{activeSlotNumber - 1} completes all 14 positions.
-            </p>
-          </div>
-        ) : (
+          ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
               {loadingDetails && !details
                 ? `Syncing Slot #${String(activeSlotNumber).padStart(2, "0")}...`
@@ -331,6 +316,17 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
             className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer mb-2.5"
           >
             <span>← Return to Active Slot #{String(effectiveHighestUnlocked).padStart(2, "0")}</span>
+          </button>
+        )}
+
+        {/* Quick link to view completed prior slot board if current slot is active but empty */}
+        {activeSlotNumber > 1 && isSlotUnlocked && details?.filledNodes === 0 && (
+          <button
+            type="button"
+            onClick={() => selectSlot(1, 1, address || undefined)}
+            className="w-full py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer mb-2.5 shadow-xs"
+          >
+            <span>← View Completed Slot #01 Board (14/14 🏆)</span>
           </button>
         )}
 

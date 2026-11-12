@@ -552,7 +552,7 @@ export async function getLiveSlotCostUsdAndSun(
 }
 export function getSlotCost(slotNumber: number): number {
   const slot = Math.max(1, Math.min(12, Math.floor(slotNumber || 1)));
-  return dynamicSlotUsdCosts[slot] ?? 30;
+  return dynamicSlotUsdCosts[slot] ?? (30 * Math.pow(2, slot - 1));
 }
 
 /**

@@ -163,6 +163,8 @@ export interface MatrixSlotSummary {
   currentCycle: number;
   slotCycle?: number;
   recyclesCount: number;
+  snapshotCount?: number;
+  cycleBreakdowns?: any[];
   filledNodes: number;
   upgradeReserve: number;
   totalEarned: number;

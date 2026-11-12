@@ -112,8 +112,18 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     const prevCycle = get().selectedCycle ?? null;
     const isChangingView = prevSlot !== slotNum || prevCycle !== targetCycleNorm;
 
-    // Show clean on-chain loader on explicit slot/board switch so stale or unverified trees never flash
-    if (isChangingView || !get().slotDetails) {
+    const cacheKey = cycle === undefined ? `${slotNum}_live` : `${slotNum}_cycle_${cycle}`;
+    const cached = get().slotDetailsCache[cacheKey];
+
+    // If already verified & cached in memory, display instantly with 0ms delay!
+    if (cached) {
+      set({
+        selectedSlotNumber: slotNum,
+        selectedCycle: targetCycleNorm,
+        slotDetails: cached,
+        loadingDetails: false,
+      });
+    } else if (isChangingView || !get().slotDetails) {
       set({
         selectedSlotNumber: slotNum,
         selectedCycle: targetCycleNorm,
@@ -412,6 +422,19 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
             slotDetails: onChainDetails,
             slotDetailsCache: { ...get().slotDetailsCache, ["1_live"]: onChainDetails },
           });
+        }
+
+        // Seamlessly pre-cache historical snapshots in the background for zero-delay instant tree switching
+        if (onChainDetails && Number(onChainDetails.snapshotCount) > 0) {
+          getOnChainSlotDetails(addr, 1, 1)
+            .then((snap1) => {
+              if (snap1) {
+                set({
+                  slotDetailsCache: { ...get().slotDetailsCache, ["1_cycle_1"]: snap1 },
+                });
+              }
+            })
+            .catch(() => {});
         }
         return;
       }

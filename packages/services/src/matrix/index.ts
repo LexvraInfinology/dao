@@ -416,6 +416,50 @@ export async function isUserMatrixQualified(address: string): Promise<boolean> {
   return activeCount >= 2;
 }
 
+export async function fetchOnChainUserSlots(userAddress: string): Promise<MatrixSlotSummaryDTO[]> {
+  const canonical = toCanonicalAddress(userAddress);
+  const cleanAddr = canonical.startsWith("0x") ? canonical.slice(2) : canonical;
+  const param = cleanAddr.padStart(64, "0").toLowerCase();
+  try {
+    const res = await fetch(`${TROB_RPC_ENDPOINT}/wallet/triggerconstantcontract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner_address: "410000000000000000000000000000000000000000",
+        contract_address: MATRIX_CONTRACT_HEX,
+        function_selector: "getAllSlotsStatus(address)",
+        parameter: param,
+      }),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+    });
+    const json: any = await res.json();
+    const raw = json.constant_result?.[0] || "";
+    if (raw && raw.length >= 2304) {
+      const chunks: string[] = [];
+      for (let i = 0; i < raw.length; i += 64) chunks.push(raw.slice(i, i + 64));
+      return Array.from({ length: 12 }, (_, i) => {
+        const slotNumber = i + 1;
+        const isUnlocked = BigInt("0x" + chunks[i]) !== 0n;
+        const currentCycle = Number(BigInt("0x" + chunks[12 + i]));
+        const filledNodes = Number(BigInt("0x" + chunks[24 + i]));
+        return {
+          slotNumber,
+          cost: SLOT_COSTS[slotNumber] || 0,
+          isUnlocked,
+          currentCycle: isUnlocked ? Math.max(1, currentCycle) : 0,
+          recyclesCount: isUnlocked ? Math.max(0, currentCycle - 1) : 0,
+          filledNodes: isUnlocked ? filledNodes : 0,
+          upgradeReserve: 0,
+          totalEarned: 0,
+          unlockedAt: null,
+        };
+      });
+    }
+  } catch (err) {
+    console.warn(`[MatrixService] On-chain getAllSlotsStatus notice for ${canonical}:`, err);
+  }
+  return [];
+}
 
 export async function fetchOnChainSlotDetailsLive(
   userAddress: string,
@@ -930,8 +974,8 @@ export class MatrixService {
         };
       });
     } catch (dbErr: any) {
-      console.warn(`[MatrixService] DB notice in getUserSlots(${canonicalAddress}), returning fallback:`, dbErr?.message || dbErr);
-      return getFallbackUserSlots();
+      console.warn(`[MatrixService] DB notice in getUserSlots(${canonicalAddress}), querying live on-chain:`, dbErr?.message || dbErr);
+      return fetchOnChainUserSlots(canonicalAddress);
     }
   }
 

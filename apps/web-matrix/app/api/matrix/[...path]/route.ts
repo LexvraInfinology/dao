@@ -417,9 +417,9 @@ async function getOnChainSlotCostInfo(slotNumber: number): Promise<{ usdCost: nu
     }
   }
 
-  // Historical and completed payout USD per paying seat is strictly fixed at $30.00 ($180 per 6-payout slot)
-  // so past slot/cycle earnings never fluctuate with live TROB oracle/market rates.
-  const usdCost = entryUsd > 0 ? entryUsd : 30;
+  const baseEntry = entryUsd > 0 ? entryUsd : 30;
+  const slotMultiplier = Math.pow(2, Math.max(0, slotNumber - 1));
+  const usdCost = baseEntry * slotMultiplier;
   return { usdCost, trobCost };
 }
 

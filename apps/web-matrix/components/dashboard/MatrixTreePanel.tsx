@@ -221,7 +221,21 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     setSelectedSlot(sNum);
     const raw = address || data?.address;
     const active = raw ? toHexAddress(raw) : undefined;
-    selectSlotStore(sNum, undefined, active);
+    const sSummary = storeSlots?.find((s) => s.slotNumber === sNum);
+    const snaps = Number(sSummary?.snapshotCount ?? sSummary?.recyclesCount ?? 0);
+    // When selecting a slot that has completed snapshots (e.g. Slot 1), default to showing
+    // the completed 14/14 settled board so the user's completed earnings & placements are immediately visible!
+    if (snaps > 0) {
+      selectSlotStore(sNum, 1, active);
+    } else {
+      selectSlotStore(sNum, undefined, active);
+    }
+  };
+
+  const handleRoundSelect = (roundCycle: number | undefined) => {
+    const raw = address || data?.address;
+    const active = raw ? toHexAddress(raw) : undefined;
+    selectSlotStore(selectedSlot, roundCycle, active);
   };
 
   const handleCycleSelect = (cNum: number) => {
@@ -231,20 +245,21 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
     selectSlotStore(selectedSlot, undefined, active);
   };
 
-  // Single unified live poller for currently selected slot
+  // Single unified live poller for currently selected slot and cycle
   useEffect(() => {
     const raw = address || data?.address;
     if (!raw) return;
     const active = toHexAddress(raw);
     if (!active || !active.startsWith("0x") || active === "0x0000000000000000000000000000000000000000") return;
 
-    fetchSlotDetails(selectedSlot, undefined, active, true);
+    const cycleToPoll = storeSelectedCycle ?? undefined;
+    fetchSlotDetails(selectedSlot, cycleToPoll, active, true);
     const interval = setInterval(() => {
-      fetchSlotDetails(selectedSlot, undefined, active, true);
+      fetchSlotDetails(selectedSlot, cycleToPoll, active, true);
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [address, data?.address, selectedSlot, fetchSlotDetails]);
+  }, [address, data?.address, selectedSlot, storeSelectedCycle, fetchSlotDetails]);
 
   // Fetch direct partners list when active wallet changes
   useEffect(() => {
@@ -266,6 +281,12 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const currentSlotCost = getSlotCost(selectedSlot);
   const currentCycle = isCurrentSlotUnlocked ? (activeSlotDetails?.currentCycle ?? selectedGlobalCycle) : 0;
   const snapshotCount = isCurrentSlotUnlocked ? (activeSlotDetails?.snapshotCount ?? 0) : 0;
+  const currentSlotSummary = storeSlots?.find((s) => s.slotNumber === selectedSlot);
+  const effectiveSnapshotCount = Math.max(
+    snapshotCount,
+    Number(currentSlotSummary?.snapshotCount ?? 0),
+    Number(currentSlotSummary?.recyclesCount ?? 0)
+  );
   const isViewingSnapshot = isCurrentSlotUnlocked && Boolean(activeSlotDetails?.isViewingSnapshot);
   const slot12Summary = storeSlots?.find((s) => s.slotNumber === 12);
   const isGlobalCycle2Unlocked = Boolean(
@@ -726,17 +747,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               </span>
             ) : (loadingDetails || !activeSlotDetails) && (!activeSlotDetails || activeSlotDetails.slotNumber !== selectedSlot) ? (
               <span className="text-[#1e60e5] font-semibold">Syncing Slot #{String(selectedSlot).padStart(2, "0")} • Cycle #0{selectedGlobalCycle} from TrobChain...</span>
-            ) : isViewingSnapshot || filledCount >= 14 ? (
+            ) : isViewingSnapshot ? (
               <span className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-emerald-700">
-                  Slot #{String(selectedSlot).padStart(2, "0")} • 14/14 Seats Settled 🏆
+                  Slot #{String(selectedSlot).padStart(2, "0")} • Board #{activeSlotDetails?.selectedCycle || 1} Completed (14/14 Seats Settled 🏆)
                 </span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-500">On-Chain Verified</span>
+                <span className="text-slate-400">•</span>
+                <span className="font-bold text-emerald-600">+${(currentSlotCost * 6).toFixed(2)} USD Direct Yield</span>
               </span>
             ) : (
               <span>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled{snapshotCount > 0 ? ` • ${snapshotCount} Completed Round${snapshotCount > 1 ? "s" : ""} (14/14 Settled)` : ""} • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
+                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled{effectiveSnapshotCount > 0 ? ` • Board #${effectiveSnapshotCount + 1} (Live Active)` : ""} • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
               </span>
             )}
           </p>
@@ -814,6 +837,66 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           );
         })}
       </div>
+
+      {/* ───────────────── MULTI-BOARD / ROUND SELECTOR FOR RECYCLED SLOTS ───────────────── */}
+      {isCurrentSlotUnlocked && effectiveSnapshotCount > 0 && (
+        <div className="my-2.5 p-2 sm:p-2.5 rounded-2xl bg-gradient-to-r from-blue-50/70 via-emerald-50/40 to-slate-50 border border-slate-200/90 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider px-1">
+              Slot #{String(selectedSlot).padStart(2, "0")} Boards:
+            </span>
+
+            {/* Completed Snapshot Boards (Board 1 .. N) */}
+            {Array.from({ length: effectiveSnapshotCount }, (_, sIdx) => {
+              const roundNum = sIdx + 1;
+              const isSelected = isViewingSnapshot && (activeSlotDetails?.selectedCycle === roundNum || (roundNum === 1 && !activeSlotDetails?.selectedCycle));
+              return (
+                <button
+                  key={`round-snap-${roundNum}`}
+                  type="button"
+                  onClick={() => handleRoundSelect(roundNum)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? "bg-emerald-600 text-white shadow-sm shadow-emerald-500/30 ring-2 ring-emerald-300"
+                      : "bg-white text-emerald-800 border border-emerald-200 hover:bg-emerald-50 shadow-xs"
+                  }`}
+                  title={`Board #${roundNum} • 14/14 Seats Settled on-chain ($${(currentSlotCost * 6).toFixed(0)} USD earned)`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-white" : "bg-emerald-500"}`} />
+                  <span>Board #{roundNum} · Completed (14/14 Settled · ${(currentSlotCost * 6).toFixed(0)})</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-black ${isSelected ? "bg-emerald-700 text-emerald-100" : "bg-emerald-100 text-emerald-800"}`}>
+                    14/14 🏆
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* Active Live Recycle Board */}
+            <button
+              type="button"
+              onClick={() => handleRoundSelect(undefined)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                !isViewingSnapshot
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-500/30 ring-2 ring-blue-300"
+                  : "bg-white text-blue-800 border border-blue-200 hover:bg-blue-50 shadow-xs"
+              }`}
+              title={`Board #${effectiveSnapshotCount + 1} • Live on-chain active cycle (${liveFilledCount}/14 nodes filled)`}
+            >
+              <span className={`w-2 h-2 rounded-full ${!isViewingSnapshot ? "bg-white animate-pulse" : "bg-blue-500"}`} />
+              <span>Board #{effectiveSnapshotCount + 1} · Live Active ({liveFilledCount}/14 Nodes)</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-black ${!isViewingSnapshot ? "bg-blue-700 text-blue-100" : "bg-blue-100 text-blue-800"}`}>
+                Live
+              </span>
+            </button>
+          </div>
+
+          <div className="text-[11px] font-bold text-slate-500 hidden sm:flex items-center gap-1.5">
+            <span className="text-emerald-700 font-extrabold">{effectiveSnapshotCount} Settled Board{effectiveSnapshotCount > 1 ? "s" : ""}</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-blue-700 font-extrabold">1 Live Cycle</span>
+          </div>
+        </div>
+      )}
 
       {/* ───────────────── LOCKED SLOT NOTIFICATION BANNER ───────────────── */}
       {!isCurrentSlotUnlocked && selectedSlot > 1 && (

@@ -418,8 +418,7 @@ async function getOnChainSlotCostInfo(slotNumber: number): Promise<{ usdCost: nu
   }
 
   const baseEntry = entryUsd > 0 ? entryUsd : 30;
-  const slotMultiplier = Math.pow(2, Math.max(0, slotNumber - 1));
-  const usdCost = baseEntry * slotMultiplier;
+  const usdCost = baseEntry;
   return { usdCost, trobCost };
 }
 

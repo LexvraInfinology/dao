@@ -17,48 +17,64 @@ export function EarningsBreakdownChart() {
     }
     return Math.max(0, v);
   };
-  const totalLifetime = cleanVal(Number((earnings as any)?.totalEarningsUsd ?? earnings?.totalEarnings ?? (profile as any)?.totalEarningsUsd ?? profile?.totalEarnings ?? 0));
+  const totalLifetime = cleanVal(
+    Number(
+      (earnings as any)?.totalEarningsUsd ??
+      earnings?.totalEarnings ??
+      (profile as any)?.totalEarningsUsd ??
+      profile?.totalEarnings ??
+      0
+    )
+  );
 
-  // Direct on-chain settled earnings breakdown
-  const directAmount = totalLifetime;
-  let levelAmount = 0;
-  let referralAmount = 0;
-  const totalAmount = totalLifetime;
+  const slotBreakdowns = (earnings as any)?.slotBreakdowns || [];
+  const s1Breakdown = slotBreakdowns.find((s: any) => s.slotNumber === 1);
+  const s2Breakdown = slotBreakdowns.find((s: any) => s.slotNumber === 2);
 
-  const directPct = totalAmount > 0 ? (directAmount / totalAmount) * 100 : 0;
-  const levelPct = totalAmount > 0 ? (levelAmount / totalAmount) * 100 : 0;
-  const referralPct = totalAmount > 0 ? (referralAmount / totalAmount) * 100 : 0;
+  const slot1Amount = s1Breakdown
+    ? Number(s1Breakdown.earnedUsd || 0)
+    : Math.min(totalLifetime, 180);
+  const slot2Amount = s2Breakdown
+    ? Number(s2Breakdown.earnedUsd || 0)
+    : Math.max(0, totalLifetime - slot1Amount);
+  const royaltyAmount = 0;
+
+  const totalAmount = totalLifetime > 0 ? totalLifetime : slot1Amount + slot2Amount;
+
+  const slot1Pct = totalAmount > 0 ? (slot1Amount / totalAmount) * 100 : 0;
+  const slot2Pct = totalAmount > 0 ? (slot2Amount / totalAmount) * 100 : 0;
+  const royaltyPct = totalAmount > 0 ? (royaltyAmount / totalAmount) * 100 : 0;
 
   const circumference = 364.42; // 2 * pi * 58
-  const directStroke = (directPct / 100) * circumference;
-  const levelStroke = (levelPct / 100) * circumference;
-  const referralStroke = (referralPct / 100) * circumference;
+  const slot1Stroke = (slot1Pct / 100) * circumference;
+  const slot2Stroke = (slot2Pct / 100) * circumference;
+  const royaltyStroke = (royaltyPct / 100) * circumference;
 
   const breakdownData = [
     {
-      id: "direct",
-      name: "Direct Rewards",
-      subText: "Instant Matrix spillover",
-      amount: `$${directAmount.toFixed(2)} USD`,
-      percent: `${directPct.toFixed(1)}%`,
+      id: "slot1",
+      name: "Slot #01 Matrix Yield",
+      subText: `${s1Breakdown?.paidSeats ?? Math.round(slot1Amount / 30)} Direct P2P Payouts`,
+      amount: `$${slot1Amount.toFixed(2)} USD`,
+      percent: `${slot1Pct.toFixed(1)}%`,
       color: "#0047cc", // Deep Royal Navy Blue
       dotClass: "bg-[#0047cc]",
     },
     {
-      id: "level",
-      name: "Level Rewards",
-      subText: "Tier matrix completions",
-      amount: `$${levelAmount.toFixed(2)} USD`,
-      percent: `${levelPct.toFixed(1)}%`,
+      id: "slot2",
+      name: "Slot #02 Matrix Yield",
+      subText: `${s2Breakdown?.paidSeats ?? Math.round(slot2Amount / 30)} Direct P2P Payout`,
+      amount: `$${slot2Amount.toFixed(2)} USD`,
+      percent: `${slot2Pct.toFixed(1)}%`,
       color: "#0088ff", // Sky / Bright Blue
       dotClass: "bg-[#0088ff]",
     },
     {
-      id: "referral",
-      name: "Referral Bonus",
-      subText: "Invited network activation",
-      amount: `$${referralAmount.toFixed(2)} USD`,
-      percent: `${referralPct.toFixed(1)}%`,
+      id: "royalty",
+      name: "Leadership Royalty",
+      subText: "Protocol Pool Distribution",
+      amount: `$${royaltyAmount.toFixed(2)} USD`,
+      percent: `${royaltyPct.toFixed(1)}%`,
       color: "#38bdf8", // Light Cyan
       dotClass: "bg-[#38bdf8]",
     },
@@ -90,48 +106,48 @@ export function EarningsBreakdownChart() {
                       fill="none"
                     />
 
-                    {/* Segment 1: Direct Rewards */}
+                    {/* Segment 1: Slot #01 Matrix Yield */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#0047cc"
                       strokeWidth="24"
-                      strokeDasharray={`${directStroke} ${circumference}`}
+                      strokeDasharray={`${slot1Stroke} ${circumference}`}
                       strokeDashoffset="0"
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
-                      onMouseEnter={() => setHoveredSegment("direct")}
+                      onMouseEnter={() => setHoveredSegment("slot1")}
                       onMouseLeave={() => setHoveredSegment(null)}
                     />
 
-                    {/* Segment 2: Level Rewards */}
+                    {/* Segment 2: Slot #02 Matrix Yield */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#0088ff"
                       strokeWidth="24"
-                      strokeDasharray={`${levelStroke} ${circumference}`}
-                      strokeDashoffset={`-${directStroke}`}
+                      strokeDasharray={`${slot2Stroke} ${circumference}`}
+                      strokeDashoffset={`-${slot1Stroke}`}
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
-                      onMouseEnter={() => setHoveredSegment("level")}
+                      onMouseEnter={() => setHoveredSegment("slot2")}
                       onMouseLeave={() => setHoveredSegment(null)}
                     />
 
-                    {/* Segment 3: Referral Bonus */}
+                    {/* Segment 3: Royalty */}
                     <circle
                       cx="80"
                       cy="80"
                       r="58"
                       stroke="#38bdf8"
                       strokeWidth="24"
-                      strokeDasharray={`${referralStroke} ${circumference}`}
-                      strokeDashoffset={`-${directStroke + levelStroke}`}
+                      strokeDasharray={`${royaltyStroke} ${circumference}`}
+                      strokeDashoffset={`-${slot1Stroke + slot2Stroke}`}
                       fill="none"
                       className="cursor-pointer transition-all duration-300 hover:opacity-90"
-                      onMouseEnter={() => setHoveredSegment("referral")}
+                      onMouseEnter={() => setHoveredSegment("royalty")}
                       onMouseLeave={() => setHoveredSegment(null)}
                     />
                   </svg>

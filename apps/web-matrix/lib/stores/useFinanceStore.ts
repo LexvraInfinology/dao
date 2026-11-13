@@ -122,7 +122,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }
   },
 
-  fetchTransactions: async (options = { page: 1, limit: 30 }, userAddress, force = false) => {
+  fetchTransactions: async (options = { page: 1, limit: 100 }, userAddress, force = false) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) return;
     const { transactions, loadingTransactions } = get();

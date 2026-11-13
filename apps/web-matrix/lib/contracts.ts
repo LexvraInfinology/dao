@@ -552,7 +552,7 @@ export async function getLiveSlotCostUsdAndSun(
 }
 export function getSlotCost(slotNumber: number): number {
   const slot = Math.max(1, Math.min(12, Math.floor(slotNumber || 1)));
-  return dynamicSlotUsdCosts[slot] ?? (30 * Math.pow(2, slot - 1));
+  return dynamicSlotUsdCosts[slot] ?? 30;
 }
 
 /**
@@ -902,14 +902,16 @@ export async function getOnChainSlotDetails(
 
     if (isFilled) computedFilledCount++;
 
-    // Contract-aligned payout types (honoring live on-chain payoutTypes enum when filled)
+    // Contract-aligned payout types matching EquoraMatrix.sol enum PayoutType exactly:
+    // 0: UPLINE_1, 1: UPLINE_2, 2: OWNER_DIRECT, 3: PROTOCOL_POOL, 4: SPILLOVER_DOWNLINE1, 5: SPILLOVER_DOWNLINE2, 6: CYCLE_COMPLETE
     const CONTRACT_PAYOUT_NAMES = [
-      "OWNER_DIRECT",
       "UPLINE_1",
       "UPLINE_2",
+      "OWNER_DIRECT",
       "PROTOCOL_POOL",
       "SPILLOVER_DOWNLINE1",
       "SPILLOVER_DOWNLINE2",
+      "CYCLE_COMPLETE",
     ];
     let payoutType = "OWNER_DIRECT";
     if (isFilled && onChainPayoutTypes[pos - 1] !== undefined && CONTRACT_PAYOUT_NAMES[onChainPayoutTypes[pos - 1]]) {
@@ -3218,28 +3220,52 @@ export async function getOnChainUserTransactions(userAddress: string) {
         const perNodeTrob = cycDetails.totalEarnedTrob > 0 && paidInCyc.length > 0
           ? Number((cycDetails.totalEarnedTrob / paidInCyc.length).toFixed(2))
           : liveSlot1Trob;
-        for (const pos of paidInCyc) {
-          const node = cycDetails.nodes[pos - 1];
-          totalInflow += slot1Usd;
+        for (const node of cycDetails.nodes) {
+          if (!node || !node.filled) continue;
+          const pos = node.position;
+          const isPaying = paidInCyc.includes(pos);
           const senderB58 = node.base58 || toTrobBase58(node.placedUser);
-          items.push({
-            id: `tx-reward-${userHex.slice(2, 8)}-s1-c${cyc}-p${pos}`,
-            type: "COMMISSION_EARNED",
-            slotNumber: 1,
-            cycle: cyc,
-            position: pos,
-            amount: slot1Usd,
-            amountUsd: slot1Usd,
-            trobAmount: perNodeTrob,
-            trobSubtitle: perNodeTrob > 0 ? `${perNodeTrob.toFixed(2)} TROB` : undefined,
-            token: "USD",
-            fromAddress: senderB58,
-            toAddress: "You",
-            txHash: node.txHash || null,
-            status: "COMPLETED",
-            description: `Slot #01 Cycle #${cyc} Position #${pos} P2P Settlement (+ $${slot1Usd.toFixed(2)} USD)`,
-            timestamp: node.timestamp || new Date().toISOString(),
-          });
+          if (isPaying) {
+            totalInflow += slot1Usd;
+            items.push({
+              id: `tx-reward-${userHex.slice(2, 8)}-s1-c${cyc}-p${pos}`,
+              type: "COMMISSION_EARNED",
+              slotNumber: 1,
+              cycle: cyc,
+              position: pos,
+              amount: slot1Usd,
+              amountUsd: slot1Usd,
+              trobAmount: perNodeTrob,
+              trobSubtitle: perNodeTrob > 0 ? `${perNodeTrob.toFixed(2)} TROB` : undefined,
+              token: "USD",
+              fromAddress: senderB58,
+              toAddress: "You",
+              txHash: node.txHash || null,
+              status: "COMPLETED",
+              description: `Slot #01 Cycle #${cyc} Position #${pos} P2P Settlement (+ $${slot1Usd.toFixed(2)} USD)`,
+              timestamp: node.timestamp || new Date().toISOString(),
+            });
+          } else {
+            items.push({
+              id: `tx-route-${userHex.slice(2, 8)}-s1-c${cyc}-p${pos}`,
+              type: (pos === 4 || pos === 5 || pos === 14) ? "POOL_ROUTING" : "BOARD_ROUTING",
+              slotNumber: 1,
+              cycle: cyc,
+              position: pos,
+              amount: 0,
+              amountUsd: 0,
+              routedAmountUsd: slot1Usd,
+              trobAmount: liveSlot1Trob,
+              trobSubtitle: liveSlot1Trob > 0 ? `${liveSlot1Trob.toFixed(2)} TROB Routed` : undefined,
+              token: "USD",
+              fromAddress: senderB58,
+              toAddress: (pos === 4 || pos === 5 || pos === 14) ? "EquoraVault" : "Protocol Network",
+              txHash: node.txHash || null,
+              status: "COMPLETED",
+              description: `Slot #01 Seat #${pos}: $${slot1Usd.toFixed(2)} Matrix Routing`,
+              timestamp: node.timestamp || new Date().toISOString(),
+            });
+          }
         }
       }
 
@@ -3293,6 +3319,57 @@ export async function getOnChainUserTransactions(userAddress: string) {
         description: `Slot #${String(sNum).padStart(2, "0")} Auto-Activation ($${sUsd.toFixed(2)} Value • $0.00 Out-of-Pocket)`,
         timestamp: null,
       });
+
+      if (slotInfo.nodes && Array.isArray(slotInfo.nodes)) {
+        const payingPositions = [3, 6, 8, 9, 11, 12];
+        for (const node of slotInfo.nodes) {
+          if (!node || !node.filled) continue;
+          const isDirectPaying = payingPositions.includes(node.position) &&
+            (node.payoutType === "OWNER_DIRECT" || node.payoutType === "DIRECT" || String(node.recipientAddress || "").toLowerCase() === userHex.toLowerCase());
+          const senderB58 = node.base58 || toTrobBase58(node.placedUser);
+          if (isDirectPaying) {
+            totalInflow += sUsd;
+            items.push({
+              id: `tx-reward-${userHex.slice(2, 8)}-s${sNum}-p${node.position}`,
+              type: "COMMISSION_EARNED",
+              slotNumber: sNum,
+              cycle: slotInfo.currentCycle || 1,
+              position: node.position,
+              amount: sUsd,
+              amountUsd: sUsd,
+              trobAmount: sTrob,
+              trobSubtitle: sTrob > 0 ? `${sTrob.toFixed(2)} TROB` : undefined,
+              token: "USD",
+              fromAddress: senderB58,
+              toAddress: "You",
+              txHash: node.txHash || null,
+              status: "COMPLETED",
+              description: `Slot #${String(sNum).padStart(2, "0")} Seat #${node.position} Direct P2P Yield (+ $${sUsd.toFixed(2)} USD)`,
+              timestamp: node.timestamp || new Date().toISOString(),
+            });
+          } else {
+            items.push({
+              id: `tx-route-${userHex.slice(2, 8)}-s${sNum}-p${node.position}`,
+              type: (node.position === 4 || node.position === 5 || node.position === 14) ? "POOL_ROUTING" : "BOARD_ROUTING",
+              slotNumber: sNum,
+              cycle: slotInfo.currentCycle || 1,
+              position: node.position,
+              amount: 0,
+              amountUsd: 0,
+              routedAmountUsd: sUsd,
+              trobAmount: sTrob,
+              trobSubtitle: sTrob > 0 ? `${sTrob.toFixed(2)} TROB Routed` : undefined,
+              token: "USD",
+              fromAddress: senderB58,
+              toAddress: (node.position === 4 || node.position === 5 || node.position === 14) ? "EquoraVault" : "Protocol Network",
+              txHash: node.txHash || null,
+              status: "COMPLETED",
+              description: `Slot #${String(sNum).padStart(2, "0")} Seat #${node.position}: $${sUsd.toFixed(2)} Matrix Routing`,
+              timestamp: node.timestamp || new Date().toISOString(),
+            });
+          }
+        }
+      }
     }
 
     // 3. Royalty Pool Rewards (Leadership Royalty 40%)

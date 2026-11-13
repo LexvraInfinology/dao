@@ -30,7 +30,10 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
 
   const allTransactions: Transaction[] = (payouts && payouts.length > 0)
     ? payouts.map((p) => {
-        const isDirect = p.type.toLowerCase().includes("direct") || p.type.toLowerCase().includes("slot");
+        const isDirect =
+          p.type.toLowerCase().includes("direct") ||
+          p.type.toLowerCase().includes("slot") ||
+          p.type.toLowerCase().includes("commission");
         const isLevel = p.type.toLowerCase().includes("level") || p.type.toLowerCase().includes("override");
         const kind: "direct" | "level" | "referral" = isDirect ? "direct" : isLevel ? "level" : "referral";
         const dateStr = formatDateSafe(p.timestamp);
@@ -47,10 +50,10 @@ export function RecentPayoutsTable({ payouts: propPayouts }: RecentPayoutsTableP
           id: p.id,
           type: kind,
           typeName: p.type.replace(/_/g, " "),
-          description: p.description || "Matrix Reward",
-          subDescriptionMobile: p.slotIndex ? `Slot #${p.slotIndex}` : p.description || "Node placement",
+          description: p.description || "Direct P2P Commission",
+          subDescriptionMobile: (p as any).slotNumber ? `Slot #${(p as any).slotNumber}` : p.slotIndex ? `Slot #${p.slotIndex}` : p.description || "Node placement",
           subDescriptionDesktop: p.txHash ? `Tx: ${p.txHash.slice(0, 10)}...` : p.description || "Node placement",
-          amount: p.amount,
+          amount: (p as any).amountUsd || p.amount || 30,
           date: dateStr,
           time: timeStr,
           status: p.status === "COMPLETED" ? "Completed" : "Pending",

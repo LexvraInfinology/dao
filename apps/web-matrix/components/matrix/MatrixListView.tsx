@@ -82,7 +82,7 @@ export function MatrixListView(props: MatrixListViewProps = {}) {
           joined: joinedDate,
           joinedShort: `${joinedDate} • S${selectedSlotNumber}`,
           level: `Slot ${selectedSlotNumber}`,
-          earned: `$${(Number(node.amount) > 0 ? Number(node.amount) : slotCost).toFixed(2)}`,
+          earned: `$${slotCost.toFixed(2)}`,
           avatarBg:
             posNum === 1
               ? "bg-[#2563eb]"

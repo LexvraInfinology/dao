@@ -128,7 +128,7 @@ export function SlotEarningsBreakdown() {
 
   const earningTerms = cards
     .filter((c) => c.earnedUsd > 0)
-    .map((c) => `$${c.earnedUsd.toFixed(0)} (S${c.slotNumber} C${c.cycleNumber})`);
+    .map((c) => `$${c.earnedUsd.toFixed(0)} (Slot #${String(c.slotNumber).padStart(2, "0")})`);
 
   return (
     <div className="bg-white rounded-2xl border border-[#e2e8f0] p-4 sm:p-5 mb-5 shadow-xs">

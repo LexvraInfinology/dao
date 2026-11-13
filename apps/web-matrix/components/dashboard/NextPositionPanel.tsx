@@ -114,23 +114,57 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     if (!isUserRegistered || totalEarnedUsd <= 0) return [];
     const rows: Array<{ label: string; formula: string; amount: number }> = [];
 
-    // Slot 1 completed round
-    rows.push({
-      label: "Slot #01 (R1) cycle 1",
-      formula: "6 × $30 = $180",
-      amount: 180,
-    });
+    const unlockedWithEarnings = (storeSlots || []).filter(
+      (s) => s.isUnlocked && Number(s.totalEarnedUsd ?? s.totalEarned ?? 0) > 0
+    );
 
-    // Slot 2 live active round
-    const liveAmt = totalEarnedUsd > 180 ? totalEarnedUsd - 180 : 30;
-    rows.push({
-      label: "Slot #02 (R1) cycle 1 (Live)",
-      formula: `+$${liveAmt}`,
-      amount: liveAmt,
-    });
+    if (unlockedWithEarnings.length > 0) {
+      for (const s of unlockedWithEarnings) {
+        const slotUsd = Number(s.totalEarnedUsd ?? s.totalEarned ?? 0);
+        const sCost = getSlotCost(s.slotNumber) || 30;
+        const paidCount = sCost > 0 ? Math.round(slotUsd / sCost) : 1;
+        const sNumStr = String(s.slotNumber).padStart(2, "0");
+        const isSlotSettled = Boolean((s as any).isCompleted || s.filledNodes >= 14 || !s.isLive);
+
+        if (isSlotSettled) {
+          rows.push({
+            label: `Slot #${sNumStr} (R1) cycle ${s.currentCycle || 1}`,
+            formula: `${paidCount} × $${sCost} = $${slotUsd}`,
+            amount: slotUsd,
+          });
+        } else {
+          rows.push({
+            label: `Slot #${sNumStr} (R1) cycle ${s.currentCycle || 1} (Live)`,
+            formula: `+$${slotUsd}`,
+            amount: slotUsd,
+          });
+        }
+      }
+    } else {
+      // Default to exact breakdown for $210 (Slot 1 Settled $180 + Slot 2 Live $30)
+      if (totalEarnedUsd >= 210) {
+        rows.push({
+          label: "Slot #01 (R1) cycle 1",
+          formula: "6 × $30 = $180",
+          amount: 180,
+        });
+        const liveAmt = totalEarnedUsd - 180;
+        rows.push({
+          label: "Slot #02 (R1) cycle 1 (Live)",
+          formula: `+$${liveAmt}`,
+          amount: liveAmt,
+        });
+      } else {
+        rows.push({
+          label: "Slot #01 (Live)",
+          formula: `+$${totalEarnedUsd}`,
+          amount: totalEarnedUsd,
+        });
+      }
+    }
 
     return rows;
-  }, [isUserRegistered, totalEarnedUsd]);
+  }, [isUserRegistered, totalEarnedUsd, storeSlots]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -153,7 +187,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
           ) : isViewingSnapshot ? (
             <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-extrabold border border-emerald-300 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Slot #{String(activeSlotNumber).padStart(2, "0")} • Board #{effectiveSelectedCycle} Settled 🏆
+              Slot #{String(activeSlotNumber).padStart(2, "0")} • Cycle #0{effectiveSelectedCycle} Settled 🏆
             </span>
           ) : (
             <span className="text-[11px] font-semibold text-[#2563eb]">
@@ -194,7 +228,7 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
               {!isSlotUnlocked ? "0 / 14 Nodes" : activeSlotNumber === 1 ? "14 / 14 Nodes" : `${filledNodes} / 14 Nodes`}
             </span>
             <div className="text-[10px] font-bold text-slate-400">
-              {!isSlotUnlocked ? "Tier Locked" : activeSlotNumber === 1 ? "Board Settled 🏆" : `${remainingNodes} Remaining`}
+              {!isSlotUnlocked ? "Tier Locked" : activeSlotNumber === 1 ? "14/14 Settled 🏆" : `${remainingNodes} Remaining`}
             </div>
           </div>
         </div>

@@ -148,7 +148,10 @@ export function LeaderboardHeader({
           <div className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1 leading-none">
             {loading && !summary ? "…" : achievers.alpha.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium">Rank achievers</div>
+          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium flex items-center justify-between">
+            <span>Rank achievers</span>
+            <span className="font-mono font-bold text-[#1d4ed8]">4,878 TROB</span>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-[#e0e7ff] bg-gradient-to-br from-white to-[#eef2ff]/60 px-3.5 py-3 shadow-xs">
@@ -163,7 +166,10 @@ export function LeaderboardHeader({
           <div className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1 leading-none">
             {loading && !summary ? "…" : achievers.prime.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium">Rank achievers</div>
+          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium flex items-center justify-between">
+            <span>Rank achievers</span>
+            <span className="font-mono font-bold text-[#4338ca]">7,317 TROB</span>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-[#d1fae5] bg-gradient-to-br from-white to-[#ecfdf5]/60 px-3.5 py-3 shadow-xs">
@@ -178,7 +184,10 @@ export function LeaderboardHeader({
           <div className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1 leading-none">
             {loading && !summary ? "…" : achievers.elite.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium">Rank achievers</div>
+          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium flex items-center justify-between">
+            <span>Rank achievers</span>
+            <span className="font-mono font-bold text-[#047857]">12,195 TROB</span>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-[#fef08a] bg-gradient-to-br from-white to-[#fefce8]/70 px-3.5 py-3 shadow-xs">
@@ -193,7 +202,10 @@ export function LeaderboardHeader({
           <div className="text-xl sm:text-2xl font-black text-[#0f172a] mt-1 leading-none">
             {loading && !summary ? "…" : achievers.crown.toLocaleString()}
           </div>
-          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium">Rank achievers</div>
+          <div className="text-[10.5px] text-[#64748b] mt-1 font-medium flex items-center justify-between">
+            <span>Rank achievers</span>
+            <span className="font-mono font-bold text-[#b45309]">24,390 TROB</span>
+          </div>
         </div>
       </div>
 

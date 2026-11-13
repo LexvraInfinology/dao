@@ -53,12 +53,16 @@ export function OverviewTab({
   const currentRank = profile?.rankName || "NONE";
 
   // Rank Milestones & Smart Contract Verification
-  const rankMilestones = (dashboard as any)?.rankMilestones;
-  const milestones = rankMilestones?.milestones ?? 0;
-  const isAlphaAchieved = rankMilestones?.isAlphaAchieved ?? (milestones >= 42);
-  const isPrimeAchieved = rankMilestones?.isPrimeAchieved ?? (milestones >= 84);
-  const isEliteAchieved = rankMilestones?.isEliteAchieved ?? (milestones >= 126);
-  const isCrownAchieved = rankMilestones?.isCrownAchieved ?? (milestones >= 168);
+  const rankMilestones = (dashboard as any)?.rankMilestones || (profile as any)?.rankMilestones;
+  const milestones = Math.max(
+    Number(rankMilestones?.milestones ?? 0),
+    Number((profile as any)?.rankMilestones?.milestones ?? 0),
+    Number((dashboard as any)?.totalPlacementsCount ?? 0)
+  );
+  const isAlphaAchieved = Boolean(rankMilestones?.isAlphaAchieved || milestones >= 42);
+  const isPrimeAchieved = Boolean(rankMilestones?.isPrimeAchieved || milestones >= 84);
+  const isEliteAchieved = Boolean(rankMilestones?.isEliteAchieved || milestones >= 126);
+  const isCrownAchieved = Boolean(rankMilestones?.isCrownAchieved || milestones >= 168);
 
   const [rankModalOpen, setRankModalOpen] = useState(false);
   const [activeRankModal, setActiveRankModal] = useState<RankTierName>("ALPHA");

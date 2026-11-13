@@ -1254,7 +1254,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   const userHex = toHexAddress(userAddress);
   const param = coder.encode(["address"], [userHex]).slice(2);
 
-  const [finRaw, directsCountRaw, qualRaw, sponsorRaw, isRegRaw, liveRaw, slot1Raw] = await Promise.all([
+  const [finRaw, directsCountRaw, qualRaw, sponsorRaw, isRegRaw, liveRaw, slot1Raw, onChainRank] = await Promise.all([
     queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getUserFinancials(address)", param).catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getActiveDirectReferralsCount(address)", param).catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.matrix, "isMatrixQualified(address)", param).catch(() => null),
@@ -1262,6 +1262,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     queryTrobConstant(CONTRACT_ADDRESSES.registry, "isRegistered(address)", param).catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getAllSlotsLiveStatus(address)", param).catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.matrix, "getSlotData(address,uint256)", coder.encode(["address", "uint256"], [userHex, 1]).slice(2)).catch(() => null),
+    getOnChainUserRankMilestones(userHex).catch(() => null),
   ]);
 
   let availableBalance = 0;
@@ -1589,8 +1590,9 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     // Cycle 2+ or Slot 2+ permanent qualification exemption
     isQualified: isRegistered && (cleanHighestSlot > 1 || isQualified),
     teamCount: isRegistered ? directReferralsCount : 0,
-    rankTier: isRegistered ? rankTier : 0,
-    rankName: isRegistered ? rankNames[rankTier] : "NONE",
+    rankTier: isRegistered ? (onChainRank?.tierNumber ?? rankTier) : 0,
+    rankName: isRegistered ? (onChainRank?.tierName ?? rankNames[rankTier]) : "NONE",
+    rankMilestones: onChainRank || null,
     globalCycle: 1,
     currentSlot: cleanHighestSlot > 0 ? cleanHighestSlot : 1,
     highestUnlockedSlot: cleanHighestSlot,

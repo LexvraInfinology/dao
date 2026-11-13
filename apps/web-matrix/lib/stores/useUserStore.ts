@@ -190,6 +190,8 @@ export const useUserStore = create<UserState>((set, get) => ({
           activeDirectsCount: onChainProf.activeDirectsCount,
           isQualified: onChainProf.isQualified,
           rankTier: Math.max(onChainProf.rankTier || 0, dbProf.rankTier || 0),
+          rankName: onChainProf.rankName || dbProf.rankName || "NONE",
+          rankMilestones: onChainProf.rankMilestones || (dbProf as any)?.rankMilestones || null,
           username: dbProf.username || onChainProf.username,
           avatarUrl: dbProf.avatarUrl || onChainProf.avatarUrl,
           referralCode: onChainProf.referralCode || dbProf.referralCode || null,

@@ -2647,7 +2647,7 @@ export async function GET(
         unlockedSlots.map(async (slotSummary) => {
           const s = slotSummary.slotNumber;
           const [snapCount, liveDetail] = await Promise.all([
-            Promise.resolve(slotSummary.snapshotCount),
+            getCycleSnapshotCount(ethHex, s).catch(() => slotSummary.snapshotCount || 0),
             fetchRawNodesWithCodes(ethHex, s),
           ]);
 
@@ -2686,15 +2686,38 @@ export async function GET(
             });
           });
 
-          boards.push({
-            cycle: slotSummary.currentCycle,
-            nodeAddresses: liveDetail.nodeAddresses || [],
-            nodeCodes: liveDetail.nodeCodes || [],
-            nodeMemberIds: liveDetail.nodeMemberIds || [],
-            payoutRecipients: liveDetail.payoutRecipients || [],
-            payoutTypes: liveDetail.payoutTypes || [],
-            fallbackTimestamp: null,
-          });
+          const hasLiveNodes = liveDetail.nodeAddresses && liveDetail.nodeAddresses.some((a: string) => isNonZeroAddress(a));
+          const effectiveLiveAddresses = hasLiveNodes
+            ? liveDetail.nodeAddresses
+            : (slotSummary.slot1Nodes ? slotSummary.slot1Nodes.map((n: any) => n?.placedUser || "0x0000000000000000000000000000000000000000") : []);
+          const effectiveLiveCodes = hasLiveNodes
+            ? liveDetail.nodeCodes
+            : (slotSummary.slot1Nodes ? slotSummary.slot1Nodes.map((n: any) => n?.referralCode || n?.code || 0) : []);
+          const effectiveLiveIds = hasLiveNodes
+            ? liveDetail.nodeMemberIds
+            : (slotSummary.slot1Nodes ? slotSummary.slot1Nodes.map((n: any) => n?.userId || 0) : []);
+          const effectiveLiveRecipients = hasLiveNodes
+            ? liveDetail.payoutRecipients
+            : (slotSummary.slot1Nodes ? slotSummary.slot1Nodes.map((n: any) => n?.recipient || (n?.payoutType === "DIRECT" ? ethHex : "0x0000000000000000000000000000000000000000")) : []);
+          const effectiveLiveTypes = hasLiveNodes
+            ? liveDetail.payoutTypes
+            : (slotSummary.slot1Nodes ? slotSummary.slot1Nodes.map((n: any) => n?.payoutType === "DIRECT" ? 2 : 0) : []);
+
+          const isSettledSlot = !slotSummary.isLive && boards.length > 0;
+          if (!isSettledSlot && (slotSummary.isLive || effectiveLiveAddresses.some((a: string) => isNonZeroAddress(a)))) {
+            boards.push({
+              cycle: slotSummary.currentCycle,
+              nodeAddresses: effectiveLiveAddresses,
+              nodeCodes: effectiveLiveCodes,
+              nodeMemberIds: effectiveLiveIds,
+              payoutRecipients: effectiveLiveRecipients,
+              payoutTypes: effectiveLiveTypes,
+              fallbackTimestamp: null,
+            });
+          }
+
+          const slotCost = slotSummary.cost > 0 ? slotSummary.cost : unitCostUsd;
+          const slotTrobCost = slotSummary.costTrob > 0 ? slotSummary.costTrob : unitCostTrob;
 
           for (const board of boards) {
             for (let idx = 0; idx < 14; idx++) {
@@ -2717,10 +2740,10 @@ export async function GET(
 
               const txHash = directLog?.hash || posLog?.hash || null;
               const timestamp = directLog?.timestamp || posLog?.timestamp || board.fallbackTimestamp;
-              const trobAmt = directLog?.amountTrob || posLog?.costTrob || unitCostTrob;
+              const trobAmt = directLog?.amountTrob || posLog?.costTrob || slotTrobCost;
 
               if (isDirectToOwner) {
-                totalInflowUsd += unitCostUsd;
+                totalInflowUsd += slotCost;
                 totalInflowTrob += trobAmt;
 
                 const row = {
@@ -2730,8 +2753,8 @@ export async function GET(
                   slotNumber: s,
                   cycle: board.cycle,
                   position: pos,
-                  amount: unitCostUsd,
-                  amountUsd: unitCostUsd,
+                  amount: slotCost,
+                  amountUsd: slotCost,
                   trobAmount: Number(trobAmt.toFixed(2)),
                   trobSubtitle: trobAmt > 0 ? `${trobAmt.toFixed(2)} TROB` : undefined,
                   token: "USD",
@@ -2742,7 +2765,7 @@ export async function GET(
                   distributionRule: "100% Direct P2P Instant Payout",
                   txHash,
                   status: "COMPLETED",
-                  description: `Slot #${String(s).padStart(2, "0")} (Cycle #${board.cycle}) Seat #${pos} • 100% P2P Payout (+ $${unitCostUsd.toFixed(2)} USD)`,
+                  description: `Slot #${String(s).padStart(2, "0")} (Cycle #${board.cycle}) Seat #${pos} • 100% P2P Payout (+ $${slotCost.toFixed(2)} USD)`,
                   timestamp,
                 };
                 items.push(row);
@@ -2881,7 +2904,7 @@ export async function GET(
       payoutItems.sort(sortDesc);
 
       const finalInflowUsd =
-        totalInflowUsd > 0 ? Number(totalInflowUsd.toFixed(2)) : overview.totalEarnedUsd;
+        Math.max(Number(totalInflowUsd.toFixed(2)), overview.totalEarnedUsd);
       const finalInflowTrob =
         overview.totalEarnedTrob > 0
           ? Number(overview.totalEarnedTrob.toFixed(2))

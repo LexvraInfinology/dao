@@ -101,27 +101,27 @@ export function TransactionsStats({ stats: propStats }: TransactionsStatsProps) 
         </div>
       </div>
 
-      {/* Net Profit */}
+      {/* Total Realized Profit */}
       <div className="bg-white rounded-2xl border border-[#e2e8f0] p-3.5 lg:p-4 shadow-xs">
         <div className="flex items-start justify-between mb-1.5">
-          <span className="text-[10.5px] lg:text-[11.5px] font-semibold text-[#64748b]">Net Profit</span>
+          <span className="text-[10.5px] lg:text-[11.5px] font-semibold text-[#64748b]">Total Realized Profit</span>
           <div className="w-7 h-7 rounded-lg bg-[#ecfdf5] flex items-center justify-center flex-shrink-0">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </div>
-        <div className={`text-[18px] lg:text-[22px] font-black leading-tight ${netProfit >= 0 ? "text-[#16a34a]" : "text-[#e11d48]"}`}>
-          {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
+        <div className="text-[18px] lg:text-[22px] font-black leading-tight text-[#16a34a]">
+          +${totalInflow.toFixed(2)} <span className="text-[11px] font-bold text-[#64748b]">USD</span>
         </div>
-        {netProfit !== 0 && netProfitTrob !== 0 && (
-          <div className={`text-[10.5px] font-medium mt-0.5 ${netProfit >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-            ({netProfitTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+        {totalInflowTrob > 0 && (
+          <div className="text-[10.5px] font-medium mt-0.5 text-emerald-600">
+            ({totalInflowTrob.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
           </div>
         )}
         <div className="flex items-center justify-between mt-2">
-          <span className={`text-[10px] font-semibold ${netProfit >= 0 ? "text-[#16a34a]" : "text-[#64748b]"}`}>
-            {totalOutflow > 0 ? `Net Realized (${roiPct >= 0 ? "+" : ""}${roiPct}% ROI)` : "On-Chain Net"}
+          <span className="text-[10px] font-semibold text-[#16a34a]">
+            {totalOutflow > 0 ? `+$${(totalInflow - totalOutflow).toFixed(0)} Net after $${totalOutflow.toFixed(0)} 1x entry (${roiPct}% ROI)` : "100% On-Chain Yield"}
           </span>
         </div>
       </div>

@@ -151,18 +151,21 @@ export function SlotEarningsBreakdown() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-right">
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-right">
             <span className="text-[10px] font-bold text-slate-500 uppercase block">
-              Personal Net Realized
+              Total Realized Income
             </span>
-            <span className={`text-[14px] font-black ${netProfit >= 0 ? "text-[#16a34a]" : "text-[#e11d48]"}`}>
-              {netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`} USD
+            <span className="text-[14px] font-black text-[#16a34a]">
+              +${totalInflow.toFixed(2)} USD
               {netProfitTrob !== 0 && (
                 <span className="text-[10.5px] font-medium text-slate-400 ml-1">
-                  ({Math.abs(netProfitTrob).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
+                  ({Math.abs(Number((stats as any)?.totalInflowTrob ?? profile?.totalEarningsTrob ?? netProfitTrob)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TROB)
                 </span>
               )}
             </span>
+            <div className="text-[9.5px] text-emerald-700 font-semibold mt-0.5">
+              +${(totalInflow - totalOutflow).toFixed(0)} Net after $30 Entry
+            </div>
           </div>
         </div>
       </div>

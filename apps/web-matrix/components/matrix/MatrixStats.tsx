@@ -56,27 +56,27 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
         </div>
 
         {/* ──────── TOP KPI CARDS ──────── */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full xl:w-auto">
           {/* Card 1: Current Slot */}
-          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-5 py-3.5 flex items-center gap-3.5 shadow-xs min-w-[160px]">
-            <div className="w-10 h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-3.5 sm:px-4 xl:px-5 py-3 sm:py-3.5 flex items-center gap-3 shadow-xs min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 16h14a1 1 0 0 0 1-1l1-8-4.5 4L12 4 7.5 11 3 7l1 8a1 1 0 0 0 1 1z" />
               </svg>
             </div>
-            <div>
-              <span className="text-[11px] font-semibold text-[#64748b] block">Selected Slot</span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-[16px] font-extrabold text-[#0f172a]">Slot #{selectedSlotNumber}</span>
-                <span className="text-[11px] font-semibold text-[#94a3b8]">Cycle {currentCycle}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10.5px] sm:text-[11px] font-semibold text-[#64748b] block truncate">Selected Slot</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5 min-w-0">
+                <span className="text-[15px] sm:text-[16px] font-extrabold text-[#0f172a] truncate">Slot #{selectedSlotNumber}</span>
+                <span className="text-[10.5px] sm:text-[11px] font-semibold text-[#94a3b8] truncate">Cycle {currentCycle}</span>
               </div>
             </div>
           </div>
 
           {/* Card 2: Nodes Filled */}
-          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-5 py-3.5 flex items-center gap-3.5 shadow-xs min-w-[160px]">
-            <div className="w-10 h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-3.5 sm:px-4 xl:px-5 py-3 sm:py-3.5 flex items-center gap-3 shadow-xs min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3" />
                 <circle cx="6" cy="12" r="3" />
                 <circle cx="18" cy="19" r="3" />
@@ -84,11 +84,11 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
             </div>
-            <div className="flex-1">
-              <span className="text-[11px] font-semibold text-[#64748b] block">Nodes Filled</span>
-              <div className="flex items-baseline justify-between mt-0.5">
-                <span className="text-[16px] font-extrabold text-[#0f172a]">{filledNodes} / 14</span>
-                <span className="text-[11px] font-bold text-[#2563eb]">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10.5px] sm:text-[11px] font-semibold text-[#64748b] block truncate">Nodes Filled</span>
+              <div className="flex items-baseline justify-between mt-0.5 min-w-0">
+                <span className="text-[15px] sm:text-[16px] font-extrabold text-[#0f172a] truncate">{filledNodes} / 14</span>
+                <span className="text-[10.5px] sm:text-[11px] font-bold text-[#2563eb] truncate">
                   {Math.round((filledNodes / 14) * 100)}%
                 </span>
               </div>
@@ -96,18 +96,18 @@ export function MatrixStats(props: MatrixStatsProps = {}) {
           </div>
 
           {/* Card 3: Total Volume */}
-          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-5 py-3.5 flex items-center gap-3.5 shadow-xs min-w-[160px]">
-            <div className="w-10 h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div className="bg-white border border-[#e8ecf1] rounded-2xl px-3.5 sm:px-4 xl:px-5 py-3 sm:py-3.5 flex items-center gap-3 shadow-xs min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#eff6ff] flex items-center justify-center text-[#2563eb] flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                 <polyline points="17 6 23 6 23 12" />
               </svg>
             </div>
-            <div>
-              <span className="text-[11px] font-semibold text-[#64748b] block">Total Volume</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[16px] font-extrabold text-[#0f172a]">${totalEarned.toFixed(2)}</span>
-                <span className="text-[11px] font-bold text-[#2563eb]">USD</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10.5px] sm:text-[11px] font-semibold text-[#64748b] block truncate">Total Volume</span>
+              <div className="flex items-baseline gap-1 mt-0.5 min-w-0">
+                <span className="text-[15px] sm:text-[16px] font-extrabold text-[#0f172a] truncate">${totalEarned.toFixed(2)}</span>
+                <span className="text-[10.5px] sm:text-[11px] font-bold text-[#2563eb]">USD</span>
               </div>
             </div>
           </div>

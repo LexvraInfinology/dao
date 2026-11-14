@@ -69,15 +69,19 @@ export function EarningsBreakdownChart() {
       color: "#0088ff", // Sky / Bright Blue
       dotClass: "bg-[#0088ff]",
     },
-    {
-      id: "royalty",
-      name: "Leadership Royalty",
-      subText: "Protocol Pool Distribution",
-      amount: `$${royaltyAmount.toFixed(2)} USD`,
-      percent: `${royaltyPct.toFixed(1)}%`,
-      color: "#38bdf8", // Light Cyan
-      dotClass: "bg-[#38bdf8]",
-    },
+    ...(royaltyAmount > 0
+      ? [
+          {
+            id: "royalty",
+            name: "Leadership Royalty",
+            subText: "Protocol Pool Distribution",
+            amount: `$${royaltyAmount.toFixed(2)} USD`,
+            percent: `${royaltyPct.toFixed(1)}%`,
+            color: "#38bdf8", // Light Cyan
+            dotClass: "bg-[#38bdf8]",
+          },
+        ]
+      : []),
   ];
 
   return (

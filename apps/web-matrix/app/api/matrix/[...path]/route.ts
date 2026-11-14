@@ -1022,6 +1022,11 @@ let leaderboardBuildPromise: Promise<LiveLeaderboardSnapshot> | null = null;
 const LEADERBOARD_FRESH_TTL_MS = 12_000;
 const LEADERBOARD_STALE_TTL_MS = 300_000;
 
+// High-speed memory caches for user earnings and transaction ledgers (3-5s TTL)
+const userEarningsCache = new Map<string, { data: any; timestamp: number }>();
+const userTransactionsCache = new Map<string, { data: any; timestamp: number }>();
+const USER_LEDGER_CACHE_TTL_MS = 4_000;
+
 /** Kick off non-blocking background warmup so /leaderboard loads instantaneously */
 function warmLeaderboardCacheIfIdle(): void {
   const now = Date.now();
@@ -2504,18 +2509,57 @@ export async function GET(
       const userBase58 = hexToTronBase58(ethHex);
       const matrixBase58 = hexToTronBase58("0x" + (MATRIX_HEX.startsWith("41") ? MATRIX_HEX.slice(2) : MATRIX_HEX));
 
+      const cacheKey = ethHex.toLowerCase();
+      const now = Date.now();
+      const cached =
+        path[0] === "earnings"
+          ? userEarningsCache.get(cacheKey)
+          : userTransactionsCache.get(cacheKey);
+
+      // Return instant cached response if under TTL (sub-second fast response, zero RPC spam)
+      if (cached && now - cached.timestamp < USER_LEDGER_CACHE_TTL_MS) {
+        return NextResponse.json({
+          success: true,
+          data: cached.data,
+          _source: "fast-cache",
+        });
+      }
+
       const [overview, txMap, regUser, balanceWei] = await Promise.all([
-        collectUserSlotsOverview(ethHex),
+        collectUserSlotsOverview(ethHex).catch(() => ({
+          isRegistered: false,
+          highestUnlocked: 1,
+          totalEarnedUsd: 0,
+          totalEarnedTrob: 0,
+          unitCostUsd: 30,
+          unitCostTrob: 789.79,
+          trobPriceUsd: 0.038,
+          slotSummaries: [],
+        })),
         getMatrixContractEvents().catch(() => new Map<string, IndexedMatrixTx>()),
         getRegistryUser(ethHex).catch(() => null),
-        getUserBalance(ethHex),
+        getUserBalance(ethHex).catch(() => 0n),
       ]);
 
       const balanceTrob = Number(balanceWei) / 1_000_000;
       const unitCostUsd = overview.unitCostUsd;
       const unitCostTrob = overview.unitCostTrob;
 
-      if (!overview.isRegistered) {
+      // Resilient registration check: if RPC dropped, verify from registry ID, tx history or cache
+      const hasOnChainTxs = Array.from(txMap.values()).some((tx) =>
+        tx.distributions.some((d) => d.recipient.toLowerCase() === ethHex) ||
+        tx.slotJoined.some((sj) => sj.user.toLowerCase() === ethHex) ||
+        tx.positionFilled.some((pf) => pf.matrixOwner.toLowerCase() === ethHex)
+      );
+
+      const isRegistered = Boolean(
+        overview.isRegistered ||
+        (regUser && (Number(regUser.id) > 0 || Number(regUser.code) > 0)) ||
+        hasOnChainTxs ||
+        (cached?.data && (cached.data.totalEarningsUsd > 0 || (cached.data.items && cached.data.items.length > 0)))
+      );
+
+      if (!isRegistered) {
         if (path[0] === "earnings") {
           return NextResponse.json({
             success: true,
@@ -2936,56 +2980,62 @@ export async function GET(
             : 0;
         const settledUsd = finalInflowUsd;
 
+        const earningsPayload = {
+          address: ethHex,
+          totalEarnings: finalInflowUsd,
+          totalEarningsUsd: finalInflowUsd,
+          totalEarningsTrob: finalInflowTrob,
+          availableBalance: availableUsd,
+          availableBalanceUsd: availableUsd,
+          availableBalanceTrob: balanceTrob,
+          withdrawnTotal: settledUsd,
+          withdrawnTotalUsd: settledUsd,
+          totalWithdrawn: settledUsd,
+          pendingRewards: 0,
+          breakdown: {
+            directBonus: finalInflowUsd,
+            matrixPlacements: 0,
+            upgradeReserves: 0,
+            poolShares: 0,
+          },
+          slotBreakdowns,
+          chartData,
+          recentPayouts: payoutItems,
+          _source: "onchain",
+        };
+        userEarningsCache.set(cacheKey, { data: earningsPayload, timestamp: Date.now() });
+
         return NextResponse.json({
           success: true,
-          data: {
-            address: ethHex,
-            totalEarnings: finalInflowUsd,
-            totalEarningsUsd: finalInflowUsd,
-            totalEarningsTrob: finalInflowTrob,
-            availableBalance: availableUsd,
-            availableBalanceUsd: availableUsd,
-            availableBalanceTrob: balanceTrob,
-            withdrawnTotal: settledUsd,
-            withdrawnTotalUsd: settledUsd,
-            totalWithdrawn: settledUsd,
-            pendingRewards: 0,
-            breakdown: {
-              directBonus: finalInflowUsd,
-              matrixPlacements: 0,
-              upgradeReserves: 0,
-              poolShares: 0,
-            },
-            slotBreakdowns,
-            chartData,
-            recentPayouts: payoutItems,
-            _source: "onchain",
-          },
+          data: earningsPayload,
         });
       }
 
+      const txPayload = {
+        items,
+        slotBreakdowns,
+        total: items.length,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+        stats: {
+          totalInflow: finalInflowUsd,
+          totalOutflow: finalOutflowUsd,
+          totalInflowTrob: finalInflowTrob,
+          totalOutflowTrob: finalOutflowTrob,
+          pendingCount: 0,
+          netProfit: finalInflowUsd,
+          netProfitAfterOutflow: Number((finalInflowUsd - finalOutflowUsd).toFixed(2)),
+          netProfitTrob: finalInflowTrob,
+          netProfitAfterOutflowTrob: Number((finalInflowTrob - finalOutflowTrob).toFixed(2)),
+        },
+        _source: "onchain",
+      };
+      userTransactionsCache.set(cacheKey, { data: txPayload, timestamp: Date.now() });
+
       return NextResponse.json({
         success: true,
-        data: {
-          items,
-          slotBreakdowns,
-          total: items.length,
-          page: 1,
-          limit: 100,
-          totalPages: 1,
-          stats: {
-            totalInflow: finalInflowUsd,
-            totalOutflow: finalOutflowUsd,
-            totalInflowTrob: finalInflowTrob,
-            totalOutflowTrob: finalOutflowTrob,
-            pendingCount: 0,
-            netProfit: finalInflowUsd,
-            netProfitAfterOutflow: Number((finalInflowUsd - finalOutflowUsd).toFixed(2)),
-            netProfitTrob: finalInflowTrob,
-            netProfitAfterOutflowTrob: Number((finalInflowTrob - finalOutflowTrob).toFixed(2)),
-          },
-          _source: "onchain",
-        },
+        data: txPayload,
       });
     }
 

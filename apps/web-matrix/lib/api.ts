@@ -280,13 +280,16 @@ export type MatrixTransactionItem = MatrixTransaction;
 export interface MatrixEarningsOverview {
   totalEarnings: number;
   totalEarningsUsd?: number;
+  totalEarningsTrob?: number;
   availableBalance: number;
   availableBalanceUsd?: number;
+  availableBalanceTrob?: number;
   withdrawnTotal: number;
   withdrawnTotalUsd?: number;
   totalWithdrawn?: number;
   pendingRewards?: number;
   trobPriceUsd?: number;
+  slotBreakdowns?: any[];
   breakdown: {
     directBonus?: number;
     matrixPlacements?: number;

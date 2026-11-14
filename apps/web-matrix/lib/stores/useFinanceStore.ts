@@ -38,6 +38,40 @@ export interface FinanceState {
   reset: () => void;
 }
 
+function getLocalEarningsCache(addr: string): MatrixEarningsOverview | null {
+  if (typeof window === "undefined" || !addr) return null;
+  try {
+    const raw = localStorage.getItem(`equora_earnings_${addr.toLowerCase()}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalEarningsCache(addr: string, data: MatrixEarningsOverview) {
+  if (typeof window === "undefined" || !addr || !data) return;
+  try {
+    localStorage.setItem(`equora_earnings_${addr.toLowerCase()}`, JSON.stringify(data));
+  } catch {}
+}
+
+function getLocalTransactionsCache(addr: string): { items: MatrixTransaction[]; stats: any } | null {
+  if (typeof window === "undefined" || !addr) return null;
+  try {
+    const raw = localStorage.getItem(`equora_txs_${addr.toLowerCase()}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalTransactionsCache(addr: string, items: MatrixTransaction[], stats: any) {
+  if (typeof window === "undefined" || !addr || !items) return;
+  try {
+    localStorage.setItem(`equora_txs_${addr.toLowerCase()}`, JSON.stringify({ items, stats }));
+  } catch {}
+}
+
 export const useFinanceStore = create<FinanceState>((set, get) => ({
   earnings: null,
   transactions: [],
@@ -51,9 +85,19 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   fetchEarnings: async (userAddress, force = false) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) return;
-    const { earnings, loadingEarnings } = get();
+
+    // 1. Immediately hydrate from persistent local cache so charts and balances NEVER disappear
+    const currentEarnings = get().earnings;
+    if (!currentEarnings) {
+      const cached = getLocalEarningsCache(addr);
+      if (cached) {
+        set({ earnings: cached });
+      }
+    }
+
+    const { loadingEarnings } = get();
     if (loadingEarnings) return;
-    if (earnings && !force) return;
+    if (get().earnings && !force) return;
 
     set({ loadingEarnings: true, error: null });
     try {
@@ -61,6 +105,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         matrixApi.getEarnings(addr).catch(() => null),
         getOnChainUserProfile(addr).catch(() => null),
       ]);
+
+      const existing = get().earnings;
 
       if (data && onChainProf) {
         const apiTotal = Number(data.totalEarningsUsd ?? data.totalEarnings ?? 0);
@@ -73,44 +119,72 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
               ? onChainProf.withdrawnTotal
               : effTotal;
         const apiAvail = Number(data.availableBalanceUsd ?? data.availableBalance ?? 0);
+
+        // Safeguard: Never replace populated payouts with empty array
+        const freshPayouts =
+          Array.isArray(data.recentPayouts) && data.recentPayouts.length > 0
+            ? data.recentPayouts
+            : existing?.recentPayouts || [];
+
+        const merged: MatrixEarningsOverview = {
+          ...data,
+          totalEarnings: effTotal,
+          totalEarningsUsd: effTotal,
+          availableBalance: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
+          availableBalanceUsd: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
+          withdrawnTotal: effSettled,
+          withdrawnTotalUsd: effSettled,
+          totalWithdrawn: effSettled,
+          recentPayouts: freshPayouts,
+        };
         set({
-          earnings: {
-            ...data,
-            totalEarnings: effTotal,
-            totalEarningsUsd: effTotal,
-            availableBalance: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
-            availableBalanceUsd: apiAvail > 0 ? apiAvail : onChainProf.availableBalance,
-            withdrawnTotal: effSettled,
-            withdrawnTotalUsd: effSettled,
-            totalWithdrawn: effSettled,
-          },
+          earnings: merged,
           loadingEarnings: false,
         });
+        setLocalEarningsCache(addr, merged);
       } else if (data) {
-        set({ earnings: data, loadingEarnings: false });
+        const freshPayouts =
+          Array.isArray(data.recentPayouts) && data.recentPayouts.length > 0
+            ? data.recentPayouts
+            : existing?.recentPayouts || [];
+        const merged = {
+          ...data,
+          recentPayouts: freshPayouts,
+        };
+        set({ earnings: merged, loadingEarnings: false });
+        setLocalEarningsCache(addr, merged);
       } else if (onChainProf) {
         const effSettled =
           onChainProf.withdrawnTotal > 0 ? onChainProf.withdrawnTotal : onChainProf.totalEarnings;
-        set({
-          earnings: {
-            totalEarnings: onChainProf.totalEarnings,
-            totalEarningsUsd: onChainProf.totalEarnings,
-            availableBalance: onChainProf.availableBalance,
-            availableBalanceUsd: onChainProf.availableBalance,
-            withdrawnTotal: effSettled,
-            withdrawnTotalUsd: effSettled,
-            totalWithdrawn: effSettled,
-            pendingRewards: 0,
-            breakdown: {
-              directBonus: onChainProf.directEarnings,
-              matrixPlacements: onChainProf.matrixEarnings,
-              upgradeReserves: 0,
-              poolShares: 0,
-            },
-            recentPayouts: [],
+        // Keep existing payouts rather than wiping to empty array!
+        const existingPayouts = existing?.recentPayouts || [];
+        const merged: MatrixEarningsOverview = {
+          totalEarnings: onChainProf.totalEarnings,
+          totalEarningsUsd: onChainProf.totalEarnings,
+          availableBalance: onChainProf.availableBalance,
+          availableBalanceUsd: onChainProf.availableBalance,
+          withdrawnTotal: effSettled,
+          withdrawnTotalUsd: effSettled,
+          totalWithdrawn: effSettled,
+          pendingRewards: 0,
+          breakdown: existing?.breakdown || {
+            directBonus: onChainProf.directEarnings,
+            matrixPlacements: onChainProf.matrixEarnings,
+            upgradeReserves: 0,
+            poolShares: 0,
           },
+          slotBreakdowns: (existing as any)?.slotBreakdowns || [],
+          chartData: existing?.chartData || [],
+          recentPayouts: existingPayouts,
+        };
+        set({
+          earnings: merged,
           loadingEarnings: false,
         });
+        setLocalEarningsCache(addr, merged);
+      } else if (existing) {
+        // If both network queries failed, preserve cached data
+        set({ loadingEarnings: false });
       } else {
         throw new Error("Failed to load earnings overview from chain or database");
       }
@@ -125,9 +199,19 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   fetchTransactions: async (options = { page: 1, limit: 100 }, userAddress, force = false) => {
     const addr = userAddress || useUserStore.getState().address || getStoredUserAddress();
     if (!addr) return;
-    const { transactions, loadingTransactions } = get();
+
+    // Immediately hydrate from local cache if store is empty
+    const currentTxs = get().transactions;
+    if (currentTxs.length === 0) {
+      const cached = getLocalTransactionsCache(addr);
+      if (cached && cached.items && cached.items.length > 0) {
+        set({ transactions: cached.items, transactionStats: cached.stats || null });
+      }
+    }
+
+    const { loadingTransactions } = get();
     if (loadingTransactions) return;
-    if (transactions.length > 0 && !force) return;
+    if (get().transactions.length > 0 && !force) return;
 
     set({ loadingTransactions: true, error: null });
     // 1. Prioritize live 100% on-chain blockchain transaction ledger
@@ -139,6 +223,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           transactionStats: onChainRes.stats,
           loadingTransactions: false,
         });
+        setLocalTransactionsCache(addr, onChainRes.items, onChainRes.stats);
         return;
       }
     } catch (err: any) {
@@ -154,6 +239,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           transactionStats: res.stats || null,
           loadingTransactions: false,
         });
+        setLocalTransactionsCache(addr, res.items, res.stats);
         return;
       }
     } catch {}

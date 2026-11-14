@@ -39,6 +39,23 @@ export interface UserState {
   reset: () => void;
 }
 
+function getLocalProfileCache(addr: string): MatrixUserProfile | null {
+  if (typeof window === "undefined" || !addr) return null;
+  try {
+    const raw = localStorage.getItem(`equora_profile_${addr.toLowerCase()}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalProfileCache(addr: string, data: MatrixUserProfile) {
+  if (typeof window === "undefined" || !addr || !data) return;
+  try {
+    localStorage.setItem(`equora_profile_${addr.toLowerCase()}`, JSON.stringify(data));
+  } catch {}
+}
+
 export const useUserStore = create<UserState>((set, get) => ({
   address: typeof window !== "undefined" ? getStoredUserAddress() : "",
   profile: null,
@@ -148,8 +165,18 @@ export const useUserStore = create<UserState>((set, get) => ({
     const { address, profile, loadingProfile } = get();
     const effectiveAddress = address || getStoredUserAddress();
     if (!effectiveAddress) return;
+
+    // Immediately hydrate from local storage cache if available
+    const currentProfile = get().profile;
+    if (!currentProfile) {
+      const cached = getLocalProfileCache(effectiveAddress);
+      if (cached) {
+        set({ profile: cached });
+      }
+    }
+
     if (loadingProfile) return;
-    if (profile && !force) return;
+    if (get().profile && !force) return;
 
     set({ loadingProfile: true, error: null });
     try {
@@ -203,12 +230,15 @@ export const useUserStore = create<UserState>((set, get) => ({
           twitter: dbProf.twitter || onChainProf.twitter,
         };
         set({ profile: merged, loadingProfile: false });
+        setLocalProfileCache(effectiveAddress, merged);
         return;
       } else if (onChainProf) {
         set({ profile: onChainProf, loadingProfile: false });
+        setLocalProfileCache(effectiveAddress, onChainProf);
         return;
       } else if (dbProf) {
         set({ profile: dbProf, loadingProfile: false });
+        setLocalProfileCache(effectiveAddress, dbProf);
         return;
       }
       throw new Error("Unable to load profile data from chain or database");

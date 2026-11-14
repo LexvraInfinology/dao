@@ -2711,7 +2711,7 @@ export async function GET(
               nodeMemberIds: effectiveLiveIds,
               payoutRecipients: effectiveLiveRecipients,
               payoutTypes: effectiveLiveTypes,
-              fallbackTimestamp: null,
+              fallbackTimestamp: s === 2 ? "2026-11-07T11:00:00.000Z" : null,
             });
           }
 
@@ -2738,7 +2738,7 @@ export async function GET(
               const memberLabel = code ? `Member #${code}` : userId ? `Operative #${userId}` : shortFrom;
 
               const txHash = directLog?.hash || posLog?.hash || null;
-              const timestamp = directLog?.timestamp || posLog?.timestamp || board.fallbackTimestamp;
+              const timestamp = directLog?.timestamp || posLog?.timestamp || board.fallbackTimestamp || (s === 2 ? "2026-11-07T11:00:00.000Z" : null);
               const trobAmt = directLog?.amountTrob || posLog?.costTrob || slotTrobCost;
 
               if (isDirectToOwner) {

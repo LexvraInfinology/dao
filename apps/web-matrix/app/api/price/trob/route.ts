@@ -55,7 +55,7 @@ async function fetchOnChainOraclePrice(): Promise<number> {
 
 async function fetchLiveTrobPrice(): Promise<any> {
   const now = Date.now();
-  if (cachedTrobPayload && now - lastTrobFetchTime < 30_000) {
+  if (cachedTrobPayload && now - lastTrobFetchTime < 15_000) {
     return cachedTrobPayload;
   }
 
@@ -89,16 +89,24 @@ async function fetchLiveTrobPrice(): Promise<any> {
           const rawPrice = json?.data?.priceUsd ?? json?.priceUsd ?? json?.price;
           const priceUsd = Number(rawPrice);
           if (Number.isFinite(priceUsd) && priceUsd > 0) {
+            const slot1Trob = Number((30 / priceUsd).toFixed(4));
+            const slot1Sun = Math.round((30 / priceUsd) * 1_000_000);
             const payload = {
               success: true,
               data: {
                 priceUsd,
                 price: priceUsd,
+                entryFeeUsd: 30,
+                slot1Trob,
+                slot1Sun,
                 timestamp: Date.now(),
                 source: url,
               },
               priceUsd,
               price: priceUsd,
+              entryFeeUsd: 30,
+              slot1Trob,
+              slot1Sun,
             };
             cachedTrobPayload = payload;
             lastTrobFetchTime = Date.now();
@@ -112,16 +120,24 @@ async function fetchLiveTrobPrice(): Promise<any> {
 
     const oraclePrice = await fetchOnChainOraclePrice();
     if (oraclePrice > 0) {
+      const slot1Trob = Number((30 / oraclePrice).toFixed(4));
+      const slot1Sun = Math.round((30 / oraclePrice) * 1_000_000);
       const payload = {
         success: true,
         data: {
           priceUsd: oraclePrice,
           price: oraclePrice,
+          entryFeeUsd: 30,
+          slot1Trob,
+          slot1Sun,
           timestamp: Date.now(),
           source: 'onchain_oracle',
         },
         priceUsd: oraclePrice,
         price: oraclePrice,
+        entryFeeUsd: 30,
+        slot1Trob,
+        slot1Sun,
       };
       cachedTrobPayload = payload;
       lastTrobFetchTime = Date.now();
@@ -156,7 +172,7 @@ export async function GET() {
     }
     return NextResponse.json(payload, {
       headers: {
-        'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30',
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=15',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
       },

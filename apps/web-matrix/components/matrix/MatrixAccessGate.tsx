@@ -176,27 +176,28 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   );
   const isFirstMember = isRootWallet || (totalMembers !== null && totalMembers === 0);
 
-  // Dynamic entry cost based on live TrobChain oracle & EquoraMatrix contract
+  // Dynamic entry cost based on live TrobChain market oracle
   const [slotCostSun, setSlotCostSun] = useState<number>(0);
-  const [slotCostUsd, setSlotCostUsd] = useState<number>(0);
+  const [slotCostUsd, setSlotCostUsd] = useState<number>(30);
   const [trobPriceUsd, setTrobPriceUsd] = useState<number>(0);
 
   useEffect(() => {
     let mounted = true;
     const updateLivePricing = async () => {
       try {
-        const [{ costUsd, costSun }, livePrice] = await Promise.all([
-          getLiveSlotCostUsdAndSun(1),
-          getLiveTrobPriceUsd(),
-        ]);
+        const livePrice = await getLiveTrobPriceUsd();
         if (!mounted) return;
-        if (livePrice > 0) setTrobPriceUsd(livePrice);
-        if (costUsd > 0) setSlotCostUsd(costUsd);
-        if (costSun > 0) {
-          setSlotCostSun(costSun);
+        if (livePrice > 0) {
+          setTrobPriceUsd(livePrice);
+          const sun = Math.max(300_000_000, Math.round((30.0 / livePrice) * 1_000_000));
+          setSlotCostSun(sun);
+          setSlotCostUsd(30);
         } else {
-          const sun = await getOnChainSlotCostSun(1);
-          if (sun > 0 && mounted) setSlotCostSun(sun);
+          const { costSun } = await getLiveSlotCostUsdAndSun(1);
+          if (mounted && costSun > 0) {
+            setSlotCostSun(costSun);
+            setSlotCostUsd(30);
+          }
         }
       } catch {}
 
@@ -209,15 +210,20 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     };
 
     updateLivePricing();
-    const interval = setInterval(updateLivePricing, 20_000);
+    const interval = setInterval(updateLivePricing, 15_000);
     return () => {
       mounted = false;
       clearInterval(interval);
     };
   }, []);
 
-  const requiredTrob = slotCostSun > 0 ? Number((slotCostSun / 1_000_000).toFixed(2)) : 0;
-  const displayEntryUsd = slotCostUsd > 0 ? slotCostUsd : 30;
+  const requiredTrob =
+    slotCostSun > 0
+      ? Number((slotCostSun / 1_000_000).toFixed(2))
+      : trobPriceUsd > 0
+      ? Number((30.0 / trobPriceUsd).toFixed(2))
+      : 0;
+  const displayEntryUsd = 30.0;
 
   // Helper to extract clean address from full URL or raw string
   const cleanSponsorInput = (raw: string): string => {
@@ -1264,14 +1270,18 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     setIsJoining(true);
     setActionError(null);
     try {
-      const callValueSun = await getOnChainSlotCostSun(1);
-      const trobCoinsRequired = (callValueSun / 1_000_000).toFixed(2);
+      // Fetch fresh live market price right before wallet signing
+      const freshPrice = await getLiveTrobPriceUsd();
+      const freshSun = freshPrice > 0
+        ? Math.max(300_000_000, Math.round((30.0 / freshPrice) * 1_000_000))
+        : (slotCostSun > 0 ? slotCostSun : await getOnChainSlotCostSun(1));
+      const trobCoinsRequired = (freshSun / 1_000_000).toFixed(2);
       toast.info(
         "Activating Slot 1",
-        `Confirm $30.00 USD (${trobCoinsRequired} TROB) in TrobSafe wallet...`
+        `Confirm $30.00 USD (${trobCoinsRequired} TROB at $${freshPrice.toFixed(4)}) in TrobSafe wallet...`
       );
 
-      const txHash = await joinSlotOnChain(1, effectiveSponsor, address, callValueSun);
+      const txHash = await joinSlotOnChain(1, effectiveSponsor, address, freshSun);
 
       try {
         await matrixApi.buySlot(address, 1, txHash, effectiveSponsor);
@@ -1453,18 +1463,26 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
       <div className="max-w-[480px] w-full mx-auto my-auto bg-white rounded-2xl border border-[#e0eaf7] shadow-[0_4px_24px_-4px_rgba(40,104,232,0.08)] p-6 sm:p-7 space-y-5">
         {/* Title */}
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa] text-[11px] font-semibold mb-2">
-            <Sparkles className="w-3 h-3 text-[#2868e8]" />
-            <span>Genesis Board Entry</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f0f6ff] text-[#2868e8] border border-[#d8e6fa] text-[11px] font-semibold">
+              <Sparkles className="w-3 h-3 text-[#2868e8]" />
+              <span>Genesis Board Entry</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10.5px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono">
+                {trobPriceUsd > 0 ? `1 TROB = $${trobPriceUsd.toFixed(4)} USD` : "Fetching Live Rate..."}
+              </span>
+            </div>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#102341] tracking-tight">
             Matrix Slot 1 Activation
           </h1>
           <p className="text-xs text-[#526682] mt-1 leading-normal">
-            Entry cost: <span className="font-semibold text-[#102341]">${displayEntryUsd.toFixed(2)} USD</span>{" "}
+            Entry cost: <span className="font-semibold text-[#102341]">$30.00 USD</span>{" "}
             {requiredTrob > 0 && trobPriceUsd > 0
-              ? `(~${requiredTrob.toFixed(2)} TROB at $${trobPriceUsd.toFixed(5)})`
-              : "(loading live TROB rate...)"}. Higher slots recycle and auto-escalate on-chain.
+              ? `(~${requiredTrob.toFixed(2)} TROB at live market price)`
+              : "(fetching live market rate...)"}. Higher slots recycle and auto-escalate on-chain.
           </p>
         </div>
 

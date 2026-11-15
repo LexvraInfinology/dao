@@ -192,12 +192,6 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
           const sun = Math.max(300_000_000, Math.round((30.0 / livePrice) * 1_000_000));
           setSlotCostSun(sun);
           setSlotCostUsd(30);
-        } else {
-          const { costSun } = await getLiveSlotCostUsdAndSun(1);
-          if (mounted && costSun > 0) {
-            setSlotCostSun(costSun);
-            setSlotCostUsd(30);
-          }
         }
       } catch {}
 
@@ -1493,7 +1487,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             <div className="text-right">
               <span className="font-bold text-[#102341] font-mono">${displayEntryUsd.toFixed(2)} USD</span>
               <span className="text-[11px] text-[#2868e8] font-mono ml-1.5 font-medium">
-                {requiredTrob > 0 ? `(~${requiredTrob.toFixed(2)} TROB)` : "(loading...)"}
+                {requiredTrob > 0 ? `(~${requiredTrob.toFixed(2)} TROB)` : "(fetching live TROB...)"}
               </span>
             </div>
           </div>
@@ -1646,7 +1640,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             <div className="flex items-center justify-between">
               <span className="text-[#526682]">4. Liquid Balance</span>
               <span className={`text-[10.5px] font-semibold ${isPriceLoading ? "text-[#526682]" : hasEnoughBalance ? "text-emerald-600" : "text-rose-600 font-bold"}`}>
-                {tokenBalance !== null ? tokenBalance.toFixed(2) : "0.00"} / {requiredTrob > 0 ? `${requiredTrob.toFixed(2)} TROB` : "Loading..."} {requiredTrob > 0 ? (hasEnoughBalance ? "✓ (Required)" : "(Insufficient ✕)") : ""}
+                {tokenBalance !== null ? tokenBalance.toFixed(2) : "0.00"} / {requiredTrob > 0 ? `${requiredTrob.toFixed(2)} TROB` : "Fetching live rate..."} {requiredTrob > 0 ? (hasEnoughBalance ? "✓ (Required)" : "(Insufficient ✕)") : ""}
               </span>
             </div>
 

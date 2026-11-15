@@ -457,15 +457,14 @@ const liveSlotCostCache = new Map<number, { costSun: number; costUsd: number; ti
 const dynamicSlotUsdCosts: Record<number, number> = {};
 
 /**
- * Queries live TROB/USD price from real-time market API (primary) or on-chain contract oracle (fallback).
- * Never uses stale hardcoded rates; guaranteed to represent real-time spot market value.
+ * Queries live TROB/USD price exclusively from real-time market API.
+ * Never uses stale hardcoded or mock fallback rates; returns 0 while loading.
  */
 export async function getLiveTrobPriceUsd(): Promise<number> {
   if (livePriceCache.priceUsd > 0 && Date.now() - livePriceCache.timestamp < 15_000) {
     return livePriceCache.priceUsd;
   }
 
-  // 1. PRIMARY: Fetch from live market API first!
   const endpoints =
     typeof window !== "undefined"
       ? ["/api/price/trob", "/api/price", "/api/trob-market/price"]
@@ -486,31 +485,13 @@ export async function getLiveTrobPriceUsd(): Promise<number> {
     } catch { }
   }
 
-  // 2. FALLBACK: Check on-chain EquoraMatrix oracle if live market API is temporarily unreachable
-  try {
-    const rawPrice = await queryTrobConstant(
-      CONTRACT_ADDRESSES.matrix,
-      "trobPriceUsd6()",
-      ""
-    );
-    if (rawPrice && rawPrice.length >= 64) {
-      const coder = new ethers.AbiCoder();
-      const [p6] = coder.decode(["uint256"], "0x" + rawPrice);
-      const p = Number(p6) / 1_000_000;
-      if (Number.isFinite(p) && p > 0) {
-        livePriceCache.priceUsd = p;
-        livePriceCache.timestamp = Date.now();
-        return p;
-      }
-    }
-  } catch { }
-
-  return livePriceCache.priceUsd || 0.035344;
+  return livePriceCache.priceUsd > 0 ? livePriceCache.priceUsd : 0;
 }
 
 /**
  * Fetches dynamic live slot cost pegged to $30 USD at current live market rate.
  * Uniform across all slots in Equora Matrix (flat $30 entry fee).
+ * Strictly zero fallback: returns 0 until live market rate is fetched.
  */
 export async function getLiveSlotCostUsdAndSun(
   slotNumber: number = 1
@@ -533,28 +514,8 @@ export async function getLiveSlotCostUsdAndSun(
     return { costSun, costUsd: 30, priceUsd };
   }
 
-  // Fallback to contract call if price is completely offline
-  const coder = new ethers.AbiCoder();
-  const param = coder.encode(["uint256"], [slot]).slice(2);
-  let onChainSun = 0;
-
-  for (const fn of ["getSlotCost(uint256)", "getRequiredTrobForSlot(uint256)", "slotCosts(uint256)"]) {
-    try {
-      const raw = await queryTrobConstant(CONTRACT_ADDRESSES.matrix, fn, param);
-      if (raw && raw.length >= 64) {
-        const [val] = coder.decode(["uint256"], "0x" + raw);
-        const n = Number(val);
-        if (n > 0) {
-          onChainSun = n;
-          break;
-        }
-      }
-    } catch { }
-  }
-
-  const finalSun = onChainSun > 0 ? onChainSun : 848_800_362;
-  liveSlotCostCache.set(slot, { costSun: finalSun, costUsd: 30, timestamp: Date.now() });
-  return { costSun: finalSun, costUsd: 30, priceUsd: priceUsd || 0.035344 };
+  // Zero fallback while price is loading
+  return { costSun: 0, costUsd: 30, priceUsd: 0 };
 }
 export function getSlotCost(slotNumber: number): number {
   return 30;
@@ -563,12 +524,13 @@ export function getSlotCost(slotNumber: number): number {
 /**
  * Fetches the exact on-chain required deposit in SUN (6 decimals) for $30 USD at live market price.
  * Enforces live TROB rate and respects on-chain MIN_SLOT1_FLOOR (minimum 300 TROB = 300,000,000 SUN).
+ * Returns 0 if live price is still loading.
  */
 export async function getOnChainSlotCostSun(slotNumber: number = 1): Promise<number> {
   const { costSun, priceUsd } = await getLiveSlotCostUsdAndSun(slotNumber);
   if (costSun > 0) return costSun;
   if (priceUsd > 0) return Math.max(300_000_000, Math.round((30.0 / priceUsd) * 1_000_000));
-  return 848_800_362; // ~848.80 TROB at live $0.035344
+  return 0;
 }
 
 // Fast cache for direct referrals

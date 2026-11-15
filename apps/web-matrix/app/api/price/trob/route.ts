@@ -65,10 +65,10 @@ async function fetchLiveTrobPrice(): Promise<any> {
 
   inFlightPromise = (async () => {
     const endpointsToTry = [
-      process.env.TROB_PRICE_API_URL,
-      process.env.NEXT_PUBLIC_TROB_PRICE_API_URL,
       'https://backend.trobchain.com/v1/market/price',
       'https://backend.trobchain.com/v1/market/price/summary',
+      process.env.TROB_PRICE_API_URL,
+      process.env.NEXT_PUBLIC_TROB_PRICE_API_URL,
     ];
 
     for (const url of endpointsToTry) {
@@ -116,32 +116,6 @@ async function fetchLiveTrobPrice(): Promise<any> {
       } catch {
         // try next endpoint
       }
-    }
-
-    const oraclePrice = await fetchOnChainOraclePrice();
-    if (oraclePrice > 0) {
-      const slot1Trob = Number((30 / oraclePrice).toFixed(4));
-      const slot1Sun = Math.round((30 / oraclePrice) * 1_000_000);
-      const payload = {
-        success: true,
-        data: {
-          priceUsd: oraclePrice,
-          price: oraclePrice,
-          entryFeeUsd: 30,
-          slot1Trob,
-          slot1Sun,
-          timestamp: Date.now(),
-          source: 'onchain_oracle',
-        },
-        priceUsd: oraclePrice,
-        price: oraclePrice,
-        entryFeeUsd: 30,
-        slot1Trob,
-        slot1Sun,
-      };
-      cachedTrobPayload = payload;
-      lastTrobFetchTime = Date.now();
-      return payload;
     }
 
     return null;

@@ -456,35 +456,23 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   };
 
   const handleResetSponsor = () => {
-    if (daoSeat && daoSeat >= 2 && daoSeat <= 100) {
+    if (daoSeat && daoSeat >= 1 && daoSeat <= 100) {
       const boundedPos = Math.max(1, Math.min(100, daoSeat));
       const quadrant = Math.floor((boundedPos - 1) / 25) + 1;
-      const k = ((boundedPos - 1) % 25) + 1;
 
-      if (k <= 2) {
-        const gatewayAnchors: Record<number, string> = {
-          1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || CONTRACT_ADDRESSES.vault,
-          2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || CONTRACT_ADDRESSES.vault,
-          3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || CONTRACT_ADDRESSES.vault,
-          4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || CONTRACT_ADDRESSES.vault,
-        };
-        const gAddr = gatewayAnchors[quadrant] || CONTRACT_ADDRESSES.vault;
-        setSponsorAddress(gAddr);
-        setSponsorInput(gAddr.startsWith("T") ? gAddr : toTrobBase58(gAddr));
-        setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
-        toast.info("Designated Gateway Anchor", `Quadrant ${quadrant} Gateway Link`);
-      } else {
-        const parentSeat = (quadrant - 1) * 25 + Math.floor((k - 1) / 2);
-        getOnChainDaoMemberForSeat(parentSeat).then((addr) => {
-          if (addr) {
-            setSponsorAddress(addr);
-            setSponsorInput(addr.startsWith("T") ? addr : toTrobBase58(addr));
-            setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
-            localStorage.setItem("equora_sponsor", addr);
-            toast.info("Reset to Designated Sponsor", `Assigned to Council Seat #${parentSeat}`);
-          }
-        });
-      }
+      const gatewayAnchors: Record<number, string> = {
+        1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || "TJZ9mqEvNipu3Fhsstf6b5UUVuKQhfaZ4V",
+        2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || "TPQvvXpxduiLWNVoQPuaTyrbd128Svy3QY",
+        3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || "TKQt9v8VeJtusfF5KPqifvSTu6tgbL4MDy",
+        4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || "TVTGMNGL7igjgM4uTG695DJuPwDphU2P95",
+      };
+      const gAddr = gatewayAnchors[quadrant] || gatewayAnchors[1];
+      setSponsorAddress(gAddr);
+      setSponsorInput(gAddr.startsWith("T") ? gAddr : toTrobBase58(gAddr));
+      setSponsorStatus({ isValid: true, isCustom: true, isGenesis: false });
+      localStorage.setItem("equora_sponsor", gAddr);
+      try { sessionStorage.setItem("equora_sponsor", gAddr); } catch {}
+      toast.info("Designated Gateway Anchor", `Quadrant ${quadrant} Gateway Link`);
     } else if (isRootWallet || (totalMembers !== null && totalMembers === 0)) {
       const vaultAddr = CONTRACT_ADDRESSES.vault;
       setSponsorAddress(vaultAddr);
@@ -627,29 +615,20 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
             if (isFirstId) {
               resolved = CONTRACT_ADDRESSES.vault;
               isRootAllowed = true;
-            } else if (parsedSeat && parsedSeat >= 2 && parsedSeat <= 100) {
+            } else if (parsedSeat && parsedSeat >= 1 && parsedSeat <= 100) {
               const boundedPos = Math.max(1, Math.min(100, parsedSeat));
               const quadrant = Math.floor((boundedPos - 1) / 25) + 1;
-              const k = ((boundedPos - 1) % 25) + 1;
 
-              if (k <= 2) {
-                const gatewayAnchors: Record<number, string> = {
-                  1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || CONTRACT_ADDRESSES.vault,
-                  2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || CONTRACT_ADDRESSES.vault,
-                  3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || CONTRACT_ADDRESSES.vault,
-                  4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || CONTRACT_ADDRESSES.vault,
-                };
-                resolved = gatewayAnchors[quadrant] || CONTRACT_ADDRESSES.vault;
-                isCustomFound = true;
-              } else {
-                const parentSeat = (quadrant - 1) * 25 + Math.floor((k - 1) / 2);
-                const parentMember = await getOnChainDaoMemberForSeat(parentSeat);
-                if (parentMember && (parentMember.startsWith("T") || parentMember.startsWith("0x"))) {
-                  resolved = parentMember;
-                  isCustomFound = true;
-                  localStorage.setItem("equora_sponsor", parentMember);
-                }
-              }
+              const gatewayAnchors: Record<number, string> = {
+                1: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || "TJZ9mqEvNipu3Fhsstf6b5UUVuKQhfaZ4V",
+                2: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || "TPQvvXpxduiLWNVoQPuaTyrbd128Svy3QY",
+                3: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || "TKQt9v8VeJtusfF5KPqifvSTu6tgbL4MDy",
+                4: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || "TVTGMNGL7igjgM4uTG695DJuPwDphU2P95",
+              };
+              resolved = gatewayAnchors[quadrant] || gatewayAnchors[1];
+              isCustomFound = true;
+              localStorage.setItem("equora_sponsor", resolved);
+              try { sessionStorage.setItem("equora_sponsor", resolved); } catch {}
             }
           }
         }

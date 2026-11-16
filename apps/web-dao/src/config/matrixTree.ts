@@ -124,29 +124,7 @@ export function resolveSponsorAddressForSeat(
 ): string {
   const boundedSeat = Math.max(1, Math.min(100, seat || 1));
   const quadrantInfo = resolveQuadrantParent(boundedSeat);
-
-  // If directly under a Gateway (k <= 2)
-  if (quadrantInfo.isGatewayDirect) {
-    return quadrantInfo.gateway.gatewayCode || quadrantInfo.gateway.gatewayAddress || PROTOCOL_VAULT_ADDRESS;
-  }
-
-  // If under another DAO seat in the quadrant (k >= 3)
-  const parentSeat = quadrantInfo.parentSeat;
-  if (!parentSeat) return PROTOCOL_VAULT_ADDRESS;
-
-  if (knownMembers && knownMembers.length > 0) {
-    const found = knownMembers.find((m) => m.position === parentSeat);
-    if (found) {
-      if (found.referralCode && String(found.referralCode).length >= 5) {
-        return String(found.referralCode);
-      }
-      if (found.address && (found.address.startsWith('T') || found.address.startsWith('0x'))) {
-        return found.address;
-      }
-    }
-  }
-
-  return PROTOCOL_VAULT_ADDRESS;
+  return quadrantInfo.gateway.gatewayAddress;
 }
 
 /**
@@ -162,9 +140,6 @@ export function getMatrixReferralUrl(
   const boundedSeat = Math.max(1, Math.min(100, seat || 1));
   const quadrantInfo = resolveQuadrantParent(boundedSeat);
 
-  const sponsor = customSponsor || resolveSponsorAddressForSeat(boundedSeat, knownMembers);
-  if (sponsor) {
-    return `${cleanBase}/gate?ref=${encodeURIComponent(sponsor)}&seat=${boundedSeat}&quadrant=${quadrantInfo.quadrant}`;
-  }
-  return `${cleanBase}/gate?seat=${boundedSeat}&quadrant=${quadrantInfo.quadrant}`;
+  const sponsor = customSponsor || quadrantInfo.gateway.gatewayAddress;
+  return `${cleanBase}/gate?ref=${encodeURIComponent(sponsor)}&seat=${boundedSeat}&quadrant=${quadrantInfo.quadrant}`;
 }

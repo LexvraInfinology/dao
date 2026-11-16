@@ -185,7 +185,7 @@ export default function DaoDashboardPage() {
                         <Wallet className="w-3.5 h-3.5" />
                         <span>Open Member Lounge</span>
                       </Link>
-                      {myPosition && myPosition >= 1 && myPosition <= 7 && (
+                      {myPosition && myPosition >= 1 && myPosition <= 100 && (
                         <a
                           href={getMatrixReferralUrl(myPosition)}
                           target="_blank"
@@ -194,9 +194,7 @@ export default function DaoDashboardPage() {
                         >
                           <GitBranch className="w-3.5 h-3.5 text-[#93C5FD]" />
                           <span>
-                            {myPosition === 1
-                              ? 'Activate Apex Node (Slot 1)'
-                              : `Join Matrix (Sponsor #${Math.floor(myPosition / 2)})`}
+                            {`Join Matrix (Gateway #${Math.floor((myPosition - 1) / 25) + 1})`}
                           </span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </a>

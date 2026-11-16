@@ -184,7 +184,15 @@ def sanitize_env_file(filepath):
         "NEXT_PUBLIC_MATRIX_DOMAIN": "equorafimatrix.com",
         "NEXT_PUBLIC_DAO_DOMAIN": "equorafidao.com",
         "NEXT_PUBLIC_MATRIX_URL": "https://equorafimatrix.com",
-        "NEXT_PUBLIC_DAO_URL": "https://equorafidao.com"
+        "NEXT_PUBLIC_DAO_URL": "https://equorafidao.com",
+        "NEXT_PUBLIC_GATEWAY_LINK_1": "TJZ9mqEvNipu3Fhsstf6b5UUVuKQhfaZ4V",
+        "NEXT_PUBLIC_GATEWAY_CODE_1": "62166",
+        "NEXT_PUBLIC_GATEWAY_LINK_2": "TPQvvXpxduiLWNVoQPuaTyrbd128Svy3QY",
+        "NEXT_PUBLIC_GATEWAY_CODE_2": "61181",
+        "NEXT_PUBLIC_GATEWAY_LINK_3": "TKQt9v8VeJtusfF5KPqifvSTu6tgbL4MDy",
+        "NEXT_PUBLIC_GATEWAY_CODE_3": "41760",
+        "NEXT_PUBLIC_GATEWAY_LINK_4": "TVTGMNGL7igjgM4uTG695DJuPwDphU2P95",
+        "NEXT_PUBLIC_GATEWAY_CODE_4": "73478"
     }
 
     for crit_key, def_val in critical_defaults.items():

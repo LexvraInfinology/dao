@@ -35,14 +35,14 @@ export interface MatrixGatewayInfo {
 export const PROTOCOL_VAULT_ADDRESS =
   process.env.NEXT_PUBLIC_MAINNET_VAULT_ADDRESS ||
   process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-  "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J";
+  "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9";
 
 export const MATRIX_GATEWAYS: Record<1 | 2 | 3 | 4, MatrixGatewayInfo> = {
   1: {
     linkNumber: 1,
     gatewayNodeId: 3,
-    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || PROTOCOL_VAULT_ADDRESS,
-    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_1 || "",
+    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_1 || "TJZ9mqEvNipu3Fhsstf6b5UUVuKQhfaZ4V",
+    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_1 || "62166",
     assignedSeatRange: "Seats 1 – 25",
     minSeat: 1,
     maxSeat: 25,
@@ -51,8 +51,8 @@ export const MATRIX_GATEWAYS: Record<1 | 2 | 3 | 4, MatrixGatewayInfo> = {
   2: {
     linkNumber: 2,
     gatewayNodeId: 4,
-    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || PROTOCOL_VAULT_ADDRESS,
-    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_2 || "",
+    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_2 || "TPQvvXpxduiLWNVoQPuaTyrbd128Svy3QY",
+    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_2 || "61181",
     assignedSeatRange: "Seats 26 – 50",
     minSeat: 26,
     maxSeat: 50,
@@ -61,8 +61,8 @@ export const MATRIX_GATEWAYS: Record<1 | 2 | 3 | 4, MatrixGatewayInfo> = {
   3: {
     linkNumber: 3,
     gatewayNodeId: 5,
-    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || PROTOCOL_VAULT_ADDRESS,
-    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_3 || "",
+    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_3 || "TKQt9v8VeJtusfF5KPqifvSTu6tgbL4MDy",
+    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_3 || "41760",
     assignedSeatRange: "Seats 51 – 75",
     minSeat: 51,
     maxSeat: 75,
@@ -71,8 +71,8 @@ export const MATRIX_GATEWAYS: Record<1 | 2 | 3 | 4, MatrixGatewayInfo> = {
   4: {
     linkNumber: 4,
     gatewayNodeId: 6,
-    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || PROTOCOL_VAULT_ADDRESS,
-    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_4 || "",
+    gatewayAddress: process.env.NEXT_PUBLIC_GATEWAY_LINK_4 || "TVTGMNGL7igjgM4uTG695DJuPwDphU2P95",
+    gatewayCode: process.env.NEXT_PUBLIC_GATEWAY_CODE_4 || "73478",
     assignedSeatRange: "Seats 76 – 100",
     minSeat: 76,
     maxSeat: 100,
@@ -99,31 +99,14 @@ export function resolveQuadrantParent(position: number | null | undefined): Quad
   const k = ((boundedPos - 1) % 25) + 1; // 1 to 25
   const gateway = MATRIX_GATEWAYS[quadrant];
 
-  if (k <= 2) {
-    return {
-      quadrant,
-      gateway,
-      isGatewayDirect: true,
-      parentSeat: null,
-      legPosition: k === 1 ? 'left' : 'right',
-      localIndex: k,
-      label: `${gateway.label} (${k === 1 ? 'Primary Left' : 'Primary Right'})`,
-    };
-  }
-
-  // k >= 3: 0-indexed binary heap parent index
-  const parentK = Math.floor((k - 1) / 2);
-  const parentSeat = (quadrant - 1) * 25 + parentK;
-  const legPosition: 'left' | 'right' = (k % 2 === 1) ? 'left' : 'right';
-
   return {
     quadrant,
     gateway,
-    isGatewayDirect: false,
-    parentSeat,
-    legPosition,
+    isGatewayDirect: true,
+    parentSeat: null,
+    legPosition: k % 2 === 1 ? 'left' : 'right',
     localIndex: k,
-    label: `Council Seat #${parentSeat} (${legPosition === 'left' ? 'Left Node' : 'Right Node'})`,
+    label: `${gateway.label} (Seat #${boundedPos})`,
   };
 }
 

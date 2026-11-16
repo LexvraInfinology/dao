@@ -40,23 +40,24 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
   const payoutsCount =
     earnings?.recentPayouts && earnings.recentPayouts.length > 0
       ? earnings.recentPayouts.length
-      : Math.max(0, Math.round(total / 30));
+      : Math.max(0, Math.floor(total / 30));
 
-  const s1Payouts = s1Breakdown?.paidSeats ?? (total >= 180 ? 6 : Math.round(total / 30));
-  const s2Payouts = s2Breakdown?.paidSeats ?? Math.max(0, payoutsCount - s1Payouts);
+  const s1Payouts = s1Breakdown?.paidSeats ?? (slotBreakdowns.length === 0 ? payoutsCount : 0);
+  const s2Payouts = s2Breakdown?.paidSeats ?? (slotBreakdowns.length === 0 ? 0 : Math.max(0, payoutsCount - s1Payouts));
 
   const highestSlot = Math.max(
     Number((profile as any)?.highestUnlockedSlot ?? 0),
     Number((profile as any)?.currentSlot ?? 0),
     slotBreakdowns.length > 0 ? Math.max(...slotBreakdowns.map((s: any) => s.slotNumber || 1)) : 1,
-    total >= 180 ? 2 : 1
+    1
   );
 
   const slotPercent = Math.round((highestSlot / 12) * 100);
 
   // ── LIVE ON-CHAIN PROTOCOL POOL DATA ─────────────────────────────────────────
   const [poolStats, setPoolStats] = useState<ProtocolPoolsStats | null>(null);
-  const [trobPrice, setTrobPrice] = useState<number>(0.038);
+  const [trobPrice, setTrobPrice] = useState<number>(0);
+  const [isPoolsLoading, setIsPoolsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,12 +65,14 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
       try {
         const [stats, price] = await Promise.all([
           getOnChainProtocolPoolsStats().catch(() => null),
-          getLiveTrobPriceUsd().catch(() => 0.038),
+          getLiveTrobPriceUsd().catch(() => 0),
         ]);
         if (!isMounted) return;
         if (stats) setPoolStats(stats);
         if (price > 0) setTrobPrice(price);
-      } catch {}
+      } catch {} finally {
+        if (isMounted) setIsPoolsLoading(false);
+      }
     };
     fetchPools();
     const interval = setInterval(fetchPools, 20000);
@@ -86,10 +89,10 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
       (profile as any)?.teamCount ??
       0;
     if (rawPlacements > 0) return rawPlacements;
-    // Derive from active boards: Slot 1 (14 nodes) + Slot 2 (3 nodes) = 17
-    const s1Filled = s1Breakdown?.filledNodes ?? 14;
-    const s2Filled = s2Breakdown?.filledNodes ?? 3;
-    return Math.max(17, s1Filled + s2Filled);
+    // Derive from active boards dynamically
+    const s1Filled = s1Breakdown?.filledNodes ?? 0;
+    const s2Filled = s2Breakdown?.filledNodes ?? 0;
+    return s1Filled + s2Filled;
   }, [dashboard, profile, s1Breakdown, s2Breakdown]);
 
   // Current stage & Upcoming rank calculation
@@ -150,9 +153,10 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
   }, [currentPlacements]);
 
   // Total Salary / Leadership Royalty Pool (40% Protocol Allocation)
-  const totalSalaryTrob = poolStats?.salaryPool?.pendingBalanceTrob ?? 49728.09;
+  const isPotLoading = isPoolsLoading || trobPrice <= 0;
+  const totalSalaryTrob = poolStats?.salaryPool?.pendingBalanceTrob ?? 0;
   const targetPotTrob = (totalSalaryTrob * upcomingRank.sharePct) / 100;
-  const targetPotUsd = targetPotTrob * (trobPrice > 0 ? trobPrice : 0.038);
+  const targetPotUsd = trobPrice > 0 ? targetPotTrob * trobPrice : 0;
 
   const progressPct = Math.min(100, Math.round((currentPlacements / upcomingRank.requiredPlacements) * 100));
   const remainingPlacements = Math.max(0, upcomingRank.requiredPlacements - currentPlacements);
@@ -302,14 +306,24 @@ export function EarningsStatsGrid({ earnings: propEarnings, onWithdrawClick }: E
           </div>
 
           <div className="flex items-baseline gap-1 mt-0.5 min-w-0">
-            <span className="text-[18px] sm:text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight truncate">
-              ${targetPotUsd.toFixed(2)}
-            </span>
-            <span className="text-[11.5px] sm:text-[13px] font-bold text-[#0284c7]">USD</span>
+            {isPotLoading && totalSalaryTrob === 0 ? (
+              <span className="inline-block w-20 h-6 bg-slate-100 animate-pulse rounded my-0.5" />
+            ) : (
+              <>
+                <span className="text-[18px] sm:text-[20px] lg:text-[22px] font-black text-[#0f172a] tracking-tight truncate">
+                  ${targetPotUsd.toFixed(2)}
+                </span>
+                <span className="text-[11.5px] sm:text-[13px] font-bold text-[#0284c7]">USD</span>
+              </>
+            )}
           </div>
 
           <div className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-0.5 truncate">
-            ({targetPotTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB in Pot)
+            {isPotLoading && totalSalaryTrob === 0 ? (
+              <span className="inline-block w-28 h-3.5 bg-slate-100 animate-pulse rounded" />
+            ) : (
+              `(${targetPotTrob.toLocaleString(undefined, { maximumFractionDigits: 1 })} TROB in Pot)`
+            )}
           </div>
 
           {/* Clean Skyblue Progress Bar towards /42 Nodes */}

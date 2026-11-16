@@ -2718,7 +2718,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
               sharePercent: 40,
               pendingBalanceTrob: (d.salaryPool?.pendingBalanceTrob && d.salaryPool.pendingBalanceTrob > 0)
                 ? d.salaryPool.pendingBalanceTrob
-                : (d.vault?.totalRoutedFromUsers ? Number((d.vault.totalRoutedFromUsers * 0.40).toFixed(2)) : 0),
+                : ((d.vault?.totalRoutedTrob || d.vault?.totalRoutedFromUsers || (d.vault?.totalRoutedFromMatrix ?? 0) + (d.vault?.totalRoutedFromUsers ?? 0)) ? Number((((d.vault?.totalRoutedTrob || ((d.vault?.totalRoutedFromMatrix ?? 0) + (d.vault?.totalRoutedFromUsers ?? 0)))) * 0.40).toFixed(2)) : 0),
               totalDistributedTrob: d.salaryPool?.totalDistributedTrob ?? 0,
               settlementsCount: d.salaryPool?.settlementsCount ?? 0,
               lastSettlementTimestamp: d.salaryPool?.lastSettlementTimestamp ?? 0,
@@ -2805,8 +2805,8 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
   if (pendingSalary <= 0 && nativeSalaryBal > 0) {
     pendingSalary = nativeSalaryBal;
   }
-  if (pendingSalary <= 0 && totalRoutedFromUsers > 0) {
-    pendingSalary = Number((totalRoutedFromUsers * 0.40).toFixed(2));
+  if (pendingSalary <= 0 && (totalRoutedFromUsers > 0 || totalRoutedFromMatrix > 0)) {
+    pendingSalary = Number(((totalRoutedFromUsers + totalRoutedFromMatrix) * 0.40).toFixed(2));
   }
 
   let alphaCount = 0, primeCount = 0, eliteCount = 0, crownCount = 0;

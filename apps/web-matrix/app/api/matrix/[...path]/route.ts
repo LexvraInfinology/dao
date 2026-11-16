@@ -1367,6 +1367,9 @@ async function fetchLivePoolsSnapshot() {
   if (!salaryPending && nativeSalaryBal > 0) {
     salaryPending = nativeSalaryBal;
   }
+  if (!salaryPending && totalVaultRouted > 0) {
+    salaryPending = Number((totalVaultRouted * 0.40).toFixed(2));
+  }
   const salaryDistributed = sStatsChunks[1] ? Number(decodeUint256(sStatsChunks[1])) / 1e6 : 0;
   const salarySettlements = sStatsChunks[2] ? Number(decodeUint256(sStatsChunks[2])) : 0;
   const salaryLastSettlement = sStatsChunks[3] ? Number(decodeUint256(sStatsChunks[3])) : 0;

@@ -65,45 +65,75 @@ const DEFAULT_DAO_HEX = "417816ae352da7d1a806eea8446aebbe551420429b"; // TLvBFwu
 const DEFAULT_MAGIC_BOX_HEX = "412b23fe5b5fc7b3ef248dd6c95554d0ae74ca6afd"; // TDuKBBieferWEHwSESRA1YKiKhJovidYsw
 const DEFAULT_REWARD_POOL_HEX = "41120cd0d08658c3857b52733c730885bbed9a22e9"; // TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v
 
-const MATRIX_HEX = toTronHex(
+const RAW_MATRIX_HEX = toTronHex(
   process.env.NEXT_PUBLIC_MATRIX_ADDRESS ||
   process.env.NEXT_PUBLIC_MATRIX_HEX ||
   process.env.MATRIX_HEX ||
   DEFAULT_MATRIX_HEX
 );
+const MATRIX_HEX =
+  RAW_MATRIX_HEX.toLowerCase() === "41a66a8dbb5b9c240989392e21e7e436f00db1bb58"
+    ? DEFAULT_MATRIX_HEX
+    : RAW_MATRIX_HEX;
+
 const REGISTRY_HEX = toTronHex(
   process.env.NEXT_PUBLIC_REGISTRY_ADDRESS ||
   process.env.NEXT_PUBLIC_REGISTRY_HEX ||
   process.env.REGISTRY_HEX ||
   DEFAULT_REGISTRY_HEX
 );
-const VAULT_HEX = toTronHex(
+
+const RAW_VAULT_HEX = toTronHex(
   process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
   process.env.NEXT_PUBLIC_VAULT_HEX ||
   process.env.VAULT_HEX ||
   DEFAULT_VAULT_HEX
 );
-const SALARY_POOL_HEX = toTronHex(
+const VAULT_HEX =
+  RAW_VAULT_HEX.toLowerCase() === "41ca60882772589417dc1c05d76d655f4639e7eb2b"
+    ? DEFAULT_VAULT_HEX
+    : RAW_VAULT_HEX;
+
+const RAW_SALARY_POOL_HEX = toTronHex(
   process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS ||
   process.env.NEXT_PUBLIC_SALARY_POOL_HEX ||
   process.env.SALARY_POOL_HEX ||
   DEFAULT_SALARY_POOL_HEX
 );
-const DAO_HEX = toTronHex(
+const SALARY_POOL_HEX =
+  RAW_SALARY_POOL_HEX.toLowerCase() === "419dbb89afb46826dda5823821eed3a71506b05d4b"
+    ? DEFAULT_SALARY_POOL_HEX
+    : RAW_SALARY_POOL_HEX;
+
+const RAW_DAO_HEX = toTronHex(
   process.env.NEXT_PUBLIC_DAO_ADDRESS ||
   process.env.NEXT_PUBLIC_DAO_HEX ||
   DEFAULT_DAO_HEX
 );
-const MAGIC_BOX_HEX = toTronHex(
+const DAO_HEX =
+  RAW_DAO_HEX.toLowerCase() === "415cbc4c27409afcbc897099b6a18e09d4de0cbc2f"
+    ? DEFAULT_DAO_HEX
+    : RAW_DAO_HEX;
+
+const RAW_MAGIC_BOX_HEX = toTronHex(
   process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS ||
   process.env.NEXT_PUBLIC_MAGIC_BOX_HEX ||
   DEFAULT_MAGIC_BOX_HEX
 );
-const REWARD_POOL_HEX = toTronHex(
+const MAGIC_BOX_HEX =
+  RAW_MAGIC_BOX_HEX.toLowerCase() === "411993c1507f4ebbe99cfd550995faea4f7b6ecdb1"
+    ? DEFAULT_MAGIC_BOX_HEX
+    : RAW_MAGIC_BOX_HEX;
+
+const RAW_REWARD_POOL_HEX = toTronHex(
   process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS ||
   process.env.NEXT_PUBLIC_REWARD_POOL_HEX ||
   DEFAULT_REWARD_POOL_HEX
 );
+const REWARD_POOL_HEX =
+  RAW_REWARD_POOL_HEX.toLowerCase() === "4127027b4010b50aa228302061034f59fc850fc41f"
+    ? DEFAULT_REWARD_POOL_HEX
+    : RAW_REWARD_POOL_HEX;
 
 function encodeBase58(buffer: Uint8Array): string {
   const digits = [0];
@@ -1307,6 +1337,7 @@ async function fetchLivePoolsSnapshot() {
     mTimeChunks,
     rStatsChunks,
     nativeRewardBal,
+    nativeSalaryBal,
   ] = await Promise.all([
     callContract(VAULT_HEX, "totalRoutedFromUsers()"),
     callContract(VAULT_HEX, "totalRoutedFromMatrix()"),
@@ -1318,6 +1349,7 @@ async function fetchLivePoolsSnapshot() {
     callContract(MAGIC_BOX_HEX, "getTimeUntilNextDraw()"),
     callContract(REWARD_POOL_HEX, "getPoolStats()"),
     getNativeBalanceTrob(REWARD_POOL_HEX),
+    getNativeBalanceTrob(SALARY_POOL_HEX),
   ]);
 
   const routedUsers = vUsersChunks[0] ? Number(decodeUint256(vUsersChunks[0])) / 1e6 : 0;
@@ -1331,6 +1363,9 @@ async function fetchLivePoolsSnapshot() {
   let salaryPending = sBalChunks[0] ? Number(decodeUint256(sBalChunks[0])) / 1e6 : 0;
   if (!salaryPending && sStatsChunks[0]) {
     salaryPending = Number(decodeUint256(sStatsChunks[0])) / 1e6;
+  }
+  if (!salaryPending && nativeSalaryBal > 0) {
+    salaryPending = nativeSalaryBal;
   }
   const salaryDistributed = sStatsChunks[1] ? Number(decodeUint256(sStatsChunks[1])) / 1e6 : 0;
   const salarySettlements = sStatsChunks[2] ? Number(decodeUint256(sStatsChunks[2])) : 0;

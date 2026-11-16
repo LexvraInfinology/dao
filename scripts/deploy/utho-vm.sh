@@ -188,15 +188,15 @@ critical_defaults = {
     "WEB_PORT": "3000",
     "MATRIX_WEB_PORT": "3001",
     "API_PORT": "4000",
-    "NEXT_PUBLIC_DAO_ADDRESS": "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
-    "NEXT_PUBLIC_MATRIX_ADDRESS": "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
-    "NEXT_PUBLIC_TOKEN_ADDRESS": "TPAGzWMuLbGiKMkvZZkWfg3mbcmGtsLgWn",
-    "NEXT_PUBLIC_REGISTRY_ADDRESS": "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
-    "NEXT_PUBLIC_VAULT_ADDRESS": "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
-    "NEXT_PUBLIC_NFT_ADDRESS": "TP8MDQFdoTMtZZjpRThExdniz2VQ1pTSPC",
-    "NEXT_PUBLIC_SALARY_POOL_ADDRESS": "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
-    "NEXT_PUBLIC_REWARD_POOL_ADDRESS": "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
-    "NEXT_PUBLIC_MAGIC_BOX_ADDRESS": "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
+    "NEXT_PUBLIC_DAO_ADDRESS": "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf",
+    "NEXT_PUBLIC_MATRIX_ADDRESS": "TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx",
+    "NEXT_PUBLIC_TOKEN_ADDRESS": "TR94a7NtVh2wrTvUVojd8g4MBWnUsrW4p8",
+    "NEXT_PUBLIC_REGISTRY_ADDRESS": "TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T",
+    "NEXT_PUBLIC_VAULT_ADDRESS": "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9",
+    "NEXT_PUBLIC_NFT_ADDRESS": "TH9wqQqL6vW3Lcp6PKq7pnJz6r8ByXTiCD",
+    "NEXT_PUBLIC_SALARY_POOL_ADDRESS": "TPH8E3PYKreaB5CjCPXTrEnEu1bhVCvHkZ",
+    "NEXT_PUBLIC_REWARD_POOL_ADDRESS": "TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v",
+    "NEXT_PUBLIC_MAGIC_BOX_ADDRESS": "TDuKBBieferWEHwSESRA1YKiKhJovidYsw",
     "NEXT_PUBLIC_OFFICIAL_SR_MAINNET_ADDRESS": "TC7LCXJ5qhhw6ewLzK8SJuJiwtWmLExLYY",
     "NEXT_PUBLIC_CHAIN_ID": "1000",
     "CHAIN_ID": "1000",
@@ -230,30 +230,54 @@ outdated_matrix_addrs = [
     "TXdUXMtLawCBdkhDCAVCAaLEimzaiGkjz2",
     "TJTgouvq6T6eMNr6d2xfJmzS646bG1MoSL",
     "TEUe7Wi375eKVGGynAZT6kMhyPpG1f9mBQ",
+    "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV",
 ]
 if key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS") in outdated_matrix_addrs or not key_map.get("NEXT_PUBLIC_MATRIX_ADDRESS"):
-    key_map["NEXT_PUBLIC_MATRIX_ADDRESS"] = "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV"
+    key_map["NEXT_PUBLIC_MATRIX_ADDRESS"] = "TSRv5fcx5RFLyoPjhBc3MKuaQQdbCintEx"
 
 outdated_vault_addrs = [
     "THoeHcGMEzNDsE8xPZuorTYgV9hje1RkGw",
     "TV6NRDubL8w749VAhsx8H8GZs8CrEcSDZB",
     "TCbJ3HBFJRucYAsApF6RCAmqGi7y2RHVxs",
     "TFSfnLmvx1q1Ur5aWbE5fqm6rXk6jVyj2A",
+    "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J",
 ]
 if key_map.get("NEXT_PUBLIC_VAULT_ADDRESS") in outdated_vault_addrs or not key_map.get("NEXT_PUBLIC_VAULT_ADDRESS"):
-    key_map["NEXT_PUBLIC_VAULT_ADDRESS"] = "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J"
+    key_map["NEXT_PUBLIC_VAULT_ADDRESS"] = "TKGvMuxfwy31qHYi4cNNJK184d8vT9E2L9"
 
 outdated_registry_addrs = [
     "TUxT2CjgiSUaiTfwaA3nZ8ZnBcugnspZRB",
+    "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj",
 ]
 if key_map.get("NEXT_PUBLIC_REGISTRY_ADDRESS") in outdated_registry_addrs or not key_map.get("NEXT_PUBLIC_REGISTRY_ADDRESS"):
-    key_map["NEXT_PUBLIC_REGISTRY_ADDRESS"] = "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj"
+    key_map["NEXT_PUBLIC_REGISTRY_ADDRESS"] = "TVpGmrzHpmbP7hY7pyEYBUtNpzEjPcpr7T"
 
 outdated_dao_addrs = [
     "THMrTHkAfcM1ZmhNzNRrMJiyCimgoGjF9V",
+    "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2",
 ]
 if key_map.get("NEXT_PUBLIC_DAO_ADDRESS") in outdated_dao_addrs or not key_map.get("NEXT_PUBLIC_DAO_ADDRESS"):
-    key_map["NEXT_PUBLIC_DAO_ADDRESS"] = "TJRYjqygAEUcrcB2WkgizGFPYeBmyhDqM2"
+    key_map["NEXT_PUBLIC_DAO_ADDRESS"] = "TLvBFwu7bakVPBTS9GfBmkeLZVkQ4UpXhf"
+
+outdated_salary_addrs = [
+    "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS",
+    "TEC2wDpRSbPutaP3URY8m3UieE74Muo5T9",
+    "TQuoEwp5s6G62CYRuQsvziynUQnGsvtucM",
+]
+if key_map.get("NEXT_PUBLIC_SALARY_POOL_ADDRESS") in outdated_salary_addrs or not key_map.get("NEXT_PUBLIC_SALARY_POOL_ADDRESS"):
+    key_map["NEXT_PUBLIC_SALARY_POOL_ADDRESS"] = "TPH8E3PYKreaB5CjCPXTrEnEu1bhVCvHkZ"
+
+outdated_reward_addrs = [
+    "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq",
+]
+if key_map.get("NEXT_PUBLIC_REWARD_POOL_ADDRESS") in outdated_reward_addrs or not key_map.get("NEXT_PUBLIC_REWARD_POOL_ADDRESS"):
+    key_map["NEXT_PUBLIC_REWARD_POOL_ADDRESS"] = "TBceWxhVxMPiWNxdi7oNs5H4rKainDh75v"
+
+outdated_magic_addrs = [
+    "TCDL237GcsDQ3eP4phaG1iXzc2SMPcXaPG",
+]
+if key_map.get("NEXT_PUBLIC_MAGIC_BOX_ADDRESS") in outdated_magic_addrs or not key_map.get("NEXT_PUBLIC_MAGIC_BOX_ADDRESS"):
+    key_map["NEXT_PUBLIC_MAGIC_BOX_ADDRESS"] = "TDuKBBieferWEHwSESRA1YKiKhJovidYsw"
 
 # Strictly enforce host ports matching Nginx reverse proxy architecture (DAO: 3000, Matrix: 3001, API: 4000)
 key_map["WEB_PORT"] = "3000"

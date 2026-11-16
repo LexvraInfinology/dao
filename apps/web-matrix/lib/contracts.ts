@@ -2718,7 +2718,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
               sharePercent: 40,
               pendingBalanceTrob: (d.salaryPool?.pendingBalanceTrob && d.salaryPool.pendingBalanceTrob > 0)
                 ? d.salaryPool.pendingBalanceTrob
-                : (d.vault?.totalRoutedFromUsers ? Number((d.vault.totalRoutedFromUsers * 0.40).toFixed(2)) : 52441.80),
+                : (d.vault?.totalRoutedFromUsers ? Number((d.vault.totalRoutedFromUsers * 0.40).toFixed(2)) : 0),
               totalDistributedTrob: d.salaryPool?.totalDistributedTrob ?? 0,
               settlementsCount: d.salaryPool?.settlementsCount ?? 0,
               lastSettlementTimestamp: d.salaryPool?.lastSettlementTimestamp ?? 0,

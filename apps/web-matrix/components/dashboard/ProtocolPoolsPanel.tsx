@@ -208,7 +208,8 @@ export function ProtocolPoolsPanel({
   const isEliteTarget = isPrimeAchieved && !isEliteAchieved;
   const isCrownTarget = isEliteAchieved && !isCrownAchieved;
 
-  const totalSalaryPoolTrob = poolStats?.salaryPool.pendingBalanceTrob ?? 48780.72;
+  const isPoolsLoading = !poolStats;
+  const totalSalaryPoolTrob = poolStats?.salaryPool?.pendingBalanceTrob ?? 0;
   const alphaPoolTrob = totalSalaryPoolTrob * 0.10;
   const primePoolTrob = totalSalaryPoolTrob * 0.15;
   const elitePoolTrob = totalSalaryPoolTrob * 0.25;
@@ -458,13 +459,17 @@ export function ProtocolPoolsPanel({
               </h3>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-[20px] font-mono font-black text-[#2868e8]">
-                  {(poolStats?.salaryPool?.pendingBalanceTrob ?? 48780.72).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {isPoolsLoading ? (
+                    <span className="inline-block animate-pulse text-[#94a3b8]">Loading...</span>
+                  ) : (
+                    (poolStats?.salaryPool?.pendingBalanceTrob ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  )}
                 </span>
                 <span className="text-[12px] text-[#2868e8] font-black">TROB</span>
                 <span className="text-[10px] text-[#657895] font-semibold">(Live Pending)</span>
               </div>
               <div className="text-[10.5px] font-medium text-slate-400 mt-0.5">
-                (~${trobPrice > 0 ? (((poolStats?.salaryPool?.pendingBalanceTrob ?? 48780.72)) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "1,679.52"} USD)
+                (~${!isPoolsLoading && trobPrice > 0 && poolStats?.salaryPool?.pendingBalanceTrob ? ((poolStats.salaryPool.pendingBalanceTrob) * trobPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"} USD)
               </div>
               <p className="text-[11px] text-[#657895] mt-1 leading-relaxed">
                 Monthly equity dividend settled on the 11th across Alpha, Prime, Elite, and Crown ranks.

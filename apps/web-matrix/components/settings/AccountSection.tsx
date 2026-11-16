@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { MatrixUserProfile } from "@/lib/api";
 import { useUserStore, useMatrixStore } from "@/lib/stores";
 import { formatAddress, toTrobBase58, formatDateSafe } from "@/lib/format";
+import { CONTRACT_ADDRESSES, isDeployerAddress } from "@/lib/contracts";
 
 export interface AccountSectionProps {
   copy: (text: string) => void;
@@ -20,15 +21,76 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
 
   const storeProfile = useUserStore((s) => s.profile);
   const storeSlots = useMatrixStore((s) => s.slots);
+  const storeAddress = useUserStore((s) => s.address);
 
   const profile = mounted ? (propProfile !== undefined ? propProfile : storeProfile) : null;
-  const count = mounted ? (propSlotsCount !== undefined ? propSlotsCount : storeSlots.length) : 0;
-  const storeAddress = useUserStore((s) => s.address);
   const address = mounted ? (profile?.address ?? storeAddress ?? "") : "";
   const displayAddress = address ? formatAddress(address) : "Not Connected";
-  const userIdDisplay = profile?.userId ? `#${profile.userId}` : (address ? "#Pending" : "Unregistered");
-  const levelDisplay = count > 0 ? `Slot ${count}` : "Not Activated";
-  const joinedDate = formatDateSafe(profile?.joinedAt, address ? "Connected" : "—");
+
+  // Derive genuine unlocked slots and current level from on-chain state
+  const unlockedSlots = storeSlots.filter((s) => s.isUnlocked);
+  const unlockedCount = unlockedSlots.length;
+  const highestSlot = Math.max(
+    Number(profile?.highestUnlockedSlot ?? 0),
+    Number(profile?.currentSlot ?? 0),
+    unlockedCount > 0 ? Math.max(...unlockedSlots.map((s) => s.slotNumber)) : 0,
+    propSlotsCount && propSlotsCount > 0 && propSlotsCount <= 12 && propSlotsCount !== storeSlots.length ? propSlotsCount : 0
+  );
+
+  const levelDisplay =
+    highestSlot > 0
+      ? `Slot #${String(highestSlot).padStart(2, "0")} Active`
+      : address
+      ? "Slot #01 Pending"
+      : "Not Activated";
+
+  const userIdDisplay =
+    profile?.userId
+      ? `#${profile.userId}`
+      : profile?.referralCode
+      ? `#${profile.referralCode}`
+      : address
+      ? "Syncing on-chain..."
+      : "Unregistered";
+
+  const joinedDate = profile?.joinedAt
+    ? formatDateSafe(profile.joinedAt)
+    : address
+    ? "Syncing on-chain..."
+    : "—";
+
+  const sponsorDisplay = useMemo(() => {
+    if (!address) return "None";
+    if (!profile) return "Loading...";
+    const spAddr = profile.sponsorAddress ? toTrobBase58(profile.sponsorAddress) : "";
+    const isVault =
+      !spAddr ||
+      spAddr === toTrobBase58(CONTRACT_ADDRESSES.vault) ||
+      profile.isVaultSponsor ||
+      isDeployerAddress(spAddr) ||
+      spAddr === "0x0000000000000000000000000000000000000000" ||
+      profile.userId === 1;
+
+    if (isVault) {
+      return "Protocol Vault (Apex Root)";
+    }
+    if (profile.sponsorUserId) {
+      return `ID #${profile.sponsorUserId}`;
+    }
+    if (profile.sponsorCode) {
+      return `ID #${profile.sponsorCode}`;
+    }
+    if (spAddr) {
+      return formatAddress(spAddr);
+    }
+    return "Genesis (Root)";
+  }, [address, profile]);
+
+  const isRegisteredNode = Boolean(
+    (profile as any)?.isRegistered ||
+    highestSlot > 0 ||
+    unlockedCount > 0
+  );
 
   return (
     <div className="space-y-4 lg:space-y-5 w-full">
@@ -148,14 +210,7 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
             </div>
             <div className="flex-shrink-0">
               <div suppressHydrationWarning className="px-2 sm:px-3 py-1 rounded-xl bg-[#eff6ff] text-[#2563eb] font-bold text-[12px] sm:text-[13px] flex items-center gap-1">
-                <span>↑</span>{" "}
-                {profile?.sponsorUserId
-                  ? `ID #${profile.sponsorUserId}`
-                  : profile?.sponsorAddress && profile.sponsorAddress !== "0x0000000000000000000000000000000000000000"
-                  ? formatAddress(profile.sponsorAddress)
-                  : address
-                  ? "Genesis (Root)"
-                  : "None"}
+                <span>↑</span> {sponsorDisplay}
               </div>
             </div>
           </div>
@@ -172,9 +227,15 @@ export function AccountSection({ copy, profile: propProfile, slotsCount: propSlo
               <span className="text-[12.5px] sm:text-[13.5px] font-medium text-[#475569] truncate">Matrix Status</span>
             </div>
             <div className="flex-shrink-0">
-              {mounted && address ? (
+              {mounted && address && isRegisteredNode ? (
                 <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-[#ecfdf5] border border-[#a7f3d0] text-[#16a34a] text-[11.5px] sm:text-[12px] font-bold shadow-2xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />Active Node
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                  Active Node {highestSlot > 0 ? `(Slot #${highestSlot})` : ""}
+                </div>
+              ) : mounted && address ? (
+                <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11.5px] sm:text-[12px] font-bold shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Registration Pending
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[11.5px] sm:text-[12px] font-bold shadow-2xs">

@@ -321,7 +321,18 @@ export default function SettingsPage() {
             onTouchEnd={handleTouchEnd}
             className="w-full"
           >
-            {activeTab === "Account" && <AccountSection copy={copy} profile={profile} slotsCount={slots.length} />}
+            {activeTab === "Account" && (
+              <AccountSection
+                copy={copy}
+                profile={profile}
+                slotsCount={
+                  profile?.highestUnlockedSlot ||
+                  (slots.filter((s) => s.isUnlocked).length > 0
+                    ? Math.max(...slots.filter((s) => s.isUnlocked).map((s) => s.slotNumber))
+                    : 0)
+                }
+              />
+            )}
             {activeTab === "Security" && <SecuritySection copy={copy} />}
             {activeTab === "Notifications" && (
               <NotificationsSection

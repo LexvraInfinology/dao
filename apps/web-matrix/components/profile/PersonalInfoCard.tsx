@@ -127,7 +127,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Telegram</span>
               </div>
               <span className="text-[12px] sm:text-[13.5px] font-bold text-[#0f172a] text-right truncate">
-                {profile?.telegram || "@equora_operative"}
+                {profile?.telegram || "Not Linked"}
               </span>
             </div>
 
@@ -140,7 +140,7 @@ export function PersonalInfoCard({ profile: propProfile, onSaveProfile: propOnSa
                 <span className="text-[12.5px] sm:text-[13px] font-medium">Twitter / X</span>
               </div>
               <span className="text-[12.5px] sm:text-[13.5px] font-bold text-[#0f172a] text-right truncate">
-                {profile?.twitter || "@equora_matrix"}
+                {profile?.twitter || "Not Linked"}
               </span>
             </div>
 

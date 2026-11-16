@@ -16,10 +16,10 @@ export function ProfileHeroCard(props: ProfileHeroCardProps = {}) {
   const profile = props.profile !== undefined ? props.profile : storeProfile;
   const copy = props.copy ?? ((text: string) => navigator.clipboard?.writeText(text));
   const storeAddress = useUserStore((s) => s.address);
-  const userId = profile?.userId ?? 1;
   const address = profile?.address ?? storeAddress ?? "";
+  const userId = profile?.userId || profile?.referralCode || (address ? "..." : "—");
   const displayAddress = address ? formatAddress(address, "spaced") : "Not Connected";
-  const username = profile?.username ?? `Operative #${userId}`;
+  const username = profile?.username ?? (profile?.userId ? `Operative #${profile.userId}` : profile?.referralCode ? `Operative #${profile.referralCode}` : address ? "Active Operative" : "Guest");
   const rankName = profile?.rankName ?? "NONE";
 
   return (

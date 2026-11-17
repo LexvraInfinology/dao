@@ -123,7 +123,9 @@ export function normalizeTo0x(raw: string): string {
   }
   if (clean.startsWith("T") && clean.length >= 33 && clean.length <= 35) {
     try {
-      return toHexAddress(clean);
+      const hex = toHexAddress(clean);
+      if (hex && hex.startsWith("0x") && hex.length === 42) return hex.toLowerCase();
+      return clean.toLowerCase();
     } catch {
       return clean.toLowerCase();
     }

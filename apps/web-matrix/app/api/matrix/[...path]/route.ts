@@ -23,25 +23,32 @@ function base58ToHex(b58: string): string {
   }
   for (let i = 0; i < b58.length && b58[i] === "1"; i++) bytes.push(0);
   const buf = Buffer.from(bytes.reverse());
+  if (buf.length >= 24) {
+    const evmBytes = buf.subarray(buf.length - 24, buf.length - 4);
+    return "41" + evmBytes.toString("hex");
+  }
   return buf.subarray(0, buf.length - 4).toString("hex");
 }
 
-/** Convert any address format → 41-prefixed tron hex */
+/** Convert any address format → 41-prefixed tron hex (supports 33–35 char Base58) */
 function toTronHex(address: string): string {
   if (!address) return "";
   const c = address.trim();
-  if (c.startsWith("T") && c.length === 34) return base58ToHex(c).toLowerCase();
+  if (c.startsWith("T") && c.length >= 33 && c.length <= 35) return base58ToHex(c).toLowerCase();
   if (c.startsWith("0x") || c.startsWith("0X")) return ("41" + c.slice(2)).toLowerCase();
   if (c.startsWith("41") && c.length === 42) return c.toLowerCase();
   return c.toLowerCase();
 }
 
-/** Convert any address format → 0x-prefixed eth hex */
+/** Convert any address format → 0x-prefixed eth hex (supports 33–35 char Base58) */
 function toEthHex(address: string): string {
   if (!address) return "";
   const c = address.trim();
   if (c.startsWith("0x") || c.startsWith("0X")) return c.toLowerCase();
-  if (c.startsWith("T") && c.length === 34) return ("0x" + base58ToHex(c).slice(2)).toLowerCase();
+  if (c.startsWith("T") && c.length >= 33 && c.length <= 35) {
+    const tHex = base58ToHex(c);
+    return ("0x" + (tHex.startsWith("41") ? tHex.slice(2) : tHex)).toLowerCase();
+  }
   if (c.startsWith("41") && c.length === 42) return ("0x" + c.slice(2)).toLowerCase();
   return c.toLowerCase();
 }

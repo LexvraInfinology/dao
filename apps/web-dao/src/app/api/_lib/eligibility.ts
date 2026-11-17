@@ -30,12 +30,16 @@ export function base58ToHex(b58: string): string {
   }
   for (let i = 0; i < b58.length && b58[i] === '1'; i++) bytes.push(0);
   const buf = Buffer.from(bytes.reverse());
+  if (buf.length >= 24) {
+    const evmBytes = buf.subarray(buf.length - 24, buf.length - 4);
+    return '41' + evmBytes.toString('hex');
+  }
   return buf.subarray(0, buf.length - 4).toString('hex');
 }
 
 export function toTronHex(address: string): string {
   const clean = address.trim();
-  if (clean.startsWith('T') && clean.length === 34) {
+  if (clean.startsWith('T') && clean.length >= 33 && clean.length <= 35) {
     return base58ToHex(clean).toLowerCase();
   }
   if (clean.startsWith('0x')) {

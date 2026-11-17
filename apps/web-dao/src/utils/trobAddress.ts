@@ -146,10 +146,13 @@ export function toTronHex(addr?: string | null): string {
   if (!addr) return '';
   const trimmed = addr.trim();
 
-  // If already Base58 (T...), decode to 41-hex
-  if (trimmed.startsWith('T') && trimmed.length === 34) {
+  // If already Base58 (T...), decode to 41-hex (supports 33–35 char Base58 addresses)
+  if (trimmed.startsWith('T') && trimmed.length >= 33 && trimmed.length <= 35) {
     const decoded = decode58(trimmed);
-    if (decoded && decoded.length >= 21) {
+    if (decoded && decoded.length >= 24) {
+      const evmBytes = decoded.slice(decoded.length - 24, decoded.length - 4);
+      return ('41' + Array.from(evmBytes).map((b) => b.toString(16).padStart(2, '0')).join('')).toLowerCase();
+    } else if (decoded && decoded.length >= 21) {
       return Array.from(decoded.slice(0, 21))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('')
@@ -175,7 +178,7 @@ export function toTronHex(addr?: string | null): string {
 export function toTrobBase58(addr?: string | null): string {
   if (!addr) return '';
   const trimmed = addr.trim();
-  if (trimmed.startsWith('T') && trimmed.length === 34) {
+  if (trimmed.startsWith('T') && trimmed.length >= 33 && trimmed.length <= 35) {
     return trimmed;
   }
 

@@ -146,12 +146,26 @@ function encode58(buffer: Uint8Array): string {
 export function toHexAddress(input: string): string {
   if (!input) return "0x0000000000000000000000000000000000000000";
   const str = input.trim();
-  if (str.startsWith("0x") || str.startsWith("0X")) return str.toLowerCase();
+  if (str.startsWith("0x") || str.startsWith("0X")) {
+    if (str.length === 42) return str.toLowerCase();
+    if (str.length > 42) return ("0x" + str.slice(-40)).toLowerCase();
+    return str.toLowerCase();
+  }
   if (str.startsWith("41") && str.length === 42) return `0x${str.slice(2)}`.toLowerCase();
 
-  if (str.startsWith("T") && str.length === 34) {
+  // Support 33 to 35 character Base58 Tron/Trob addresses
+  if (str.startsWith("T") && str.length >= 33 && str.length <= 35) {
     const decoded = decode58(str);
-    if (decoded && decoded.length >= 21) {
+    if (decoded && decoded.length >= 24) {
+      const evmBytes = decoded.slice(decoded.length - 24, decoded.length - 4);
+      return (
+        "0x" +
+        Array.from(evmBytes)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+          .toLowerCase()
+      );
+    } else if (decoded && decoded.length >= 21) {
       return (
         "0x" +
         Array.from(decoded.slice(1, 21))
@@ -166,7 +180,7 @@ export function toHexAddress(input: string): string {
 
 export function toTronHex(input: string): string {
   const hex = toHexAddress(input);
-  return "41" + hex.slice(2);
+  return "41" + hex.replace(/^0x/i, "");
 }
 
 // ── Deployer / Restricted System Accounts ─────────────────────────────────────
@@ -183,7 +197,7 @@ export function isDeployerAddress(addr?: string | null): boolean {
   for (const dep of DEPLOYER_ADDRESSES) {
     if (clean === dep.toLowerCase()) return true;
   }
-  if (clean.startsWith("t") && clean.length === 34) {
+  if (clean.startsWith("t") && clean.length >= 33 && clean.length <= 35) {
     try {
       const hex = toHexAddress(clean);
       for (const dep of DEPLOYER_ADDRESSES) {
@@ -201,7 +215,7 @@ export function isDeployerAddress(addr?: string | null): boolean {
 export function toTrobBase58(addr?: string | null): string {
   if (!addr) return "";
   const trimmed = addr.trim();
-  if (trimmed.startsWith("T") && trimmed.length === 34) {
+  if (trimmed.startsWith("T") && trimmed.length >= 33 && trimmed.length <= 35) {
     return trimmed;
   }
   const hex = toTronHex(trimmed);
@@ -1619,7 +1633,7 @@ export async function checkOnChainRegistrationAuthoritative(userAddress: string)
   try {
     const coder = new ethers.AbiCoder();
     const userHex = toHexAddress(userAddress);
-    if (!userHex || userHex === "0x0000000000000000000000000000000000000000") {
+    if (!userHex || userHex === "0x0000000000000000000000000000000000000000" || userHex.length !== 42) {
       return false;
     }
     const param = coder.encode(["address", "uint256"], [userHex, 1]).slice(2);
@@ -2215,9 +2229,9 @@ export async function searchOperativeOnChain(input: string): Promise<{
     };
   }
 
-  // 2. Wallet Address check (34 char Base58 'T...', 42 char Hex '0x...' or '41...')
+  // 2. Wallet Address check (33–35 char Base58 'T...', 42 char Hex '0x...' or '41...')
   const isAddress =
-    (trimmed.startsWith("T") && trimmed.length === 34) ||
+    (trimmed.startsWith("T") && trimmed.length >= 33 && trimmed.length <= 35) ||
     (trimmed.startsWith("0x") && trimmed.length === 42) ||
     (trimmed.startsWith("41") && trimmed.length === 42);
   if (isAddress) {

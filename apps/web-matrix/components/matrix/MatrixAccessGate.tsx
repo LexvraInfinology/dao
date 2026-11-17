@@ -922,7 +922,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     };
 
     const profileCheck = async (): Promise<boolean | null> => {
-      if (!userHex) return null;
+      if (!userHex || userHex.length !== 42) return null;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
       try {
@@ -934,10 +934,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         const json = await res.json();
         const data = json?.data;
         if (!json?.success || !data) return null;
-        if (data.isRegistered === true || Number(data.currentSlot || 0) >= 1) {
+        const hasSlotUnlocked = Number(data.highestUnlockedSlot || data.currentSlot || 0) >= 1;
+        if (data.isRegistered === true && hasSlotUnlocked) {
           return true;
         }
-        if (data.isRegistered === false && Number(data.currentSlot || 0) === 0) {
+        if (data.isRegistered === false || !hasSlotUnlocked) {
           return false;
         }
         return null;
@@ -976,7 +977,7 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
         .catch(() => null);
 
       const bothChecks = Promise.all([directPromise, apiPromise]).then(([directRes, apiRes]) => {
-        if (!resolvedUnlocked && (directRes === false || (directRes === null && apiRes === false))) {
+        if (!resolvedUnlocked && (directRes === false || apiRes === false)) {
           setConfirmedUnregistered(true);
         }
       });
@@ -1286,11 +1287,11 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
   useEffect(() => {
     if (isStandaloneGate && isSlot1Unlocked) {
       router.replace("/dashboard");
-    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked && (!address || confirmedUnregistered)) {
+    } else if (!checkingStatus && !isStandaloneGate && !isSlot1Unlocked) {
       const search = typeof window !== "undefined" ? window.location.search : "";
       router.replace(`/gate${search}`);
     }
-  }, [address, checkingStatus, confirmedUnregistered, isSlot1Unlocked, isStandaloneGate, router]);
+  }, [address, checkingStatus, isSlot1Unlocked, isStandaloneGate, router]);
 
   // Auto-retry verification if transient RPC outage prevented definitive on-chain resolution
   useEffect(() => {
@@ -1339,26 +1340,18 @@ export function MatrixAccessGate({ children, isStandaloneGate = false }: MatrixA
     return <>{children}</>;
   }
 
-  // If not unlocked and on a protected route, only redirect once unregistered status is confirmed (or no wallet)
+  // If not unlocked and on a protected route, strictly redirect to /gate
   if (!isStandaloneGate) {
-    if (address && !confirmedUnregistered) {
-      return (
-        <EquoraLogoLoader
-          message="Verifying Matrix Identity"
-          submessage={`Syncing on-chain Slot 1 status on ${NETWORK_NAME}...`}
-        />
-      );
-    }
     return (
       <div className="min-h-screen bg-[#F1F5F9] flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-md flex items-center justify-center mb-3">
           <Loader2 className="w-6 h-6 text-[#2563EB] animate-spin" />
         </div>
         <div className="text-[14px] font-bold text-[#0F172A]">
-          Redirecting to Matrix Gate
+          Matrix Access Gate
         </div>
         <div className="text-[12px] text-slate-500 mt-1">
-          Slot 1 activation required to enter the matrix.
+          Slot 1 activation required to enter the matrix. Redirecting to gate...
         </div>
       </div>
     );

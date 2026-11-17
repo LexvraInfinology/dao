@@ -19,7 +19,25 @@
  * - Every single parent seat receives EXACTLY 2 direct referrals, fulfilling their 2-referral qualification!
  */
 
-import { getMatrixBaseUrl } from './matrixTree';
+/**
+ * Returns the base URL for the Matrix application
+ */
+export function getMatrixBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_MATRIX_URL) {
+    return process.env.NEXT_PUBLIC_MATRIX_URL.replace(/\/+$/, '');
+  }
+  // 1. Client-side browser inspection
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    // Local development or LAN access: point directly to local Matrix dev server (Port 3001)
+    if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
+      return `${window.location.protocol}//${host}:3001`;
+    }
+  }
+
+  // Production default
+  return 'https://equorafimatrix.com';
+}
 
 export interface MatrixGatewayInfo {
   linkNumber: 1 | 2 | 3 | 4;

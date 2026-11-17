@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   WelcomeBanner,
   MatrixTreePanel,
@@ -36,6 +37,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -78,7 +80,18 @@ export default function DashboardPage() {
     profile?.isQualified || dashboard?.isQualified || isCycledOrHigherSlot || activeDirectsCount >= 2
   );
 
-  if (!mounted || (loading && !dashboard)) {
+  // Strict Matrix Gate redirect: unregistered wallets or users without Slot 1 unlocked must NEVER access the dashboard
+  React.useEffect(() => {
+    if (!mounted || loading) return;
+    const highestSlot = dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 0;
+    const isReg = profile?.isRegistered !== false && highestSlot >= 1;
+    if (!isReg) {
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/gate${search}`);
+    }
+  }, [mounted, loading, address, dashboard, profile, router]);
+
+  if (!mounted || (loading && !dashboard) || !isRegisteredUser) {
     return (
       <MatrixAccessGate>
         <EquoraLogoLoader

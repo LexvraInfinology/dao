@@ -20,14 +20,17 @@ export function OverviewTab({
   dashboard,
   onSwitchTab,
 }: OverviewTabProps) {
-  const currentSlot = dashboard?.currentSlot ?? profile?.currentSlot ?? 1;
-  const activeBoardSlot = dashboard?.activeSlotProgress?.slotNumber ?? currentSlot;
-  const activeBoardSlotStr = activeBoardSlot.toString().padStart(2, "0");
-  const currentSlotStr = currentSlot.toString().padStart(2, "0");
-  const isRegistered = Boolean(profile?.isRegistered);
+  const isRegistered = Boolean(
+    profile?.isRegistered !== false &&
+    ((dashboard?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 0) >= 1)
+  );
   const highestUnlockedSlot = isRegistered
     ? Math.max(profile?.highestUnlockedSlot ?? 1, dashboard?.highestUnlockedSlot ?? 1)
     : 0;
+  const currentSlot = isRegistered ? (dashboard?.currentSlot ?? profile?.currentSlot ?? 1) : 0;
+  const activeBoardSlot = isRegistered ? (dashboard?.activeSlotProgress?.slotNumber ?? currentSlot) : 0;
+  const activeBoardSlotStr = activeBoardSlot.toString().padStart(2, "0");
+  const currentSlotStr = currentSlot.toString().padStart(2, "0");
 
   const rawEarnedUsd = dashboard?.totalEarnedUsd ?? (profile?.totalEarningsUsd ?? (profile?.totalEarnings ?? 0));
   const totalEarnedUsd = Math.round(rawEarnedUsd);
@@ -232,9 +235,9 @@ export function OverviewTab({
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
             {highestUnlockedSlot} / 12 Slots
           </div>
-          <div className="text-[10.5px] text-[#0e9f79] font-bold mt-1.5 truncate flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0e9f79]" />
-            Levels 1-{highestUnlockedSlot} Active
+          <div className={`text-[10.5px] font-bold mt-1.5 truncate flex items-center gap-1 ${highestUnlockedSlot >= 1 ? "text-[#0e9f79]" : "text-slate-400"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${highestUnlockedSlot >= 1 ? "bg-[#0e9f79]" : "bg-slate-400"}`} />
+            {highestUnlockedSlot >= 1 ? `Levels 1-${highestUnlockedSlot} Active` : "No Active Slots"}
           </div>
         </div>
       </div>
@@ -271,12 +274,12 @@ export function OverviewTab({
                   <span className="font-black text-[13.5px] text-[#102341] truncate">
                     {profile?.userId ? `#${profile.userId} • ` : profile?.referralCode ? `Member #${profile.referralCode} • ` : ""}{profile?.username || (address ? formatAddress(toTrobBase58(address)) : "EQUORA Operative")}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-[#e8fbf5] text-[#138261] text-[9.5px] font-extrabold uppercase">
-                    Active
+                  <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase ${highestUnlockedSlot >= 1 ? "bg-[#e8fbf5] text-[#138261]" : "bg-slate-100 text-slate-500"}`}>
+                    {highestUnlockedSlot >= 1 ? "Active" : "Pending Activation"}
                   </span>
                 </div>
                 <p className="text-[11px] text-[#657895] mt-0.5 truncate">
-                  {directsCount} direct referrals • {currentSlot} active slot{currentSlot > 1 ? "s" : ""}
+                  {directsCount} direct referrals • {highestUnlockedSlot} active slot{highestUnlockedSlot === 1 ? "" : "s"}
                 </p>
               </div>
             </div>

@@ -5,6 +5,8 @@ import { RankAchievedModal, RankTierName } from "@/components/modals/RankAchieve
 import Link from "next/link";
 import { formatAddress, toTrobBase58 } from "@/lib/format";
 import { MatrixDashboardOverview, MatrixUserProfile } from "@/lib/api";
+import { useMatrixStore } from "@/lib/stores";
+import { toHexAddress } from "@/lib/contracts";
 import { Medal, Award, Trophy, Crown, Coins, Building2, Zap, ArrowUpRight, Layers } from "lucide-react";
 
 interface OverviewTabProps {
@@ -192,7 +194,13 @@ export function OverviewTab({
 
         {/* Card 3: Direct Referrals (Shows all referrals without artificial capping) */}
         <div
-          onClick={() => onSwitchTab?.("matrix")}
+          onClick={() => {
+            const mState = useMatrixStore.getState();
+            if (!mState.userManuallySelectedSlot && currentSlot > 1) {
+              mState.selectSlot(currentSlot, undefined, address ? toHexAddress(address) : undefined);
+            }
+            onSwitchTab?.("matrix");
+          }}
           className="bg-white border border-[#e0eaf7] rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">
@@ -221,7 +229,13 @@ export function OverviewTab({
 
         {/* Card 4: Unlocked Progression (Replaced Available Balance) */}
         <div
-          onClick={() => onSwitchTab?.("matrix")}
+          onClick={() => {
+            const mState = useMatrixStore.getState();
+            if (!mState.userManuallySelectedSlot && currentSlot > 1) {
+              mState.selectSlot(currentSlot, undefined, address ? toHexAddress(address) : undefined);
+            }
+            onSwitchTab?.("matrix");
+          }}
           className="bg-white border border-[#e0eaf7] rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-[0_4px_16px_rgba(35,82,140,0.035)] hover:border-[#2868e8]/40 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between gap-2">

@@ -59,21 +59,25 @@ export function useMatrixUser() {
 
   const refreshAll = useCallback(
     async (force = false, followUp = false) => {
-      const curSlot = useMatrixStore.getState().selectedSlotNumber || 1;
-      const curCycle = useMatrixStore.getState().selectedCycle ?? undefined;
+      const mState = useMatrixStore.getState();
+      const uProfile = useUserStore.getState().profile;
+      const targetActiveSlot = mState.userManuallySelectedSlot
+        ? mState.selectedSlotNumber
+        : (uProfile?.currentSlot || uProfile?.highestUnlockedSlot || mState.dashboard?.currentSlot || mState.selectedSlotNumber || 1);
+      const curCycle = mState.selectedCycle ?? undefined;
       await Promise.all([
         fetchProfile(force),
         fetchDashboard(undefined, force),
         fetchSlots(undefined, force),
         fetchEarnings(undefined, force),
         fetchSettings(force),
-        fetchSlotDetails(curSlot, curCycle, undefined, force),
+        fetchSlotDetails(targetActiveSlot, curCycle, undefined, force),
         fetchDirectMembers(undefined, force),
       ]);
 
       if (followUp) {
         setTimeout(async () => {
-          const s = useMatrixStore.getState().selectedSlotNumber || 1;
+          const s = useMatrixStore.getState().selectedSlotNumber || targetActiveSlot || 1;
           const c = useMatrixStore.getState().selectedCycle ?? undefined;
           await Promise.all([
             fetchProfile(true),

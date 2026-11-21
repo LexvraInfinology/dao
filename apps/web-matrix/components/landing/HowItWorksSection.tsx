@@ -87,8 +87,7 @@ export function HowItWorksSection() {
                 Connect Wallet
               </h3>
               <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed mb-7 flex-1 max-w-[270px]">
-                Link your Web3 wallet (MetaMask, Rabby, Trust, WalletConnect) and
-                get started in seconds.
+                Link your Web3 wallet (TrobSafe) and get started in seconds.
               </p>
 
               {/* Bottom Pill */}

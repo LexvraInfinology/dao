@@ -186,9 +186,10 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
   const address = useUserStore((s) => s.address);
 
   const data = propData !== undefined ? propData : storeDashboard;
-  const currentActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? 1;
+  const userActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? data?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 1;
+  const initialSlot = (storeSelectedSlot && storeSelectedSlot > 1) ? storeSelectedSlot : (userActiveSlot || storeSelectedSlot || 1);
 
-  const [selectedSlot, setSelectedSlot] = useState<number>(storeSelectedSlot || 1);
+  const [selectedSlot, setSelectedSlot] = useState<number>(initialSlot);
   const [selectedGlobalCycle, setSelectedGlobalCycle] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"tree" | "table" | "directs">("tree");
   const [directMembersList, setDirectMembersList] = useState<any[]>([]);
@@ -216,6 +217,17 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
       setSelectedSlot(storeSelectedSlot);
     }
   }, [storeSelectedSlot]);
+
+  // Sync to user's active slot if not yet manually chosen
+  useEffect(() => {
+    const isManuallySelected = useMatrixStore.getState().userManuallySelectedSlot;
+    if (!isManuallySelected && userActiveSlot && userActiveSlot !== selectedSlot && userActiveSlot > 1) {
+      setSelectedSlot(userActiveSlot);
+      const raw = address || data?.address;
+      const active = raw ? toHexAddress(raw) : undefined;
+      selectSlotStore(userActiveSlot, undefined, active);
+    }
+  }, [userActiveSlot, selectedSlot, address, data?.address, selectSlotStore]);
 
   const handleSelectSlot = (sNum: number) => {
     setSelectedSlot(sNum);

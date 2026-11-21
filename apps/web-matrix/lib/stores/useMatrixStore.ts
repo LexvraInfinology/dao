@@ -21,6 +21,7 @@ import { useUserStore } from "./useUserStore";
 export interface MatrixState {
   slots: MatrixSlotSummary[];
   selectedSlotNumber: number;
+  userManuallySelectedSlot: boolean;
   selectedCycle: number | null;
   slotDetails: MatrixSlotDetails | null;
   slotDetailsCache: Record<string, MatrixSlotDetails>;
@@ -63,6 +64,7 @@ export interface MatrixState {
 export const useMatrixStore = create<MatrixState>((set, get) => ({
   slots: [],
   selectedSlotNumber: 1,
+  userManuallySelectedSlot: false,
   selectedCycle: null,
   slotDetails: null,
   slotDetailsCache: {},
@@ -119,6 +121,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     if (cached) {
       set({
         selectedSlotNumber: slotNum,
+        userManuallySelectedSlot: true,
         selectedCycle: targetCycleNorm,
         slotDetails: cached,
         loadingDetails: false,
@@ -126,6 +129,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     } else if (isChangingView || !get().slotDetails) {
       set({
         selectedSlotNumber: slotNum,
+        userManuallySelectedSlot: true,
         selectedCycle: targetCycleNorm,
         slotDetails: null,
         loadingDetails: true,
@@ -133,6 +137,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     } else {
       set({
         selectedSlotNumber: slotNum,
+        userManuallySelectedSlot: true,
         selectedCycle: targetCycleNorm,
       });
     }
@@ -410,14 +415,37 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
         };
 
         const currentState = get();
+        const userActiveSlot = isUserRegistered ? (onChainProf?.currentSlot || onChainProf?.highestUnlockedSlot || 1) : 1;
+        const targetSlotNumber = currentState.userManuallySelectedSlot ? currentState.selectedSlotNumber : userActiveSlot;
+
         set({
           dashboard: onChainDashboard,
           loadingDashboard: false,
+          selectedSlotNumber: targetSlotNumber,
           ...(Array.isArray(onChainAllSlots) && onChainAllSlots.length > 0 ? { slots: onChainAllSlots } : {}),
         });
 
-        // Only populate initial slotDetails when user has not switched away from live Slot 1
-        if (onChainDetails && currentState.selectedSlotNumber === 1 && !currentState.selectedCycle) {
+        // Pre-fetch and cache on-chain slotDetails for the active slot (Slot 2, 3, etc.)
+        if (targetSlotNumber > 1 && !currentState.slotDetailsCache[`${targetSlotNumber}_live`]) {
+          getOnChainSlotDetails(addr, targetSlotNumber)
+            .then((targetDetails) => {
+              if (targetDetails) {
+                const updatedState = get();
+                if (updatedState.selectedSlotNumber === targetSlotNumber && !updatedState.selectedCycle) {
+                  set({
+                    slotDetails: targetDetails,
+                    slotDetailsCache: { ...get().slotDetailsCache, [`${targetSlotNumber}_live`]: targetDetails },
+                    loadingDetails: false,
+                  });
+                } else {
+                  set({
+                    slotDetailsCache: { ...get().slotDetailsCache, [`${targetSlotNumber}_live`]: targetDetails },
+                  });
+                }
+              }
+            })
+            .catch(() => {});
+        } else if (onChainDetails && targetSlotNumber === 1 && !currentState.selectedCycle) {
           set({
             slotDetails: onChainDetails,
             slotDetailsCache: { ...get().slotDetailsCache, ["1_live"]: onChainDetails },
@@ -457,6 +485,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     set({
       slots: [],
       selectedSlotNumber: 1,
+      userManuallySelectedSlot: false,
       selectedCycle: null,
       slotDetails: null,
       directMembers: [],

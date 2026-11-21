@@ -54,11 +54,12 @@ const rawSalary = process.env.NEXT_PUBLIC_SALARY_POOL_ADDRESS || DEFAULT_ADDRESS
 const rawReward = process.env.NEXT_PUBLIC_REWARD_POOL_ADDRESS || DEFAULT_ADDRESSES.rewardPool;
 const rawMagic = process.env.NEXT_PUBLIC_MAGIC_BOX_ADDRESS || DEFAULT_ADDRESSES.magicBoxPool;
 const rawDao = process.env.NEXT_PUBLIC_DAO_ADDRESS || DEFAULT_ADDRESSES.dao;
+const rawRegistry = process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || DEFAULT_ADDRESSES.registry;
 
 export const CONTRACT_ADDRESSES = {
   matrix: rawMatrix === "TQuf5qo6EdRYDdEihbfbj51yo6rtzQCkCV" ? MAINNET_DEFAULT_ADDRESSES.matrix : rawMatrix,
   token: process.env.NEXT_PUBLIC_TOKEN_ADDRESS || DEFAULT_ADDRESSES.token,
-  registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || DEFAULT_ADDRESSES.registry,
+  registry: rawRegistry === "TNxk5Uguc16mxReUjXHDctKj12Y3MUSQZj" ? MAINNET_DEFAULT_ADDRESSES.registry : rawRegistry,
   vault: rawVault === "TUZjyaLc1TghdoccJWTKhoBcEU12AG327J" ? MAINNET_DEFAULT_ADDRESSES.vault : rawVault,
   salaryPool: rawSalary === "TQMDkXunFuXDiTqL1HCRgdx47i3AsincjS" ? MAINNET_DEFAULT_ADDRESSES.salaryPool : rawSalary,
   rewardPool: rawReward === "TDq8iJSeomNxEJyUAVxvf4iGH2q5f67kJq" ? MAINNET_DEFAULT_ADDRESSES.rewardPool : rawReward,
@@ -2777,6 +2778,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     mTimeRaw,
     nativeRewardBal,
     nativeSalaryBal,
+    regUsersRaw,
   ] = await Promise.all([
     queryTrobConstant(CONTRACT_ADDRESSES.vault, "totalRoutedFromMatrix()", "").catch(() => null),
     queryTrobConstant(CONTRACT_ADDRESSES.vault, "totalRoutedFromUsers()", "").catch(() => null),
@@ -2787,6 +2789,7 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
     queryTrobConstant(CONTRACT_ADDRESSES.magicBoxPool, "getTimeUntilNextDraw()", "").catch(() => null),
     getNativeAccountBalanceTrob(CONTRACT_ADDRESSES.rewardPool),
     getNativeAccountBalanceTrob(CONTRACT_ADDRESSES.salaryPool),
+    queryTrobConstant(CONTRACT_ADDRESSES.registry, "totalUsers()", "").catch(() => null),
   ]);
 
   let totalRoutedFromMatrix = 0;
@@ -2859,6 +2862,13 @@ export async function getOnChainProtocolPoolsStats(): Promise<ProtocolPoolsStats
       magicBoxTotalDist = Number(ethers.formatUnits(mDec[1], 6));
       magicBoxRounds = Number(mDec[2]);
       magicBoxUsers = Number(mDec[3]);
+    } catch { }
+  }
+
+  // Quarterly Qualified Members: If MagicBox internal array is unpopulated, use on-chain registry total users
+  if (magicBoxUsers <= 1 && regUsersRaw) {
+    try {
+      magicBoxUsers = Number(coder.decode(["uint256"], "0x" + regUsersRaw)[0]);
     } catch { }
   }
 

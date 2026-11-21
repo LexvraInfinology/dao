@@ -40,7 +40,8 @@ export function NextPositionPanel({ data: propData }: NextPositionPanelProps) {
     }
   };
 
-  const activeSlotNumber = storeSelectedSlot || data?.currentSlot || 1;
+  const userActiveSlot = data?.currentSlot ?? profile?.currentSlot ?? data?.highestUnlockedSlot ?? profile?.highestUnlockedSlot ?? 1;
+  const activeSlotNumber = (storeSelectedSlot && storeSelectedSlot > 1) ? storeSelectedSlot : (userActiveSlot || storeSelectedSlot || 1);
   const cost = getSlotCost(activeSlotNumber);
 
   // Use single source of truth from store matching the currently selected slot

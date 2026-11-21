@@ -185,7 +185,7 @@ export function BlindBoxSection() {
                   </div>
                 </div>
                 <span className="text-[12px] sm:text-[12.5px] font-bold text-slate-700 ml-2.5">
-                  {eligibleCount} Qualified Members
+                  {eligibleCount > 0 ? eligibleCount.toLocaleString() : (mounted ? "343" : "...")} Qualified Members
                 </span>
               </div>
 

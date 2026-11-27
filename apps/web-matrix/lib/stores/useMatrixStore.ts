@@ -108,7 +108,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
     }
   },
 
-  selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
+    selectSlot: async (slotNum: number, cycle?: number, userAddress?: string) => {
     const targetCycleNorm = cycle ?? null;
     const prevSlot = get().slotDetails?.slotNumber;
     const prevCycle = get().selectedCycle ?? null;
@@ -304,17 +304,17 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
         const isUserRegistered = Boolean(onChainProf?.isRegistered);
         const totalEarnedUsd = isUserRegistered
           ? Math.max(
-            Number(onChainProf?.totalEarningsUsd ?? 0),
-            slotSumUsd,
-            Number(onChainDetails?.totalEarnedUsd ?? 0)
-          )
+              Number(onChainProf?.totalEarningsUsd ?? 0),
+              slotSumUsd,
+              Number(onChainDetails?.totalEarnedUsd ?? 0)
+            )
           : 0;
         const totalEarnedTrob = isUserRegistered
           ? Math.max(
-            Number(onChainProf?.totalEarningsTrob ?? 0),
-            slotSumTrob,
-            Number(onChainDetails?.totalEarnedTrob ?? 0)
-          )
+              Number(onChainProf?.totalEarningsTrob ?? 0),
+              slotSumTrob,
+              Number(onChainDetails?.totalEarnedTrob ?? 0)
+            )
           : 0;
 
         const availableWithdrawUsd = totalEarnedUsd;
@@ -327,12 +327,12 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
 
         const allSlotsPlacements = Array.isArray(onChainAllSlots)
           ? onChainAllSlots.reduce((acc: number, s: any) => {
-            if (!s?.isUnlocked) return acc;
-            const cyc = Math.max(1, Number(s.currentCycle || 1));
-            const recs = Math.max(0, Number(s.recyclesCount ?? cyc - 1));
-            const filled = Math.max(0, Number(s.filledNodes || 0));
-            return acc + recs * 14 + filled;
-          }, 0)
+              if (!s?.isUnlocked) return acc;
+              const cyc = Math.max(1, Number(s.currentCycle || 1));
+              const recs = Math.max(0, Number(s.recyclesCount ?? cyc - 1));
+              const filled = Math.max(0, Number(s.filledNodes || 0));
+              return acc + recs * 14 + filled;
+            }, 0)
           : 0;
         const mergedMilestonesCount = Math.max(
           Number(onChainRank?.milestones ?? 0),
@@ -444,33 +444,12 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
                 }
               }
             })
-            .catch(() => { });
+            .catch(() => {});
         } else if (onChainDetails && targetSlotNumber === 1 && !currentState.selectedCycle) {
           set({
             slotDetails: onChainDetails,
             slotDetailsCache: { ...get().slotDetailsCache, ["1_live"]: onChainDetails },
           });
-        }
-
-        // Pre-cache completed historical slots for instant 0ms tab switching with zero data jump
-        if (targetSlotNumber > 1) {
-          for (let s = 1; s < targetSlotNumber; s++) {
-            if (!currentState.slotDetailsCache[`${s}_live`]) {
-              getOnChainSlotDetails(addr, s)
-                .then((completedDetails) => {
-                  if (completedDetails) {
-                    set({
-                      slotDetailsCache: {
-                        ...get().slotDetailsCache,
-                        [`${s}_live`]: completedDetails,
-                        [`${s}_cycle_${s}`]: completedDetails,
-                      },
-                    });
-                  }
-                })
-                .catch(() => { });
-            }
-          }
         }
 
         // Seamlessly pre-cache historical snapshots in the background for zero-delay instant tree switching
@@ -483,7 +462,7 @@ export const useMatrixStore = create<MatrixState>((set, get) => ({
                 });
               }
             })
-            .catch(() => { });
+            .catch(() => {});
         }
         return;
       }

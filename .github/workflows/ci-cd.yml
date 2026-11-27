@@ -52,6 +52,9 @@ jobs:
         run: docker compose --env-file .env.example config --quiet
 
       - name: Build Docker images
+        env:
+          COMPOSE_PARALLEL_LIMIT: '1'
+          DOCKER_BUILDKIT: '1'
         run: docker compose --env-file .env.example build
 
   deploy:

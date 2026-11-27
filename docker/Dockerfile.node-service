@@ -36,6 +36,8 @@ RUN --mount=type=cache,id=equora-pnpm-store,target=/pnpm/store \
 
 FROM dependencies AS builder
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 ARG SERVICE_PACKAGE
 ARG SERVICE_DIR
 

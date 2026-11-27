@@ -352,7 +352,7 @@ docker compose version >/dev/null 2>&1 || {
 }
 
 compose() {
-  docker compose --env-file "$APP_DIR/.env" "$@"
+  COMPOSE_PARALLEL_LIMIT=1 docker compose --env-file "$APP_DIR/.env" "$@"
 }
 
 print_diagnostics() {

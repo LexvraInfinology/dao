@@ -147,9 +147,11 @@ services:
       - equora_network
 
   frontend:
+    shm_size: '2gb'
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
+      shm_size: '2gb'
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://equorafidao.com}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.equorafidao.com}
@@ -238,9 +240,11 @@ services:
       - equora_network
 
   matrix-frontend:
+    shm_size: '2gb'
     build:
       context: .
       dockerfile: docker/Dockerfile.matrix
+      shm_size: '2gb'
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_MATRIX_URL:-${NEXT_PUBLIC_MATRIX_APP_URL:-https://equorafimatrix.com}}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-${NEXT_PUBLIC_MATRIX_API_URL:-https://api.equorafidao.com}}

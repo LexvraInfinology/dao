@@ -42,16 +42,16 @@ export function MatrixTreeView(props: MatrixTreeViewProps = {}) {
   const effectiveHighestUnlocked = isUserRegistered ? (highestUnlockedSlot || 1) : 0;
   const isSlotUnlocked = slotDetails ? Boolean(slotDetails.isUnlocked) : (isUserRegistered && selectedSlotNumber <= effectiveHighestUnlocked);
 
-  const isSlot1Complete = Boolean(
-    (slotDetails as any)?.prevSlotCompleted ||
-    (slotDetails as any)?.isSlot1Completed ||
-    (slotDetails as any)?.slot1FilledNodes >= 14 ||
-    (slotDetails?.slotNumber === 1 && (slotDetails?.filledNodes ?? 0) >= 14) ||
-    (slotDetails?.slotNumber === 1 && (slotDetails?.currentCycle ?? 1) > 1) ||
-    (profile as any)?.isSlot1Complete
+  const isSlotCompleted = Boolean(
+    (slotDetails as any)?.isCompleted ||
+    (slotDetails?.filledNodes ?? 0) >= 14 ||
+    (slotDetails?.slotNumber && slotDetails.slotNumber < (profile?.currentSlot ?? 1))
   );
-  const isSlotLive = selectedSlotNumber === 1 ? true : Boolean(slotDetails?.isLive || (selectedSlotNumber === 2 && isSlot1Complete));
-  const isSlotStandby = false;
+  const isSlotLive = Boolean(
+    slotDetails?.isLive ??
+    (slotDetails?.slotNumber === (profile?.currentSlot ?? 1) && !isSlotCompleted)
+  );
+  const isSlotStandby = Boolean(isSlotUnlocked && !isSlotCompleted && !isSlotLive && (slotDetails?.filledNodes ?? 0) === 0);
 
   const currentCycle = isSlotUnlocked ? (slotDetails?.currentCycle ?? 1) : 0;
   const totalCycles = isSlotUnlocked ? (slotDetails?.totalCycles ?? currentCycle) : 0;

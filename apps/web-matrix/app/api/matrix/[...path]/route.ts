@@ -1586,11 +1586,12 @@ interface SlotSummaryItem {
 }
 
 async function collectUserSlotsOverview(ethHex: string) {
-  const [userSlots, stats, costInfo, trobPriceUsd6] = await Promise.all([
+  const [userSlots, stats, costInfo, trobPriceUsd6, s1SnapCount] = await Promise.all([
     Promise.all(Array.from({ length: 12 }, (_, i) => getUserSlot(ethHex, i + 1))),
     getUserStats(ethHex),
     getOnChainSlotCostInfo(1),
     getTrobPrice(),
+    getCycleSnapshotCount(ethHex, 1).catch(() => 0),
   ]);
 
   const trobPriceUsd = trobPriceUsd6 / 1_000_000;
@@ -1606,7 +1607,11 @@ async function collectUserSlotsOverview(ethHex: string) {
   for (let i = 0; i < 12; i++) {
     if (userSlots[i]?.isUnlocked) highestUnlockedFromSlots = i + 1;
   }
-  const highestUnlocked = Math.max(stats.highestSlot, highestUnlockedFromSlots);
+  const completedBoards = s1SnapCount;
+  const s1Filled = userSlots[0]?.filledNodes || 0;
+  const activeSlotNumber = Math.min(12, completedBoards + 1);
+  const nextStandbyUnlocked = Math.min(12, activeSlotNumber + (s1Filled >= 5 || completedBoards >= activeSlotNumber ? 1 : 0));
+  const highestUnlocked = Math.max(stats.highestSlot, highestUnlockedFromSlots, nextStandbyUnlocked);
   const isRegistered = Boolean(userSlots[0]?.isUnlocked || highestUnlocked >= 1);
 
   const slot12Data = userSlots[11];
@@ -1760,60 +1765,94 @@ async function collectUserSlotsOverview(ethHex: string) {
     })
   );
 
-  // ── User Progression Architecture ──
-  // Slot #01 Completed History (14/14 settled = $180) -> Slot #02 Active Live (3/14 filled = +$30)
-  if (
-    isRegistered &&
-    slotSummaries[0] &&
-    (slotSummaries[0].snapshotCount > 0 ||
-      slotSummaries[0].recyclesCount > 0 ||
-      slotSummaries[0].currentCycle > 1)
-  ) {
-    const livePlacedNodes = slotSummaries[0].slot1Nodes || [];
+  // ── Generalized Multi-Slot Progression Engine ──
+  // Sequential slot mapping: 1st 14 completed -> Slot 1, 2nd 14 completed -> Slot 2, 3rd 14 -> Slot 3...
+  if (isRegistered && slotSummaries.length === 12) {
+    const livePlacedNodes = slotSummaries[0]?.slot1Nodes || [];
     const livePlacedCount = livePlacedNodes.filter((n: any) => n?.filled).length;
+    const effectiveActiveFilled = Math.max(s1Filled, livePlacedCount);
+    const trobRate = trobPriceUsd > 0 ? trobPriceUsd : 0.034476;
 
-    // Slot 1: Settled history board (14/14 settled = 6 × $30 = $180)
-    slotSummaries[0].isUnlocked = true;
-    slotSummaries[0].isLive = false;
-    slotSummaries[0].filledNodes = 14;
-    slotSummaries[0].currentCycle = 1;
-    slotSummaries[0].snapshotCount = 0;
-    slotSummaries[0].recyclesCount = 0;
-    slotSummaries[0].earnedUsd = 180;
-    slotSummaries[0].earnedTrob = 5220.96;
-    slotSummaries[0].cycleBreakdowns = [
-      {
-        slotNumber: 1,
-        cycleNumber: 1,
-        filledNodes: 14,
-        paidSeats: 6,
-        earnedUsd: 180,
-        isCompleted: true,
-      },
-    ];
+    for (let s = 1; s <= 12; s++) {
+      const idx = s - 1;
+      if (!slotSummaries[idx]) continue;
 
-    // Slot 2: Active live board
-    if (slotSummaries[1]) {
-      const activeCount = livePlacedCount > 0 ? livePlacedCount : 3;
-      slotSummaries[1].isUnlocked = true;
-      slotSummaries[1].isLive = true;
-      slotSummaries[1].filledNodes = activeCount;
-      slotSummaries[1].currentCycle = 1;
-      slotSummaries[1].snapshotCount = 0;
-      slotSummaries[1].recyclesCount = 0;
-      slotSummaries[1].earnedUsd = 30;
-      slotSummaries[1].earnedTrob = 882.09;
-      slotSummaries[1].slot1Nodes = livePlacedNodes;
-      slotSummaries[1].cycleBreakdowns = [
-        {
-          slotNumber: 2,
-          cycleNumber: 1,
-          filledNodes: activeCount,
-          paidSeats: 1,
-          earnedUsd: 30,
-          isCompleted: false,
-        },
-      ];
+      if (s <= completedBoards) {
+        // Slot S: Permanently completed board (14/14 settled = $180 USD)
+        slotSummaries[idx].isUnlocked = true;
+        slotSummaries[idx].isLive = false;
+        slotSummaries[idx].filledNodes = 14;
+        slotSummaries[idx].currentCycle = s;
+        slotSummaries[idx].snapshotCount = 1;
+        slotSummaries[idx].recyclesCount = 0;
+        slotSummaries[idx].earnedUsd = 180;
+        slotSummaries[idx].earnedTrob = Number((180 / trobRate).toFixed(2));
+        slotSummaries[idx].cycleBreakdowns = [
+          {
+            slotNumber: s,
+            cycleNumber: s,
+            filledNodes: 14,
+            paidSeats: 6,
+            earnedUsd: 180,
+            isCompleted: true,
+          },
+        ];
+      } else if (s === activeSlotNumber) {
+        // Slot S: Currently active playing board
+        const paidSeatsCount = livePlacedNodes.filter((n: any) =>
+          isOwnerDirectSeat(
+            n.position,
+            n.placedUser,
+            n.recipientAddress,
+            n.payoutType === "DIRECT" ? 2 : 0,
+            ethHex
+          )
+        ).length;
+        const activeEarnedUsd = Number((paidSeatsCount * unitCostUsd).toFixed(2));
+        const activeEarnedTrob = Number((activeEarnedUsd / trobRate).toFixed(2));
+
+        slotSummaries[idx].isUnlocked = true;
+        slotSummaries[idx].isLive = true;
+        slotSummaries[idx].filledNodes = effectiveActiveFilled;
+        slotSummaries[idx].currentCycle = s;
+        slotSummaries[idx].snapshotCount = 0;
+        slotSummaries[idx].recyclesCount = 0;
+        slotSummaries[idx].earnedUsd = activeEarnedUsd;
+        slotSummaries[idx].earnedTrob = activeEarnedTrob;
+        slotSummaries[idx].slot1Nodes = livePlacedNodes;
+        slotSummaries[idx].cycleBreakdowns = [
+          {
+            slotNumber: s,
+            cycleNumber: s,
+            filledNodes: effectiveActiveFilled,
+            paidSeats: paidSeatsCount,
+            earnedUsd: activeEarnedUsd,
+            isCompleted: false,
+          },
+        ];
+      } else if (s <= nextStandbyUnlocked) {
+        // Slot S: Standby unlocked slot (unlocked upon 5 nodes on active board or completed prior board)
+        slotSummaries[idx].isUnlocked = true;
+        slotSummaries[idx].isLive = false;
+        slotSummaries[idx].filledNodes = 0;
+        slotSummaries[idx].currentCycle = s;
+        slotSummaries[idx].snapshotCount = 0;
+        slotSummaries[idx].recyclesCount = 0;
+        slotSummaries[idx].earnedUsd = 0;
+        slotSummaries[idx].earnedTrob = 0;
+        slotSummaries[idx].cycleBreakdowns = [];
+      } else {
+        // Slot S: Locked future slot
+        slotSummaries[idx].isUnlocked = false;
+        slotSummaries[idx].isLive = false;
+        slotSummaries[idx].filledNodes = 0;
+        slotSummaries[idx].currentCycle = 0;
+        slotSummaries[idx].snapshotCount = 0;
+        slotSummaries[idx].recyclesCount = 0;
+        slotSummaries[idx].earnedUsd = 0;
+        slotSummaries[idx].earnedTrob = 0;
+        slotSummaries[idx].cycleBreakdowns = [];
+      }
     }
   }
 
@@ -2572,15 +2611,21 @@ export async function GET(
       const cycleParam = req.nextUrl.searchParams.get("cycle");
       const targetCycle = cycleParam ? parseInt(cycleParam, 10) : null;
 
-      const [sd, nodesWithCodes, snapshotCount, userStats, slot12Data] = await Promise.all([
+      const [sd, nodesWithCodes, snapshotCount, userStats, slot12Data, s1Data, s1SnapCount] = await Promise.all([
         getSlotDataV2(ethHex, slotNumber),
         getSlotNodesWithCodesOnChain(ethHex, slotNumber),
         getCycleSnapshotCount(ethHex, slotNumber),
         getUserStats(ethHex),
         getSlotDataV2(ethHex, 12).catch(() => null),
+        getSlotDataV2(ethHex, 1).catch(() => null),
+        getCycleSnapshotCount(ethHex, 1).catch(() => 0),
       ]);
 
-      const highestSlot = Math.max(userStats?.highestSlot || 0, sd?.isUnlocked ? slotNumber : 0);
+      const completedBoards = s1SnapCount;
+      const s1Filled = s1Data?.filledNodes || 0;
+      const activeSlotNumber = Math.min(12, completedBoards + 1);
+      const nextStandbyUnlocked = Math.min(12, activeSlotNumber + (s1Filled >= 5 || completedBoards >= activeSlotNumber ? 1 : 0));
+      const highestSlot = Math.max(userStats?.highestSlot || 0, nextStandbyUnlocked, sd?.isUnlocked ? slotNumber : 0);
       const isRegistered = highestSlot >= 1 || Boolean(sd?.isUnlocked);
       // Global Cycle rule: Cycle 1 covers Slots 1–12.
       // Cycle 2 opens once Slot 12 has completed 14 positions or moved to cycle > 1.
@@ -2593,6 +2638,135 @@ export async function GET(
           : 1
         : 0;
 
+      // 1. If slotNumber <= completedBoards: this board is PERMANENTLY COMPLETED!
+      if (isRegistered && slotNumber <= completedBoards) {
+        const snapIndex = slotNumber - 1;
+        let snapDetail = await getCycleSnapshotDetail(ethHex, 1, snapIndex).catch(() => null);
+        if (!snapDetail || !snapDetail.nodeAddresses || snapDetail.nodeAddresses.length < 14) {
+          snapDetail = await getCycleSnapshot(ethHex, 1, snapIndex).catch(() => null);
+        }
+        if (snapDetail) {
+          const snapNodes = await buildNodes(
+            snapDetail.nodeAddresses,
+            snapDetail.nodeCodes,
+            snapDetail.nodeMemberIds,
+            snapDetail.payoutRecipients,
+            snapDetail.payoutTypes,
+            slotCostUsd
+          );
+          const trobRate = trobPriceUsd > 0 ? trobPriceUsd : 0.034476;
+          return NextResponse.json({
+            success: true,
+            data: {
+              slotNumber,
+              cost: slotCostUsd,
+              costTrob: slotCostTrob,
+              isUnlocked: true,
+              isLive: false,
+              isCompleted: true,
+              globalCycle,
+              currentCycle: slotNumber,
+              slotCycle: slotNumber,
+              selectedCycle: slotNumber,
+              totalCycles: slotNumber,
+              snapshotCount: 1,
+              isViewingSnapshot: true,
+              filledNodes: 14,
+              nodes: snapNodes,
+              totalEarned: 180,
+              totalEarnedTrob: Number((180 / trobRate).toFixed(2)),
+              totalEarnedUsd: 180,
+              _source: "onchain_snapshot",
+            },
+          });
+        }
+      }
+
+      // 2. If slotNumber === activeSlotNumber: this board is the LIVE ACTIVE PLAYING BOARD!
+      if (isRegistered && slotNumber === activeSlotNumber) {
+        const liveDetail =
+          slotNumber === 1 || nodesWithCodes.nodeAddresses.every((a) => !isNonZeroAddress(a))
+            ? await getSlotNodesWithCodesOnChain(ethHex, 1)
+            : nodesWithCodes;
+
+        const liveNodes = await buildNodes(
+          liveDetail.nodeAddresses,
+          liveDetail.nodeCodes,
+          liveDetail.nodeMemberIds,
+          liveDetail.payoutRecipients,
+          liveDetail.payoutTypes,
+          slotCostUsd
+        );
+        const liveFilled = liveNodes.filter((n) => n.filled).length;
+        const paidSeatsCount = liveNodes.filter((n) =>
+          isOwnerDirectSeat(
+            n.position,
+            n.placedUser,
+            n.recipientAddress,
+            n.payoutType === "DIRECT" ? 2 : 0,
+            ethHex
+          )
+        ).length;
+        const liveEarnedUsd = Number((paidSeatsCount * slotCostUsd).toFixed(2));
+        const trobRate = trobPriceUsd > 0 ? trobPriceUsd : 0.034476;
+        const liveEarnedTrob = Number((liveEarnedUsd / trobRate).toFixed(2));
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            slotNumber,
+            cost: slotCostUsd,
+            costTrob: slotCostTrob,
+            isUnlocked: true,
+            isLive: true,
+            isCompleted: false,
+            globalCycle,
+            currentCycle: slotNumber,
+            slotCycle: slotNumber,
+            selectedCycle: slotNumber,
+            totalCycles: slotNumber,
+            snapshotCount: 0,
+            isViewingSnapshot: false,
+            filledNodes: liveFilled,
+            nodes: liveNodes,
+            totalEarned: liveEarnedUsd,
+            totalEarnedTrob: liveEarnedTrob,
+            totalEarnedUsd: liveEarnedUsd,
+            _source: "onchain_live",
+          },
+        });
+      }
+
+      // 3. If slotNumber === activeSlotNumber + 1 and standby unlocked:
+      if (isRegistered && slotNumber <= nextStandbyUnlocked) {
+        const emptyNodes = await buildNodes([], [], [], [], [], slotCostUsd);
+        return NextResponse.json({
+          success: true,
+          data: {
+            slotNumber,
+            cost: slotCostUsd,
+            costTrob: slotCostTrob,
+            isUnlocked: true,
+            isLive: false,
+            isCompleted: false,
+            globalCycle,
+            currentCycle: slotNumber,
+            slotCycle: slotNumber,
+            selectedCycle: slotNumber,
+            totalCycles: slotNumber,
+            snapshotCount: 0,
+            isViewingSnapshot: false,
+            filledNodes: 0,
+            nodes: emptyNodes,
+            totalEarned: 0,
+            totalEarnedTrob: 0,
+            totalEarnedUsd: 0,
+            _source: "onchain_standby",
+          },
+        });
+      }
+
+      // 4. Otherwise: Future Locked Board
       if (!sd || (!sd.isUnlocked && slotNumber > highestSlot)) {
         const emptyNodes = await buildNodes([], [], [], [], [], slotCostUsd);
         return NextResponse.json({
@@ -2619,110 +2793,14 @@ export async function GET(
         });
       }
 
-      const slotOnChainCycle = sd.currentCycle || 1;
-      const effectiveCurrentCycle = globalCycle || slotOnChainCycle;
-      const totalSlotCycles = Math.max(effectiveCurrentCycle, snapshotCount + (sd.isUnlocked ? 1 : 0));
-
-      let nodes: any[] = [];
-      let isViewingSnapshot = false;
+      // 5. Native on-chain slot fallback (if higher slot has direct on-chain contract state)
+      const slotOnChainCycle = Number(sd?.currentCycle || 1);
+      const effectiveCurrentCycle = Math.max(1, slotOnChainCycle);
+      const totalSlotCycles = Math.max(effectiveCurrentCycle, snapshotCount + 1);
       let selectedCycle = effectiveCurrentCycle;
+      let isViewingSnapshot = false;
       let displayFilledCount = 0;
-
-      // ── User Progression Architecture ──
-      // When Slot 1 has completed cycle 1:
-      // - Slot 1 returns the completed snapshot (14/14 settled = $180)
-      // - Slot 2 returns the live active nodes (3/14 filled = +$30)
-      const [s1Data, s1SnapCount] =
-        slotNumber === 2
-          ? await Promise.all([
-              getSlotDataV2(ethHex, 1).catch(() => null),
-              getCycleSnapshotCount(ethHex, 1).catch(() => 0),
-            ])
-          : [null, 0];
-
-      const isSlot1Recycled =
-        slotNumber === 1
-          ? Boolean(snapshotCount > 0 || sd.currentCycle > 1 || (sd.isUnlocked && sd.filledNodes >= 14))
-          : Boolean(s1SnapCount > 0 || (s1Data && (s1Data.currentCycle > 1 || s1Data.filledNodes >= 14)));
-
-      if (slotNumber === 1 && isSlot1Recycled) {
-        let snapDetail = await getCycleSnapshotDetail(ethHex, 1, 0).catch(() => null);
-        if (!snapDetail || !snapDetail.nodeAddresses || snapDetail.nodeAddresses.length < 14) {
-          snapDetail = await getCycleSnapshot(ethHex, 1, 0).catch(() => null);
-        }
-        if (snapDetail) {
-          nodes = await buildNodes(
-            snapDetail.nodeAddresses,
-            snapDetail.nodeCodes,
-            snapDetail.nodeMemberIds,
-            snapDetail.payoutRecipients,
-            snapDetail.payoutTypes,
-            slotCostUsd
-          );
-          return NextResponse.json({
-            success: true,
-            data: {
-              slotNumber: 1,
-              cost: slotCostUsd,
-              costTrob: slotCostTrob,
-              isUnlocked: true,
-              isLive: false,
-              isCompleted: true,
-              globalCycle,
-              currentCycle: 1,
-              slotCycle: 1,
-              selectedCycle: 1,
-              totalCycles: 1,
-              snapshotCount: 0,
-              isViewingSnapshot: true,
-              filledNodes: 14,
-              nodes,
-              totalEarned: 180,
-              totalEarnedTrob: 5220.96,
-              totalEarnedUsd: 180,
-              _source: "onchain_snapshot",
-            },
-          });
-        }
-      }
-
-      if (slotNumber === 2 && isSlot1Recycled) {
-        // Slot 2 shows the live active nodes from slot 1's live cycle
-        const s1LiveDetail = await getSlotNodesWithCodesOnChain(ethHex, 1);
-        nodes = await buildNodes(
-          s1LiveDetail.nodeAddresses,
-          s1LiveDetail.nodeCodes,
-          s1LiveDetail.nodeMemberIds,
-          s1LiveDetail.payoutRecipients,
-          s1LiveDetail.payoutTypes,
-          slotCostUsd
-        );
-        const liveFilled = nodes.filter((n) => n.filled).length;
-        return NextResponse.json({
-          success: true,
-          data: {
-            slotNumber: 2,
-            cost: slotCostUsd,
-            costTrob: slotCostTrob,
-            isUnlocked: true,
-            isLive: true,
-            isCompleted: false,
-            globalCycle,
-            currentCycle: 1,
-            slotCycle: 1,
-            selectedCycle: 1,
-            totalCycles: 1,
-            snapshotCount: 0,
-            isViewingSnapshot: false,
-            filledNodes: liveFilled > 0 ? liveFilled : 3,
-            nodes,
-            totalEarned: 30,
-            totalEarnedTrob: 882.09,
-            totalEarnedUsd: 30,
-            _source: "onchain",
-          },
-        });
-      }
+      let nodes: any[] = [];
 
       // Load immutable snapshot ONLY if targetCycle falls within archived snapshots [1..snapshotCount]
       const shouldLoadTargetSnapshot = Boolean(
@@ -2745,7 +2823,7 @@ export async function GET(
           );
           isViewingSnapshot = true;
           selectedCycle = snapDetail.cycleNumber || targetCycle!;
-          displayFilledCount = nodes.filter((n) => n.filled).length;
+          displayFilledCount = nodes.filter((n: any) => n.filled).length;
         }
       }
 
@@ -2758,13 +2836,13 @@ export async function GET(
           nodesWithCodes.payoutTypes,
           slotCostUsd
         );
-        const activeFilledCount = nodes.filter((n) => n.filled).length;
-        displayFilledCount = Math.max(sd.filledNodes || 0, activeFilledCount);
+        const activeFilledCount = nodes.filter((n: any) => n.filled).length;
+        displayFilledCount = Math.max(sd?.filledNodes || 0, activeFilledCount);
         selectedCycle = effectiveCurrentCycle;
       }
 
-      const totalEarnedTrob = Number(sd.slotEarned) / 1_000_000;
-      const boardPaidCount = nodes.filter((n) =>
+      const totalEarnedTrob = Number(sd?.slotEarned || 0) / 1_000_000;
+      const boardPaidCount = nodes.filter((n: any) =>
         isOwnerDirectSeat(
           n.position,
           n.placedUser,

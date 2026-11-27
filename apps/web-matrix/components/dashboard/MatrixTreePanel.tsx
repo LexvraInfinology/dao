@@ -751,23 +751,19 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
               </span>
             ) : (loadingDetails || !activeSlotDetails) && (!activeSlotDetails || activeSlotDetails.slotNumber !== selectedSlot) ? (
               <span className="text-[#1e60e5] font-semibold">Syncing Slot #{String(selectedSlot).padStart(2, "0")} • Cycle #0{selectedGlobalCycle} from TrobChain...</span>
-            ) : selectedSlot === 1 && (isViewingSnapshot || filledCount >= 14 || (activeSlotDetails as any)?.isCompleted) ? (
+            ) : (isViewingSnapshot || filledCount >= 14 || (activeSlotDetails as any)?.isCompleted || selectedSlot < userActiveSlot) ? (
               <span className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-emerald-700">
-                  Slot #01 • 14/14 Seats Settled 🏆 • Cycle #01 (Completed)
+                  Slot #{String(selectedSlot).padStart(2, "0")} • 14/14 Seats Settled 🏆 • Cycle #0{currentCycle || 1} (Completed)
                 </span>
                 <span className="text-slate-400">•</span>
                 <span className="text-slate-500">On-Chain Verified</span>
                 <span className="text-slate-400">•</span>
                 <span className="font-bold text-emerald-600">+$180.00 USD Direct Yield</span>
               </span>
-            ) : selectedSlot === 2 ? (
-              <span>
-                Slot #02 • {filledCount} / 14 Nodes Filled • Cycle #01 (Live Active) • Next Up: Position #{firstOpenSeat}
-              </span>
             ) : (
               <span>
-                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled • Cycle #0{selectedGlobalCycle} Active • Next Up: Position #{firstOpenSeat}
+                Slot #{String(selectedSlot).padStart(2, "0")} • {filledCount} / 14 Nodes Filled • Cycle #0{currentCycle || 1} (Live Active) • Next Up: Position #{firstOpenSeat}
               </span>
             )}
           </p>
@@ -812,9 +808,9 @@ export function MatrixTreePanel({ data: propData }: MatrixTreePanelProps = {}) {
           const slotItem = storeSlots?.find((s) => s.slotNumber === sNum);
           const isSlotUnlocked = slotItem ? Boolean(slotItem.isUnlocked) : (isUserRegistered && sNum <= effectiveHighestUnlocked);
           const isCompleted = isSlotUnlocked && Boolean(
-            (sNum === 1 && (effectiveHighestUnlocked >= 2 || (slotItem && ((slotItem as any).isCompleted || slotItem.filledNodes >= 14)))) ||
             (slotItem && ((slotItem as any).isCompleted || slotItem.filledNodes >= 14)) ||
-            (isActive && (isViewingSnapshot || filledCount >= 14))
+            (isActive && (isViewingSnapshot || (activeSlotDetails as any)?.isCompleted || filledCount >= 14)) ||
+            (sNum < userActiveSlot)
           );
           return (
             <button

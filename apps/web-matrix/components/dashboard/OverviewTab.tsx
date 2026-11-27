@@ -219,9 +219,8 @@ export function OverviewTab({
           <div className="text-[20px] sm:text-[24px] font-black text-[#102341] tracking-tight mt-2 leading-none">
             {directsCount} Directs
           </div>
-          <div className={`text-[10.5px] font-bold mt-1.5 truncate flex items-center gap-1 ${
-            isQualified ? "text-[#0e9f79]" : "text-amber-600"
-          }`}>
+          <div className={`text-[10.5px] font-bold mt-1.5 truncate flex items-center gap-1 ${isQualified ? "text-[#0e9f79]" : "text-amber-600"
+            }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isQualified ? "bg-[#0e9f79]" : "bg-amber-500 animate-pulse"}`} />
             {isQualified ? "Qualified • 100% P2P Yield" : `${Math.max(0, 2 - directsCount)} more to qualify (2 Required)`}
           </div>
@@ -314,9 +313,8 @@ export function OverviewTab({
 
             {/* 4 Rank Steps (Connected to Smart Contract Milestones: 42, 84, 126, 168) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5">
-              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
-                isAlphaAchieved ? "border-blue-500 bg-blue-50/80 shadow-xs ring-1 ring-blue-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
-              }`}>
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${isAlphaAchieved ? "border-blue-500 bg-blue-50/80 shadow-xs ring-1 ring-blue-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+                }`}>
                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isAlphaAchieved ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-600"}`}>
                   <Medal className="w-3.5 h-3.5" />
                 </div>
@@ -326,9 +324,8 @@ export function OverviewTab({
                 </div>
               </div>
 
-              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
-                isPrimeAchieved ? "border-emerald-500 bg-emerald-50/80 shadow-xs ring-1 ring-emerald-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
-              }`}>
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${isPrimeAchieved ? "border-emerald-500 bg-emerald-50/80 shadow-xs ring-1 ring-emerald-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+                }`}>
                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isPrimeAchieved ? "bg-emerald-600 text-white" : "bg-indigo-50 text-indigo-600"}`}>
                   <Award className="w-3.5 h-3.5" />
                 </div>
@@ -338,9 +335,8 @@ export function OverviewTab({
                 </div>
               </div>
 
-              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
-                isEliteAchieved ? "border-amber-500 bg-amber-50/80 shadow-xs ring-1 ring-amber-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
-              }`}>
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${isEliteAchieved ? "border-amber-500 bg-amber-50/80 shadow-xs ring-1 ring-amber-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+                }`}>
                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isEliteAchieved ? "bg-amber-600 text-white" : "bg-amber-50 text-amber-600"}`}>
                   <Trophy className="w-3.5 h-3.5" />
                 </div>
@@ -350,9 +346,8 @@ export function OverviewTab({
                 </div>
               </div>
 
-              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${
-                isCrownAchieved ? "border-purple-500 bg-purple-50/80 shadow-xs ring-1 ring-purple-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
-              }`}>
+              <div className={`rounded-xl p-2 text-center flex flex-col items-center border transition-all ${isCrownAchieved ? "border-purple-500 bg-purple-50/80 shadow-xs ring-1 ring-purple-400/30" : "border-[#e5edf7] bg-[#fafcff] opacity-80"
+                }`}>
                 <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isCrownAchieved ? "bg-purple-600 text-white" : "bg-purple-100 text-purple-600"}`}>
                   <Crown className="w-3.5 h-3.5" />
                 </div>
@@ -410,22 +405,20 @@ export function OverviewTab({
                   return (
                     <div
                       key={act.id || i}
-                      className={`flex items-center gap-3 p-2.5 rounded-xl border text-[11px] transition-all ${
-                        isIncome
-                          ? "bg-gradient-to-r from-[#effcf7] to-white border-[#d9f5e9]"
-                          : isPool
+                      className={`flex items-center gap-3 p-2.5 rounded-xl border text-[11px] transition-all ${isIncome
+                        ? "bg-gradient-to-r from-[#effcf7] to-white border-[#d9f5e9]"
+                        : isPool
                           ? "bg-[#fffbef] border-[#f8ebc9]"
                           : "bg-white border-[#edf2f8]"
-                      }`}
+                        }`}
                     >
                       <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0 ${
-                          isIncome
-                            ? "bg-[#d8f8eb] text-[#0b956d]"
-                            : isPool
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0 ${isIncome
+                          ? "bg-[#d8f8eb] text-[#0b956d]"
+                          : isPool
                             ? "bg-[#fff0c7] text-[#ac7212]"
                             : "bg-[#eaf2ff] text-[#2868e8]"
-                        }`}
+                          }`}
                       >
                         {isIncome ? (
                           <Coins className="w-3.5 h-3.5 text-[#0b956d]" />

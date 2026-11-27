@@ -1286,6 +1286,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   // Determine live matrix board earnings across all unlocked slots
   let boardEarnedTrob = 0;
   let slot1FilledCount = 0;
+  let s1SnapCnt = 0;
   let isSlot1Complete = false;
   let calculatedUsdEarned = 0;
   const { costUsd: baseSlotUsd, priceUsd: livePrice } = await getLiveSlotCostUsdAndSun(1);
@@ -1327,7 +1328,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
           return n && n !== "0x0000000000000000000000000000000000000000" && n !== "0x0";
         }).length;
       }
-      const s1SnapCnt = s1SnapCntRaw
+      s1SnapCnt = s1SnapCntRaw
         ? Number(coder.decode(["uint256"], "0x" + s1SnapCntRaw)[0])
         : Math.max(0, cNum - 1);
       let s1SnapPaying = 0;
@@ -1554,7 +1555,13 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
   const withdrawnTotalUsd = livePrice > 0 ? Math.round(withdrawnTotal * livePrice) : 0;
   const inferredUsdFromTrob = rawTrobEarned > 0 && livePrice > 0 ? Math.round(rawTrobEarned * livePrice) : 0;
   const effectiveEarnedUsd = calculatedUsdEarned > 0 ? calculatedUsdEarned : inferredUsdFromTrob;
-  const cleanHighestSlot = isRegistered ? Math.max(highestUnlockedSlot, 1) : 0;
+  const completedBoards = s1SnapCnt;
+  const activeSlot = isRegistered ? Math.min(12, completedBoards + 1) : 1;
+  const nextStandbyUnlocked = isRegistered
+    ? Math.min(12, activeSlot + (slot1FilledCount >= 5 || completedBoards >= activeSlot ? 1 : 0))
+    : 1;
+  const effectiveUnlocked = isRegistered ? Math.max(highestUnlockedSlot, nextStandbyUnlocked, 1) : 0;
+  const cleanHighestSlot = effectiveUnlocked;
 
   return {
     address: userHex,
@@ -1585,7 +1592,7 @@ export async function getOnChainUserProfile(userAddress: string): Promise<any> {
     rankName: isRegistered ? (onChainRank?.tierName ?? rankNames[rankTier]) : "NONE",
     rankMilestones: onChainRank || null,
     globalCycle: 1,
-    currentSlot: cleanHighestSlot > 0 ? cleanHighestSlot : 1,
+    currentSlot: activeSlot > 0 ? activeSlot : 1,
     highestUnlockedSlot: cleanHighestSlot,
     isSlot2Reserved: cleanHighestSlot >= 2,
     isSlot1Complete,
